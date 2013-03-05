@@ -78,7 +78,7 @@ func ConnHandler(conn net.Conn) {
 	FileReader(newClient)
 }
 
-var tokens []byte = make([] byte, 1000) 
+var tokens []byte = make([] byte, 10000) 
 var clientList *list.List = list.New()
 func init(){
 	for i,_ := range tokens{
