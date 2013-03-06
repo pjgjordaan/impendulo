@@ -3,24 +3,20 @@ package client
 import( "net")
 
 type Client struct {
-	Token byte
+	Name string
 	Conn net.Conn
 	File string
 }
 
-func NewClient(tok byte, con net.Conn, fname string)(*Client){
-	return &Client{tok, con, fname}
+func NewClient(name string, con net.Conn, fname string)(*Client){
+	return &Client{name, con, fname}
 }
 
 func (c *Client) Equal(other *Client) bool {
-	if c.Token == other.Token {
+	if c.Name == other.Name {
 		if c.Conn == other.Conn {
 			return true
 		}
 	}
 	return false
-}
-
-func (c *Client) Close() {
-	c.Conn.Close()
 }
