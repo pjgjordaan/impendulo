@@ -1,139 +1,265 @@
 package server
 
 import (
+	"archive/zip"
 	"bytes"
-	"container/list"
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"intlola/client"
 	"io"
 	"io/ioutil"
 	"net"
 	"os"
-	"strings"
-	"archive/zip"
+"github.com/peterbourgon/diskv"
 )
 
-func Write(c *client.Client, data *bytes.Buffer) error {
-	Log("Writing to: ", c.Project+"/"+c.File)
-	out := c.Project
-	os.Mkdir(out, 0777)
-	if !c.Zip{
-		out = out+string(os.PathSeparator)+c.Name
-		os.Mkdir(out, 0777)
-	}
-	out = out + string(os.PathSeparator) + c.File
-	err := ioutil.WriteFile(out, data.Bytes(), 0666)
+const sep = string(os.PathSeparator)
+
+func WriteFile(file string, data *bytes.Buffer) error {
+	Log("Writing to: ", file)
+	err := ioutil.WriteFile(file, data.Bytes(), 0666)
 	return err
 }
+
 func Log(v ...interface{}) {
 	fmt.Println(v...)
 }
 
-func ZipFiles(c *client.Client){
+func createUserProject(client *client.Client) error {
+	os.Mkdir(client.Project, 0777)
+	return os.Mkdir(client.Project+sep+client.Name, 0777)
+}
+
+func ZipDir(dir, fname string) (err error) {
 	buf := new(bytes.Buffer)
 	w := zip.NewWriter(buf)
-	finfos, err := ioutil.ReadDir(c.Project+string(os.PathSeparator)+c.Name)
-	if err != nil{
-		Log(err)
-	} else{
-	for _, file := range finfos {
-		if !file.IsDir(){
-			f, err := w.Create(file.Name())
-			if err != nil {
-				Log(err)
-				break
-			}
-			contents, err := ioutil.ReadFile(file.Name())
-			if err != nil{
-				Log(err)
-				break
-			}
-			_, err = f.Write(contents)
-			if err != nil {
-				Log(err)
-				break
+	finfos, err := ioutil.ReadDir(dir)
+	if err == nil {
+		for _, file := range finfos {
+			if !file.IsDir() {
+				f, err := w.Create(file.Name())
+				if err != nil {
+					break
+				}
+				contents, err := ioutil.ReadFile(dir+sep+file.Name())
+				if err != nil {
+					break
+				}
+				_, err = f.Write(contents)
+				if err != nil {
+					break
+				}
 			}
 		}
+	
 	}
-	}
-	err = w.Close()
-	if err != nil {
-		Log(err)
-	} else{
-		c.Zip = true
-		Write(c, buf)
-	}
+	w.Close()
+	if err == nil {
+		err = WriteFile(dir+sep+fname, buf)
+	} 
+	return err
 }
 
-func Remove(c *client.Client) {
-	c.Conn.Close()
-	for entry := clientList.Front(); entry != nil; entry = entry.Next() {
-		cur := entry.Value.(client.Client)
-		if c.Equal(&cur) {
-			Log("Removed: ", c.Name)
-			clientList.Remove(entry)
-			break
-		}
-	}
-}
-func FileReader(c *client.Client) {
+func FileReader(conn net.Conn, token string, fname string) {
 	buffer := new(bytes.Buffer)
 	p := make([]byte, 2048)
-	bytesRead, err := c.Conn.Read(p)
+	bytesRead, err := conn.Read(p)
 	for err == nil {
 		buffer.Write(p[:bytesRead])
-		bytesRead, err = c.Conn.Read(p)
+		bytesRead, err = conn.Read(p)
 	}
 	if err != io.EOF {
-		Log("Client ", c.Name, " resulted in unexpected error: ", err)
-	}
-	Log("Reader stopped for ", c.Name)
-	err = Write(c, buffer)
-	if err != nil {
-		Log(c.Name, " had write error: ", err)
+		clientError(conn, "Unexpected error: "+err.Error(), token)
 	} else {
-		Log("Successfully wrote for: ", c.Name)
+		c := tokens[token]
+		file := c.Project + sep + c.Name + sep + fname
+		err = WriteFile(file, buffer)
+		if err != nil {
+			clientError(conn, "Write error: "+err.Error(), token)
+		} else {
+			Log("Successfully wrote for: ", c.Name)
+			conn.Close()
+		}
 	}
-	Remove(c)
 }
-
-var ARGS_LEN int = 4
 
 func ConnHandler(conn net.Conn) {
 	buffer := make([]byte, 1024)
 	bytesRead, error := conn.Read(buffer)
 	if error != nil {
-		conn.Close()
-		Log("Client connection error: ", error)
+		clientError(conn, "Client connection error: "+error.Error(), "")
+	} else {
+		handleRequest(buffer[:bytesRead], conn)
 	}
-	req := strings.TrimSpace(string(buffer[:bytesRead]))
-	args := strings.Split(req, ":")
-	if len(args) != ARGS_LEN {
-		conn.Close()
-		Log("Invalid number of arguments in connection request: " + req)
-	} else{
-		name := args[1]
-		project := args[2]
-		fname := args[3]
-		c := client.NewClient(name, project, fname, conn)
-		Log("Connected to new client ", name, " sending ", fname, " from project ", project, "  on ", conn.RemoteAddr())
-		if args[0] == "SEND"{	
-			c.Conn.Write([]byte("ACCEPT"))
-			clientList.PushBack(*c)
-			FileReader(c)
-		} else if args[0] == "DONE"{
-			ZipFiles(c)
-		} else {
-			Log("Invalid connection request: " + req)
-			c.Conn.Close()
+}
+
+func handleRequest(data []byte, conn net.Conn) {
+	var holder interface{}
+	err := json.Unmarshal(data, &holder)
+	if err != nil {
+		clientError(conn, "Invalid connection request: "+string(data), "")
+	} else {
+		jobj := holder.(map[string]interface{})
+		val, err := getJSONValue(jobj, "TYPE")
+		if err != nil {
+			clientError(conn, "Invalid request type "+string(data)+" error "+err.Error(), "")
+		} else if val == "LOGIN" {
+			handleLogin(jobj, conn)
+		} else if val == "ZIP" {
+			handleZip(jobj, conn)
+		} else if val == "SEND" {
+			handleSend(jobj, conn)
+		} else if val == "LOGOUT"{
+			handleLogout(jobj, conn)
 		}
 	}
 }
 
+func handleLogin(jobj map[string]interface{}, conn net.Conn) {
+	uname, erru := getJSONValue(jobj, "USERNAME")
+	pword, errw := getJSONValue(jobj, "PASSWORD")
+	project, errp := getJSONValue(jobj, "PROJECT")
+	if erru != nil || errw != nil || errp != nil {
+		clientError(conn, "Error retrieving JSON value from request", "")
+	} else {
+		if validate(uname, pword) {
+			client := client.NewClient(uname, project)
+			token := getToken(client)
+			err := createUserProject(client)
+			if err != nil {
+				clientError(conn, "Error creating project: "+err.Error(), token)
+			} else {
+				
+				conn.Write([]byte("TOKEN:"+token))
+			}
+		} else {
+			clientError(conn, "Invalid username or password "+uname+" "+pword, "")
+		}
+	}
+}
 
-var clientList *list.List = list.New()
+func handleSend(jobj map[string]interface{}, conn net.Conn) {
+	token, errt := getJSONValue(jobj, "TOKEN")
+	fname, errf := getJSONValue(jobj, "FILENAME")
+	if errt != nil || errf != nil {
+		clientError(conn, "Error retrieving JSON value from request", "")
+	} else {
+		if tokens[token] != nil {
+			conn.Write([]byte("ACCEPT"))
+			FileReader(conn, token, fname)
+		} else {
+			clientError(conn, "Invalid token "+token, "")
+		}
+	}
+}
 
+func handleZip(jobj map[string]interface{}, conn net.Conn) {
+	token, errt := getJSONValue(jobj, "TOKEN")
+	fname, errf := getJSONValue(jobj, "FILENAME")
+	if errt != nil || errf != nil {
+		clientError(conn, "Error retrieving JSON value from request", "")
+	} else {
+		if tokens[token] != nil {
+			c := tokens[token]
+			dir := c.Project + sep + c.Name
+			err := ZipDir(dir, fname)
+			conn.Write([]byte("ACCEPT"))
+			if err != nil {
+				clientError(conn, "Error creating zip file "+token, token)
+			} else{ 
+				conn.Close()
+			}
+		} else {
+			clientError(conn, "Invalid token "+token, "")
+		}
+	}
+}
+
+func handleLogout(jobj map[string]interface{}, conn net.Conn) {
+	token, err := getJSONValue(jobj, "TOKEN")
+	if err != nil {
+		clientError(conn, "Error retrieving token from request", "")
+	} else {
+		if tokens[token] != nil {
+			conn.Write([]byte("ACCEPT"))
+			conn.Close()
+			delete(tokens, token)
+		} else {
+			clientError(conn, "Invalid token "+token, "")
+		}
+	}
+}
+
+func clientError(conn net.Conn, msg string, token string) {
+	Log(msg)
+	conn.Write([]byte(msg))
+	conn.Close()
+	if token != "" {
+		delete(tokens, token)
+	}
+}
+
+var users map[string]string
+
+func validate(uname, pword string) bool {
+	valbytes, err := db.Read(uname)
+	if len(valbytes) == 0 || err != nil{
+		db.Write(uname, [] byte(pword))
+		valbytes, _ = db.Read(uname)
+	} 
+	val := string(valbytes)
+	return val == pword
+}
+
+func getJSONValue(jobj map[string]interface{}, key string) (string, error) {
+	ival, err := jobj[key]
+	if !err {
+		return "", errors.New(key + " not found in JSON Object")
+	}
+	switch val := ival.(type) {
+	case string:
+		return val, nil
+	}
+	return "", errors.New("Invalid type in JSON parameter")
+}
+
+var tokens map[string]*client.Client
+
+const STRLEN = 80
+
+func genToken() string {
+	b := make([]byte, STRLEN)
+	rand.Read(b)
+	en := base64.StdEncoding
+	d := make([]byte, en.EncodedLen(len(b)))
+	en.Encode(d, b)
+	return string(d)
+}
+func getToken(c *client.Client) string {
+	if tokens == nil {
+		tokens = make(map[string]*client.Client)
+	}
+	tok := genToken()
+	for tokens[tok] != nil {
+		tok = genToken()
+	}
+	tokens[tok] = c
+	return tok
+}
+
+var db *diskv.Diskv
+func initDB(){
+	flatTransform := func(s string) []string{return []string{""}}
+	db = diskv.New(diskv.Options{
+		BasePath: "db",
+		Transform: flatTransform,
+	CacheSizeMax: 1024 * 1024,})
+}
 func Run(address string, port string) {
+	initDB()
 	Log("Server Started")
 	service := address + ":" + port
 	tcpAddr, error := net.ResolveTCPAddr("tcp", service)
@@ -146,12 +272,11 @@ func Run(address string, port string) {
 		} else {
 			defer netListen.Close()
 			for {
-				Log("Waiting for connections")
-				connection, error := netListen.Accept()
+				conn, error := netListen.Accept()
 				if error != nil {
 					Log("Client error: ", error)
 				} else {
-					go ConnHandler(connection)
+					go ConnHandler(conn)
 				}
 			}
 		}

@@ -1,0 +1,25 @@
+package server
+import(
+"crypto/rand"
+)
+var tokens map[string] *client.Client
+const STRLEN = 80 
+func genToken()(string){ 
+        b := make([]byte, STRLEN) 
+        rand.Read(b) 
+        en := base64.StdEncoding  
+        d := make([]byte, en.EncodedLen(len(b))) 
+        en.Encode(d, b) 
+        return d 
+} 
+func getToken(client *client.Client)(string){
+	if tokens == nil{
+		tokens = make(map[string] *client.Client)
+	}
+	tok := genToken()
+	for _,err := tokens[tok]; err != nil{
+		tok = genToken()
+	}
+	tokens[tok] = client
+	return tok
+}
