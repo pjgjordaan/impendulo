@@ -15,3 +15,8 @@ func (c *Client) Equal(other *Client) bool {
 	}
 	return false
 }
+
+type ClientData struct {
+	Projects map[string]bool
+	Password string
+}

@@ -1,0 +1,25 @@
+package db
+import(
+	"intlola/client"
+)
+func readDB(uname) (client.ClientInfo, error){
+	fname := dbName(uname)
+	var info *client.ClientInfo
+	if err == nil{
+		data := ioutil.ReadFile(fname)
+		err = json.UnMarshall(data, info)
+	}
+	return info, err
+	
+}
+
+func addDB(uname string, info *client.ClientData){
+	data, err := json.Marshall(info)
+	buff := new(bytes.Buffer)
+	buff.Write(data)
+	WriteFile(dbName(uname), buff)
+}
+
+func dbName(uname string)(string){
+	return DB_PATH+SEP+uname+".json"
+}
