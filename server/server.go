@@ -32,16 +32,16 @@ func FileReader(conn net.Conn, token string, fname string) {
 		bytesRead, err = conn.Read(p)
 	}
 	if err != io.EOF {
-		clientError(conn, "Unexpected error: "+err.Error(), token)
+		clientError(conn, "Unexpected error", token, err)
 	} else {
 		c := tokens[token]
 		file, err := getPath(fname, c)
 		if err != nil{
-			clientError(conn, "Path error: "+err.Error(), token)
+			clientError(conn, "Path error: "+err.Error(), token, err)
 		}else{		
 			err = utils.WriteFile(file, buffer)
 			if err != nil {
-				clientError(conn, "Write error: "+err.Error(), token)
+				clientError(conn, "Write error: "+err.Error(), token, err)
 			} else {
 				utils.Log("Successfully wrote for: ", c.Name)
 				conn.Close()
@@ -52,9 +52,9 @@ func FileReader(conn net.Conn, token string, fname string) {
 
 func ConnHandler(conn net.Conn) {
 	buffer := make([]byte, 1024)
-	bytesRead, error := conn.Read(buffer)
-	if error != nil {
-		clientError(conn, "Client connection error: "+error.Error(), "")
+	bytesRead, err := conn.Read(buffer)
+	if err != nil {
+		clientError(conn, "Client connection error", "", err)
 	} else {
 		handleRequest(buffer[:bytesRead], conn)
 	}
@@ -64,12 +64,12 @@ func handleRequest(data []byte, conn net.Conn) {
 	var holder interface{}
 	err := json.Unmarshal(data, &holder)
 	if err != nil {
-		clientError(conn, "Invalid connection request: "+string(data), "")
+		clientError(conn, "Invalid connection request: "+string(data), "", err)
 	} else {
 		jobj := holder.(map[string]interface{})
 		val, err := utils.JSONValue(jobj, "TYPE")
 		if err != nil {
-			clientError(conn, "Invalid request type "+string(data)+" error "+err.Error(), "")
+			clientError(conn, "Invalid request type "+string(data), "", err)
 		} else if val == "LOGIN" {
 			handleLogin(jobj, conn)
 		} else if val == "ZIP" {
@@ -88,20 +88,20 @@ func handleLogin(jobj map[string]interface{}, conn net.Conn) {
 	project, errp := utils.JSONValue(jobj, "PROJECT")
 	mode, errm := utils.JSONValue(jobj, "MODE")
 	if erru != nil || errw != nil || errp != nil || errm != nil{
-		clientError(conn, "Error retrieving JSON value from request", "")
+		clientError(conn, "Error retrieving JSON value from request", "", nil)
 	} else {
 		num, err := getProjectNum(uname, pword, project) 
 		if err == nil {
-			client := client.NewClient(uname, project, num, mode)
-			token := getToken(client)
-			err := utils.CreateUserProject(client)
+			c := client.NewClient(uname, project, num, mode)
+			token := getToken(c)
+			err := utils.MkDir(c.Project+utils.SEP+c.Name)
 			if err != nil {
-				clientError(conn, "Error creating project: "+err.Error(), token)
+				clientError(conn, "Error creating project: "+err.Error(), token, err)
 			} else {
 				conn.Write([]byte("TOKEN:" + token))
 			}
 		} else {
-			clientError(conn, "Invalid username, password or project "+uname+" "+pword + " " +project, "")
+			clientError(conn, "Invalid username, password or project "+uname+" "+pword + " " +project, "", err)
 		}
 	}
 }
@@ -110,13 +110,13 @@ func handleSend(jobj map[string]interface{}, conn net.Conn) {
 	token, errt := utils.JSONValue(jobj, "TOKEN")
 	fname, errf := utils.JSONValue(jobj, "FILENAME")
 	if errt != nil || errf != nil {
-		clientError(conn, "Error retrieving JSON value from request", "")
+		clientError(conn, "Error retrieving JSON value from request", "", nil)
 	} else {
 		if tokens[token] != nil {
 			conn.Write([]byte("ACCEPT"))
 			FileReader(conn, token, fname)
 		} else {
-			clientError(conn, "Invalid token "+token, "")
+			clientError(conn, "Invalid token "+token, "", nil)
 		}
 	}
 }
@@ -124,7 +124,7 @@ func handleSend(jobj map[string]interface{}, conn net.Conn) {
 func handleZip(jobj map[string]interface{}, conn net.Conn) {
 	token, errt := utils.JSONValue(jobj, "TOKEN")
 	if errt != nil {
-		clientError(conn, "Error retrieving JSON value from request", "")
+		clientError(conn, "Error retrieving JSON value from request", "", errt)
 	} else {
 		if tokens[token] != nil {
 			c := tokens[token]
@@ -134,12 +134,12 @@ func handleZip(jobj map[string]interface{}, conn net.Conn) {
 			}
 			conn.Write([]byte("ACCEPT"))
 			if err != nil {
-				clientError(conn, "Error creating zip file "+token, token)
+				clientError(conn, "Error creating zip file "+token, token, err)
 			} else {
 				conn.Close()
 			}
 		} else {
-			clientError(conn, "Invalid token "+token, "")
+			clientError(conn, "Invalid token "+token, "", nil)
 		}
 	}
 }
@@ -147,20 +147,20 @@ func handleZip(jobj map[string]interface{}, conn net.Conn) {
 func handleLogout(jobj map[string]interface{}, conn net.Conn) {
 	token, err := utils.JSONValue(jobj, "TOKEN")
 	if err != nil {
-		clientError(conn, "Error retrieving token from request", "")
+		clientError(conn, "Error retrieving token from request", "", err)
 	} else {
 		if tokens[token] != nil {
 			conn.Write([]byte("ACCEPT"))
 			conn.Close()
 			delete(tokens, token)
 		} else {
-			clientError(conn, "Invalid token "+token, "")
+			clientError(conn, "Invalid token "+token, "", nil)
 		}
 	}
 }
 
-func clientError(conn net.Conn, msg string, token string) {
-	utils.Log(msg)
+func clientError(conn net.Conn, msg string, token string, err error) {
+	utils.Log(msg, err)
 	conn.Write([]byte(msg))
 	conn.Close()
 	if token != "" {

@@ -8,8 +8,10 @@ import (
 )
 
 func main() {
+	if !checkDB(){
+		addUsers("users")
+	}
 	runServer("localhost", "9998")
-	//addUsers("users")
 }
 
 func runServer(addr, port string){
@@ -27,4 +29,8 @@ func addUsers(fname string){
 			db.Add(user, data)
 		}
 	}
+}
+
+func checkDB() bool{
+	return utils.MkDir("db") != nil
 }

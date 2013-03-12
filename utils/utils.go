@@ -8,6 +8,7 @@ import (
 	"github.com/disco-volante/intlola/client"
 	"io/ioutil"
 	"os"
+	"os/user"
 "strings"
 "io"
 "strconv"
@@ -15,8 +16,18 @@ import (
 
 const SEP = string(os.PathSeparator)
 const PERM = 0777
-const BASE_DIR = "data"
-
+var BASE_DIR = "Data"
+func init(){
+	cur, err := user.Current()
+	if err == nil{
+		temp := cur.HomeDir+SEP+".intlola"+SEP+BASE_DIR
+		BASE_DIR = ""
+		MkDir(temp)
+		BASE_DIR = temp
+	} else{
+		MkDir("")
+	}
+}
 func WriteFile(file string, data *bytes.Buffer) error {
 	Log("Writing to: ", file)
 	err := ioutil.WriteFile(BASE_DIR+SEP+file, data.Bytes(), 0666)
@@ -47,17 +58,22 @@ func Log(v ...interface{}) {
 	fmt.Println(v...)
 }
 
-func MkDir(dir string) (err error) {
-	return os.Mkdir(BASE_DIR+SEP+dir, PERM)
+func MkDir(dir string)(err error){
+	if strings.Contains(dir, SEP){
+		dirs := strings.Split(dir, SEP)
+		cur := BASE_DIR
+		for _, d := range dirs{
+			cur = cur+SEP+d
+			err = os.Mkdir(cur, PERM)
+		}
+	} else{
+		err = os.Mkdir(BASE_DIR+SEP+dir, PERM)
+	}
+	return err
 }
 
 func Remove(path string)(error){
 	return os.RemoveAll(BASE_DIR+SEP+path)
-}
-
-func CreateUserProject(c *client.Client) error {
-	MkDir(c.Project)
-	return MkDir(c.Project+SEP+c.Name)
 }
 
 func ZipProject(c *client.Client) (err error) {
