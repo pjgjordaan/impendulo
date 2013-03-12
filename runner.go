@@ -28,12 +28,14 @@ func runServer(addr, port string) {
 }
 
 func addUsers(fname string) {
+	utils.Log(fname)
 	users, err := utils.ReadUsers(fname)
 	if err != nil {
 		utils.Log(err)
 	} else {
 		for user, pword := range users {
 			data := &client.ClientData{make(map[string]int), pword}
+			utils.Log(data)
 			db.Add(user, data)
 		}
 	}
