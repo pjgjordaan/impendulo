@@ -3,8 +3,8 @@ package db
 import (
 	"bytes"
 	"encoding/json"
-	"intlola/client"
-	"intlola/utils"
+	"github.com/disco-volante/intlola/client"
+	"github.com/disco-volante/intlola/utils"
 	"os"
 )
 

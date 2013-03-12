@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"intlola/client"
+	"github.com/disco-volante/intlola/client"
 	"io/ioutil"
 	"os"
 "strings"

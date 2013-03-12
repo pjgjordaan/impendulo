@@ -1,10 +1,10 @@
 package main
 
 import (
-	"intlola/server"
-	"intlola/db"
-	"intlola/utils"
-"intlola/client"
+	"github.com/disco-volante/intlola/server"
+	"github.com/disco-volante/intlola/db"
+	"github.com/disco-volante/intlola/utils"
+"github.com/disco-volante/intlola/client"
 )
 
 func main() {
