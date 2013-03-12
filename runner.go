@@ -1,36 +1,44 @@
 package main
 
 import (
-	"github.com/disco-volante/intlola/server"
+	"flag"
+	"github.com/disco-volante/intlola/client"
 	"github.com/disco-volante/intlola/db"
+	"github.com/disco-volante/intlola/server"
 	"github.com/disco-volante/intlola/utils"
-"github.com/disco-volante/intlola/client"
 )
 
-func main() {
-	if !checkDB(){
-		addUsers("users")
-	}
-	runServer("localhost", "9998")
+var port, address, users string
+
+func init() {
+	flag.StringVar(&port, "p", "9999", "Specify the port to listen on.")
+	flag.StringVar(&address, "a", "0.0.0.0", "Specify the address.")
+	flag.StringVar(&users, "u", "", "Specify a file with new users.")
+
 }
 
-func runServer(addr, port string){
+func main() {
+	initDB()
+	addUsers(users)
+	runServer(address, port)
+}
+
+func runServer(addr, port string) {
 	server.Run(addr, port)
 }
 
-func addUsers(fname string){
-	utils.MkDir("db")
+func addUsers(fname string) {
 	users, err := utils.ReadUsers(fname)
-	if err != nil{
+	if err != nil {
 		utils.Log(err)
-	} else{
-		for user, pword := range users{
+	} else {
+		for user, pword := range users {
 			data := &client.ClientData{make(map[string]int), pword}
 			db.Add(user, data)
 		}
 	}
 }
 
-func checkDB() bool{
-	return utils.MkDir("db") != nil
+func initDB() {
+	utils.MkDir("db")
 }

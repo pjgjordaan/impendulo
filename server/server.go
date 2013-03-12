@@ -5,21 +5,22 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"github.com/disco-volante/intlola/client"
 	"github.com/disco-volante/intlola/db"
 	"github.com/disco-volante/intlola/utils"
 	"io"
 	"net"
-	"errors"
 	"strconv"
 )
-func getPath(fname string, c *client.Client)(file string, err error){
-	if c.Mode == client.ONSAVE{
+
+func getPath(fname string, c *client.Client) (file string, err error) {
+	if c.Mode == client.ONSAVE {
 		file = c.Project + utils.SEP + c.Name + utils.SEP + fname
-	} else if c.Mode == client.ONSTOP{
-		file = c.Project + utils.SEP + c.Name +"_" +c.Project+strconv.Itoa(c.ProjectNum)+".zip"
-	} else{
-		err = errors.New("Unknown send mode: "+c.Mode)
+	} else if c.Mode == client.ONSTOP {
+		file = c.Project + utils.SEP + c.Name + "_" + c.Project + strconv.Itoa(c.ProjectNum) + ".zip"
+	} else {
+		err = errors.New("Unknown send mode: " + c.Mode)
 	}
 	return file, err
 }
@@ -36,9 +37,9 @@ func FileReader(conn net.Conn, token string, fname string) {
 	} else {
 		c := tokens[token]
 		file, err := getPath(fname, c)
-		if err != nil{
+		if err != nil {
 			clientError(conn, "Path error: "+err.Error(), token, err)
-		}else{		
+		} else {
 			err = utils.WriteFile(file, buffer)
 			if err != nil {
 				clientError(conn, "Write error: "+err.Error(), token, err)
@@ -87,21 +88,21 @@ func handleLogin(jobj map[string]interface{}, conn net.Conn) {
 	pword, errw := utils.JSONValue(jobj, "PASSWORD")
 	project, errp := utils.JSONValue(jobj, "PROJECT")
 	mode, errm := utils.JSONValue(jobj, "MODE")
-	if erru != nil || errw != nil || errp != nil || errm != nil{
+	if erru != nil || errw != nil || errp != nil || errm != nil {
 		clientError(conn, "Error retrieving JSON value from request", "", nil)
 	} else {
-		num, err := getProjectNum(uname, pword, project) 
+		num, err := getProjectNum(uname, pword, project)
 		if err == nil {
 			c := client.NewClient(uname, project, num, mode)
 			token := getToken(c)
-			err := utils.MkDir(c.Project+utils.SEP+c.Name)
+			err := utils.MkDir(c.Project + utils.SEP + c.Name)
 			if err != nil {
 				clientError(conn, "Error creating project: "+err.Error(), token, err)
 			} else {
 				conn.Write([]byte("TOKEN:" + token))
 			}
 		} else {
-			clientError(conn, "Invalid username, password or project "+uname+" "+pword + " " +project, "", err)
+			clientError(conn, "Invalid username, password or project "+uname+" "+pword+" "+project, "", err)
 		}
 	}
 }
@@ -129,8 +130,8 @@ func handleZip(jobj map[string]interface{}, conn net.Conn) {
 		if tokens[token] != nil {
 			c := tokens[token]
 			err := utils.ZipProject(c)
-			if err == nil{
-				err = utils.Remove(c.Project+utils.SEP+c.Name)
+			if err == nil {
+				err = utils.Remove(c.Project + utils.SEP + c.Name)
 			}
 			conn.Write([]byte("ACCEPT"))
 			if err != nil {
@@ -165,7 +166,7 @@ func clientError(conn net.Conn, msg string, token string, err error) {
 	conn.Close()
 	if token != "" {
 		c := tokens[token]
-		utils.Remove(c.Project+utils.SEP+c.Name)
+		utils.Remove(c.Project + utils.SEP + c.Name)
 		delete(tokens, token)
 	}
 }
@@ -175,11 +176,11 @@ func getProjectNum(uname, pword, project string) (int, error) {
 	num := -1
 	if err == nil {
 		if info.Password == pword {
-			info.Projects[project] ++
+			info.Projects[project]++
 			num = info.Projects[project]
-			err = db.Add(uname, info)		
+			err = db.Add(uname, info)
 		} else {
-			err = errors.New("Invalid password: "+pword)
+			err = errors.New("Invalid password: " + pword)
 		}
 	}
 	return num, err
