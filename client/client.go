@@ -3,10 +3,13 @@ package client
 type Client struct {
 	Name    string
 	Project string
+	ProjectNum int
+	Mode string
 }
-
-func NewClient(name string, project string) *Client {
-	return &Client{name, project}
+const ONSAVE = "ONSAVE"
+const ONSTOP = "ONSTOP"
+func NewClient(name string, project string, num int, mode string) *Client {
+	return &Client{name, project, num, mode}
 }
 
 func (c *Client) Equal(other *Client) bool {
@@ -17,6 +20,6 @@ func (c *Client) Equal(other *Client) bool {
 }
 
 type ClientData struct {
-	Projects map[string]bool
+	Projects map[string] int
 	Password string
 }

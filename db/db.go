@@ -22,7 +22,6 @@ func Read(uname string) (*client.ClientData, error) {
 	return info, err
 
 }
-
 func Add(uname string, info *client.ClientData) error {
 	data, err := json.Marshal(info)
 	if err == nil {

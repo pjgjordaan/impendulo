@@ -23,7 +23,7 @@ func addUsers(fname string){
 		utils.Log(err)
 	} else{
 		for user, pword := range users{
-			data := &client.ClientData{make(map[string] bool), pword}
+			data := &client.ClientData{make(map[string]int), pword}
 			db.Add(user, data)
 		}
 	}

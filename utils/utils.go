@@ -10,6 +10,7 @@ import (
 	"os"
 "strings"
 "io"
+"strconv"
 )
 
 const SEP = string(os.PathSeparator)
@@ -50,14 +51,19 @@ func MkDir(dir string) (err error) {
 	return os.Mkdir(BASE_DIR+SEP+dir, PERM)
 }
 
+func Remove(path string)(error){
+	return os.RemoveAll(BASE_DIR+SEP+path)
+}
+
 func CreateUserProject(c *client.Client) error {
 	MkDir(c.Project)
 	return MkDir(c.Project+SEP+c.Name)
 }
 
-func ZipDir(dir, fname string) (err error) {
+func ZipProject(c *client.Client) (err error) {
 	buf := new(bytes.Buffer)
 	w := zip.NewWriter(buf)
+	dir := c.Project+SEP+c.Name
 	finfos, err := ioutil.ReadDir(BASE_DIR+SEP+dir)
 	if err == nil {
 		for _, file := range finfos {
@@ -80,9 +86,9 @@ func ZipDir(dir, fname string) (err error) {
 	}
 	w.Close()
 	if err == nil {
-		err = WriteFile(dir+SEP+fname, buf)
+		path := c.Project+SEP+c.Project+strconv.Itoa(c.ProjectNum)+"_"+c.Name+".zip"
+		err = WriteFile(path, buf)
 	}
-	Log(err)
 	return err
 }
 
