@@ -4,20 +4,25 @@ import (
 	"archive/zip"
 	"bytes"
 	"errors"
-	"fmt"
 	"github.com/disco-volante/intlola/client"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/user"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const SEP = string(os.PathSeparator)
-const PERM = 0777
+const DPERM = 0777
+const FPERM = 0666
+const DEBUG = true
+const DB_PATH = "db"
 
 var BASE_DIR = "Data"
+var logger *log.Logger
 
 func init() {
 	cur, err := user.Current()
@@ -29,11 +34,15 @@ func init() {
 	} else {
 		MkDir("")
 	}
+	fo, err := os.Create(BASE_DIR + SEP + "intlola.log")
+	if err != nil {
+		panic(err)
+	}
+	logger = log.New(fo, time.Now().String(), log.LstdFlags)
 }
+
 func WriteFile(file string, data *bytes.Buffer) error {
-	Log("Writing to: ", file)
-	err := ioutil.WriteFile(BASE_DIR+SEP+file, data.Bytes(), 0666)
-	return err
+	return ioutil.WriteFile(BASE_DIR+SEP+file, data.Bytes(), FPERM)
 }
 
 func ReadFile(fname string) ([]byte, error) {
@@ -43,21 +52,25 @@ func ReadFile(fname string) ([]byte, error) {
 func ReadUsers(fname string) (map[string]string, error) {
 	users := make(map[string]string)
 	data, err := ioutil.ReadFile(fname)
-	buff := bytes.NewBuffer(data)
-	line, err := buff.ReadString(byte('\n'))
-	for err == nil {
-		vals := strings.Split(line, ":")
-		users[strings.TrimSpace(vals[0])] = strings.TrimSpace(vals[1])
-		line, err = buff.ReadString(byte('\n'))
-	}
-	if err == io.EOF {
-		err = nil
+	if err == nil {
+		buff := bytes.NewBuffer(data)
+		line, err := buff.ReadString(byte('\n'))
+		for err == nil {
+			vals := strings.Split(line, ":")
+			users[strings.TrimSpace(vals[0])] = strings.TrimSpace(vals[1])
+			line, err = buff.ReadString(byte('\n'))
+		}
+		if err == io.EOF {
+			err = nil
+		}
 	}
 	return users, err
 }
 
 func Log(v ...interface{}) {
-	fmt.Println(v...)
+	if DEBUG {
+		logger.Print(v...)
+	}
 }
 
 func MkDir(dir string) (err error) {
@@ -66,10 +79,10 @@ func MkDir(dir string) (err error) {
 		cur := BASE_DIR
 		for _, d := range dirs {
 			cur = cur + SEP + d
-			err = os.Mkdir(cur, PERM)
+			err = os.Mkdir(cur, DPERM)
 		}
 	} else {
-		err = os.Mkdir(BASE_DIR+SEP+dir, PERM)
+		err = os.Mkdir(BASE_DIR+SEP+dir, DPERM)
 	}
 	return err
 }
@@ -102,22 +115,25 @@ func ZipProject(c *client.Client) (err error) {
 		}
 
 	}
-	w.Close()
+	errw := w.Close()
 	if err == nil {
-		path := c.Project + SEP + c.Project + strconv.Itoa(c.ProjectNum) + "_" + c.Name + ".zip"
-		err = WriteFile(path, buf)
+		if errw == nil {
+			path := c.Project + SEP + c.Project + strconv.Itoa(c.ProjectNum) + "_" + c.Name + ".zip"
+			err = WriteFile(path, buf)
+		} else {
+			err = errw
+		}
 	}
 	return err
 }
 
-func JSONValue(jobj map[string]interface{}, key string) (string, error) {
-	ival, err := jobj[key]
-	if !err {
-		return "", errors.New(key + " not found in JSON Object")
+func JSONValue(jobj map[string]interface{}, key string) (val string, err error) {
+	ival, ok := jobj[key]
+	if ok {
+		val, ok = ival.(string)
 	}
-	switch val := ival.(type) {
-	case string:
-		return val, nil
+	if !ok {
+		err = errors.New("Error retrieving JSON value for: " + key)
 	}
-	return "", errors.New("Invalid type in JSON parameter")
+	return val, err
 }

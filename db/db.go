@@ -5,24 +5,17 @@ import (
 	"encoding/json"
 	"github.com/disco-volante/intlola/client"
 	"github.com/disco-volante/intlola/utils"
-	"os"
 )
 
-const DB_PATH = "db"
-const SEP = string(os.PathSeparator)
-
-func Read(uname string) (*client.ClientData, error) {
-	fname := dbName(uname)
-	var info *client.ClientData
-	data, err := utils.ReadFile(fname)
+func Read(uname string) (info *client.ClientData, err error) {
+	data, err := utils.ReadFile(dbName(uname))
 	if err == nil {
 		err = json.Unmarshal(data, &info)
-
 	}
 	return info, err
 
 }
-func Add(uname string, info *client.ClientData) error {
+func Add(uname string, info *client.ClientData) (err error) {
 	data, err := json.Marshal(info)
 	if err == nil {
 		buff := new(bytes.Buffer)
@@ -33,5 +26,5 @@ func Add(uname string, info *client.ClientData) error {
 }
 
 func dbName(uname string) string {
-	return DB_PATH + SEP + uname + ".json"
+	return utils.DB_PATH + utils.SEP + uname + ".json"
 }
