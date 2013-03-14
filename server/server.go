@@ -42,13 +42,14 @@ func FileReader(conn net.Conn, token string, fname string) {
 		bytesRead, err = conn.Read(p)
 	}
 	if err == io.EOF {
+		err = nil
 		c := tokens[token]
 		file, err := getPath(fname, c)
 		if err == nil {
 			err = utils.WriteFile(file, buffer)
 		}
 	}
-	if handleError(conn, token, err) {
+	if handleError(conn, token, "File read error - ",  err) {
 		conn.Close()
 	}
 }
@@ -56,7 +57,7 @@ func FileReader(conn net.Conn, token string, fname string) {
 func ConnHandler(conn net.Conn) {
 	buffer := make([]byte, 1024)
 	bytesRead, err := conn.Read(buffer)
-	if handleError(conn, "", err) {
+	if handleError(conn, "", "Connection error - ", err) {
 		handleRequest(buffer[:bytesRead], conn)
 	}
 }
@@ -79,7 +80,7 @@ func handleRequest(data []byte, conn net.Conn) {
 			}
 		}
 	}
-	handleError(conn, "", err)
+	handleError(conn, "", "Request error - ", err)
 }
 
 func handleLogin(jobj map[string]interface{}, conn net.Conn) {
@@ -87,29 +88,29 @@ func handleLogin(jobj map[string]interface{}, conn net.Conn) {
 	pword, errw := utils.JSONValue(jobj, "PASSWORD")
 	project, errp := utils.JSONValue(jobj, "PROJECT")
 	mode, errm := utils.JSONValue(jobj, "MODE")
-	if handleError(conn, "", erru, errw, errp, errm) {
+	if handleError(conn, "","Login JSON Error - ", erru, errw, errp, errm) {
 		num, err := getProjectNum(uname, pword, project)
 		if err == nil {
 			c := client.NewClient(uname, project, num, mode)
 			token := getToken(c)
 			err := utils.MkDir(c.Project + utils.SEP + c.Name)
 			if err == nil {
-				conn.Write([]byte("TOKEN:" + token))
+				_, err = conn.Write([]byte("TOKEN:" + token))
 			}
 		}
-		handleError(conn, "", err)
+		handleError(conn, "","Login IO Error - ", err)
 	}
 }
 
 func handleSend(jobj map[string]interface{}, conn net.Conn) {
 	token, errt := utils.JSONValue(jobj, "TOKEN")
 	fname, errf := utils.JSONValue(jobj, "FILENAME")
-	if handleError(conn, "", errt, errf) {
+	if handleError(conn, "","Sending JSON error - ", errt, errf) {
 		if tokens[token] != nil {
 			conn.Write([]byte("ACCEPT"))
 			FileReader(conn, token, fname)
 		} else {
-			handleError(conn, "", errors.New("Invalid token"))
+			handleError(conn, "", "Sending Validation error - ", errors.New("Invalid token"))
 		}
 	}
 }
@@ -131,7 +132,7 @@ func handleZip(jobj map[string]interface{}, conn net.Conn) {
 			err = errors.New("Invalid token")
 		}
 	}
-	handleError(conn, "", err)
+	handleError(conn, "", "Zip error - ",  err)
 }
 
 func handleLogout(jobj map[string]interface{}, conn net.Conn) {
@@ -145,23 +146,28 @@ func handleLogout(jobj map[string]interface{}, conn net.Conn) {
 			err = errors.New("Invalid token")
 		}
 	}
-	handleError(conn, "", err)
+	handleError(conn, "", "Logout error - ", err)
 }
 
-func handleError(conn net.Conn, token string, errs ...error) bool {
-	if errs == nil {
+func handleError(conn net.Conn, token string, msg string, errs ...error) bool {
+	errMsg := "Error encountered: " + msg
+	size := len(errMsg)
+	for _, err := range errs {
+		if err != nil{
+			errMsg += err.Error()
+		}
+	}
+	if size == len(errMsg){
 		return true
 	}
-	utils.Log(token, errs)
-	errMsg := "Error encountered: "
-	for _, err := range errs {
-		errMsg += err.Error()
-	}
+	utils.Log(token, errMsg)
 	conn.Write([]byte(errMsg))
 	conn.Close()
 	if token != "" {
 		c := tokens[token]
-		utils.Remove(c.Project + utils.SEP + c.Name)
+		if c != nil{
+			utils.Remove(c.Project + utils.SEP + c.Name)
+		}
 		delete(tokens, token)
 	}
 	return false
@@ -202,19 +208,19 @@ func getToken(c *client.Client) string {
 
 func Run(address string, port string) {
 	service := address + ":" + port
-	tcpAddr, error := net.ResolveTCPAddr("tcp", service)
-	if error != nil {
-		utils.Log("Error: Could not resolve address")
+	tcpAddr, err := net.ResolveTCPAddr("tcp", service)
+	if err != nil {
+		utils.Log("Error: Could not resolve address", err)
 	} else {
-		netListen, error := net.Listen(tcpAddr.Network(), tcpAddr.String())
-		if error != nil {
-			utils.Log(error)
+		netListen, err := net.Listen(tcpAddr.Network(), tcpAddr.String())
+		if err != nil {
+			utils.Log(err)
 		} else {
 			defer netListen.Close()
 			for {
-				conn, error := netListen.Accept()
-				if error != nil {
-					utils.Log("Client error: ", error)
+				conn, err := netListen.Accept()
+				if err != nil {
+					utils.Log("Client error: ", err)
 				} else {
 					go ConnHandler(conn)
 				}

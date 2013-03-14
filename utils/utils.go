@@ -20,7 +20,7 @@ const DPERM = 0777
 const FPERM = 0666
 const DEBUG = true
 const DB_PATH = "db"
-
+const LOG_DIR = "logs"
 var BASE_DIR = "Data"
 var logger *log.Logger
 
@@ -34,7 +34,8 @@ func init() {
 	} else {
 		MkDir("")
 	}
-	fo, err := os.Create(BASE_DIR + SEP + "intlola.log")
+	MkDir(LOG_DIR)
+	fo, err := os.Create(BASE_DIR + SEP + LOG_DIR + SEP + time.Now().String()+".log")
 	if err != nil {
 		panic(err)
 	}

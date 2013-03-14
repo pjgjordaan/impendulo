@@ -20,18 +20,21 @@ func init() {
 func main() {
 	flag.Parse()
 	initDB()
-	addUsers(users)
+	if users != ""{
+		addUsers(users)
+	}
 	runServer(address, port)
 }
 
 func runServer(addr, port string) {
+	utils.Log("Starting server at: ", address, " on port ", port)
 	server.Run(addr, port)
 }
 
 func addUsers(fname string) {
 	users, err := utils.ReadUsers(fname)
 	if err != nil {
-		utils.Log(err)
+		utils.Log("Invalid users file ", fname, " gave error: ", err)
 	} else {
 		for user, pword := range users {
 			data := &client.ClientData{make(map[string]int), pword}
