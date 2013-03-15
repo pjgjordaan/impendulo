@@ -58,13 +58,13 @@ func ReadUsers(fname string) (users []*client.ClientData, err error) {
 	if err == nil {
 		buff := bytes.NewBuffer(data)
 		line, err := buff.ReadString(byte('\n'))
-		users = make([]*client.ClientData, 100)
+		users = make([] *client.ClientData, 100)
 		i := 0
 		for err == nil {
 			vals := strings.Split(line, ":")
 			user := strings.TrimSpace(vals[0])
 			pword := strings.TrimSpace(vals[1])
-			data := &client.ClientData{user, pword, make(map[string] int)}
+			data := client.NewData(user, pword)
 			if i >= len(users){
 				users = append(users, data)
 			}else{

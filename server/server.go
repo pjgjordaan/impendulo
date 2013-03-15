@@ -174,14 +174,13 @@ func handleError(conn net.Conn, token string, msg string, errs ...error) bool {
 }
 
 func getProjectNum(uname, pword, project string) (int, error) {
-	infos, err := db.Read("users", uname, pword)
+	user, err := db.ReadUser(uname, pword)
 	num := -1
-	if err == nil && len(infos) == 1{
-		info := infos[0]
-		if info.Password == pword {
-			info.Projects[project]++
-			num = info.Projects[project]
-			err = db.AddOne("users", info)
+	if err == nil{
+		if user.Password == pword {
+			user.Projects[project]++
+			num = user.Projects[project]
+			err = db.AddUsers(user)
 		} else {
 			err = errors.New("Invalid password: " + pword)
 		}

@@ -35,7 +35,7 @@ func runServer(addr, port string) {
 func addUsers(fname string) error {
 	users, err := utils.ReadUsers(fname)
 	if err == nil {
-		err = db.Add("users", users)
+		err = db.AddUsers(users...)
 	}
 	return err
 }

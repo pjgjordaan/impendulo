@@ -19,7 +19,9 @@ type ClientData struct {
 	Password string
 	Projects map[string]int
 }
-
+func NewData(name, pword string)(*ClientData){
+	return &ClientData{name, pword, make(map[string]int)}
+}
 func (c *ClientData) String() (string){
 	return "Username: "+c.Name+", Password: "+c.Password
 } 
