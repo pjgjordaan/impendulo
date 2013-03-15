@@ -1,30 +1,33 @@
 package db
 
 import (
-	"bytes"
-	"encoding/json"
 	"github.com/disco-volante/intlola/client"
 	"github.com/disco-volante/intlola/utils"
+	"labix.org/v2/mgo"
+        "labix.org/v2/mgo/bson"
 )
+const DB_NAME = "intlola"
 
-func Read(uname string) (info *client.ClientData, err error) {
-	data, err := utils.ReadFile(dbName(uname))
-	if err == nil {
-		err = json.Unmarshal(data, &info)
-	}
+func Read(collName, key, value string) (info [] *client.ClientData, err error) {
+	session, err := mgo.Dial("localhost")
+	defer session.Close()
+	c := session.DB(DB_NAME).C(collName)
+	err = c.Find(bson.M{key : value}).All(info)
+	utils.Log("Read: ", info)
 	return info, err
-
 }
-func Add(uname string, info *client.ClientData) (err error) {
-	data, err := json.Marshal(info)
-	if err == nil {
-		buff := new(bytes.Buffer)
-		buff.Write(data)
-		err = utils.WriteFile(dbName(uname), buff)
+
+func AddOne(collName string, info *client.ClientData)(error){
+	return Add(collName, []*client.ClientData{info})
+}
+func Add(collName string, infos[] *client.ClientData) (error) {
+	session, err := mgo.Dial("localhost")
+	defer session.Close()
+	if err == nil{
+		c := session.DB(DB_NAME).C(collName)
+		err = c.Insert(infos)
+		utils.Log("Inserted: ", infos)
 	}
 	return err
 }
 
-func dbName(uname string) string {
-	return utils.DB_PATH + utils.SEP + uname + ".json"
-}

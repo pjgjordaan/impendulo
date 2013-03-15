@@ -15,6 +15,11 @@ func NewClient(name string, project string, num int, mode string) *Client {
 }
 
 type ClientData struct {
-	Projects map[string]int
+	Name string
 	Password string
+	Projects map[string]int
 }
+
+func (c *ClientData) String() (string){
+	return "Username: "+c.Name+", Password: "+c.Password
+} 

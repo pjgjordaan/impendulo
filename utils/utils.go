@@ -34,12 +34,15 @@ func init() {
 	} else {
 		MkDir("")
 	}
-	MkDir(LOG_DIR)
-	fo, err := os.Create(BASE_DIR + SEP + LOG_DIR + SEP + time.Now().String()+".log")
+	now := time.Now()
+	y, m, d := now.Date()
+	dir := LOG_DIR+SEP+strconv.Itoa(y)+SEP+m.String()+SEP+strconv.Itoa(d)
+	MkDir(dir)
+	fo, err := os.Create(BASE_DIR + SEP + dir + SEP + time.Now().String()+".log")
 	if err != nil {
 		panic(err)
 	}
-	logger = log.New(fo, time.Now().String(), log.LstdFlags)
+	logger = log.New(fo, "Inlola log", log.LstdFlags)
 }
 
 func WriteFile(file string, data *bytes.Buffer) error {
@@ -50,19 +53,29 @@ func ReadFile(fname string) ([]byte, error) {
 	return ioutil.ReadFile(BASE_DIR + SEP + fname)
 }
 
-func ReadUsers(fname string) (map[string]string, error) {
-	users := make(map[string]string)
+func ReadUsers(fname string) (users []*client.ClientData, err error) {
 	data, err := ioutil.ReadFile(fname)
 	if err == nil {
 		buff := bytes.NewBuffer(data)
 		line, err := buff.ReadString(byte('\n'))
+		users = make([]*client.ClientData, 100)
+		i := 0
 		for err == nil {
 			vals := strings.Split(line, ":")
-			users[strings.TrimSpace(vals[0])] = strings.TrimSpace(vals[1])
+			user := strings.TrimSpace(vals[0])
+			pword := strings.TrimSpace(vals[1])
+			data := &client.ClientData{user, pword, make(map[string] int)}
+			if i >= len(users){
+				users = append(users, data)
+			}else{
+				users[i] = data
+			}
+			i ++
 			line, err = buff.ReadString(byte('\n'))
 		}
 		if err == io.EOF {
 			err = nil
+			users = users[:i-1]
 		}
 	}
 	return users, err
