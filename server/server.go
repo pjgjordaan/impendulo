@@ -47,6 +47,7 @@ func FileReader(conn net.Conn, token string, fname string) {
 		file, err := getPath(fname, c)
 		if err == nil {
 			err = utils.WriteFile(file, buffer)
+			err = db.AddFile(c, fname, buffer.Bytes())
 		}
 	}
 	if handleError(conn, token, "File read error - ",  err) {
@@ -89,7 +90,7 @@ func handleLogin(jobj map[string]interface{}, conn net.Conn) {
 	project, errp := utils.JSONValue(jobj, "PROJECT")
 	mode, errm := utils.JSONValue(jobj, "MODE")
 	if handleError(conn, "","Login JSON Error - ", erru, errw, errp, errm) {
-		num, err := getProjectNum(uname, pword, project)
+		num, err := getProjectNum(uname, project)
 		if err == nil {
 			c := client.NewClient(uname, project, num, mode)
 			token := getToken(c)
@@ -98,7 +99,7 @@ func handleLogin(jobj map[string]interface{}, conn net.Conn) {
 				_, err = conn.Write([]byte("TOKEN:" + token))
 			}
 		}
-		handleError(conn, "","Login IO Error - ", err)
+		handleError(conn, "","Login IO Error - username: "+uname+" password: "+pword, err)
 	}
 }
 
@@ -173,19 +174,8 @@ func handleError(conn net.Conn, token string, msg string, errs ...error) bool {
 	return false
 }
 
-func getProjectNum(uname, pword, project string) (int, error) {
-	user, err := db.ReadUser(uname, pword)
-	num := -1
-	if err == nil{
-		if user.Password == pword {
-			user.Projects[project]++
-			num = user.Projects[project]
-			err = db.AddUsers(user)
-		} else {
-			err = errors.New("Invalid password: " + pword)
-		}
-	}
-	return num, err
+func getProjectNum(uname, project string) (int, error) {
+	return db.CreateProject(uname, project)
 }
 
 func genToken() string {
