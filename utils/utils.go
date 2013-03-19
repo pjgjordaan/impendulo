@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"github.com/disco-volante/intlola/client"
+	"github.com/disco-volante/intlola/db"
 	"io"
 	"io/ioutil"
 	"log"
@@ -53,18 +54,27 @@ func ReadFile(fname string) ([]byte, error) {
 	return ioutil.ReadFile(BASE_DIR + SEP + fname)
 }
 
-func ReadUsers(fname string) (users []*client.ClientData, err error) {
+func AddUsers(fname string) error {
+	users, err := ReadUsers(fname)
+	if err == nil {
+		err = db.AddUsers(users...)
+	}
+	return err
+}
+
+
+func ReadUsers(fname string) (users []*db.UserData, err error) {
 	data, err := ioutil.ReadFile(fname)
 	if err == nil {
 		buff := bytes.NewBuffer(data)
 		line, err := buff.ReadString(byte('\n'))
-		users = make([] *client.ClientData, 100, 1000)
+		users = make([] *db.UserData, 100, 1000)
 		i := 0
 		for err == nil {
 			vals := strings.Split(line, ":")
 			user := strings.TrimSpace(vals[0])
 			pword := strings.TrimSpace(vals[1])
-			data := client.NewData(user, pword)
+			data := db.NewUser(user, pword)
 			if i == len(users){
 				users = append(users, data)
 			}else{
@@ -134,7 +144,7 @@ func ZipProject(c *client.Client) (err error) {
 	errw := w.Close()
 	if err == nil {
 		if errw == nil {
-			path := c.Project + SEP + c.Project + strconv.Itoa(c.ProjectNum) + "_" + c.Name + ".zip"
+			path := c.Project + SEP + c.Project + "_" + c.Name + "_" + c.Token + ".zip"
 			err = WriteFile(path, buf)
 		} else {
 			err = errw

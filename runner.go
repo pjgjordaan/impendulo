@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"github.com/disco-volante/intlola/db"
 	"github.com/disco-volante/intlola/server"
 	"github.com/disco-volante/intlola/utils"
 )
@@ -19,7 +18,7 @@ func init() {
 func main() {
 	flag.Parse()
 	if users != ""{
-		err := addUsers(users)
+		err := utils.AddUsers(users)
 		if err != nil{
 			utils.Log("DB error ", err)
 		}
@@ -32,11 +31,4 @@ func runServer(addr, port string) {
 	server.Run(addr, port)
 }
 
-func addUsers(fname string) error {
-	users, err := utils.ReadUsers(fname)
-	if err == nil {
-		err = db.AddUsers(users...)
-	}
-	return err
-}
 

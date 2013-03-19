@@ -11,7 +11,6 @@ import (
 	"github.com/disco-volante/intlola/utils"
 	"io"
 	"net"
-	"strconv"
 )
 
 var tokens map[string]*client.Client
@@ -20,13 +19,21 @@ const STRLEN = 80
 
 func init() {
 	tokens = make(map[string]*client.Client)
+	used, err := db.GetTokens()
+	if handleError(nil, "", "Error retrieving submission tokens ", err){
+		dummy := client.NewClient("", "", "", "")
+		for _, tok := range used{
+			tokens[tok] = dummy
+		}
+	}
+	
 }
 
 func getPath(fname string, c *client.Client) (file string, err error) {
 	if c.Mode == client.ONSAVE {
 		file = c.Project + utils.SEP + c.Name + utils.SEP + fname
 	} else if c.Mode == client.ONSTOP {
-		file = c.Project + utils.SEP + c.Name + "_" + c.Project + strconv.Itoa(c.ProjectNum) + ".zip"
+		file = c.Project + utils.SEP + c.Project+ "_" + c.Name + "_" + c.Token + ".zip"
 	} else {
 		err = errors.New("Unknown send mode: " + c.Mode)
 	}
@@ -44,11 +51,7 @@ func FileReader(conn net.Conn, token string, fname string) {
 	if err == io.EOF {
 		err = nil
 		c := tokens[token]
-		file, err := getPath(fname, c)
-		if err == nil {
-			err = utils.WriteFile(file, buffer)
-			err = db.AddFile(c, fname, buffer.Bytes())
-		}
+		err = db.AddFile(c, fname, buffer.Bytes())
 	}
 	if handleError(conn, token, "File read error - ",  err) {
 		conn.Close()
@@ -90,15 +93,8 @@ func handleLogin(jobj map[string]interface{}, conn net.Conn) {
 	project, errp := utils.JSONValue(jobj, "PROJECT")
 	mode, errm := utils.JSONValue(jobj, "MODE")
 	if handleError(conn, "","Login JSON Error - ", erru, errw, errp, errm) {
-		num, err := getProjectNum(uname, project)
-		if err == nil {
-			c := client.NewClient(uname, project, num, mode)
-			token := getToken(c)
-			err := utils.MkDir(c.Project + utils.SEP + c.Name)
-			if err == nil {
-				_, err = conn.Write([]byte("TOKEN:" + token))
-			}
-		}
+		token := createClient(uname, project, mode)
+		_, err := conn.Write([]byte("TOKEN:" + token))
 		handleError(conn, "","Login IO Error - username: "+uname+" password: "+pword, err)
 	}
 }
@@ -120,11 +116,6 @@ func handleZip(jobj map[string]interface{}, conn net.Conn) {
 	token, err := utils.JSONValue(jobj, "TOKEN")
 	if err == nil {
 		if tokens[token] != nil {
-			c := tokens[token]
-			err = utils.ZipProject(c)
-			if err == nil {
-				err = utils.Remove(c.Project + utils.SEP + c.Name)
-			}
 			conn.Write([]byte("ACCEPT"))
 			if err == nil {
 				conn.Close()
@@ -162,20 +153,14 @@ func handleError(conn net.Conn, token string, msg string, errs ...error) bool {
 		return true
 	}
 	utils.Log(token, errMsg)
-	conn.Write([]byte(errMsg))
-	conn.Close()
+	if conn != nil{
+		conn.Write([]byte(errMsg))
+		conn.Close()
+	}
 	if token != "" {
-		c := tokens[token]
-		if c != nil{
-			utils.Remove(c.Project + utils.SEP + c.Name)
-		}
 		delete(tokens, token)
 	}
 	return false
-}
-
-func getProjectNum(uname, project string) (int, error) {
-	return db.CreateProject(uname, project)
 }
 
 func genToken() string {
@@ -187,11 +172,12 @@ func genToken() string {
 	return string(d)
 }
 
-func getToken(c *client.Client) string {
+func createClient(uname, project, mode string) (string) {
 	tok := genToken()
 	for tokens[tok] != nil {
 		tok = genToken()
 	}
+	c := client.NewClient(uname, project, tok, mode)
 	tokens[tok] = c
 	return tok
 }
@@ -200,7 +186,7 @@ func Run(address string, port string) {
 	service := address + ":" + port
 	tcpAddr, err := net.ResolveTCPAddr("tcp", service)
 	if err != nil {
-		utils.Log("Error: Could not resolve address", err)
+		utils.Log("Error: Could not resolve address ", err)
 	} else {
 		netListen, err := net.Listen(tcpAddr.Network(), tcpAddr.String())
 		if err != nil {
