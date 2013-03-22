@@ -20,15 +20,14 @@ const SEP = string(os.PathSeparator)
 const DPERM = 0777
 const FPERM = 0666
 const DEBUG = true
-const DB_PATH = "db"
 const LOG_DIR = "logs"
-var BASE_DIR = "Data"
+var BASE_DIR = ".intlola"
 var logger *log.Logger
 
 func init() {
 	cur, err := user.Current()
 	if err == nil {
-		temp := cur.HomeDir + SEP + ".intlola" + SEP + BASE_DIR
+		temp := cur.HomeDir + SEP + BASE_DIR
 		BASE_DIR = ""
 		MkDir(temp)
 		BASE_DIR = temp
@@ -43,7 +42,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	logger = log.New(fo, "Inlola log", log.LstdFlags)
+	logger = log.New(fo, "Inlola server log >> ", log.LstdFlags)
 }
 
 func WriteFile(file string, data *bytes.Buffer) error {

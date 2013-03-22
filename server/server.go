@@ -19,7 +19,7 @@ const STRLEN = 80
 
 func init() {
 	tokens = make(map[string]*client.Client)
-	used, err := db.GetTokens()
+	used, err := db.GetAll("token")
 	if handleError(nil, "", "Error retrieving submission tokens ", err){
 		dummy := client.NewClient("", "", "", "")
 		for _, tok := range used{
@@ -81,11 +81,14 @@ func handleRequest(data []byte, conn net.Conn) {
 				handleSend(jobj, conn)
 			} else if val == "LOGOUT" {
 				handleLogout(jobj, conn)
+			} else {
+				err = errors.New("Unknown request: "+val)
 			}
 		}
 	}
 	handleError(conn, "", "Request error - ", err)
 }
+
 
 func handleLogin(jobj map[string]interface{}, conn net.Conn) {
 	uname, erru := utils.JSONValue(jobj, "USERNAME")
@@ -94,7 +97,10 @@ func handleLogin(jobj map[string]interface{}, conn net.Conn) {
 	mode, errm := utils.JSONValue(jobj, "MODE")
 	if handleError(conn, "","Login JSON Error - ", erru, errw, errp, errm) {
 		token := createClient(uname, project, mode)
-		_, err := conn.Write([]byte("TOKEN:" + token))
+		err := db.CreateProject(tokens[token])
+		if err == nil{
+			_, err = conn.Write([]byte("TOKEN:" + token))
+		}
 		handleError(conn, "","Login IO Error - username: "+uname+" password: "+pword, err)
 	}
 }
