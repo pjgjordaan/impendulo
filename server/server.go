@@ -17,6 +17,9 @@ var tokens map[string]*client.Client
 
 const STRLEN = 80
 
+/*
+Initialises the tokens available for use.
+*/
 func init() {
 	tokens = make(map[string]*client.Client)
 	used, err := db.GetAll("token")
@@ -29,6 +32,9 @@ func init() {
 	
 }
 
+/*
+Retrieves the path to save files on.
+*/
 func getPath(fname string, c *client.Client) (file string, err error) {
 	if c.Mode == client.ONSAVE {
 		file = c.Project + utils.SEP + c.Name + utils.SEP + fname
@@ -40,6 +46,9 @@ func getPath(fname string, c *client.Client) (file string, err error) {
 	return file, err
 }
 
+/*
+Reads files from a client's TCP connection and stores them.
+*/
 func FileReader(conn net.Conn, token string, fname string) {
 	buffer := new(bytes.Buffer)
 	p := make([]byte, 2048)
@@ -58,38 +67,43 @@ func FileReader(conn net.Conn, token string, fname string) {
 	}
 }
 
+/*
+Manages an incoming connection request.
+*/
 func ConnHandler(conn net.Conn) {
 	buffer := make([]byte, 1024)
 	bytesRead, err := conn.Read(buffer)
 	if handleError(conn, "", "Connection error - ", err) {
-		handleRequest(buffer[:bytesRead], conn)
-	}
-}
-
-func handleRequest(data []byte, conn net.Conn) {
-	var holder interface{}
-	err := json.Unmarshal(data, &holder)
-	if err == nil {
-		jobj := holder.(map[string]interface{})
-		val, err := utils.JSONValue(jobj, "TYPE")
+		buffer = buffer[:bytesRead]
+		var holder interface{}
+		err := json.Unmarshal(buffer, &holder)
 		if err == nil {
-			if val == "LOGIN" {
-				handleLogin(jobj, conn)
-			} else if val == "ZIP" {
-				handleZip(jobj, conn)
-			} else if val == "SEND" {
-				handleSend(jobj, conn)
-			} else if val == "LOGOUT" {
-				handleLogout(jobj, conn)
-			} else {
-				err = errors.New("Unknown request: "+val)
+			jobj := holder.(map[string]interface{})
+			val, err := utils.JSONValue(jobj, "TYPE")
+			if err == nil {
+				if val == "LOGIN" {
+					handleLogin(jobj, conn)
+				} else if val == "ZIP" {
+					handleZip(jobj, conn)
+				} else if val == "SEND" {
+					handleSend(jobj, conn)
+				} else if val == "LOGOUT" {
+					handleLogout(jobj, conn)
+				} else if val == "TESTS" { 
+					handleTests(jobj, conn)
+				} else {
+					err = errors.New("Unknown request: "+val)
+				}
 			}
 		}
+		handleError(conn, "", "Request error - ", err)
 	}
-	handleError(conn, "", "Request error - ", err)
 }
 
-
+/*
+Determines whether a login request is valid and delivers this 
+result to the client 
+*/
 func handleLogin(jobj map[string]interface{}, conn net.Conn) {
 	uname, erru := utils.JSONValue(jobj, "USERNAME")
 	pword, errw := utils.JSONValue(jobj, "PASSWORD")
@@ -105,6 +119,33 @@ func handleLogin(jobj map[string]interface{}, conn net.Conn) {
 	}
 }
 
+/*
+Receives new project tests and stores them in the database.
+*/
+func handleTests(jobj map[string]interface{}, conn net.Conn) {
+	project, err := utils.JSONValue(jobj, "PROJECT")
+	if handleError(conn, "","Test send JSON Error - ", err) {
+		conn.Write([]byte("ACCEPT"))
+		buffer := new(bytes.Buffer)
+		p := make([]byte, 2048)
+		bytesRead, err := conn.Read(p)
+		for err == nil {
+			buffer.Write(p[:bytesRead])
+			bytesRead, err = conn.Read(p)
+		}
+		if err == io.EOF {
+			err = nil
+			err = db.AddTests(project, buffer.Bytes())
+		}
+		if handleError(conn, "", "File read error - ",  err) {
+			conn.Close()
+		}
+	}
+}
+
+/*
+Determines whether a file send request is valid and reads a file if it is.
+*/
 func handleSend(jobj map[string]interface{}, conn net.Conn) {
 	token, errt := utils.JSONValue(jobj, "TOKEN")
 	fname, errf := utils.JSONValue(jobj, "FILENAME")
@@ -118,6 +159,9 @@ func handleSend(jobj map[string]interface{}, conn net.Conn) {
 	}
 }
 
+/*
+Zips a user's project submission.
+*/
 func handleZip(jobj map[string]interface{}, conn net.Conn) {
 	token, err := utils.JSONValue(jobj, "TOKEN")
 	if err == nil {
@@ -133,6 +177,9 @@ func handleZip(jobj map[string]interface{}, conn net.Conn) {
 	handleError(conn, "", "Zip error - ",  err)
 }
 
+/*
+Ends a user's session.
+*/
 func handleLogout(jobj map[string]interface{}, conn net.Conn) {
 	token, err := utils.JSONValue(jobj, "TOKEN")
 	if err == nil {
@@ -147,6 +194,10 @@ func handleLogout(jobj map[string]interface{}, conn net.Conn) {
 	handleError(conn, "", "Logout error - ", err)
 }
 
+/*
+Handles an error by logging it as well as reporting it to the connected
+user if possible.
+*/
 func handleError(conn net.Conn, token string, msg string, errs ...error) bool {
 	errMsg := "Error encountered: " + msg
 	size := len(errMsg)
@@ -169,25 +220,36 @@ func handleError(conn net.Conn, token string, msg string, errs ...error) bool {
 	return false
 }
 
-func genToken() string {
-	b := make([]byte, STRLEN)
-	rand.Read(b)
-	en := base64.StdEncoding
-	d := make([]byte, en.EncodedLen(len(b)))
-	en.Encode(d, b)
-	return string(d)
+/*
+Generates a new token.
+*/
+func genToken() (tok string){
+	for{
+		b := make([]byte, STRLEN)
+		rand.Read(b)
+		en := base64.StdEncoding
+		d := make([]byte, en.EncodedLen(len(b)))
+		en.Encode(d, b)
+		tok = string(d)
+		if tokens[tok] == nil{
+			break
+		}
+	}
+	return tok
 }
 
+/*
+Assigns a token to a newly connected  client.
+*/
 func createClient(uname, project, mode string) (string) {
 	tok := genToken()
-	for tokens[tok] != nil {
-		tok = genToken()
-	}
 	c := client.NewClient(uname, project, tok, mode)
 	tokens[tok] = c
 	return tok
 }
-
+/*
+Listens for new connections and creates a new goroutine for each connection.
+*/
 func Run(address string, port string) {
 	service := address + ":" + port
 	tcpAddr, err := net.ResolveTCPAddr("tcp", service)

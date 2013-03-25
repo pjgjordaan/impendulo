@@ -10,7 +10,10 @@ const DB = "impendulo"
 const USERS = "users"
 const PROJECTS = "projects"
 const ADDRESS = "localhost"
-
+/*
+Finds a user in the database. 
+This is used to authenticate a login attempt.
+*/
 func ReadUser(uname string) (user *UserData, err error) {
 	session, err := mgo.Dial(ADDRESS)
 	defer session.Close()
@@ -23,14 +26,22 @@ func ReadUser(uname string) (user *UserData, err error) {
 	return user, err
 }
 
-
+/*
+The struct used to store user information in the database.
+*/
 type UserData struct{
 	Name string "_id,omitempty"
 	Password string "password"
 }
+
+
 func NewUser(uname, pword string) (*UserData){
 	return &UserData{uname, pword}
 }
+
+/*
+Adds or updates multiple users.
+*/
 func AddUsers(users...  *UserData)(error){
 	session, err := mgo.Dial(ADDRESS)
 	defer session.Close()
@@ -48,6 +59,11 @@ func AddUsers(users...  *UserData)(error){
 	return err
 }
 
+
+/*
+A struct used to store information about individual project submissions
+in the database.
+*/
 type ProjectData struct{
 	Name string "name"
 	User string "user"
@@ -56,12 +72,18 @@ type ProjectData struct{
 	files []FileData "files"
 }
 
+/*
+A struct used to store individual files in the database.
+*/
 type FileData struct{
 	Name string "name"
 	Data [] byte "data"
 	Date int64 "date"
 }
 
+/*
+Creates a new project submission for a given user.
+*/
 func CreateProject(c *client.Client)(error){
 	session, err := mgo.Dial(ADDRESS)
 	defer session.Close()
@@ -76,7 +98,9 @@ func CreateProject(c *client.Client)(error){
 	return err
 }
 
-
+/*
+Adds a new file to a user's project submission.
+*/
 func AddFile(c *client.Client, fname string, data []byte)(error){
 	session, err := mgo.Dial(ADDRESS)
 	defer session.Close()
@@ -92,6 +116,26 @@ func AddFile(c *client.Client, fname string, data []byte)(error){
 	return err
 }
 
+/*
+Adds a new file to a user's project submission.
+*/
+func AddTests(project string, data []byte)(error){
+	session, err := mgo.Dial(ADDRESS)
+	defer session.Close()
+	if err == nil{
+		fcol := session.DB(DB).C(PROJECTS)
+		test := bson.M{"project" : project, "tests": data}
+		_,err = fcol.Upsert(bson.M{"project" : project}, test)
+	} else{
+		panic(err)
+	}
+	return err
+}
+
+
+/*
+Retrieves all distinct values for a given field.
+*/
 func GetAll(field string)(values []string, err error){
 	session, err := mgo.Dial(ADDRESS)
 	defer session.Close()
