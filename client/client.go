@@ -7,11 +7,12 @@ type Client struct {
 	Name       string
 	Project    string
 	Token string
-	Mode       string
+	Format       string
+	SubNum int
 	
 }
 
 func NewClient(name, project, token, mode string) *Client {
-	return &Client{name, project, token, mode}
+	return &Client{name, project, token, mode, -1}
 }
 

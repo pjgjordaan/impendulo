@@ -5,6 +5,7 @@ import (
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 	"time"
+	"fmt"
 )
 const DB = "impendulo"
 const USERS = "users"
@@ -64,12 +65,13 @@ func AddUsers(users...  *UserData)(error){
 A struct used to store information about individual project submissions
 in the database.
 */
-type ProjectData struct{
+type Submission struct{
 	Name string "name"
 	User string "user"
 	Date int64 "date"
-	Token string "token"
-	files []FileData "files"
+	Subnum int "number"
+	Format string "format"
+	Files []FileData "files"
 }
 
 /*
@@ -84,18 +86,25 @@ type FileData struct{
 /*
 Creates a new project submission for a given user.
 */
-func CreateProject(c *client.Client)(error){
+func CreateSubmission(c *client.Client)(num int, err error){
 	session, err := mgo.Dial(ADDRESS)
 	defer session.Close()
 	if err == nil{
 		pcol := session.DB(DB).C(PROJECTS)
-		date := time.Now().UnixNano()
-		holder := &ProjectData{c.Project, c.Name, date,c.Token, make([]FileData, 0, 300)}
-		err = pcol.Insert(holder)	
+		matcher := bson.M{"name" : c.Project, "user" : c.Name}
+		num, err = pcol.Find(matcher).Count()
+		if err == nil{
+			date := time.Now().UnixNano()
+			sub := &Submission{c.Project, c.Name, date, num, c.Format,  make([]FileData, 0, 300)}
+			err = pcol.Insert(sub)
+			var s *Submission
+			pcol.Find(matcher).One(&s)
+			fmt.Println(s, err)
+		}
 	} else{
 		panic(err)
 	}
-	return err
+	return num, err
 }
 
 /*
@@ -108,7 +117,7 @@ func AddFile(c *client.Client, fname string, data []byte)(error){
 		fcol := session.DB(DB).C(PROJECTS)
 		date := time.Now().UnixNano()
 		file := &FileData{fname, data, date}
-		matcher := bson.M{"name" : c.Project, "user" : c.Name, "token" : c.Token}
+		matcher := bson.M{"name" : c.Project, "user" : c.Name, "number" :c.SubNum}
 		err = fcol.Update(matcher, bson.M{"$push": bson.M{ "files": file}})
 	} else{
 		panic(err)

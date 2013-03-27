@@ -21,30 +21,9 @@ const STRLEN = 80
 Initialises the tokens available for use.
 */
 func init() {
-	tokens = make(map[string]*client.Client)
-	used, err := db.GetAll("token")
-	if handleError(nil, "", "Error retrieving submission tokens ", err){
-		dummy := client.NewClient("", "", "", "")
-		for _, tok := range used{
-			tokens[tok] = dummy
-		}
-	}
-	
+	tokens = make(map[string]*client.Client)	
 }
 
-/*
-Retrieves the path to save files on.
-*/
-func getPath(fname string, c *client.Client) (file string, err error) {
-	if c.Mode == client.ONSAVE {
-		file = c.Project + utils.SEP + c.Name + utils.SEP + fname
-	} else if c.Mode == client.ONSTOP {
-		file = c.Project + utils.SEP + c.Project+ "_" + c.Name + "_" + c.Token + ".zip"
-	} else {
-		err = errors.New("Unknown send mode: " + c.Mode)
-	}
-	return file, err
-}
 
 /*
 Reads files from a client's TCP connection and stores them.
@@ -83,8 +62,6 @@ func ConnHandler(conn net.Conn) {
 			if err == nil {
 				if val == "LOGIN" {
 					handleLogin(jobj, conn)
-				} else if val == "ZIP" {
-					handleZip(jobj, conn)
 				} else if val == "SEND" {
 					handleSend(jobj, conn)
 				} else if val == "LOGOUT" {
@@ -108,12 +85,16 @@ func handleLogin(jobj map[string]interface{}, conn net.Conn) {
 	uname, erru := utils.JSONValue(jobj, "USERNAME")
 	pword, errw := utils.JSONValue(jobj, "PASSWORD")
 	project, errp := utils.JSONValue(jobj, "PROJECT")
-	mode, errm := utils.JSONValue(jobj, "MODE")
-	if handleError(conn, "","Login JSON Error - ", erru, errw, errp, errm) {
-		token := createClient(uname, project, mode)
-		err := db.CreateProject(tokens[token])
+	format, errf := utils.JSONValue(jobj, "FORMAT")
+	if handleError(conn, "","Login JSON Error - ", erru, errw, errp, errf) {
+		token, err := createClient(uname, pword, project, format)
 		if err == nil{
-			_, err = conn.Write([]byte("TOKEN:" + token))
+			num, err := db.CreateSubmission(tokens[token])
+			tokens[token].SubNum = num
+			if err == nil{
+				_, err = conn.Write([]byte("TOKEN:" + token))
+				utils.Log("successfully logged in: ", uname)
+			}
 		}
 		handleError(conn, "","Login IO Error - username: "+uname+" password: "+pword, err)
 	}
@@ -157,24 +138,6 @@ func handleSend(jobj map[string]interface{}, conn net.Conn) {
 			handleError(conn, "", "Sending Validation error - ", errors.New("Invalid token"))
 		}
 	}
-}
-
-/*
-Zips a user's project submission.
-*/
-func handleZip(jobj map[string]interface{}, conn net.Conn) {
-	token, err := utils.JSONValue(jobj, "TOKEN")
-	if err == nil {
-		if tokens[token] != nil {
-			conn.Write([]byte("ACCEPT"))
-			if err == nil {
-				conn.Close()
-			}
-		} else {
-			err = errors.New("Invalid token")
-		}
-	}
-	handleError(conn, "", "Zip error - ",  err)
 }
 
 /*
@@ -239,14 +202,22 @@ func genToken() (tok string){
 }
 
 /*
-Assigns a token to a newly connected  client.
+Authenticates and assigns a token to a newly connected  client.
 */
-func createClient(uname, project, mode string) (string) {
-	tok := genToken()
-	c := client.NewClient(uname, project, tok, mode)
-	tokens[tok] = c
-	return tok
+func createClient(uname, passwd,  project, mode string) (tok string, err error) {
+	user, err := db.ReadUser(uname)
+	if err == nil{
+		if user.Password == passwd{
+			tok = genToken()
+			c := client.NewClient(uname, project, tok, mode)
+			tokens[tok] = c
+		}else{
+			err = errors.New("Invalid username or password")
+		}
+	}
+	return tok, err
 }
+
 /*
 Listens for new connections and creates a new goroutine for each connection.
 */
