@@ -1,11 +1,11 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"github.com/disco-volante/intlola/server"
 	"github.com/disco-volante/intlola/utils"
 	"log"
-	"errors"
 )
 
 var port, address, users, mode string
@@ -19,14 +19,14 @@ func init() {
 
 func main() {
 	flag.Parse()
-	if mode == "u"{
+	if mode == "u" {
 		err := utils.AddUsers(users)
-		if err != nil{
+		if err != nil {
 			utils.Log("DB error ", err)
 		}
-	} else if (mode == "s"){
+	} else if mode == "s" {
 		runServer(address, port)
-	} else{
+	} else {
 		log.Fatal(errors.New("Unknown running mode: "), mode)
 	}
 }
@@ -35,5 +35,3 @@ func runServer(addr, port string) {
 	utils.Log("Starting server at: ", address, " on port ", port)
 	server.Run(addr, port)
 }
-
-

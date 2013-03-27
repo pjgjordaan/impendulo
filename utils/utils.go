@@ -2,6 +2,10 @@ package utils
 
 import (
 	"bytes"
+	"crypto/rand"
+	"crypto/sha1"
+	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"github.com/disco-volante/intlola/db"
 	"io"
@@ -12,10 +16,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"crypto/sha1"
-	"crypto/rand"
-	"encoding/base64"
-	"encoding/hex"
 )
 
 const SEP = string(os.PathSeparator)
@@ -23,6 +23,7 @@ const DPERM = 0777
 const FPERM = 0666
 const DEBUG = true
 const LOG_DIR = "logs"
+
 var BASE_DIR = ".intlola"
 var logger *log.Logger
 
@@ -38,9 +39,9 @@ func init() {
 	}
 	now := time.Now()
 	y, m, d := now.Date()
-	dir := LOG_DIR+SEP+strconv.Itoa(y)+SEP+m.String()+SEP+strconv.Itoa(d)
+	dir := LOG_DIR + SEP + strconv.Itoa(y) + SEP + m.String() + SEP + strconv.Itoa(d)
 	MkDir(dir)
-	fo, err := os.Create(BASE_DIR + SEP + dir + SEP + time.Now().String()+".log")
+	fo, err := os.Create(BASE_DIR + SEP + dir + SEP + time.Now().String() + ".log")
 	if err != nil {
 		panic(err)
 	}
@@ -63,13 +64,12 @@ func AddUsers(fname string) error {
 	return err
 }
 
-
 func ReadUsers(fname string) (users []*db.UserData, err error) {
 	data, err := ioutil.ReadFile(fname)
 	if err == nil {
 		buff := bytes.NewBuffer(data)
 		line, err := buff.ReadString(byte('\n'))
-		users = make([] *db.UserData, 100, 1000)
+		users = make([]*db.UserData, 100, 1000)
 		i := 0
 		for err == nil {
 			vals := strings.Split(line, ":")
@@ -77,17 +77,17 @@ func ReadUsers(fname string) (users []*db.UserData, err error) {
 			pword := strings.TrimSpace(vals[1])
 			hash, salt := Hash(pword)
 			data := db.NewUser(user, hash, salt)
-			if i == len(users){
+			if i == len(users) {
 				users = append(users, data)
-			}else{
+			} else {
 				users[i] = data
 			}
-			i ++
+			i++
 			line, err = buff.ReadString(byte('\n'))
 		}
 		if err == io.EOF {
 			err = nil
-			if i < len(users){
+			if i < len(users) {
 				users = users[:i]
 			}
 		}
@@ -130,23 +130,23 @@ func JSONValue(jobj map[string]interface{}, key string) (val string, err error) 
 	return val, err
 }
 
-func Validate(hashed, salt, pword string)(bool){
-	computed := computeHash(pword, salt) 
+func Validate(hashed, salt, pword string) bool {
+	computed := computeHash(pword, salt)
 	return hashed == computed
 }
 
-func Hash(pword string) (hash, salt string){
+func Hash(pword string) (hash, salt string) {
 	salt = GenString(32)
 	return computeHash(pword, salt), salt
 }
 
-func computeHash(pword, salt string) (string){
+func computeHash(pword, salt string) string {
 	h := sha1.New()
 	io.WriteString(h, pword+salt)
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func GenString(size int) (string){
+func GenString(size int) string {
 	b := make([]byte, size)
 	rand.Read(b)
 	en := base64.StdEncoding

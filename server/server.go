@@ -17,14 +17,13 @@ var tokens map[string]*client.Client
 Initialises the tokens available for use.
 */
 func init() {
-	tokens = make(map[string]*client.Client)	
+	tokens = make(map[string]*client.Client)
 }
-
 
 /*
 Reads files from a client's TCP connection and stores them.
 */
-func fileReader(conn net.Conn, token string, fname string) (err error){
+func fileReader(conn net.Conn, token string, fname string) (err error) {
 	buffer := new(bytes.Buffer)
 	p := make([]byte, 2048)
 	bytesRead, err := conn.Read(p)
@@ -33,11 +32,11 @@ func fileReader(conn net.Conn, token string, fname string) (err error){
 		bytesRead, err = conn.Read(p)
 	}
 	if err == io.EOF {
-		err = nil		 
-		if c,ok := tokens[token]; ok{
+		err = nil
+		if c, ok := tokens[token]; ok {
 			err = db.AddFile(c, fname, buffer.Bytes())
-		} else{
-			err = errors.New("Invalid token: "+token)
+		} else {
+			err = errors.New("Invalid token: " + token)
 		}
 	}
 	return err
@@ -63,10 +62,10 @@ func connHandler(conn net.Conn) {
 					err = handleSend(jobj, conn)
 				} else if val == "LOGOUT" {
 					err = handleLogout(jobj, conn)
-				} else if val == "TESTS" { 
+				} else if val == "TESTS" {
 					err = handleTests(jobj, conn)
 				} else {
-					err = errors.New("Unknown request: "+val)
+					err = errors.New("Unknown request: " + val)
 				}
 			}
 		}
@@ -80,10 +79,10 @@ result to the client
 */
 func handleLogin(jobj map[string]interface{}, conn net.Conn) (err error) {
 	c, err := createClient(jobj)
-	if err == nil{
+	if err == nil {
 		num, err := db.CreateSubmission(c)
 		c.SubNum = num
-		if err == nil{
+		if err == nil {
 			_, err = conn.Write([]byte("TOKEN:" + c.Token))
 		}
 	}
@@ -93,7 +92,7 @@ func handleLogin(jobj map[string]interface{}, conn net.Conn) (err error) {
 /*
 Receives new project tests and stores them in the database.
 */
-func handleTests(jobj map[string]interface{}, conn net.Conn)(err error) {
+func handleTests(jobj map[string]interface{}, conn net.Conn) (err error) {
 	project, err := utils.JSONValue(jobj, "PROJECT")
 	if err == nil {
 		conn.Write([]byte("ACCEPT"))
@@ -117,13 +116,13 @@ Determines whether a file send request is valid and reads a file if it is.
 */
 func handleSend(jobj map[string]interface{}, conn net.Conn) (err error) {
 	token, err := utils.JSONValue(jobj, "TOKEN")
-	if err == nil{
+	if err == nil {
 		fname, err := utils.JSONValue(jobj, "FILENAME")
 		if err == nil {
 			if tokens[token] != nil {
 				conn.Write([]byte("ACCEPT"))
 				err = fileReader(conn, token, fname)
-			} else{
+			} else {
 				err = errors.New("Invalid token")
 			}
 		}
@@ -134,7 +133,7 @@ func handleSend(jobj map[string]interface{}, conn net.Conn) (err error) {
 /*
 Ends a user's session.
 */
-func handleLogout(jobj map[string]interface{}, conn net.Conn)(err error) {
+func handleLogout(jobj map[string]interface{}, conn net.Conn) (err error) {
 	token, err := utils.JSONValue(jobj, "TOKEN")
 	if err == nil {
 		if tokens[token] != nil {
@@ -153,36 +152,33 @@ Handles an error by logging it as well as reporting it to the connected
 user if possible.
 */
 func endSession(conn net.Conn, err error) {
-	if err != nil{
+	if err != nil {
 		errMsg := "Error encountered: " + err.Error()
 		utils.Log(errMsg)
-		if conn != nil{
+		if conn != nil {
 			conn.Write([]byte(errMsg))
 		}
 	}
-	if conn != nil{	
+	if conn != nil {
 		conn.Close()
 	}
 }
 
-
-
-
-func createClient(jobj map[string]interface{})(c *client.Client, err error){
+func createClient(jobj map[string]interface{}) (c *client.Client, err error) {
 	uname, err := utils.JSONValue(jobj, "USERNAME")
-	if err != nil{
+	if err != nil {
 		return c, err
 	}
 	pword, err := utils.JSONValue(jobj, "PASSWORD")
-	if err != nil{
+	if err != nil {
 		return c, err
 	}
 	project, err := utils.JSONValue(jobj, "PROJECT")
-	if err != nil{
+	if err != nil {
 		return c, err
 	}
 	format, err := utils.JSONValue(jobj, "FORMAT")
-	if err != nil{
+	if err != nil {
 		return c, err
 	}
 	c, err = setupClient(uname, pword, project, format)
@@ -192,34 +188,32 @@ func createClient(jobj map[string]interface{})(c *client.Client, err error){
 /*
 Authenticates and assigns a token to a newly connected  client.
 */
-func setupClient(uname, passwd,  project, format string) (c *client.Client, err error) {
+func setupClient(uname, passwd, project, format string) (c *client.Client, err error) {
 	user, err := db.ReadUser(uname)
-	if err == nil{
-		if utils.Validate(user.Password, user.Salt, passwd){
+	if err == nil {
+		if utils.Validate(user.Password, user.Salt, passwd) {
 			tok := genToken()
 			c = client.NewClient(uname, project, tok, format)
 			tokens[tok] = c
-		}else{
+		} else {
 			err = errors.New("Invalid username or password")
 		}
 	}
 	return c, err
 }
 
-
 /*
 Generates a new token.
 */
-func genToken() (tok string){
-	for{
+func genToken() (tok string) {
+	for {
 		tok = utils.GenString(32)
-		if tokens[tok] == nil{
+		if tokens[tok] == nil {
 			break
 		}
 	}
 	return tok
 }
-
 
 /*
 Listens for new connections and creates a new goroutine for each connection.
