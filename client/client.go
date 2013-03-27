@@ -12,7 +12,7 @@ type Client struct {
 	
 }
 
-func NewClient(name, project, token, mode string) *Client {
-	return &Client{name, project, token, mode, -1}
+func NewClient(name, project, token, format string) *Client {
+	return &Client{name, project, token, format, -1}
 }
 

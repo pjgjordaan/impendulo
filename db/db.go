@@ -5,7 +5,6 @@ import (
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 	"time"
-	"fmt"
 )
 const DB = "impendulo"
 const USERS = "users"
@@ -21,8 +20,6 @@ func ReadUser(uname string) (user *UserData, err error) {
 	if err == nil{
 		c := session.DB(DB).C(USERS)
 		err = c.FindId(uname).One(&user)
-	}else {
-		panic(err)
 	}
 	return user, err
 }
@@ -33,11 +30,12 @@ The struct used to store user information in the database.
 type UserData struct{
 	Name string "_id,omitempty"
 	Password string "password"
+	Salt string "salt"
 }
 
 
-func NewUser(uname, pword string) (*UserData){
-	return &UserData{uname, pword}
+func NewUser(uname, pword, salt string) (*UserData){
+	return &UserData{uname, pword, salt}
 }
 
 /*
@@ -54,8 +52,6 @@ func AddUsers(users...  *UserData)(error){
 				break
 			}
 		}		
-	}else {
-		panic(err)
 	}
 	return err
 }
@@ -97,13 +93,8 @@ func CreateSubmission(c *client.Client)(num int, err error){
 			date := time.Now().UnixNano()
 			sub := &Submission{c.Project, c.Name, date, num, c.Format,  make([]FileData, 0, 300)}
 			err = pcol.Insert(sub)
-			var s *Submission
-			pcol.Find(matcher).One(&s)
-			fmt.Println(s, err)
 		}
-	} else{
-		panic(err)
-	}
+	} 
 	return num, err
 }
 
@@ -119,24 +110,20 @@ func AddFile(c *client.Client, fname string, data []byte)(error){
 		file := &FileData{fname, data, date}
 		matcher := bson.M{"name" : c.Project, "user" : c.Name, "number" :c.SubNum}
 		err = fcol.Update(matcher, bson.M{"$push": bson.M{ "files": file}})
-	} else{
-		panic(err)
-	}
+	} 
 	return err
 }
 
 /*
 Adds a new file to a user's project submission.
 */
-func AddTests(project string, data []byte)(error){
+func AddTests(project string, data []byte)(err error){
 	session, err := mgo.Dial(ADDRESS)
 	defer session.Close()
 	if err == nil{
 		fcol := session.DB(DB).C(PROJECTS)
 		test := bson.M{"project" : project, "tests": data}
 		_,err = fcol.Upsert(bson.M{"project" : project}, test)
-	} else{
-		panic(err)
 	}
 	return err
 }
@@ -151,9 +138,7 @@ func GetAll(field string)(values []string, err error){
 	if err == nil{
 		fcol := session.DB(DB).C(PROJECTS)
 		err = fcol.Find(nil).Distinct(field, &values)
-	} else{
-		panic(err)
-	}
+	} 
 	return values, err
 }
 

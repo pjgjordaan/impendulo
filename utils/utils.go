@@ -1,10 +1,8 @@
 package utils
 
 import (
-	"archive/zip"
 	"bytes"
 	"errors"
-	"github.com/disco-volante/intlola/client"
 	"github.com/disco-volante/intlola/db"
 	"io"
 	"io/ioutil"
@@ -14,6 +12,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"crypto/sha1"
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/hex"
 )
 
 const SEP = string(os.PathSeparator)
@@ -73,7 +75,8 @@ func ReadUsers(fname string) (users []*db.UserData, err error) {
 			vals := strings.Split(line, ":")
 			user := strings.TrimSpace(vals[0])
 			pword := strings.TrimSpace(vals[1])
-			data := db.NewUser(user, pword)
+			hash, salt := Hash(pword)
+			data := db.NewUser(user, hash, salt)
 			if i == len(users){
 				users = append(users, data)
 			}else{
@@ -116,42 +119,6 @@ func Remove(path string) error {
 	return os.RemoveAll(BASE_DIR + SEP + path)
 }
 
-func ZipProject(c *client.Client) (err error) {
-	buf := new(bytes.Buffer)
-	w := zip.NewWriter(buf)
-	dir := c.Project + SEP + c.Name
-	finfos, err := ioutil.ReadDir(BASE_DIR + SEP + dir)
-	if err == nil {
-		for _, file := range finfos {
-			if !file.IsDir() {
-				f, err := w.Create(file.Name())
-				if err != nil {
-					break
-				}
-				contents, err := ReadFile(dir + SEP + file.Name())
-				if err != nil {
-					break
-				}
-				_, err = f.Write(contents)
-				if err != nil {
-					break
-				}
-			}
-		}
-
-	}
-	errw := w.Close()
-	if err == nil {
-		if errw == nil {
-			path := c.Project + SEP + c.Project + "_" + c.Name + "_" + c.Token + ".zip"
-			err = WriteFile(path, buf)
-		} else {
-			err = errw
-		}
-	}
-	return err
-}
-
 func JSONValue(jobj map[string]interface{}, key string) (val string, err error) {
 	ival, ok := jobj[key]
 	if ok {
@@ -161,4 +128,29 @@ func JSONValue(jobj map[string]interface{}, key string) (val string, err error) 
 		err = errors.New("Error retrieving JSON value for: " + key)
 	}
 	return val, err
+}
+
+func Validate(hashed, salt, pword string)(bool){
+	computed := computeHash(pword, salt) 
+	return hashed == computed
+}
+
+func Hash(pword string) (hash, salt string){
+	salt = GenString(32)
+	return computeHash(pword, salt), salt
+}
+
+func computeHash(pword, salt string) (string){
+	h := sha1.New()
+	io.WriteString(h, pword+salt)
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+func GenString(size int) (string){
+	b := make([]byte, size)
+	rand.Read(b)
+	en := base64.StdEncoding
+	d := make([]byte, en.EncodedLen(len(b)))
+	en.Encode(d, b)
+	return string(d)
 }
