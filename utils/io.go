@@ -2,10 +2,6 @@ package utils
 
 import (
 	"bytes"
-	"crypto/rand"
-	"crypto/sha1"
-	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"github.com/disco-volante/intlola/db"
 	"io"
@@ -23,7 +19,6 @@ const DPERM = 0777
 const FPERM = 0666
 const DEBUG = true
 const LOG_DIR = "logs"
-
 var BASE_DIR = ".intlola"
 var logger *log.Logger
 
@@ -130,27 +125,3 @@ func JSONValue(jobj map[string]interface{}, key string) (val string, err error) 
 	return val, err
 }
 
-func Validate(hashed, salt, pword string) bool {
-	computed := computeHash(pword, salt)
-	return hashed == computed
-}
-
-func Hash(pword string) (hash, salt string) {
-	salt = GenString(32)
-	return computeHash(pword, salt), salt
-}
-
-func computeHash(pword, salt string) string {
-	h := sha1.New()
-	io.WriteString(h, pword+salt)
-	return hex.EncodeToString(h.Sum(nil))
-}
-
-func GenString(size int) string {
-	b := make([]byte, size)
-	rand.Read(b)
-	en := base64.StdEncoding
-	d := make([]byte, en.EncodedLen(len(b)))
-	en.Encode(d, b)
-	return string(d)
-}

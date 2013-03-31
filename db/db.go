@@ -11,15 +11,25 @@ const DB = "impendulo"
 const USERS = "users"
 const PROJECTS = "projects"
 const ADDRESS = "localhost"
-
+var activeSession *mgo.Session
+ 
+func getSession () (s *mgo.Session, err error) {
+	if activeSession == nil {
+		activeSession, err = mgo.Dial(ADDRESS)
+	}
+	if err == nil{
+		s = activeSession.Clone()
+	}
+	return s, err
+}
 /*
 Finds a user in the database. 
 This is used to authenticate a login attempt.
 */
 func ReadUser(uname string) (user *UserData, err error) {
-	session, err := mgo.Dial(ADDRESS)
-	defer session.Close()
+	session, err := getSession()
 	if err == nil {
+		defer session.Close()
 		c := session.DB(DB).C(USERS)
 		err = c.FindId(uname).One(&user)
 	}
@@ -43,9 +53,9 @@ func NewUser(uname, pword, salt string) *UserData {
 Adds or updates multiple users.
 */
 func AddUsers(users ...*UserData) error {
-	session, err := mgo.Dial(ADDRESS)
-	defer session.Close()
+	session, err := getSession()
 	if err == nil {
+		defer session.Close()
 		c := session.DB(DB).C(USERS)
 		for _, user := range users {
 			_, err = c.UpsertId(user.Name, user)
@@ -83,9 +93,9 @@ type FileData struct {
 Creates a new project submission for a given user.
 */
 func CreateSubmission(c *client.Client) (num int, err error) {
-	session, err := mgo.Dial(ADDRESS)
-	defer session.Close()
+	session, err := getSession()
 	if err == nil {
+		defer session.Close()
 		pcol := session.DB(DB).C(PROJECTS)
 		matcher := bson.M{"name": c.Project, "user": c.Name}
 		num, err = pcol.Find(matcher).Count()
@@ -101,10 +111,10 @@ func CreateSubmission(c *client.Client) (num int, err error) {
 /*
 Adds a new file to a user's project submission.
 */
-func AddFile(c *client.Client, fname string, data []byte) error {
-	session, err := mgo.Dial(ADDRESS)
-	defer session.Close()
+func AddFile(c *client.Client, fname string, data []byte)(err error){
+	session, err := getSession()
 	if err == nil {
+		defer session.Close()
 		fcol := session.DB(DB).C(PROJECTS)
 		date := time.Now().UnixNano()
 		file := &FileData{fname, data, date}
@@ -118,9 +128,9 @@ func AddFile(c *client.Client, fname string, data []byte) error {
 Adds a new file to a user's project submission.
 */
 func AddTests(project string, data []byte) (err error) {
-	session, err := mgo.Dial(ADDRESS)
-	defer session.Close()
+	session, err := getSession()
 	if err == nil {
+		defer session.Close()
 		fcol := session.DB(DB).C(PROJECTS)
 		test := bson.M{"project": project, "tests": data}
 		_, err = fcol.Upsert(bson.M{"project": project}, test)
@@ -132,9 +142,9 @@ func AddTests(project string, data []byte) (err error) {
 Retrieves all distinct values for a given field.
 */
 func GetAll(field string) (values []string, err error) {
-	session, err := mgo.Dial(ADDRESS)
-	defer session.Close()
+	session, err := getSession()
 	if err == nil {
+		defer session.Close()
 		fcol := session.DB(DB).C(PROJECTS)
 		err = fcol.Find(nil).Distinct(field, &values)
 	}

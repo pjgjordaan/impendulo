@@ -9,16 +9,8 @@ import (
 	"github.com/disco-volante/intlola/utils"
 	"io"
 	"net"
+	"labix.org/v2/mgo/bson"
 )
-
-var tokens map[string]*client.Client
-
-/*
-Initialises the tokens available for use.
-*/
-func init() {
-	tokens = make(map[string]*client.Client)
-}
 
 /*
 Reads files from a client's TCP connection and stores them.
@@ -26,14 +18,22 @@ Reads files from a client's TCP connection and stores them.
 func fileReader(conn net.Conn, token string, fname string) (err error) {
 	buffer := new(bytes.Buffer)
 	p := make([]byte, 2048)
-	bytesRead, err := conn.Read(p)
-	for err == nil {
-		buffer.Write(p[:bytesRead])
-		bytesRead, err = conn.Read(p)
+	receiving := true
+	eof := []byte("EOF") 
+	for receiving {
+		bytesRead, err := conn.Read(p)
+		read := p[:bytesRead]
+		if bytes.HasSuffix(read, eof) || err != nil{
+			read = read[:len(read)-len(eof)]
+			receiving = false
+		} 
+		if err == nil || err == io.EOF{
+			buffer.Write(read)
+		}
 	}
-	if err == io.EOF {
+	if err == io.EOF || err == nil {
 		err = nil
-		if c, ok := tokens[token]; ok {
+		if c, ok := getClient(token); ok {
 			err = db.AddFile(c, fname, buffer.Bytes())
 		} else {
 			err = errors.New("Invalid token: " + token)
@@ -46,6 +46,7 @@ func fileReader(conn net.Conn, token string, fname string) (err error) {
 Manages an incoming connection request.
 */
 func connHandler(conn net.Conn) {
+	var msg string
 	buffer := make([]byte, 1024)
 	bytesRead, err := conn.Read(buffer)
 	if err == nil {
@@ -57,42 +58,42 @@ func connHandler(conn net.Conn) {
 			val, err := utils.JSONValue(jobj, "TYPE")
 			if err == nil {
 				if val == "LOGIN" {
-					err = handleLogin(jobj, conn)
+					msg, err = handleLogin(jobj)
 				} else if val == "SEND" {
-					err = handleSend(jobj, conn)
+					msg, err = handleSend(jobj, conn)
 				} else if val == "LOGOUT" {
-					err = handleLogout(jobj, conn)
+					msg, err = handleLogout(jobj)
 				} else if val == "TESTS" {
-					err = handleTests(jobj, conn)
+					msg, err = handleTests(jobj, conn)
 				} else {
 					err = errors.New("Unknown request: " + val)
 				}
 			}
 		}
 	}
-	endSession(conn, err)
+	endSession(conn, msg, err)
 }
 
 /*
 Determines whether a login request is valid and delivers this 
 result to the client 
 */
-func handleLogin(jobj map[string]interface{}, conn net.Conn) (err error) {
+func handleLogin(jobj map[string]interface{}) (msg string, err error) {
 	c, err := createClient(jobj)
 	if err == nil {
 		num, err := db.CreateSubmission(c)
 		c.SubNum = num
 		if err == nil {
-			_, err = conn.Write([]byte("TOKEN:" + c.Token))
+			msg = "TOKEN:" + c.Token
 		}
 	}
-	return err
+	return msg, err
 }
 
 /*
 Receives new project tests and stores them in the database.
 */
-func handleTests(jobj map[string]interface{}, conn net.Conn) (err error) {
+func handleTests(jobj map[string]interface{}, conn net.Conn) (msg string, err error) {
 	project, err := utils.JSONValue(jobj, "PROJECT")
 	if err == nil {
 		conn.Write([]byte("ACCEPT"))
@@ -104,62 +105,67 @@ func handleTests(jobj map[string]interface{}, conn net.Conn) (err error) {
 			bytesRead, err = conn.Read(p)
 		}
 		if err == io.EOF {
-			err = nil
 			err = db.AddTests(project, buffer.Bytes())
+			if err == nil{
+				msg = "Successfully received tests."
+			}
 		}
 	}
-	return err
+	return msg, err
 }
 
 /*
 Determines whether a file send request is valid and reads a file if it is.
 */
-func handleSend(jobj map[string]interface{}, conn net.Conn) (err error) {
+func handleSend(jobj map[string]interface{}, conn net.Conn) (msg string, err error) {
 	token, err := utils.JSONValue(jobj, "TOKEN")
 	if err == nil {
 		fname, err := utils.JSONValue(jobj, "FILENAME")
 		if err == nil {
-			if tokens[token] != nil {
+			c, ok := getClient(token)
+			if  ok{
 				conn.Write([]byte("ACCEPT"))
-				err = fileReader(conn, token, fname)
+				err = fileReader(conn, c, fname)
+				if err == nil{
+					msg = "Successfully received file."
+					fdata := bson.M{"project" : c.Project, "user" : c.Name, "number" : c.SubNum, "format" : c.Format, "file": fname}  
+					go utils.ProcessFile(fdata) 
+				}
 			} else {
 				err = errors.New("Invalid token")
 			}
 		}
 	}
-	return err
+	return msg, err
 }
 
 /*
 Ends a user's session.
 */
-func handleLogout(jobj map[string]interface{}, conn net.Conn) (err error) {
+func handleLogout(jobj map[string]interface{}) (msg string, err error) {
 	token, err := utils.JSONValue(jobj, "TOKEN")
 	if err == nil {
-		if tokens[token] != nil {
-			conn.Write([]byte("ACCEPT"))
-			conn.Close()
-			delete(tokens, token)
+		_, ok = getClient(token)
+		if ok {
+			msg = "ACCEPT"
 		} else {
 			err = errors.New("Invalid token")
 		}
 	}
-	return err
+	return msg, err
 }
 
 /*
 Handles an error by logging it as well as reporting it to the connected
 user if possible.
 */
-func endSession(conn net.Conn, err error) {
+func endSession(conn net.Conn, msg string, err error) {
 	if err != nil {
-		errMsg := "Error encountered: " + err.Error()
-		utils.Log(errMsg)
-		if conn != nil {
-			conn.Write([]byte(errMsg))
-		}
+		msg = "Error encountered: " + err.Error()
+		utils.Log(msg)
 	}
 	if conn != nil {
+		conn.Write([]byte(msg))
 		conn.Close()
 	}
 }
@@ -194,25 +200,12 @@ func setupClient(uname, passwd, project, format string) (c *client.Client, err e
 		if utils.Validate(user.Password, user.Salt, passwd) {
 			tok := genToken()
 			c = client.NewClient(uname, project, tok, format)
-			tokens[tok] = c
+			addClient(c)
 		} else {
 			err = errors.New("Invalid username or password")
 		}
 	}
 	return c, err
-}
-
-/*
-Generates a new token.
-*/
-func genToken() (tok string) {
-	for {
-		tok = utils.GenString(32)
-		if tokens[tok] == nil {
-			break
-		}
-	}
-	return tok
 }
 
 /*
@@ -229,6 +222,9 @@ func Run(address string, port string) {
 			utils.Log(err)
 		} else {
 			defer netListen.Close()
+			reads := make(chan *readOp)
+			writes := make(chan *writeOp)
+			go tokenHandler()
 			for {
 				conn, err := netListen.Accept()
 				if err != nil {
