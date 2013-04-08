@@ -12,45 +12,34 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"encoding/json"
 )
 
 const SEP = string(os.PathSeparator)
 const DPERM = 0777
 const FPERM = 0666
 const DEBUG = true
-const LOG_DIR = "logs"
-var BASE_DIR = ".intlola"
+const LOG_DIR = ".intlola"+SEP+"logs"
 var logger *log.Logger
 
 func init() {
 	cur, err := user.Current()
 	if err == nil {
-		temp := cur.HomeDir + SEP + BASE_DIR
-		BASE_DIR = ""
-		MkDir(temp)
-		BASE_DIR = temp
-	} else {
-		MkDir("")
+		y, m, d := time.Now().Date()
+		dir := cur.HomeDir + SEP + LOG_DIR + SEP + strconv.Itoa(y) + SEP + m.String() + SEP + strconv.Itoa(d)
+		err = os.MkdirAll(dir, DPERM)
+		if err == nil{
+			fo, err := os.Create(dir + SEP + time.Now().String() + ".log")
+			if err == nil{
+				logger = log.New(fo, "Inlola server log >> ", log.LstdFlags)
+	
+			}
+		}
 	}
-	now := time.Now()
-	y, m, d := now.Date()
-	dir := LOG_DIR + SEP + strconv.Itoa(y) + SEP + m.String() + SEP + strconv.Itoa(d)
-	MkDir(dir)
-	fo, err := os.Create(BASE_DIR + SEP + dir + SEP + time.Now().String() + ".log")
 	if err != nil {
 		panic(err)
 	}
-	logger = log.New(fo, "Inlola server log >> ", log.LstdFlags)
 }
-
-func WriteFile(file string, data *bytes.Buffer) error {
-	return ioutil.WriteFile(BASE_DIR+SEP+file, data.Bytes(), FPERM)
-}
-
-func ReadFile(fname string) ([]byte, error) {
-	return ioutil.ReadFile(BASE_DIR + SEP + fname)
-}
-
 func AddUsers(fname string) error {
 	users, err := ReadUsers(fname)
 	if err == nil {
@@ -96,24 +85,6 @@ func Log(v ...interface{}) {
 	}
 }
 
-func MkDir(dir string) (err error) {
-	if strings.Contains(dir, SEP) {
-		dirs := strings.Split(dir, SEP)
-		cur := BASE_DIR
-		for _, d := range dirs {
-			cur = cur + SEP + d
-			err = os.Mkdir(cur, DPERM)
-		}
-	} else {
-		err = os.Mkdir(BASE_DIR+SEP+dir, DPERM)
-	}
-	return err
-}
-
-func Remove(path string) error {
-	return os.RemoveAll(BASE_DIR + SEP + path)
-}
-
 func JSONValue(jobj map[string]interface{}, key string) (val string, err error) {
 	ival, ok := jobj[key]
 	if ok {
@@ -125,3 +96,37 @@ func JSONValue(jobj map[string]interface{}, key string) (val string, err error) 
 	return val, err
 }
 
+func ReadJSON(r io.Reader) (jobj map[string]interface{}, err error) {
+	buffer := make([]byte, 1024)
+	bytesRead, err := r.Read(buffer)
+	if err == nil {
+		buffer = buffer[:bytesRead]
+		var holder interface{}
+		err = json.Unmarshal(buffer, &holder)
+		if err == nil {
+			jobj = holder.(map[string]interface{})
+		}
+	}
+	return jobj, err
+}
+
+func ReadFile(r io.Reader, term []byte)(buffer *bytes.Buffer, err error){
+	buffer = new(bytes.Buffer)
+	p := make([]byte, 2048)
+	receiving := true
+	for receiving {
+		bytesRead, err := r.Read(p)
+		read := p[:bytesRead]
+		if bytes.HasSuffix(read, term) || err != nil{
+			read = read[:len(read)-len(term)]
+			receiving = false
+		} 
+		if err == nil || err == io.EOF{
+			buffer.Write(read)
+		}
+	}
+	if err == io.EOF{
+		err = nil
+	}
+	return buffer, err
+}

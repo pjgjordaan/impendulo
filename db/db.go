@@ -1,7 +1,6 @@
 package db
 
 import (
-	"github.com/disco-volante/intlola/client"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 	"time"
@@ -72,6 +71,7 @@ A struct used to store information about individual project submissions
 in the database.
 */
 type Submission struct {
+	Id bson.ObjectId "_id"
 	Name   string     "name"
 	User   string     "user"
 	Date   int64      "date"
@@ -84,6 +84,7 @@ type Submission struct {
 A struct used to store individual files in the database.
 */
 type FileData struct {
+	Id bson.ObjectId "_id"
 	Name string "name"
 	Data []byte "data"
 	Date int64  "date"
@@ -92,36 +93,38 @@ type FileData struct {
 /*
 Creates a new project submission for a given user.
 */
-func CreateSubmission(c *client.Client) (num int, err error) {
+func CreateSubmission(project, user, format string) (subId bson.ObjectId, err error) {
 	session, err := getSession()
 	if err == nil {
 		defer session.Close()
 		pcol := session.DB(DB).C(PROJECTS)
-		matcher := bson.M{"name": c.Project, "user": c.Name}
-		num, err = pcol.Find(matcher).Count()
+		matcher := bson.M{"name": project, "user": user}
+		num, err := pcol.Find(matcher).Count()
 		if err == nil {
 			date := time.Now().UnixNano()
-			sub := &Submission{c.Project, c.Name, date, num, c.Format, make([]FileData, 0, 300)}
+			subId = bson.NewObjectId()
+			sub := &Submission{subId, project, user, date, num, format, make([]FileData, 0, 300)}
 			err = pcol.Insert(sub)
 		}
 	}
-	return num, err
+	return subId, err
 }
 
 /*
 Adds a new file to a user's project submission.
 */
-func AddFile(c *client.Client, fname string, data []byte)(err error){
+func AddFile(subId bson.ObjectId, fname string, data []byte)(fileId bson.ObjectId, err error){
 	session, err := getSession()
 	if err == nil {
 		defer session.Close()
 		fcol := session.DB(DB).C(PROJECTS)
 		date := time.Now().UnixNano()
-		file := &FileData{fname, data, date}
-		matcher := bson.M{"name": c.Project, "user": c.Name, "number": c.SubNum}
+		fileId = bson.NewObjectId()
+		file := &FileData{fileId, fname, data, date}
+		matcher := bson.M{"_id": subId}
 		err = fcol.Update(matcher, bson.M{"$push": bson.M{"files": file}})
 	}
-	return err
+	return fileId, err
 }
 
 /*
