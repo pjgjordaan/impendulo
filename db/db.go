@@ -9,6 +9,7 @@ import (
 const DB = "impendulo"
 const USERS = "users"
 const PROJECTS = "projects"
+const FILES = "files"
 const ADDRESS = "localhost"
 var activeSession *mgo.Session
  
@@ -72,12 +73,11 @@ in the database.
 */
 type Submission struct {
 	Id bson.ObjectId "_id"
-	Name   string     "name"
+	Name   string     "project"
 	User   string     "user"
 	Date   int64      "date"
 	Subnum int        "number"
-	Format string     "format"
-	Files  []FileData "files"
+	Mode string     "mode"
 }
 
 /*
@@ -85,7 +85,9 @@ A struct used to store individual files in the database.
 */
 type FileData struct {
 	Id bson.ObjectId "_id"
+	SubId bson.ObjectId "subid"
 	Name string "name"
+	FileType string "type"
 	Data []byte "data"
 	Date int64  "date"
 }
@@ -93,7 +95,7 @@ type FileData struct {
 /*
 Creates a new project submission for a given user.
 */
-func CreateSubmission(project, user, format string) (subId bson.ObjectId, err error) {
+func CreateSubmission(project, user, mode string) (subId bson.ObjectId, err error) {
 	session, err := getSession()
 	if err == nil {
 		defer session.Close()
@@ -103,7 +105,7 @@ func CreateSubmission(project, user, format string) (subId bson.ObjectId, err er
 		if err == nil {
 			date := time.Now().UnixNano()
 			subId = bson.NewObjectId()
-			sub := &Submission{subId, project, user, date, num, format, make([]FileData, 0, 300)}
+			sub := &Submission{subId, project, user, date, num, mode}
 			err = pcol.Insert(sub)
 		}
 	}
@@ -113,32 +115,31 @@ func CreateSubmission(project, user, format string) (subId bson.ObjectId, err er
 /*
 Adds a new file to a user's project submission.
 */
-func AddFile(subId bson.ObjectId, fname string, data []byte)(fileId bson.ObjectId, err error){
+func AddFile(subId bson.ObjectId, fname, ftype string, data []byte)(fileId bson.ObjectId, err error){
 	session, err := getSession()
 	if err == nil {
 		defer session.Close()
-		fcol := session.DB(DB).C(PROJECTS)
+		fcol := session.DB(DB).C(FILES)
 		date := time.Now().UnixNano()
 		fileId = bson.NewObjectId()
-		file := &FileData{fileId, fname, data, date}
-		matcher := bson.M{"_id": subId}
-		err = fcol.Update(matcher, bson.M{"$push": bson.M{"files": file}})
+		file := &FileData{fileId,subId, fname, ftype, data, date}
+		err = fcol.Insert(file)
+		//matcher := bson.M{"_id": subId}
+		//err = fcol.Update(matcher, bson.M{"$push": bson.M{"files": file}})
 	}
 	return fileId, err
 }
 
-/*
-Adds a new file to a user's project submission.
-*/
-func AddTests(project string, data []byte) (err error) {
+func GetFile(fileId, subId bson.ObjectId)(f *FileData, err error){
 	session, err := getSession()
 	if err == nil {
 		defer session.Close()
-		fcol := session.DB(DB).C(PROJECTS)
-		test := bson.M{"project": project, "tests": data}
-		_, err = fcol.Upsert(bson.M{"project": project}, test)
+		fcol := session.DB(DB).C(FILES)
+		matcher := bson.M{"_id": fileId, "subid": subId}
+		err = fcol.Find(matcher).One(&f)
 	}
-	return err
+	return f, err	
+
 }
 
 /*
