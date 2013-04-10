@@ -73,11 +73,15 @@ in the database.
 */
 type Submission struct {
 	Id bson.ObjectId "_id"
-	Name   string     "project"
+	Project   string     "project"
 	User   string     "user"
 	Date   int64      "date"
 	Subnum int        "number"
 	Mode string     "mode"
+}
+
+func (s *Submission) IsTest() bool{
+	return s.Mode == "TEST"
 }
 
 /*
@@ -90,6 +94,10 @@ type FileData struct {
 	FileType string "type"
 	Data []byte "data"
 	Date int64  "date"
+}
+
+func (f *FileData) IsSource() bool{
+	return f.FileType == "SOURCE"
 }
 
 /*
@@ -112,6 +120,35 @@ func CreateSubmission(project, user, mode string) (subId bson.ObjectId, err erro
 	return subId, err
 }
 
+func GetSubmission(id bson.ObjectId)(sub *Submission, err error){
+	session, err := getSession()
+	if err == nil {
+		defer session.Close()
+		pcol := session.DB(DB).C(PROJECTS)
+		matcher := bson.M{"_id": id}
+		err = pcol.Find(matcher).One(&sub)
+	}
+	return sub, err	
+}
+
+
+func GetTests(project string)(tests *FileData, err error){
+	session, err := getSession()
+	if err == nil {
+		defer session.Close()
+		pcol := session.DB(DB).C(PROJECTS)
+		matcher := bson.M{"project": project, "mode":"TEST"}
+		var sub *Submission
+		err = pcol.Find(matcher).One(&sub)
+		if err == nil{
+			fcol := session.DB(DB).C(FILES)
+			matcher = bson.M{"subid": sub.Id}
+			err = fcol.Find(matcher).One(&tests)
+		}
+	}
+	return tests, err	
+}
+
 /*
 Adds a new file to a user's project submission.
 */
@@ -130,16 +167,15 @@ func AddFile(subId bson.ObjectId, fname, ftype string, data []byte)(fileId bson.
 	return fileId, err
 }
 
-func GetFile(fileId, subId bson.ObjectId)(f *FileData, err error){
+func GetFile(fileId bson.ObjectId)(f *FileData, err error){
 	session, err := getSession()
 	if err == nil {
 		defer session.Close()
 		fcol := session.DB(DB).C(FILES)
-		matcher := bson.M{"_id": fileId, "subid": subId}
+		matcher := bson.M{"_id": fileId}
 		err = fcol.Find(matcher).One(&f)
 	}
 	return f, err	
-
 }
 
 /*

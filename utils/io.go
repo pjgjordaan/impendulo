@@ -13,23 +13,25 @@ import (
 	"strings"
 	"time"
 	"encoding/json"
+	"archive/zip"
+	"path/filepath"
 )
 
-const SEP = string(os.PathSeparator)
 const DPERM = 0777
-const FPERM = 0666
+const FPERM = os.O_WRONLY|os.O_CREATE|os.O_TRUNC
 const DEBUG = true
-const LOG_DIR = ".intlola"+SEP+"logs"
+const BASE_DIR = ".intlola"
+const LOG_DIR = "logs"
 var logger *log.Logger
 
 func init() {
 	cur, err := user.Current()
 	if err == nil {
 		y, m, d := time.Now().Date()
-		dir := cur.HomeDir + SEP + LOG_DIR + SEP + strconv.Itoa(y) + SEP + m.String() + SEP + strconv.Itoa(d)
+		dir := filepath.Join(cur.HomeDir, BASE_DIR, LOG_DIR, strconv.Itoa(y), m.String(), strconv.Itoa(d))
 		err = os.MkdirAll(dir, DPERM)
 		if err == nil{
-			fo, err := os.Create(dir + SEP + time.Now().String() + ".log")
+			fo, err := os.Create(filepath.Join(dir, time.Now().String() + ".log"))
 			if err == nil{
 				logger = log.New(fo, "Inlola server log >> ", log.LstdFlags)
 	
@@ -129,4 +131,42 @@ func ReadFile(r io.Reader, term []byte)(buffer *bytes.Buffer, err error){
 		err = nil
 	}
 	return buffer, err
+}
+
+func SaveFile(dir, fname string, data []byte)(err error){
+	err = os.MkdirAll(dir, DPERM)
+	if err == nil{
+		f, err := os.Create(filepath.Join(dir, fname))
+		if err == nil{
+			_, err = f.Write(data)
+		}
+	}
+	return err
+}
+
+func Unzip(dir string, data []byte)(err error){
+	br := bytes.NewReader(data)
+	zr, err := zip.NewReader(br, int64(br.Len()))
+	if err == nil{
+		for _, zf := range zr.File {
+			frc, err := zf.Open()
+			if err == nil {
+				path := filepath.Join(dir, zf.Name)
+				if zf.FileInfo().IsDir() {
+					err = os.MkdirAll(path, zf.Mode())
+				} else {
+					f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, zf.Mode())
+					if err == nil {
+						_, err = io.Copy(f, frc)
+						f.Close()
+					}
+				}
+				frc.Close()
+			}
+			if err != nil{
+				break
+			}
+		}
+	}
+	return err
 }
