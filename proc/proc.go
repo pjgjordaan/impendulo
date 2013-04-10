@@ -21,12 +21,6 @@ type Request struct{
 }
 
 
-func Javac(source string)(errBytes [] byte, err error){
-	errBytes, _, err = runCommand("javac", source)
-	return errBytes, err
-}
-
-
 func runCommand(args ...string)(errBytes, outBytes []byte, err error) {
 	cmd := exec.Command(args[0], args[1:]...)
 	errPipe, outPipe, err := getPipes(cmd)	
@@ -62,25 +56,71 @@ func getBytes(errPipe, outPipe io.ReadCloser)(errBytes, outBytes []byte, err err
 
 
 func process(r *Request){
-	f, err := db.GetFile(r.FileId)
-	if err == nil && f.IsSource(){
-		params := strings.Split(f.Name, "_")
-		//status := params[len(params)-1]
-		//counter := strconv.Atoi(params[len(params)-2])
-		//time := strconv.Atoi(params[len(params)-3])
-		fname := params[len(params)-4]
-		dir := filepath.Join(os.TempDir(), r.FileId.Hex(), filepath.Join(params[:len(params)-4]...))
-		err = utils.SaveFile(dir, fname, f.Data)
+	src, err := setupSource(r.FileId)
+	if err == nil{
+		err = setupTests(r.SubId)
 		if err == nil{
-			sub, err := db.GetSubmission(r.SubId)
-			if err == nil{
-				testBuilder.SetupTests(sub.Project)
-			}
+			RunTests(src)
 		}
 	}
 	if err != nil{
 		utils.Log(err)
 	}
+}
+
+type Source struct{
+	Name string
+	Package string
+	Ext string
+	Dir string
+}
+
+func (s *Source) AbsPath() string{
+	return filepath.Join(s.Dir, s.Package, s.FullName())
+}
+
+
+func (s *Source) FullName() string{
+	return s.Name + "." + s.Ext
+}
+
+func Javac(source string, cp []string)([]byte, [] byte, error){
+	return runCommand("javac", "-cp", strings.Join(cp,":"), source)
+}
+
+
+func RunTests(src *Source){
+		//Hardcode for now
+	testdir := filepath.Join(os.TempDir(), "tests")	
+	classpaths := []string{src.Dir, testdir}
+	tests := []*Source{&Source{"EasyTests", "testing", "java", testdir}, &Source{"AllTests", "testing", "java", testdir}}
+	for _, test := range tests{
+		errBytes, _, err := Javac(test.AbsPath(), classpaths)
+		utils.Log(string(errBytes), err)
+	}
+}
+
+
+func setupSource(sourceId bson.ObjectId)(src *Source, err error){
+	f, err := db.GetFile(sourceId)
+	if err == nil && f.IsSource(){
+		//Specific to how the file names are formatted currently, should change.
+		params := strings.Split(f.Name, "_")
+		fname := strings.Split(params[len(params)-4], ".")
+		pkg := params[len(params)-5]
+		dir := filepath.Join(os.TempDir(), sourceId.Hex(), filepath.Join(params[:len(params)-5]...))
+		src = &Source{fname[0], pkg, fname[1], dir} 
+		err = utils.SaveFile(filepath.Join(dir, pkg), src.FullName(), f.Data)
+	}
+	return src, err
+}
+
+func setupTests(subId bson.ObjectId)(err error){
+	sub, err := db.GetSubmission(subId)
+	if err == nil{
+		err = testBuilder.Setup(sub.Project)
+	}
+	return err
 }
 
 
@@ -101,7 +141,7 @@ func NewTestBuilder() *TestBuilder{
 	return &TestBuilder{make(map[string]bool), new(sync.Mutex), dir}
 }
 
-func (t *TestBuilder) SetupTests(project string)(err error){
+func (t *TestBuilder) Setup(project string)(err error){
 	t.m.Lock()
 	if !t.Status[project]{
 		tests, err := db.GetTests(project)
