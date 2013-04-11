@@ -1,7 +1,8 @@
 package utils
-import(
-"net/rpc"
-"labix.org/v2/mgo/bson"
+
+import (
+	"labix.org/v2/mgo/bson"
+	"net/rpc"
 )
 
 const PROTOCOL = "tcp"
@@ -12,7 +13,7 @@ func ProcessFile(file bson.M) error {
 	return Process("Server.Process", file)
 }
 
-func Process(function string, data bson.M) (err error){
+func Process(function string, data bson.M) (err error) {
 	c, err := rpc.Dial(PROTOCOL, ADDRESS+":"+PORT)
 	if err == nil {
 		err = c.Call(function, data, nil)

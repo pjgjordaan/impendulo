@@ -1,12 +1,12 @@
 package utils
-import(
+
+import (
 	"crypto/rand"
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/hex"
 	"io"
 )
-
 
 func Validate(hashed, salt, pword string) bool {
 	computed := computeHash(pword, salt)

@@ -5,9 +5,10 @@ import (
 	"github.com/disco-volante/intlola/db"
 	"github.com/disco-volante/intlola/proc"
 	"github.com/disco-volante/intlola/utils"
-	"net"
 	"labix.org/v2/mgo/bson"
+	"net"
 )
+
 const FNAME = "FILENAME"
 const FTYPE = "FILETYPE"
 const OK = "OK"
@@ -19,10 +20,11 @@ const UNAME = "USERNAME"
 const PWORD = "PASSWORD"
 const PROJECT = "PROJECT"
 const MODE = "MODE"
-type Client struct{
+
+type Client struct {
 	username string
-	project string
-	mode string
+	project  string
+	mode     string
 }
 
 /*
@@ -32,12 +34,12 @@ func ProcessFile(subId bson.ObjectId, jobj map[string]interface{}, conn net.Conn
 	fname, err := utils.JSONValue(jobj, FNAME)
 	if err == nil {
 		ftype, err := utils.JSONValue(jobj, FTYPE)
-		if err == nil{
+		if err == nil {
 			conn.Write([]byte(OK))
-			buffer, err := utils.ReadFile(conn, []byte(EOF)) 
+			buffer, err := utils.ReadFile(conn, []byte(EOF))
 			if err == nil {
 				fileId, err := db.AddFile(subId, fname, ftype, buffer.Bytes())
-				if err == nil{
+				if err == nil {
 					procChan <- &proc.Request{fileId, subId}
 					conn.Write([]byte(OK))
 				}
@@ -47,7 +49,6 @@ func ProcessFile(subId bson.ObjectId, jobj map[string]interface{}, conn net.Conn
 	return err
 }
 
-
 /*
 Manages an incoming connection request.
 */
@@ -55,15 +56,15 @@ func ConnHandler(conn net.Conn, procChan chan *proc.Request) {
 	jobj, err := utils.ReadJSON(conn)
 	if err == nil {
 		subId, err := Login(jobj, conn)
-		for err == nil{
+		for err == nil {
 			jobj, err = utils.ReadJSON(conn)
-			if err == nil{
+			if err == nil {
 				req, err := utils.JSONValue(jobj, REQ)
 				if req == SEND {
 					err = ProcessFile(subId, jobj, conn, procChan)
 				} else if req == LOGOUT {
 					break
-				} else if err == nil{
+				} else if err == nil {
 					err = errors.New("Unknown request: " + req)
 				}
 			}
@@ -80,13 +81,12 @@ func Login(jobj map[string]interface{}, conn net.Conn) (subId bson.ObjectId, err
 	c, err := createClient(jobj)
 	if err == nil {
 		subId, err = db.CreateSubmission(c.project, c.username, c.mode)
-		if err == nil{
+		if err == nil {
 			conn.Write([]byte(OK))
 		}
 	}
 	return subId, err
 }
-
 
 /*
 Handles an error by logging it as well as reporting it to the connected
@@ -97,13 +97,12 @@ func EndSession(conn net.Conn, err error) {
 	if err != nil {
 		msg = "ERROR: " + err.Error()
 		utils.Log(msg)
-	} else{
+	} else {
 		msg = OK
 	}
 	conn.Write([]byte(msg))
 	conn.Close()
 }
-
 
 func createClient(jobj map[string]interface{}) (c *Client, err error) {
 	uname, err := utils.JSONValue(jobj, UNAME)

@@ -11,17 +11,19 @@ const USERS = "users"
 const PROJECTS = "projects"
 const FILES = "files"
 const ADDRESS = "localhost"
+
 var activeSession *mgo.Session
- 
-func getSession () (s *mgo.Session, err error) {
+
+func getSession() (s *mgo.Session, err error) {
 	if activeSession == nil {
 		activeSession, err = mgo.Dial(ADDRESS)
 	}
-	if err == nil{
+	if err == nil {
 		s = activeSession.Clone()
 	}
 	return s, err
 }
+
 /*
 Finds a user in the database. 
 This is used to authenticate a login attempt.
@@ -72,15 +74,15 @@ A struct used to store information about individual project submissions
 in the database.
 */
 type Submission struct {
-	Id bson.ObjectId "_id"
-	Project   string     "project"
-	User   string     "user"
-	Date   int64      "date"
-	Subnum int        "number"
-	Mode string     "mode"
+	Id      bson.ObjectId "_id"
+	Project string        "project"
+	User    string        "user"
+	Date    int64         "date"
+	Subnum  int           "number"
+	Mode    string        "mode"
 }
 
-func (s *Submission) IsTest() bool{
+func (s *Submission) IsTest() bool {
 	return s.Mode == "TEST"
 }
 
@@ -88,15 +90,15 @@ func (s *Submission) IsTest() bool{
 A struct used to store individual files in the database.
 */
 type FileData struct {
-	Id bson.ObjectId "_id"
-	SubId bson.ObjectId "subid"
-	Name string "name"
-	FileType string "type"
-	Data []byte "data"
-	Date int64  "date"
+	Id       bson.ObjectId "_id"
+	SubId    bson.ObjectId "subid"
+	Name     string        "name"
+	FileType string        "type"
+	Data     []byte        "data"
+	Date     int64         "date"
 }
 
-func (f *FileData) IsSource() bool{
+func (f *FileData) IsSource() bool {
 	return f.FileType == "SOURCE"
 }
 
@@ -120,7 +122,7 @@ func CreateSubmission(project, user, mode string) (subId bson.ObjectId, err erro
 	return subId, err
 }
 
-func GetSubmission(id bson.ObjectId)(sub *Submission, err error){
+func GetSubmission(id bson.ObjectId) (sub *Submission, err error) {
 	session, err := getSession()
 	if err == nil {
 		defer session.Close()
@@ -128,44 +130,43 @@ func GetSubmission(id bson.ObjectId)(sub *Submission, err error){
 		matcher := bson.M{"_id": id}
 		err = pcol.Find(matcher).One(&sub)
 	}
-	return sub, err	
+	return sub, err
 }
 
-
-func GetTests(project string)(tests *FileData, err error){
+func GetTests(project string) (tests *FileData, err error) {
 	session, err := getSession()
 	if err == nil {
 		defer session.Close()
 		pcol := session.DB(DB).C(PROJECTS)
-		matcher := bson.M{"project": project, "mode":"TEST"}
+		matcher := bson.M{"project": project, "mode": "TEST"}
 		var sub *Submission
 		err = pcol.Find(matcher).One(&sub)
-		if err == nil{
+		if err == nil {
 			fcol := session.DB(DB).C(FILES)
 			matcher = bson.M{"subid": sub.Id}
 			err = fcol.Find(matcher).One(&tests)
 		}
 	}
-	return tests, err	
+	return tests, err
 }
 
 /*
 Adds a new file to a user's project submission.
 */
-func AddFile(subId bson.ObjectId, fname, ftype string, data []byte)(fileId bson.ObjectId, err error){
+func AddFile(subId bson.ObjectId, fname, ftype string, data []byte) (fileId bson.ObjectId, err error) {
 	session, err := getSession()
 	if err == nil {
 		defer session.Close()
 		fcol := session.DB(DB).C(FILES)
 		date := time.Now().UnixNano()
 		fileId = bson.NewObjectId()
-		file := &FileData{fileId,subId, fname, ftype, data, date}
+		file := &FileData{fileId, subId, fname, ftype, data, date}
 		err = fcol.Insert(file)
 	}
 	return fileId, err
 }
 
-func GetFile(fileId bson.ObjectId)(f *FileData, err error){
+func GetFile(fileId bson.ObjectId) (f *FileData, err error) {
 	session, err := getSession()
 	if err == nil {
 		defer session.Close()
@@ -173,20 +174,19 @@ func GetFile(fileId bson.ObjectId)(f *FileData, err error){
 		matcher := bson.M{"_id": fileId}
 		err = fcol.Find(matcher).One(&f)
 	}
-	return f, err	
+	return f, err
 }
 
-func AddResults(fileId bson.ObjectId, key string, data []byte)(err error){
+func AddResults(fileId bson.ObjectId, key string, data []byte) (err error) {
 	session, err := getSession()
 	if err == nil {
 		defer session.Close()
 		fcol := session.DB(DB).C(FILES)
 		matcher := bson.M{"_id": fileId}
-		err = fcol.Update(matcher, bson.M{"$push": bson.M{"results":bson.M{"type":key,"data":data}}})
+		err = fcol.Update(matcher, bson.M{"$push": bson.M{"results": bson.M{"type": key, "data": data}}})
 	}
 	return err
 }
-
 
 /*
 Retrieves all distinct values for a given field.

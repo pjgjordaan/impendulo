@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"archive/zip"
 	"bytes"
+	"encoding/json"
 	"errors"
 	"github.com/disco-volante/intlola/db"
 	"io"
@@ -9,19 +11,18 @@ import (
 	"log"
 	"os"
 	"os/user"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
-	"encoding/json"
-	"archive/zip"
-	"path/filepath"
 )
 
 const DPERM = 0777
-const FPERM = os.O_WRONLY|os.O_CREATE|os.O_TRUNC
+const FPERM = os.O_WRONLY | os.O_CREATE | os.O_TRUNC
 const DEBUG = true
 const BASE_DIR = ".intlola"
 const LOG_DIR = "logs"
+
 var logger *log.Logger
 
 func init() {
@@ -30,11 +31,11 @@ func init() {
 		y, m, d := time.Now().Date()
 		dir := filepath.Join(cur.HomeDir, BASE_DIR, LOG_DIR, strconv.Itoa(y), m.String(), strconv.Itoa(d))
 		err = os.MkdirAll(dir, DPERM)
-		if err == nil{
-			fo, err := os.Create(filepath.Join(dir, time.Now().String() + ".log"))
-			if err == nil{
+		if err == nil {
+			fo, err := os.Create(filepath.Join(dir, time.Now().String()+".log"))
+			if err == nil {
 				logger = log.New(fo, "Inlola server log >> ", log.LstdFlags)
-	
+
 			}
 		}
 	}
@@ -112,42 +113,42 @@ func ReadJSON(r io.Reader) (jobj map[string]interface{}, err error) {
 	return jobj, err
 }
 
-func ReadFile(r io.Reader, term []byte)(buffer *bytes.Buffer, err error){
+func ReadFile(r io.Reader, term []byte) (buffer *bytes.Buffer, err error) {
 	buffer = new(bytes.Buffer)
 	p := make([]byte, 2048)
 	receiving := true
 	for receiving {
 		bytesRead, err := r.Read(p)
 		read := p[:bytesRead]
-		if bytes.HasSuffix(read, term) || err != nil{
+		if bytes.HasSuffix(read, term) || err != nil {
 			read = read[:len(read)-len(term)]
 			receiving = false
-		} 
-		if err == nil || err == io.EOF{
+		}
+		if err == nil || err == io.EOF {
 			buffer.Write(read)
 		}
 	}
-	if err == io.EOF{
+	if err == io.EOF {
 		err = nil
 	}
 	return buffer, err
 }
 
-func SaveFile(dir, fname string, data []byte)(err error){
+func SaveFile(dir, fname string, data []byte) (err error) {
 	err = os.MkdirAll(dir, DPERM)
-	if err == nil{
+	if err == nil {
 		f, err := os.Create(filepath.Join(dir, fname))
-		if err == nil{
+		if err == nil {
 			_, err = f.Write(data)
 		}
 	}
 	return err
 }
 
-func Unzip(dir string, data []byte)(err error){
+func Unzip(dir string, data []byte) (err error) {
 	br := bytes.NewReader(data)
 	zr, err := zip.NewReader(br, int64(br.Len()))
-	if err == nil{
+	if err == nil {
 		for _, zf := range zr.File {
 			frc, err := zf.Open()
 			if err == nil {
@@ -163,7 +164,7 @@ func Unzip(dir string, data []byte)(err error){
 				}
 				frc.Close()
 			}
-			if err != nil{
+			if err != nil {
 				break
 			}
 		}
