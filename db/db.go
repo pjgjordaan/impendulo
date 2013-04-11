@@ -10,7 +10,18 @@ const DB = "impendulo"
 const USERS = "users"
 const PROJECTS = "projects"
 const FILES = "files"
+const TOOLS = "tools"
 const ADDRESS = "localhost"
+const(
+NONE = 0
+F_SUB = 1
+T_SUB = 2
+FT_SUB = 3
+U_SUB = 4
+UF_SUB = 5
+UT_SUB = 6
+ALL_SUB = 7
+)
 
 var activeSession *mgo.Session
 
@@ -23,6 +34,17 @@ func getSession() (s *mgo.Session, err error) {
 	}
 	return s, err
 }
+
+/*
+The struct used to store user information in the database.
+*/
+type UserData struct {
+	Name     string "_id,omitempty"
+	Password string "password"
+	Salt     string "salt"
+	Access int "access"
+}
+
 
 /*
 Finds a user in the database. 
@@ -38,17 +60,9 @@ func ReadUser(uname string) (user *UserData, err error) {
 	return user, err
 }
 
-/*
-The struct used to store user information in the database.
-*/
-type UserData struct {
-	Name     string "_id,omitempty"
-	Password string "password"
-	Salt     string "salt"
-}
 
 func NewUser(uname, pword, salt string) *UserData {
-	return &UserData{uname, pword, salt}
+	return &UserData{uname, pword, salt, F_SUB}
 }
 
 /*
@@ -86,21 +100,6 @@ func (s *Submission) IsTest() bool {
 	return s.Mode == "TEST"
 }
 
-/*
-A struct used to store individual files in the database.
-*/
-type FileData struct {
-	Id       bson.ObjectId "_id"
-	SubId    bson.ObjectId "subid"
-	Name     string        "name"
-	FileType string        "type"
-	Data     []byte        "data"
-	Date     int64         "date"
-}
-
-func (f *FileData) IsSource() bool {
-	return f.FileType == "SOURCE"
-}
 
 /*
 Creates a new project submission for a given user.
@@ -151,6 +150,24 @@ func GetTests(project string) (tests *FileData, err error) {
 }
 
 /*
+A struct used to store individual files in the database.
+*/
+type FileData struct {
+	Id       bson.ObjectId "_id"
+	SubId    bson.ObjectId "subid"
+	Name     string        "name"
+	FileType string        "type"
+	Data     []byte        "data"
+	Date     int64         "date"
+	Results *bson.M "results"
+}
+
+func (f *FileData) IsSource() bool {
+	return f.FileType == "SOURCE"
+}
+
+
+/*
 Adds a new file to a user's project submission.
 */
 func AddFile(subId bson.ObjectId, fname, ftype string, data []byte) (fileId bson.ObjectId, err error) {
@@ -160,7 +177,7 @@ func AddFile(subId bson.ObjectId, fname, ftype string, data []byte) (fileId bson
 		fcol := session.DB(DB).C(FILES)
 		date := time.Now().UnixNano()
 		fileId = bson.NewObjectId()
-		file := &FileData{fileId, subId, fname, ftype, data, date}
+		file := &FileData{fileId, subId, fname, ftype, data, date, new(bson.M)}
 		err = fcol.Insert(file)
 	}
 	return fileId, err
@@ -177,26 +194,33 @@ func GetFile(fileId bson.ObjectId) (f *FileData, err error) {
 	return f, err
 }
 
-func AddResults(fileId bson.ObjectId, key string, data []byte) (err error) {
+func AddResults(fileId bson.ObjectId, name, result string,  data []byte) (err error) {
 	session, err := getSession()
 	if err == nil {
 		defer session.Close()
 		fcol := session.DB(DB).C(FILES)
 		matcher := bson.M{"_id": fileId}
-		err = fcol.Update(matcher, bson.M{"$push": bson.M{"results": bson.M{"type": key, "data": data}}})
-	}
+		err = fcol.Update(matcher, bson.M{"$push": bson.M{"results": bson.M{name: bson.M{"result":result, "data": data}}}})
+	}		
 	return err
 }
 
-/*
-Retrieves all distinct values for a given field.
-*/
-func GetAll(field string) (values []string, err error) {
+func GetAll(col string)(items []interface{}, err error){
 	session, err := getSession()
 	if err == nil {
 		defer session.Close()
-		fcol := session.DB(DB).C(PROJECTS)
-		err = fcol.Find(nil).Distinct(field, &values)
+		tcol := session.DB(DB).C(col)
+		err = tcol.Find(nil).All(&items)
 	}
-	return values, err
+	return items, err	
+}
+
+func Add(item interface{}, col string)(err error){
+	session, err := getSession()
+	if err == nil {
+		defer session.Close()
+		tcol := session.DB(DB).C(col)
+		err = tcol.Insert(item)
+	}
+	return err	
 }
