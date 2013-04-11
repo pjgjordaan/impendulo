@@ -161,8 +161,6 @@ func AddFile(subId bson.ObjectId, fname, ftype string, data []byte)(fileId bson.
 		fileId = bson.NewObjectId()
 		file := &FileData{fileId,subId, fname, ftype, data, date}
 		err = fcol.Insert(file)
-		//matcher := bson.M{"_id": subId}
-		//err = fcol.Update(matcher, bson.M{"$push": bson.M{"files": file}})
 	}
 	return fileId, err
 }
@@ -177,6 +175,18 @@ func GetFile(fileId bson.ObjectId)(f *FileData, err error){
 	}
 	return f, err	
 }
+
+func AddResults(fileId bson.ObjectId, key string, data []byte)(err error){
+	session, err := getSession()
+	if err == nil {
+		defer session.Close()
+		fcol := session.DB(DB).C(FILES)
+		matcher := bson.M{"_id": fileId}
+		err = fcol.Update(matcher, bson.M{"$push": bson.M{"results":bson.M{"type":key,"data":data}}})
+	}
+	return err
+}
+
 
 /*
 Retrieves all distinct values for a given field.

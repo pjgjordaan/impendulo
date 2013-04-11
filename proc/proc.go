@@ -4,13 +4,12 @@ import(
 	"labix.org/v2/mgo/bson"
 	"github.com/disco-volante/intlola/utils"
 	"github.com/disco-volante/intlola/db"
+	"github.com/disco-volante/intlola/tools"
 "strings"
 "os"
-"os/exec"
-"io/ioutil"
-"io"
 "path/filepath"
 "sync"
+"fmt"
 )
 
 const MAX = 100
@@ -20,55 +19,8 @@ type Request struct{
 	SubId bson.ObjectId
 }
 
-
-func runCommand(args ...string)(errBytes, outBytes []byte, err error) {
-	cmd := exec.Command(args[0], args[1:]...)
-	errPipe, outPipe, err := getPipes(cmd)	
-	if err == nil{
-		err = cmd.Start()
-		if err == nil {
-			errBytes, outBytes, err = getBytes(errPipe, outPipe)
-			if err == nil{
-				err = cmd.Wait()
-			}
-		}
-	}
-	return errBytes, outBytes, err
-}
-
-
-func getPipes(cmd *exec.Cmd)(errPipe, outPipe io.ReadCloser, err error){
-	errPipe, err = cmd.StderrPipe()
-	if err == nil{
-		outPipe, err = cmd.StdoutPipe()
-	}
-	return errPipe, outPipe, err
-}
-
-
-func getBytes(errPipe, outPipe io.ReadCloser)(errBytes, outBytes []byte, err error){
-	errBytes, err = ioutil.ReadAll(errPipe)
-	if err != nil{
-		outBytes, err = ioutil.ReadAll(outPipe)			
-	}
-	return errBytes, outBytes, err
-}
-
-
-func process(r *Request){
-	src, err := setupSource(r.FileId)
-	if err == nil{
-		err = setupTests(r.SubId)
-		if err == nil{
-			RunTests(src)
-		}
-	}
-	if err != nil{
-		utils.Log(err)
-	}
-}
-
 type Source struct{
+	Id bson.ObjectId
 	Name string
 	Package string
 	Ext string
@@ -84,22 +36,58 @@ func (s *Source) FullName() string{
 	return s.Name + "." + s.Ext
 }
 
-func Javac(source string, cp []string)([]byte, [] byte, error){
-	return runCommand("javac", "-cp", strings.Join(cp,":"), source)
+func (s *Source) ClassName() string{
+	return s.Package+"."+s.Name
+}
+
+type TestBuilder struct{
+	Tests map[string] bool
+	m *sync.Mutex
+	TestDir string
+}
+
+func NewTestBuilder() *TestBuilder{
+	dir := filepath.Join(os.TempDir(), "tests")
+	return &TestBuilder{make(map[string] bool), new(sync.Mutex), dir}
+}
+
+func (t *TestBuilder) Setup(project string)(err error){
+	t.m.Lock()
+	if !t.Tests[project]{
+		tests, err := db.GetTests(project)
+		if err == nil{
+			err = utils.Unzip(filepath.Join(t.TestDir,project), tests.Data)
+			if err == nil{
+				t.Tests[project] = true
+			}
+		}
+	} 
+	t.m.Unlock()
+	return err
 }
 
 
-func RunTests(src *Source){
-		//Hardcode for now
+func RunTests(src *Source)(err error){
+	//Hardcode for now
 	testdir := filepath.Join(os.TempDir(), "tests")	
-	classpaths := []string{src.Dir, testdir}
-	tests := []*Source{&Source{"EasyTests", "testing", "java", testdir}, &Source{"AllTests", "testing", "java", testdir}}
+	cp := src.Dir+":"+testdir
+	tests := []*Source{&Source{src.Id, "EasyTests", "testing", "java", testdir}, &Source{src.Id, "AllTests", "testing", "java", testdir}}
 	for _, test := range tests{
-		errBytes, _, err := Javac(test.AbsPath(), classpaths)
-		utils.Log(string(errBytes), err)
+		stderr, stdout, err := tools.RunCommand("javac", "-cp", cp, "-d",  src.Dir, "-s", src.Dir, "-implicit:class", test.AbsPath())
+		db.AddResults(src.Id, test.Name+"_compile_error", stderr.Bytes())
+		db.AddResults(src.Id,test.Name+"_compile_warning", stdout.Bytes())
+		if err == nil{
+			stderr, stdout,err = tools.RunCommand("java", "-cp", cp,  "org.junit.runner.JUnitCore", test.ClassName()) //
+			//fmt.Println("java", "-cp", cp,  "org.junit.runner.JUnitCore", test.ClassName())
+			db.AddResults(src.Id, test.Name+"_run_error", stderr.Bytes())
+			db.AddResults(src.Id,test.Name+"_run_result", stdout.Bytes())
+			fmt.Println(stderr.String())
+			fmt.Println(err)
+			fmt.Println(stdout.String())
+		}
 	}
+	return err
 }
-
 
 func setupSource(sourceId bson.ObjectId)(src *Source, err error){
 	f, err := db.GetFile(sourceId)
@@ -109,7 +97,7 @@ func setupSource(sourceId bson.ObjectId)(src *Source, err error){
 		fname := strings.Split(params[len(params)-4], ".")
 		pkg := params[len(params)-5]
 		dir := filepath.Join(os.TempDir(), sourceId.Hex(), filepath.Join(params[:len(params)-5]...))
-		src = &Source{fname[0], pkg, fname[1], dir} 
+		src = &Source{sourceId, fname[0], pkg, fname[1], dir} 
 		err = utils.SaveFile(filepath.Join(dir, pkg), src.FullName(), f.Data)
 	}
 	return src, err
@@ -124,44 +112,26 @@ func setupTests(subId bson.ObjectId)(err error){
 }
 
 
-func handle(queue chan *Request) {
-	for r := range queue {
-		process(r)
-	}
-}
-
-type TestBuilder struct{
-	Status map[string] bool
-	m *sync.Mutex
-	TestDir string
-}
-
-func NewTestBuilder() *TestBuilder{
-	dir := filepath.Join(os.TempDir(), "tests")
-	return &TestBuilder{make(map[string]bool), new(sync.Mutex), dir}
-}
-
-func (t *TestBuilder) Setup(project string)(err error){
-	t.m.Lock()
-	if !t.Status[project]{
-		tests, err := db.GetTests(project)
-		if err == nil{
-			err = utils.Unzip(t.TestDir, tests.Data)
-			if err == nil{
-				t.Status[project] = true
-			}
-		}
-	} 
-	t.m.Unlock()
-	return err
-}
 var testBuilder *TestBuilder
 
-func Serve(clientRequests chan *Request) {
+func Serve(requests chan *Request) {
 	testBuilder = NewTestBuilder() 
 	// Start handlers
-	for i := 0; i < MAX; i++ {
-		go handle(clientRequests)
+	for r := range requests {
+		go Process(r)
 	}
 	utils.Log("completed")
+}
+
+func Process(r *Request){
+	src, err := setupSource(r.FileId)
+	if err == nil && src != nil {
+		err = setupTests(r.SubId)
+		if err == nil{
+			err = RunTests(src)			
+		}
+	}
+	if err != nil{
+		utils.Log(err)
+	}
 }
