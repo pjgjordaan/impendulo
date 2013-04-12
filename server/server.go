@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"github.com/disco-volante/intlola/db"
+	"github.com/disco-volante/intlola/usr"
 	"github.com/disco-volante/intlola/proc"
 	"github.com/disco-volante/intlola/utils"
 	"labix.org/v2/mgo/bson"
@@ -121,9 +122,10 @@ func createClient(jobj map[string]interface{}) (c *Client, err error) {
 	if err != nil {
 		return c, err
 	}
-	user, err := db.ReadUser(uname)
-	if err == nil {
-		if utils.Validate(user.Password, user.Salt, pword) {
+	uint, err := db.GetById(uname, db.USERS)
+	if err == nil {	
+		user := uint.(*usr.User)
+		if user.CheckSubmit(mode) && utils.Validate(user.Password, user.Salt, pword) {
 			c = &Client{uname, project, mode}
 		} else {
 			err = errors.New("Invalid username or password")

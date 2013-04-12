@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/disco-volante/intlola/db"
+	"github.com/disco-volante/intlola/usr"
 	"io"
 	"io/ioutil"
 	"log"
@@ -43,27 +44,28 @@ func init() {
 		panic(err)
 	}
 }
+
 func AddUsers(fname string) error {
 	users, err := ReadUsers(fname)
 	if err == nil {
-		err = db.AddUsers(users...)
+		err = db.AddMany(db.USERS, users...)
 	}
 	return err
 }
 
-func ReadUsers(fname string) (users []*db.UserData, err error) {
+func ReadUsers(fname string) (users []interface{}, err error) {
 	data, err := ioutil.ReadFile(fname)
 	if err == nil {
 		buff := bytes.NewBuffer(data)
 		line, err := buff.ReadString(byte('\n'))
-		users = make([]*db.UserData, 100, 1000)
+		users = make([]interface{}, 100, 1000)
 		i := 0
 		for err == nil {
 			vals := strings.Split(line, ":")
 			user := strings.TrimSpace(vals[0])
 			pword := strings.TrimSpace(vals[1])
 			hash, salt := Hash(pword)
-			data := db.NewUser(user, hash, salt)
+			data := usr.NewUser(user, hash, salt)
 			if i == len(users) {
 				users = append(users, data)
 			} else {

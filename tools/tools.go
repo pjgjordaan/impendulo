@@ -25,6 +25,24 @@ func UpdateListener(){
 }
 
 func UpdateHandler(){
+	jobj, err := utils.ReadJSON(conn)
+	if err == nil {
+		subId, err := Login(jobj, conn)
+		if err == nil {
+			jobj, err = utils.ReadJSON(conn)
+			if err == nil {
+				req, err := utils.JSONValue(jobj, REQ)
+				if req == SEND {
+					err = ProcessFile(subId, jobj, conn, procChan)
+				} else if req == LOGOUT {
+					break
+				} else if err == nil {
+					err = errors.New("Unknown request: " + req)
+				}
+			}
+		}
+	}
+	EndSession(conn, err)
 
 
 

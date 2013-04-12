@@ -12,16 +12,6 @@ const PROJECTS = "projects"
 const FILES = "files"
 const TOOLS = "tools"
 const ADDRESS = "localhost"
-const(
-NONE = 0
-F_SUB = 1
-T_SUB = 2
-FT_SUB = 3
-U_SUB = 4
-UF_SUB = 5
-UT_SUB = 6
-ALL_SUB = 7
-)
 
 var activeSession *mgo.Session
 
@@ -33,54 +23,6 @@ func getSession() (s *mgo.Session, err error) {
 		s = activeSession.Clone()
 	}
 	return s, err
-}
-
-/*
-The struct used to store user information in the database.
-*/
-type UserData struct {
-	Name     string "_id,omitempty"
-	Password string "password"
-	Salt     string "salt"
-	Access int "access"
-}
-
-
-/*
-Finds a user in the database. 
-This is used to authenticate a login attempt.
-*/
-func ReadUser(uname string) (user *UserData, err error) {
-	session, err := getSession()
-	if err == nil {
-		defer session.Close()
-		c := session.DB(DB).C(USERS)
-		err = c.FindId(uname).One(&user)
-	}
-	return user, err
-}
-
-
-func NewUser(uname, pword, salt string) *UserData {
-	return &UserData{uname, pword, salt, F_SUB}
-}
-
-/*
-Adds or updates multiple users.
-*/
-func AddUsers(users ...*UserData) error {
-	session, err := getSession()
-	if err == nil {
-		defer session.Close()
-		c := session.DB(DB).C(USERS)
-		for _, user := range users {
-			_, err = c.UpsertId(user.Name, user)
-			if err != nil {
-				break
-			}
-		}
-	}
-	return err
 }
 
 /*
@@ -183,17 +125,6 @@ func AddFile(subId bson.ObjectId, fname, ftype string, data []byte) (fileId bson
 	return fileId, err
 }
 
-func GetFile(fileId bson.ObjectId) (f *FileData, err error) {
-	session, err := getSession()
-	if err == nil {
-		defer session.Close()
-		fcol := session.DB(DB).C(FILES)
-		matcher := bson.M{"_id": fileId}
-		err = fcol.Find(matcher).One(&f)
-	}
-	return f, err
-}
-
 func AddResults(fileId bson.ObjectId, name, result string,  data []byte) (err error) {
 	session, err := getSession()
 	if err == nil {
@@ -203,6 +134,16 @@ func AddResults(fileId bson.ObjectId, name, result string,  data []byte) (err er
 		err = fcol.Update(matcher, bson.M{"$push": bson.M{"results": bson.M{name: bson.M{"result":result, "data": data}}}})
 	}		
 	return err
+}
+
+func GetById(id interface{}, col string) (ret interface{}, err error) {
+	session, err := getSession()
+	if err == nil {
+		defer session.Close()
+		c := session.DB(DB).C(col)
+		err = c.FindId(id).One(&ret)
+	}
+	return ret, err
 }
 
 func GetAll(col string)(items []interface{}, err error){
@@ -215,7 +156,7 @@ func GetAll(col string)(items []interface{}, err error){
 	return items, err	
 }
 
-func Add(item interface{}, col string)(err error){
+func AddSingle(item interface{}, col string)(err error){
 	session, err := getSession()
 	if err == nil {
 		defer session.Close()
@@ -223,4 +164,19 @@ func Add(item interface{}, col string)(err error){
 		err = tcol.Insert(item)
 	}
 	return err	
+}
+
+func AddMany(col string, items... interface{})(err error) {
+	session, err := getSession()
+	if err == nil {
+		defer session.Close()
+		c := session.DB(DB).C(col)
+		for _, item := range items {
+			err = c.Insert(item)
+			if err != nil {
+				break
+			}
+		}
+	}
+	return err
 }

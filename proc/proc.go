@@ -153,8 +153,10 @@ func RunTools(src *Source) {
 }
 
 func setupSource(sourceId bson.ObjectId) (src *Source, err error) {
-	f, err := db.GetFile(sourceId)
-	if err == nil && f.IsSource() {
+	fint, err := db.GetById(sourceId, db.FILES)
+	if err == nil{
+		f := fint.(*db.FileData)
+		if  f.IsSource() {
 		//Specific to how the file names are formatted currently, should change.
 		params := strings.Split(f.Name, "_")
 		fname := strings.Split(params[len(params)-4], ".")
@@ -162,6 +164,7 @@ func setupSource(sourceId bson.ObjectId) (src *Source, err error) {
 		dir := filepath.Join(os.TempDir(), sourceId.Hex())
 		src = &Source{sourceId, fname[0], pkg, fname[1], dir}
 		err = utils.SaveFile(filepath.Join(dir, pkg), src.FullName(), f.Data)
+		}
 	}
 	return src, err
 }
