@@ -3,6 +3,7 @@ package proc
 import (
 	"bytes"
 	"github.com/disco-volante/intlola/db"
+	"github.com/disco-volante/intlola/submission"
 	"github.com/disco-volante/intlola/utils"
 	"labix.org/v2/mgo/bson"
 	"os"
@@ -11,11 +12,6 @@ import (
 	"strings"
 	"sync"
 )
-
-type Request struct {
-	FileId bson.ObjectId
-	SubId  bson.ObjectId
-}
 
 type Source struct {
 	Id      bson.ObjectId
@@ -65,7 +61,7 @@ func NewTestBuilder() *TestBuilder {
 func (t *TestBuilder) Setup(project string) (err error) {
 	t.m.Lock()
 	if !t.Tests[project] {
-		tests, err := db.GetTests(project)
+		tests, err := GetTests(project)
 		if err == nil {
 			err = utils.Unzip(filepath.Join(t.TestDir, project), tests.Data)
 			if err == nil {
@@ -77,6 +73,20 @@ func (t *TestBuilder) Setup(project string) (err error) {
 	return err
 }
 
+func GetTests(project string) (tests *submission.File, err error) {
+	sint, err := db.GetMatching(db.SUBMISSIONS, bson.M{"project": project, "mode": "TEST"})
+	if err == nil {
+		sub := sint.(*submission.Submission)
+		tint, err := db.GetMatching(db.FILES, bson.M{"subid": sub.Id})
+		if err == nil{
+			tests = tint.(*submission.File)
+		}
+	}
+	return tests, err
+}
+
+
+
 func RunTests(src *Source) (err error) {
 	//Hardcode for now
 	testdir := filepath.Join(os.TempDir(), "tests")
@@ -84,23 +94,30 @@ func RunTests(src *Source) (err error) {
 	tests := []*Source{&Source{src.Id, "EasyTests", "testing", "java", testdir}, &Source{src.Id, "AllTests", "testing", "java", testdir}}
 	for _, test := range tests {
 		stderr, stdout, err := RunCommand("javac", "-cp", cp, "-d", src.Dir, "-s", src.Dir, "-implicit:class", test.FilePath())
-		db.AddResults(src.Id, test.Name, "compile_error", stderr.Bytes())
-		db.AddResults(src.Id, test.Name, "compile_warning", stdout.Bytes())
+		AddResults(src.Id, test.Name, "compile_error", stderr.Bytes())
+		AddResults(src.Id, test.Name, "compile_warning", stdout.Bytes())
 		if err == nil {
 			stderr, stdout, err = RunCommand("java", "-cp", cp, "org.junit.runner.JUnitCore", test.ClassName()) //
-			//fmt.Println("java", "-cp", cp,  "org.junit.runner.JUnitCore", test.ClassName())
-			db.AddResults(src.Id, test.Name, "run_error", stderr.Bytes())
-			db.AddResults(src.Id, test.Name,"run_result", stdout.Bytes())
+			AddResults(src.Id, test.Name, "run_error", stderr.Bytes())
+			AddResults(src.Id, test.Name,"run_result", stdout.Bytes())
 		}
 	}
 	return err
 }
 
+
+func AddResults(fileId bson.ObjectId, name, result string,  data []byte)  error {
+	matcher := bson.M{"_id": fileId}
+	change := bson.M{"$push": bson.M{"results": bson.M{name: bson.M{"result":result, "data": data}}}}
+	return db.Update(db.FILES, matcher, change)		
+}
+
+
 func RunFB(src *Source) (err error) {
 	fb := "/home/disco/apps/findbugs-2.0.2/lib/findbugs.jar"
 	stderr, stdout, err := RunCommand("java", "-jar", fb, "-textui", "-low", filepath.Join(src.Dir, src.Package))
-	db.AddResults(src.Id, "findbugs", "warnings", stderr.Bytes())
-	db.AddResults(src.Id, "findbugs", "warning_count", stdout.Bytes())
+	AddResults(src.Id, "findbugs", "warnings", stderr.Bytes())
+	AddResults(src.Id, "findbugs", "warning_count", stdout.Bytes())
 	return err
 }
 
@@ -139,8 +156,8 @@ func (tool *Tool) GetArgs(target string) (args [] string){
 func RunTool(src *Source, tool *Tool)(err error){
 	args := tool.GetArgs(src.GetTarget(tool.Target))
 	stderr, stdout, err := RunCommand(args...)
-	db.AddResults(src.Id, tool.Name, tool.ErrName, stderr.Bytes())
-	db.AddResults(src.Id, tool.Name, tool.OutName, stdout.Bytes())
+	AddResults(src.Id, tool.Name, tool.ErrName, stderr.Bytes())
+	AddResults(src.Id, tool.Name, tool.OutName, stdout.Bytes())
 	return err
 } 
 
@@ -152,26 +169,24 @@ func RunTools(src *Source) {
 	}
 }
 
-func setupSource(sourceId bson.ObjectId) (src *Source, err error) {
-	fint, err := db.GetById(sourceId, db.FILES)
-	if err == nil{
-		f := fint.(*db.FileData)
-		if  f.IsSource() {
+func setupSource(f *submission.File) (src *Source, err error) {
+	err = db.AddSingle(db.FILES, f) 
+	if err == nil && f.IsSource() {
 		//Specific to how the file names are formatted currently, should change.
 		params := strings.Split(f.Name, "_")
 		fname := strings.Split(params[len(params)-4], ".")
 		pkg := params[len(params)-5]
-		dir := filepath.Join(os.TempDir(), sourceId.Hex())
-		src = &Source{sourceId, fname[0], pkg, fname[1], dir}
+		dir := filepath.Join(os.TempDir(), f.Id.Hex())
+		src = &Source{f.Id, fname[0], pkg, fname[1], dir}
 		err = utils.SaveFile(filepath.Join(dir, pkg), src.FullName(), f.Data)
-		}
 	}
 	return src, err
 }
 
 func setupTests(subId bson.ObjectId) (err error) {
-	sub, err := db.GetSubmission(subId)
+	sint, err := db.GetById(db.SUBMISSIONS, subId)
 	if err == nil {
+		sub := sint.(*submission.Submission)
 		err = testBuilder.Setup(sub.Project)
 	}
 	return err
@@ -179,19 +194,19 @@ func setupTests(subId bson.ObjectId) (err error) {
 
 var testBuilder *TestBuilder
 
-func Serve(requests chan *Request) {
+func Serve(files chan *submission.File) {
 	testBuilder = NewTestBuilder()
 	// Start handlers
-	for r := range requests {
-		go Process(r)
+	for f := range files {
+		go Process(f)
 	}
 	utils.Log("completed")
 }
 
-func Process(r *Request) {
-	src, err := setupSource(r.FileId)
+func Process(f *submission.File) {
+	src, err := setupSource(f)
 	if err == nil && src != nil {
-		err = setupTests(r.SubId)
+		err = setupTests(f.SubId)
 		if err == nil {
 			err = RunTests(src)
 			if err == nil {
