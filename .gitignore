@@ -2,7 +2,11 @@
 *.o
 *.a
 *.so
+
+#editor extensions/prefixes
+*#*
 *~
+
 # Folders
 _obj
 _test
