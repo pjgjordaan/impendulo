@@ -172,10 +172,6 @@ func RunTools(src *Source) {
 func setupSource(f *submission.File) (src *Source, err error) {
 	err = db.AddSingle(db.FILES, f) 
 	if err == nil && f.IsSource() {
-		//Specific to how the file names are formatted currently, should change.
-		params := strings.Split(f.Name, "_")
-		fname := strings.Split(params[len(params)-4], ".")
-		pkg := params[len(params)-5]
 		dir := filepath.Join(os.TempDir(), f.Id.Hex())
 		src = &Source{f.Id, fname[0], pkg, fname[1], dir}
 		err = utils.SaveFile(filepath.Join(dir, pkg), src.FullName(), f.Data)
