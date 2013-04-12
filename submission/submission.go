@@ -3,6 +3,7 @@ import(
 	"labix.org/v2/mgo/bson"
 "time"
 )
+
 /*
 A struct used to store information about individual project submissions
 in the database.
@@ -34,7 +35,9 @@ type File struct {
 	Name     string        "name"
 	FileType string        "type"
 	Data     []byte        "data"
-	Date     int64         "date"
+	Time     int64         "time"
+	Number int "number"
+	Modification char "modification"
 	Results *bson.M "results"
 }
 
@@ -45,7 +48,15 @@ func (f *File) IsSource() bool {
 }
 
 func NewFile(subId bson.ObjectId, fname, ftype string, data []byte) *File{
-	now := time.Now().UnixNano()	
+	//Specific to how the file names are formatted currently, should change.	
+	params := strings.Split(fname, "_")
+	mod := char(params[len(params)-1])
+	num,_ := strconv.Atoi(params[len(params)-2])
+	modtime,_ := strconv.ParseInt(params[len(params)-3], 10, 64)
+	fname := strings.Split(params[len(params)-4], ".")
+	name := fname[0]
+	ext := fname[1]
+	pkg := params[len(params)-5]
 	fileId := bson.NewObjectId()
-	return &File{fileId, subId, fname, ftype, data, now, new(bson.M)}
+	return &File{fileId, subId, name, ftype, data, modtime, num, mod, new(bson.M)}
 }
