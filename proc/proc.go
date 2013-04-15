@@ -200,6 +200,7 @@ func Serve(files chan *submission.File) {
 }
 
 func Process(f *submission.File) {
+	if f.
 	src, err := setupSource(f)
 	if err == nil && src != nil {
 		err = setupTests(f.SubId)

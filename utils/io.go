@@ -115,6 +115,7 @@ func ReadJSON(r io.Reader) (jobj map[string]interface{}, err error) {
 	return jobj, err
 }
 
+
 func ReadFile(r io.Reader, term []byte) (buffer *bytes.Buffer, err error) {
 	buffer = new(bytes.Buffer)
 	p := make([]byte, 2048)

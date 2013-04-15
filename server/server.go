@@ -29,25 +29,7 @@ type Client struct {
 	mode     string
 }
 
-/*
-Determines whether a file send request is valid and reads a file if it is.
-*/
-func ProcessFile(subId bson.ObjectId, jobj map[string]interface{}, conn net.Conn, fileChan chan *submission.File) (err error) {
-	fname, err := utils.JSONValue(jobj, FNAME)
-	if err == nil {
-		ftype, err := utils.JSONValue(jobj, FTYPE)
-		if err == nil {
-			conn.Write([]byte(OK))
-			buffer, err := utils.ReadFile(conn, []byte(EOF))
-			if err == nil {
-				f := submission.NewFile(subId, fname, ftype, buffer.Bytes())
-				fileChan <- f
-				conn.Write([]byte(OK))
-			}
-		}
-	}
-	return err
-}
+
 
 /*
 Manages an incoming connection request.
@@ -73,6 +55,109 @@ func ConnHandler(conn net.Conn, fileChan chan *submission.File) {
 	EndSession(conn, err)
 }
 
+
+/*
+Determines whether a file send request is valid and reads a file if it is.
+*/
+func ProcessFile(subId bson.ObjectId, jobj map[string]interface{}, conn net.Conn, fileChan chan *submission.File) (err error) {
+	tipe,err := utils.JSONValue(jobj, TYPE)
+	var buffer bytes.Buffer
+	if err == nil {
+		f, err := ReadFileInfo(jobj, subId)
+		if err == nil {
+			if fi.HasData(){			
+				conn.Write([]byte(OK))
+				buffer, err = utils.ReadFile(conn, []byte(EOF))
+			}
+			if err == nil{				
+				conn.Write([]byte(OK))
+				f := GetFile(finfo, buffer.Bytes())
+				fileChan <- f
+			}
+		}
+	}
+	return err
+}
+
+func GetFile(finfo *submission.FileInfo, data []byte)(f *submission.File){
+	if finfo.
+
+func ReadFileInfo(jobj map[string]interface{}, subId bson.ObjectId)(fi *submission.File, err error){
+	tipe,err := utils.JSONValue(jobj, TYPE)
+	if err == nil{
+		if tipe == FILE{
+			fi = readFile(jobj, subId)
+		} else if tipe == ARCHIVE{
+			fi = readArchive(jobj, subId)
+		} else if tipe == TEST{
+			fi = readTest(jobj, subId)
+		}
+	}
+	return fi, err
+}
+
+func readTest(jobj map[string]interface{}, subId bson.ObjectId)(f *submission.File, err error){
+	name, err := utils.JSONValue(jobj, NAME)
+	if err != nil{
+		return nil, err
+	}
+	ftype, err := utils.JSONValue(jobj, FTYPE)
+	if err != nil{
+		return nil, err
+	}
+	time, err := utils.JSONValue(jobj, TIME)
+	if err != nil{
+		return nil, err
+	}
+	return submission.NewTest(name, ftype, time)
+}
+
+
+func readArchive(jobj map[string]interface{}, subId bson.ObjectId)(f *submission.File, err error){
+	ftype, err := utils.JSONValue(jobj, FTYPE)
+	if err != nil{
+		return nil, err
+	}
+	return submission.NewArchive(ftype)
+}
+
+
+
+func readFile(jobj map[string]interface{}, subId bson.ObjectId)(f *submission.File, err error){
+	name, err := utils.JSONValue(jobj, NAME)
+	if err != nil{
+		return nil, err
+	}
+	pkg, err := utils.JSONValue(jobj, PKG)
+	if err != nil{
+		return nil, err
+	}
+
+	ftype, err := utils.JSONValue(jobj, FTYPE)
+	if err != nil{
+		return nil, err
+	}		
+	mod, err := utils.JSONValue(jobj, MOD)
+	if err != nil{
+		return nil, err
+	}
+	num, err := utils.JSONValue(jobj, NUM)
+	if err != nil{
+		return nil, err
+	}
+	time, err := utils.JSONValue(jobj, time)
+	if err == nil{
+			switch submission.Type(ftype){
+			case submission.SOURCE: 
+				f = submission.NewSource(name, pkg, ftype, mod, num, time)
+			case submission.EXECUTABLE:
+				f = submission.NewExec(name, pkg, ftype, mod, num, time)
+			case submission.CHANGE:
+				f = submission.NewChange(name, pkg, ftype, mod, num, time)
+			}
+	}
+	return f, err
+}
 /*
 Determines whether a login request is valid and delivers this 
 result to the client 
