@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/disco-volante/intlola/db"
-	"github.com/disco-volante/intlola/usr"
+	myuser "github.com/disco-volante/intlola/user"
 	"io"
 	"io/ioutil"
 	"log"
@@ -62,10 +62,10 @@ func ReadUsers(fname string) (users []interface{}, err error) {
 		i := 0
 		for err == nil {
 			vals := strings.Split(line, ":")
-			user := strings.TrimSpace(vals[0])
+			uname := strings.TrimSpace(vals[0])
 			pword := strings.TrimSpace(vals[1])
 			hash, salt := Hash(pword)
-			data := usr.NewUser(user, hash, salt)
+			data := myuser.NewUser(uname, hash, salt)
 			if i == len(users) {
 				users = append(users, data)
 			} else {
@@ -173,4 +173,36 @@ func Unzip(dir string, data []byte) (err error) {
 		}
 	}
 	return err
+}
+
+func ReadZip(data []byte)(extracted map[string] []byte, err error){
+	br := bytes.NewReader(data)
+	zr, err := zip.NewReader(br, int64(br.Len()))
+	extracted = make(map[string] []byte)
+	if err == nil {
+		for _, zf := range zr.File {
+			frc, err := zf.Open()
+			if err == nil {
+				if !zf.FileInfo().IsDir() {
+					extracted[zf.FileInfo().Name()] = getBytes(frc)
+				}
+ 				frc.Close()
+			}
+			if err != nil {
+				break
+			}
+		}
+	}
+	return extracted, err
+
+
+} 
+
+func getBytes(r io.Reader)[]byte{
+	buffer := new(bytes.Buffer)
+	_, err := buffer.ReadFrom(r)
+	if err != nil{
+		panic(err)
+	}
+	return buffer.Bytes()
 }

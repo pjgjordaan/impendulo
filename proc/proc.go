@@ -3,48 +3,58 @@ package proc
 import (
 	"bytes"
 	"github.com/disco-volante/intlola/db"
-	"github.com/disco-volante/intlola/submission"
+	"github.com/disco-volante/intlola/sub"
 	"github.com/disco-volante/intlola/utils"
 	"labix.org/v2/mgo/bson"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
+	"strings"
 )
 
-type Source struct {
-	Id      bson.ObjectId
+
+const(
+DIR_PATH = iota
+PKG_PATH
+FILE_PATH
+)
+
+type SourceInfo struct {
 	Name    string
 	Package string
 	Ext     string
 	Dir     string
 }
 
-func (s *Source) FilePath() string {
-	return filepath.Join(s.Dir, s.Package, s.FullName())
+func (si *SourceInfo) FilePath() string {
+	return filepath.Join(si.Dir, si.Package, si.FullName())
 }
 
-func (s *Source) PkgPath() string {
-	return filepath.Join(s.Dir, s.Package)
+func (si *SourceInfo) PkgPath() string {
+	return filepath.Join(si.Dir, si.Package)
 }
 
-func (s *Source) FullName() string {
-	return s.Name + "." + s.Ext
+func (si *SourceInfo) FullName() string {
+	return si.Name + "." + si.Ext
 }
 
-func (s *Source) ClassName() string {
-	return s.Package + "." + s.Name
+func (si *SourceInfo) Executable() string {
+	return si.Package + "." + si.Name
 }
 
 
-func (src *Source) GetTarget(id int) (target string){
+func (si *SourceInfo) GetTarget(id int) (target string){
 	switch id {
-	case DIR_PATH: target = src.Dir
-	case PKG_PATH: target = src.PkgPath()
-	case FILE_PATH: target = src.FilePath()
+	case DIR_PATH: target = si.Dir
+	case PKG_PATH: target = si.PkgPath()
+	case FILE_PATH: target = si.FilePath()
 	}
 	return target
+}
+func NewSourceInfo(name, pkg, dir string) *SourceInfo{
+	split := strings.Split(name, ".")
+	return &SourceInfo{split[0], pkg, split[1], dir}
 }
 
 type TestBuilder struct {
@@ -73,13 +83,13 @@ func (t *TestBuilder) Setup(project string) (err error) {
 	return err
 }
 
-func GetTests(project string) (tests *submission.File, err error) {
-	sint, err := db.GetMatching(db.SUBMISSIONS, bson.M{"project": project, "mode": "TEST"})
+func GetTests(project string) (tests *sub.File, err error) {
+	smap, err := db.GetMatching(db.SUBMISSIONS, bson.M{"project": project, "mode": "TEST"})
 	if err == nil {
-		sub := sint.(*submission.Submission)
-		tint, err := db.GetMatching(db.FILES, bson.M{"subid": sub.Id})
+		s := sub.ReadSubmission(smap)
+		fmap, err := db.GetMatching(db.FILES, bson.M{"subid": s.Id})
 		if err == nil{
-			tests = tint.(*submission.File)
+			tests = sub.ReadFile(fmap)
 		}
 	}
 	return tests, err
@@ -87,19 +97,19 @@ func GetTests(project string) (tests *submission.File, err error) {
 
 
 
-func RunTests(src *Source) (err error) {
+func RunTests(id bson.ObjectId, si *SourceInfo) (err error) {
 	//Hardcode for now
 	testdir := filepath.Join(os.TempDir(), "tests")
-	cp := src.Dir + ":" + testdir
-	tests := []*Source{&Source{src.Id, "EasyTests", "testing", "java", testdir}, &Source{src.Id, "AllTests", "testing", "java", testdir}}
+	cp := si.Dir + ":" + testdir
+	tests := []*SourceInfo{&SourceInfo{"EasyTests", "testing", "java", testdir}, &SourceInfo{"AllTests", "testing", "java", testdir}}
 	for _, test := range tests {
-		stderr, stdout, err := RunCommand("javac", "-cp", cp, "-d", src.Dir, "-s", src.Dir, "-implicit:class", test.FilePath())
-		AddResults(src.Id, test.Name, "compile_error", stderr.Bytes())
-		AddResults(src.Id, test.Name, "compile_warning", stdout.Bytes())
+		stderr, stdout, err := RunCommand("javac", "-cp", cp, "-d", si.Dir, "-s", si.Dir, "-implicit:class", test.FilePath())
+		AddResults(id, test.Name, "compile_error", stderr.Bytes())
+		AddResults(id, test.Name, "compile_warning", stdout.Bytes())
 		if err == nil {
-			stderr, stdout, err = RunCommand("java", "-cp", cp, "org.junit.runner.JUnitCore", test.ClassName()) //
-			AddResults(src.Id, test.Name, "run_error", stderr.Bytes())
-			AddResults(src.Id, test.Name,"run_result", stdout.Bytes())
+			stderr, stdout, err = RunCommand("java", "-cp", cp, "org.junit.runner.JUnitCore", test.Executable()) //
+			AddResults(id, test.Name, "run_error", stderr.Bytes())
+			AddResults(id, test.Name,"run_result", stdout.Bytes())
 		}
 	}
 	return err
@@ -113,29 +123,23 @@ func AddResults(fileId bson.ObjectId, name, result string,  data []byte)  error 
 }
 
 
-func RunFB(src *Source) (err error) {
+func RunFB(id bson.ObjectId, si *SourceInfo)(err error) {
 	fb := "/home/disco/apps/findbugs-2.0.2/lib/findbugs.jar"
-	stderr, stdout, err := RunCommand("java", "-jar", fb, "-textui", "-low", filepath.Join(src.Dir, src.Package))
-	AddResults(src.Id, "findbugs", "warnings", stderr.Bytes())
-	AddResults(src.Id, "findbugs", "warning_count", stdout.Bytes())
+	stderr, stdout, err := RunCommand("java", "-jar", fb, "-textui", "-low", si.PkgPath())
+	AddResults(id, "findbugs", "warnings", stderr.Bytes())
+	AddResults(id, "findbugs", "warning_count", stdout.Bytes())
 	return err
 }
 
 type Tool struct{
-	Name string
-	Exec string
-	ErrName string
-	OutName string
-	Preamble []string
-	Flags []string
-	Target int
+	Name string "name"
+	Exec string "exec"
+	ErrName string "err"
+	OutName string "out"
+	Preamble []string "pre"
+	Flags []string "flags"
+	Target int "target"
 }
-
-const(
-DIR_PATH = iota
-PKG_PATH
-FILE_PATH
-)
 
 func (tool *Tool) GetArgs(target string) (args [] string){
 	args = make([]string, len(tool.Preamble) + len(tool.Flags) + 2)
@@ -152,45 +156,37 @@ func (tool *Tool) GetArgs(target string) (args [] string){
 	return args
 }
 
+func ReadTool(tmap bson.M)*Tool{
+	name := tmap["name"].(string)
+	exec := tmap["exec"].(string)
+	errName := tmap["err"].(string)
+	outName := tmap["out"].(string)
+	pre := tmap["pre"].([]string)
+	flags := tmap["flags"].([]string)
+	target := tmap["target"].(int)
+	return &Tool{name, exec, errName, outName, pre, flags, target}
+}
 
-func RunTool(src *Source, tool *Tool)(err error){
-	args := tool.GetArgs(src.GetTarget(tool.Target))
+func RunTool(id bson.ObjectId, si *SourceInfo, tool *Tool)(err error){
+	args := tool.GetArgs(si.GetTarget(tool.Target))
 	stderr, stdout, err := RunCommand(args...)
-	AddResults(src.Id, tool.Name, tool.ErrName, stderr.Bytes())
-	AddResults(src.Id, tool.Name, tool.OutName, stdout.Bytes())
+	AddResults(id, tool.Name, tool.ErrName, stderr.Bytes())
+	AddResults(id, tool.Name, tool.OutName, stdout.Bytes())
 	return err
 } 
 
-func RunTools(src *Source) {
+func RunTools(id bson.ObjectId, si *SourceInfo) {
 	tools,_ := db.GetAll(db.TOOLS)
 	for _, t := range tools{
-		tool, _ := t.(*Tool)
-		RunTool(src, tool)
+		tool := ReadTool(t)
+		RunTool(id, si, tool)
 	}
 }
 
-func setupSource(f *submission.File) (src *Source, err error) {
-	err = db.AddSingle(db.FILES, f) 
-	if err == nil && f.IsSource() {
-		dir := filepath.Join(os.TempDir(), f.Id.Hex())
-		src = &Source{f.Id, fname[0], pkg, fname[1], dir}
-		err = utils.SaveFile(filepath.Join(dir, pkg), src.FullName(), f.Data)
-	}
-	return src, err
-}
-
-func setupTests(subId bson.ObjectId) (err error) {
-	sint, err := db.GetById(db.SUBMISSIONS, subId)
-	if err == nil {
-		sub := sint.(*submission.Submission)
-		err = testBuilder.Setup(sub.Project)
-	}
-	return err
-}
 
 var testBuilder *TestBuilder
 
-func Serve(files chan *submission.File) {
+func Serve(files chan *sub.File) {
 	testBuilder = NewTestBuilder()
 	// Start handlers
 	for f := range files {
@@ -199,15 +195,34 @@ func Serve(files chan *submission.File) {
 	utils.Log("completed")
 }
 
-func Process(f *submission.File) {
-	if f.
-	src, err := setupSource(f)
-	if err == nil && src != nil {
-		err = setupTests(f.SubId)
+func Process(f *sub.File) {
+	t := f.Type()
+	if t == sub.ARCHIVE{
+		ProcessArchive(f)
+	} else{
+		err := db.AddSingle(db.FILES, f)
+		if err == nil{
+			if t == sub.SRC{
+				ProcessSource(f)
+			} else if t == sub.EXEC{
+				ProcessExec(f)
+			}else if t == sub.CHANGE{
+				ProcessChange(f)
+			}else if t == sub.TEST{
+				ProcessTest(f)
+			}
+		}
+	} 
+}
+
+func ProcessSource(src *sub.File){
+	si, err := setupSource(src)
+	if err == nil && si != nil {
+		err = setupTests(src.SubId)
 		if err == nil {
-			err = RunTests(src)
+			err = RunTests(src.Id, si)
 			if err == nil {
-				RunTools(src)
+				RunTools(src.Id, si)
 			}
 		}
 	}
@@ -215,6 +230,49 @@ func Process(f *submission.File) {
 		utils.Log(err)
 	}
 }
+
+
+func setupSource(src *sub.File) (si *SourceInfo, err error) {
+	dir := filepath.Join(os.TempDir(), src.Id.Hex())
+	si  = NewSourceInfo(src.InfoStr(sub.NAME), src.InfoStr(sub.PKG), dir)
+	err = utils.SaveFile(filepath.Join(dir, si.Package), si.FullName(), src.Data)
+	return si, err
+}
+
+func setupTests(subId bson.ObjectId) (err error) {
+	smap, err := db.GetById(db.SUBMISSIONS, subId)
+	if err == nil {
+		s := sub.ReadSubmission(smap)
+		//sub := sint.(*sub.Submission)
+		err = testBuilder.Setup(s.Project)
+	}
+	return err
+}
+
+func ProcessExec(s *sub.File){
+}
+
+
+func ProcessChange(s *sub.File){
+}
+
+
+func ProcessTest(s *sub.File){
+}
+
+func ProcessArchive(s *sub.File){
+	files, err := utils.ReadZip(s.Data)
+	if err == nil{
+		for name, data := range files{
+			info := sub.ParseName(name)
+			f := sub.NewFile(s.SubId, info, data)
+			Process(f)
+		}
+	}
+}
+
+
+
 
 func RunCommand(args ...string) (stdout, stderr bytes.Buffer, err error) {
 	cmd := exec.Command(args[0], args[1:]...)

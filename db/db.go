@@ -2,16 +2,17 @@ package db
 
 import (
 	"labix.org/v2/mgo"
-	//"labix.org/v2/mgo/bson"
+	"labix.org/v2/mgo/bson"
 )
 
-const DB = "impendulo"
-const USERS = "users"
-const SUBMISSIONS = "submissions"
-const FILES = "files"
-const TOOLS = "tools"
-const ADDRESS = "localhost"
-
+const(
+DB = "impendulo"
+USERS = "users"
+SUBMISSIONS = "submissions"
+FILES = "files"
+TOOLS = "tools"
+ADDRESS = "localhost"
+)
 var activeSession *mgo.Session
 
 func getSession() (s *mgo.Session, err error) {
@@ -26,7 +27,7 @@ func getSession() (s *mgo.Session, err error) {
 
 
 
-func GetById(col string, id interface{}) (ret interface{}, err error) {
+func GetById(col string, id interface{}) (ret bson.M, err error) {
 	session, err := getSession()
 	if err == nil {
 		defer session.Close()
@@ -36,17 +37,17 @@ func GetById(col string, id interface{}) (ret interface{}, err error) {
 	return ret, err
 }
 
-func GetAll(col string)(items []interface{}, err error){
+func GetAll(col string)(ret[] bson.M, err error){
 	session, err := getSession()
 	if err == nil {
 		defer session.Close()
 		tcol := session.DB(DB).C(col)
-		err = tcol.Find(nil).All(&items)
+		err = tcol.Find(nil).All(&ret)
 	}
-	return items, err	
+	return ret, err	
 }
 
-func GetMatching(col string, matcher interface{}) (ret interface{}, err error){
+func GetMatching(col string, matcher interface{}) (ret bson.M, err error){
 	session, err := getSession()
 	if err == nil {
 		defer session.Close()

@@ -3,26 +3,26 @@ package server
 import (
 	"errors"
 	"github.com/disco-volante/intlola/db"
-	"github.com/disco-volante/intlola/usr"
+	"github.com/disco-volante/intlola/user"
 	"github.com/disco-volante/intlola/proc"
 	"github.com/disco-volante/intlola/utils"
-	"github.com/disco-volante/intlola/submission"
+	"github.com/disco-volante/intlola/sub"
 	"labix.org/v2/mgo/bson"
 	"net"
 )
 
-const FNAME = "FILENAME"
-const FTYPE = "FILETYPE"
-const OK = "OK"
-const EOF = "EOF"
-const SEND = "SEND"
-const LOGOUT = "LOGOUT"
-const REQ = "TYPE"
-const UNAME = "USERNAME"
-const PWORD = "PASSWORD"
-const PROJECT = "PROJECT"
-const MODE = "MODE"
-
+const(
+ OK = "ok"
+ EOF = "eof"
+ SEND = "send"
+LOGIN = "begin"
+ LOGOUT = "end"
+ REQ = "req"
+ UNAME = "uname"
+ PWORD = "pword"
+ PROJECT = "project"
+ MODE = "mode"
+)
 type Client struct {
 	username string
 	project  string
@@ -31,25 +31,41 @@ type Client struct {
 
 
 
+
+
 /*
 Manages an incoming connection request.
 */
-func ConnHandler(conn net.Conn, fileChan chan *submission.File) {
+func ConnHandler(conn net.Conn, fileChan chan *sub.File) {
 	jobj, err := utils.ReadJSON(conn)
-	if err == nil {
-		subId, err := Login(jobj, conn)
-		for err == nil {
-			jobj, err = utils.ReadJSON(conn)
-			if err == nil {
-				req, err := utils.JSONValue(jobj, REQ)
-				if req == SEND {
-					err = ProcessFile(subId, jobj, conn, fileChan)
-				} else if req == LOGOUT {
-					break
-				} else if err == nil {
-					err = errors.New("Unknown request: " + req)
-				}
-			}
+	if err != nil {
+		EndSession(conn, err)
+		return
+	}
+	subId, err := Login(jobj, conn)
+	if err != nil {
+		EndSession(conn, err)
+		return
+	}
+	receiving := true
+	for receiving && err == nil{
+		jobj, err = utils.ReadJSON(conn)
+		if err != nil {
+			EndSession(conn, err)
+			return
+		}	
+		req, err := utils.JSONValue(jobj, REQ)
+		if err != nil {
+			EndSession(conn, err)
+			return
+		}	
+		if req == SEND {
+			delete(jobj, REQ)
+			err = ProcessFile(subId, jobj, conn, fileChan)
+		} else if req == LOGOUT {
+			receiving = false
+		} else {
+			err = errors.New("Unknown request: " + req)
 		}
 	}
 	EndSession(conn, err)
@@ -59,105 +75,17 @@ func ConnHandler(conn net.Conn, fileChan chan *submission.File) {
 /*
 Determines whether a file send request is valid and reads a file if it is.
 */
-func ProcessFile(subId bson.ObjectId, jobj map[string]interface{}, conn net.Conn, fileChan chan *submission.File) (err error) {
-	tipe,err := utils.JSONValue(jobj, TYPE)
-	var buffer bytes.Buffer
-	if err == nil {
-		f, err := ReadFileInfo(jobj, subId)
-		if err == nil {
-			if fi.HasData(){			
-				conn.Write([]byte(OK))
-				buffer, err = utils.ReadFile(conn, []byte(EOF))
-			}
-			if err == nil{				
-				conn.Write([]byte(OK))
-				f := GetFile(finfo, buffer.Bytes())
-				fileChan <- f
-			}
-		}
+func ProcessFile(subId bson.ObjectId, finfo map[string]interface{}, conn net.Conn, fileChan chan *sub.File) (err error) {
+	conn.Write([]byte(OK))
+	buffer, err := utils.ReadFile(conn, []byte(EOF))
+	if err != nil{
+		return err
 	}
-	return err
+	conn.Write([]byte(OK))
+	fileChan <- sub.NewFile(subId, finfo, buffer.Bytes())
+	return nil
 }
 
-func GetFile(finfo *submission.FileInfo, data []byte)(f *submission.File){
-	if finfo.
-
-func ReadFileInfo(jobj map[string]interface{}, subId bson.ObjectId)(fi *submission.File, err error){
-	tipe,err := utils.JSONValue(jobj, TYPE)
-	if err == nil{
-		if tipe == FILE{
-			fi = readFile(jobj, subId)
-		} else if tipe == ARCHIVE{
-			fi = readArchive(jobj, subId)
-		} else if tipe == TEST{
-			fi = readTest(jobj, subId)
-		}
-	}
-	return fi, err
-}
-
-func readTest(jobj map[string]interface{}, subId bson.ObjectId)(f *submission.File, err error){
-	name, err := utils.JSONValue(jobj, NAME)
-	if err != nil{
-		return nil, err
-	}
-	ftype, err := utils.JSONValue(jobj, FTYPE)
-	if err != nil{
-		return nil, err
-	}
-	time, err := utils.JSONValue(jobj, TIME)
-	if err != nil{
-		return nil, err
-	}
-	return submission.NewTest(name, ftype, time)
-}
-
-
-func readArchive(jobj map[string]interface{}, subId bson.ObjectId)(f *submission.File, err error){
-	ftype, err := utils.JSONValue(jobj, FTYPE)
-	if err != nil{
-		return nil, err
-	}
-	return submission.NewArchive(ftype)
-}
-
-
-
-func readFile(jobj map[string]interface{}, subId bson.ObjectId)(f *submission.File, err error){
-	name, err := utils.JSONValue(jobj, NAME)
-	if err != nil{
-		return nil, err
-	}
-	pkg, err := utils.JSONValue(jobj, PKG)
-	if err != nil{
-		return nil, err
-	}
-
-	ftype, err := utils.JSONValue(jobj, FTYPE)
-	if err != nil{
-		return nil, err
-	}		
-	mod, err := utils.JSONValue(jobj, MOD)
-	if err != nil{
-		return nil, err
-	}
-	num, err := utils.JSONValue(jobj, NUM)
-	if err != nil{
-		return nil, err
-	}
-	time, err := utils.JSONValue(jobj, time)
-	if err == nil{
-			switch submission.Type(ftype){
-			case submission.SOURCE: 
-				f = submission.NewSource(name, pkg, ftype, mod, num, time)
-			case submission.EXECUTABLE:
-				f = submission.NewExec(name, pkg, ftype, mod, num, time)
-			case submission.CHANGE:
-				f = submission.NewChange(name, pkg, ftype, mod, num, time)
-			}
-	}
-	return f, err
-}
 /*
 Determines whether a login request is valid and delivers this 
 result to the client 
@@ -165,11 +93,11 @@ result to the client
 func Login(jobj map[string]interface{}, conn net.Conn) (subId bson.ObjectId, err error) {
 	c, err := createClient(jobj)
 	if err == nil {
-		sub := submission.NewSubmission(c.project, c.username, c.mode)
-		err = db.AddSingle(db.SUBMISSIONS, sub)
+		s := sub.NewSubmission(c.project, c.username, c.mode)
+		err = db.AddSingle(db.SUBMISSIONS, s)
 		if err == nil {
 			conn.Write([]byte(OK))
-			subId = sub.Id
+			subId = s.Id
 		}
 	}
 	return subId, err
@@ -208,10 +136,11 @@ func createClient(jobj map[string]interface{}) (c *Client, err error) {
 	if err != nil {
 		return c, err
 	}
-	uint, err := db.GetById(uname, db.USERS)
-	if err == nil {	
-		user := uint.(*usr.User)
-		if user.CheckSubmit(mode) && utils.Validate(user.Password, user.Salt, pword) {
+	umap, err := db.GetById(db.USERS, uname)
+	if err == nil {
+		usr := user.ReadUser(umap)
+		utils.Log(usr, err)
+		if usr.CheckSubmit(mode) && utils.Validate(usr.Password, usr.Salt, pword) {
 			c = &Client{uname, project, mode}
 		} else {
 			err = errors.New("Invalid username or password")
@@ -224,7 +153,7 @@ func createClient(jobj map[string]interface{}) (c *Client, err error) {
 Listens for new connections and creates a new goroutine for each connection.
 */
 func Run(address string, port string) {
-	fileChan := make(chan *submission.File)
+	fileChan := make(chan *sub.File)
 	go proc.Serve(fileChan)
 	service := address + ":" + port
 	tcpAddr, err := net.ResolveTCPAddr("tcp", service)
