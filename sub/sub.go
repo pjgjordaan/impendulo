@@ -40,24 +40,24 @@ func ReadSubmission(smap bson.M)*Submission{
 type File struct {
 	Id       bson.ObjectId "_id"
 	SubId bson.ObjectId "subid"
-	Info map[string] interface{} "info"
+	Info bson.M "info"
 	Data     []byte        "data"
-	Results map[string] interface{} "results"
+	Results []interface{} "results"
 }
 
 
 func ReadFile(fmap bson.M)*File{
 	id := fmap["_id"].(bson.ObjectId)
 	subid := fmap["subid"].(bson.ObjectId)
-	info := fmap["info"].(map[string] interface{})
+	info := fmap["info"].(bson.M)
 	data := fmap["data"].([]byte)
-	res := fmap["results"].(map[string] interface{})
+	res := fmap["results"].([]interface{})
 	return &File{id, subid, info, data, res}
 }
 
 func NewFile(subId bson.ObjectId, info map[string] interface{}, data []byte)*File{
 	id := bson.NewObjectId()
-	return &File{Id: id, Info: info, Data: data}
+	return &File{id, subId, info, data, make([]interface{},0)}
 }
 
 func (f *File) Type() string{

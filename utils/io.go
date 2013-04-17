@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"sync"
 )
 
 const DPERM = 0777
@@ -25,8 +26,9 @@ const BASE_DIR = ".intlola"
 const LOG_DIR = "logs"
 
 var logger *log.Logger
-
+var logM *sync.Mutex
 func init() {
+	logM = new(sync.Mutex)
 	cur, err := user.Current()
 	if err == nil {
 		y, m, d := time.Now().Date()
@@ -65,7 +67,7 @@ func ReadUsers(fname string) (users []interface{}, err error) {
 			uname := strings.TrimSpace(vals[0])
 			pword := strings.TrimSpace(vals[1])
 			hash, salt := Hash(pword)
-			data := myuser.NewUser(uname, hash, salt)
+			data := &myuser.User{uname, hash, salt, myuser.ALL_SUB}
 			if i == len(users) {
 				users = append(users, data)
 			} else {
@@ -86,7 +88,9 @@ func ReadUsers(fname string) (users []interface{}, err error) {
 
 func Log(v ...interface{}) {
 	if DEBUG {
+		logM.Lock()
 		logger.Print(v...)
+		logM.Unlock()
 	}
 }
 

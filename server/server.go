@@ -139,7 +139,6 @@ func createClient(jobj map[string]interface{}) (c *Client, err error) {
 	umap, err := db.GetById(db.USERS, uname)
 	if err == nil {
 		usr := user.ReadUser(umap)
-		utils.Log(usr, err)
 		if usr.CheckSubmit(mode) && utils.Validate(usr.Password, usr.Salt, pword) {
 			c = &Client{uname, project, mode}
 		} else {
