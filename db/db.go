@@ -5,29 +5,28 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
-const(
-DB = "impendulo"
-USERS = "users"
-SUBMISSIONS = "submissions"
-FILES = "files"
-TOOLS = "tools"
-ADDRESS = "localhost"
+const (
+	DB          = "impendulo"
+	USERS       = "users"
+	SUBMISSIONS = "submissions"
+	FILES       = "files"
+	TOOLS       = "tools"
+	ADDRESS     = "localhost"
 )
+
 var activeSession *mgo.Session
 
 func getSession() (s *mgo.Session) {
 	if activeSession == nil {
 		var err error
 		activeSession, err = mgo.Dial(ADDRESS)
-		if err != nil{
+		if err != nil {
 			panic(err)
 		}
 	}
 	s = activeSession.Clone()
 	return s
 }
-
-
 
 func GetById(col string, id interface{}) (ret bson.M, err error) {
 	session := getSession()
@@ -37,15 +36,15 @@ func GetById(col string, id interface{}) (ret bson.M, err error) {
 	return ret, err
 }
 
-func GetAll(col string)(ret[] bson.M, err error){
+func GetAll(col string) (ret []bson.M, err error) {
 	session := getSession()
 	defer session.Close()
 	tcol := session.DB(DB).C(col)
 	err = tcol.Find(nil).All(&ret)
-	return ret, err	
+	return ret, err
 }
 
-func GetMatching(col string, matcher interface{}) (ret bson.M, err error){
+func GetMatching(col string, matcher interface{}) (ret bson.M, err error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB(DB).C(col)
@@ -53,15 +52,15 @@ func GetMatching(col string, matcher interface{}) (ret bson.M, err error){
 	return ret, err
 }
 
-func AddSingle(col string, item interface{})(err error){
+func AddSingle(col string, item interface{}) (err error) {
 	session := getSession()
 	defer session.Close()
 	tcol := session.DB(DB).C(col)
 	err = tcol.Insert(item)
-	return err	
+	return err
 }
 
-func AddMany(col string, items... interface{})(err error) {
+func AddMany(col string, items ...interface{}) (err error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB(DB).C(col)
@@ -74,18 +73,18 @@ func AddMany(col string, items... interface{})(err error) {
 	return err
 }
 
-func Update(col string, matcher, change interface{}) (err error){
+func Update(col string, matcher, change interface{}) (err error) {
 	session := getSession()
 	defer session.Close()
 	tcol := session.DB(DB).C(col)
 	err = tcol.Update(matcher, change)
-	return err	
+	return err
 }
 
-func UpsertId(col string, id, item interface{}) (err error){
+func UpsertId(col string, id, item interface{}) (err error) {
 	session := getSession()
 	defer session.Close()
 	tcol := session.DB(DB).C(col)
 	_, err = tcol.UpsertId(id, item)
-	return err	
+	return err
 }

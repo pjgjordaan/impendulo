@@ -15,8 +15,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 	"sync"
+	"time"
 )
 
 const DPERM = 0777
@@ -27,6 +27,7 @@ const LOG_DIR = "logs"
 
 var logger *log.Logger
 var logM *sync.Mutex
+
 func init() {
 	logM = new(sync.Mutex)
 	cur, err := user.Current()
@@ -119,7 +120,6 @@ func ReadJSON(r io.Reader) (jobj map[string]interface{}, err error) {
 	return jobj, err
 }
 
-
 func ReadFile(r io.Reader, term []byte) (buffer *bytes.Buffer, err error) {
 	buffer = new(bytes.Buffer)
 	p := make([]byte, 2048)
@@ -179,10 +179,10 @@ func Unzip(dir string, data []byte) (err error) {
 	return err
 }
 
-func ReadZip(data []byte)(extracted map[string] []byte, err error){
+func ReadZip(data []byte) (extracted map[string][]byte, err error) {
 	br := bytes.NewReader(data)
 	zr, err := zip.NewReader(br, int64(br.Len()))
-	extracted = make(map[string] []byte)
+	extracted = make(map[string][]byte)
 	if err == nil {
 		for _, zf := range zr.File {
 			frc, err := zf.Open()
@@ -190,7 +190,7 @@ func ReadZip(data []byte)(extracted map[string] []byte, err error){
 				if !zf.FileInfo().IsDir() {
 					extracted[zf.FileInfo().Name()] = getBytes(frc)
 				}
- 				frc.Close()
+				frc.Close()
 			}
 			if err != nil {
 				break
@@ -199,13 +199,12 @@ func ReadZip(data []byte)(extracted map[string] []byte, err error){
 	}
 	return extracted, err
 
+}
 
-} 
-
-func getBytes(r io.Reader)[]byte{
+func getBytes(r io.Reader) []byte {
 	buffer := new(bytes.Buffer)
 	_, err := buffer.ReadFrom(r)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	return buffer.Bytes()

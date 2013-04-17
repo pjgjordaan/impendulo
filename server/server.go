@@ -3,35 +3,32 @@ package server
 import (
 	"errors"
 	"github.com/disco-volante/intlola/db"
-	"github.com/disco-volante/intlola/user"
 	"github.com/disco-volante/intlola/proc"
-	"github.com/disco-volante/intlola/utils"
 	"github.com/disco-volante/intlola/sub"
+	"github.com/disco-volante/intlola/user"
+	"github.com/disco-volante/intlola/utils"
 	"labix.org/v2/mgo/bson"
 	"net"
 )
 
-const(
- OK = "ok"
- EOF = "eof"
- SEND = "send"
-LOGIN = "begin"
- LOGOUT = "end"
- REQ = "req"
- UNAME = "uname"
- PWORD = "pword"
- PROJECT = "project"
- MODE = "mode"
+const (
+	OK      = "ok"
+	EOF     = "eof"
+	SEND    = "send"
+	LOGIN   = "begin"
+	LOGOUT  = "end"
+	REQ     = "req"
+	UNAME   = "uname"
+	PWORD   = "pword"
+	PROJECT = "project"
+	MODE    = "mode"
 )
+
 type Client struct {
 	username string
 	project  string
 	mode     string
 }
-
-
-
-
 
 /*
 Manages an incoming connection request.
@@ -48,17 +45,17 @@ func ConnHandler(conn net.Conn, fileChan chan *sub.File) {
 		return
 	}
 	receiving := true
-	for receiving && err == nil{
+	for receiving && err == nil {
 		jobj, err = utils.ReadJSON(conn)
 		if err != nil {
 			EndSession(conn, err)
 			return
-		}	
+		}
 		req, err := utils.JSONValue(jobj, REQ)
 		if err != nil {
 			EndSession(conn, err)
 			return
-		}	
+		}
 		if req == SEND {
 			delete(jobj, REQ)
 			err = ProcessFile(subId, jobj, conn, fileChan)
@@ -71,14 +68,13 @@ func ConnHandler(conn net.Conn, fileChan chan *sub.File) {
 	EndSession(conn, err)
 }
 
-
 /*
 Determines whether a file send request is valid and reads a file if it is.
 */
 func ProcessFile(subId bson.ObjectId, finfo map[string]interface{}, conn net.Conn, fileChan chan *sub.File) (err error) {
 	conn.Write([]byte(OK))
 	buffer, err := utils.ReadFile(conn, []byte(EOF))
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	conn.Write([]byte(OK))
