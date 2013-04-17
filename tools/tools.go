@@ -1,26 +1,26 @@
 package tools
-import(
-"github.com/disco-volante/intlola/utils"
-"github.com/disco-volante/intlola/db"
-"os/exec"
-"bytes"
-"strings"
-"path/filepath"
-"labix.org/v2/mgo/bson"
-"os"
+
+import (
+	"bytes"
+	"github.com/disco-volante/intlola/db"
+	"github.com/disco-volante/intlola/utils"
+	"labix.org/v2/mgo/bson"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 )
 
-
-const(
-DIR_PATH = iota
-PKG_PATH
-FILE_PATH
+const (
+	DIR_PATH = iota
+	PKG_PATH
+	FILE_PATH
 )
 
 var FB *Tool
 
-func init(){
-	FB = &Tool{"findbugs","/home/disco/apps/findbugs-2.0.2/lib/findbugs.jar", "warnings","warning_count",[]string{"java", "-jar"},[]string{"-textui","-low"},PKG_PATH} 
+func init() {
+	FB = &Tool{"findbugs", "/home/disco/apps/findbugs-2.0.2/lib/findbugs.jar", "warnings", "warning_count", []string{"java", "-jar"}, []string{"-textui", "-low"}, PKG_PATH}
 }
 
 type TargetInfo struct {
@@ -46,81 +46,83 @@ func (ti *TargetInfo) Executable() string {
 	return ti.Package + "." + ti.Name
 }
 
-
-func (ti *TargetInfo) GetTarget(id int) (target string){
+func (ti *TargetInfo) GetTarget(id int) (target string) {
 	switch id {
-	case DIR_PATH: target = ti.Dir
-	case PKG_PATH: target = ti.PkgPath()
-	case FILE_PATH: target = ti.FilePath()
+	case DIR_PATH:
+		target = ti.Dir
+	case PKG_PATH:
+		target = ti.PkgPath()
+	case FILE_PATH:
+		target = ti.FilePath()
 	}
 	return target
 }
 
-func NewTarget(name, pkg, dir string) *TargetInfo{
+func NewTarget(name, pkg, dir string) *TargetInfo {
 	split := strings.Split(name, ".")
 	return &TargetInfo{split[0], pkg, split[1], dir}
 }
 
-type Tool struct{
-	Name string "_id"
-	Exec string "exec"
-	ErrName string "err"
-	OutName string "out"
+type Tool struct {
+	Name     string   "_id"
+	Exec     string   "exec"
+	ErrName  string   "err"
+	OutName  string   "out"
 	Preamble []string "pre"
-	Flags []string "flags"
-	Target int "target"
+	Flags    []string "flags"
+	Target   int      "target"
 }
 
-func (tool *Tool) GetArgs(target string) (args [] string){
-	args = make([]string, len(tool.Preamble) + len(tool.Flags) + 2)
-	for i, p := range tool.Preamble{
+func (tool *Tool) GetArgs(target string) (args []string) {
+	args = make([]string, len(tool.Preamble)+len(tool.Flags)+2)
+	for i, p := range tool.Preamble {
 		args[i] = p
 	}
 	args[len(tool.Preamble)] = tool.Exec
-	start := len(tool.Preamble)+1
-	stop := start+len(tool.Flags)
-	for j := start; j < stop; j++{
+	start := len(tool.Preamble) + 1
+	stop := start + len(tool.Flags)
+	for j := start; j < stop; j++ {
 		args[j] = tool.Flags[j-start]
 	}
 	args[stop] = target
 	return args
 }
 
-func ReadTool(tmap bson.M)*Tool{
+func ReadTool(tmap bson.M) *Tool {
 	name := tmap["_id"].(string)
 	exec := tmap["exec"].(string)
 	errName := tmap["err"].(string)
 	outName := tmap["out"].(string)
 	pint := tmap["pre"].([]interface{})
 	pre := make([]string, len(pint))
-	for i, pval := range pint{
+	for i, pval := range pint {
 		pre[i] = pval.(string)
 	}
 	fint := tmap["flags"].([]interface{})
 	flags := make([]string, len(fint))
-	for j, fval := range fint{
+	for j, fval := range fint {
 		flags[j] = fval.(string)
 	}
 	target := tmap["target"].(int)
 	return &Tool{name, exec, errName, outName, pre, flags, target}
 }
 
-func RunTool(id bson.ObjectId, ti *TargetInfo, tool *Tool){
+func RunTool(id bson.ObjectId, ti *TargetInfo, tool *Tool) {
 	args := tool.GetArgs(ti.GetTarget(tool.Target))
 	stderr, stdout, err := RunCommand(args...)
 	if err != nil {
-		utils.Log(stderr.String(),stdout.String(),err)
+		utils.Log(stderr.String(), stdout.String(), err)
 	}
 	AddResults(id, tool.Name, tool.ErrName, stderr.Bytes())
 	AddResults(id, tool.Name, tool.OutName, stdout.Bytes())
-} 
+}
 
 func Compile(id bson.ObjectId, ti *TargetInfo) bool {
 	stderr, stdout, err := RunCommand("javac", "-implicit:class", ti.FilePath())
 	AddResults(id, "compile", "error", stderr.Bytes())
-	AddResults(id, "compile", "warning", stdout.Bytes())	
+	AddResults(id, "compile", "warning", stdout.Bytes())
 	if err != nil {
-		utils.Log(stderr.String(),stdout.String(), err)
+		utils.Log(stderr.String(), stdout.String(), err)
 	}
 	return err == nil
 }
@@ -135,20 +137,19 @@ func RunTests(id bson.ObjectId, project string, ti *TargetInfo) {
 		AddResults(id, test.Name, "compile_error", stderr.Bytes())
 		AddResults(id, test.Name, "compile_warning", stdout.Bytes())
 		if err != nil {
-			utils.Log(stderr.String(),stdout.String(), err)
+			utils.Log(stderr.String(), stdout.String(), err)
 		}
 		//compiled successfully
 		if err == nil {
 			stderr, stdout, err = RunCommand("java", "-cp", cp, "org.junit.runner.JUnitCore", test.Executable()) //
 			AddResults(id, test.Name, "run_error", stderr.Bytes())
-			AddResults(id, test.Name,"run_result", stdout.Bytes())
+			AddResults(id, test.Name, "run_result", stdout.Bytes())
 			if err != nil {
-				utils.Log(stderr.String(),stdout.String(), err)
+				utils.Log(stderr.String(), stdout.String(), err)
 			}
 		}
 	}
 }
-
 
 func RunTools(id bson.ObjectId, ti *TargetInfo) {
 	tools, err := db.GetAll(db.TOOLS)
@@ -156,12 +157,11 @@ func RunTools(id bson.ObjectId, ti *TargetInfo) {
 	if err != nil {
 		panic(err)
 	}
-	for _, t := range tools{
+	for _, t := range tools {
 		tool := ReadTool(t)
 		RunTool(id, ti, tool)
 	}
 }
-
 
 func RunCommand(args ...string) (stdout, stderr bytes.Buffer, err error) {
 	cmd := exec.Command(args[0], args[1:]...)
@@ -173,22 +173,18 @@ func RunCommand(args ...string) (stdout, stderr bytes.Buffer, err error) {
 	return stdout, stderr, err
 }
 
-
-func AddResults(fileId bson.ObjectId, name, result string,  data []byte) {
+func AddResults(fileId bson.ObjectId, name, result string, data []byte) {
 	matcher := bson.M{"_id": fileId}
-	change := bson.M{"$push": bson.M{"results": bson.M{name: bson.M{"result":result, "data": data}}}}
+	change := bson.M{"$push": bson.M{"results": bson.M{name: bson.M{"result": result, "data": data}}}}
 	err := db.Update(db.FILES, matcher, change)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 }
 
-func AddTool(tool *Tool){
+func AddTool(tool *Tool) {
 	err := db.UpsertId(db.TOOLS, tool.Name, tool)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 }
-
-
- 
