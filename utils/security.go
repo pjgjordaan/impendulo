@@ -10,6 +10,7 @@ import (
 
 func Validate(hashed, salt, pword string) bool {
 	computed := computeHash(pword, salt)
+	Log(computed, hashed)
 	return hashed == computed
 }
 

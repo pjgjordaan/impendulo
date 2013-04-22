@@ -15,6 +15,17 @@ const (
 	ALL_SUB = 7
 )
 
+const(
+	INDIVIDUAL = "individual"
+ARCHIVE = "archive"
+TEST = "test"
+UPDATE = "update"
+ID = "_id"
+PWORD = "password"
+SALT = "salt"
+ACCESS = "access"
+	)
+
 type User struct {
 	Name     string "_id"
 	Password string "password"
@@ -37,18 +48,18 @@ func (u *User) hasAccess(access int) (ret bool) {
 }
 
 func ReadUser(umap bson.M) *User {
-	name := umap["_id"].(string)
-	pword := umap["password"].(string)
-	salt := umap["salt"].(string)
-	access := umap["access"].(int)
+	name := umap[ID].(string)
+	pword := umap[PWORD].(string)
+	salt := umap[SALT].(string)
+	access := umap[ACCESS].(int)
 	return &User{name, pword, salt, access}
 }
 func (u *User) CheckSubmit(mode string) (ret bool) {
-	if mode == "INDIVIDUAL" || mode == "ARCHIVE" {
+	if mode == INDIVIDUAL || mode == ARCHIVE {
 		ret = u.hasAccess(F_SUB)
-	} else if mode == "TEST" {
+	} else if mode == TEST {
 		ret = u.hasAccess(T_SUB)
-	} else if mode == "UPDATE" {
+	} else if mode == UPDATE {
 		ret = u.hasAccess(U_SUB)
 	}
 	return ret

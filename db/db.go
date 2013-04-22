@@ -36,11 +36,11 @@ func GetById(col string, id interface{}) (ret bson.M, err error) {
 	return ret, err
 }
 
-func GetAll(col string) (ret []bson.M, err error) {
+func GetAll(col string, matcher interface{}) (ret []bson.M, err error) {
 	session := getSession()
 	defer session.Close()
 	tcol := session.DB(DB).C(col)
-	err = tcol.Find(nil).All(&ret)
+	err = tcol.Find(matcher).All(&ret)
 	return ret, err
 }
 

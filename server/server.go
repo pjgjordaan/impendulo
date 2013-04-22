@@ -11,23 +11,12 @@ import (
 	"net"
 )
 
-const (
-	OK      = "ok"
-	EOF     = "eof"
-	SEND    = "send"
-	LOGIN   = "begin"
-	LOGOUT  = "end"
-	REQ     = "req"
-	UNAME   = "uname"
-	PWORD   = "pword"
-	PROJECT = "project"
-	MODE    = "mode"
-)
 
 type Client struct {
 	username string
 	project  string
 	mode     string
+	lang string
 }
 
 /*
@@ -89,7 +78,7 @@ result to the client
 func Login(jobj map[string]interface{}, conn net.Conn) (subId bson.ObjectId, err error) {
 	c, err := createClient(jobj)
 	if err == nil {
-		s := sub.NewSubmission(c.project, c.username, c.mode)
+		s := sub.NewSubmission(c.project, c.username, c.mode, c.lang)
 		err = db.AddSingle(db.SUBMISSIONS, s)
 		if err == nil {
 			conn.Write([]byte(OK))
@@ -132,12 +121,18 @@ func createClient(jobj map[string]interface{}) (c *Client, err error) {
 	if err != nil {
 		return c, err
 	}
+
+	lang, err := utils.JSONValue(jobj, LANG)
+	if err != nil {
+		return c, err
+	}
 	umap, err := db.GetById(db.USERS, uname)
 	if err == nil {
 		usr := user.ReadUser(umap)
 		if usr.CheckSubmit(mode) && utils.Validate(usr.Password, usr.Salt, pword) {
-			c = &Client{uname, project, mode}
+			c = &Client{uname, project, mode, lang}
 		} else {
+			utils.Log(usr)
 			err = errors.New("Invalid username or password")
 		}
 	}
@@ -171,3 +166,17 @@ func Run(address string, port string) {
 		}
 	}
 }
+
+const (
+	OK      = "ok"
+	EOF     = "eof"
+	SEND    = "send"
+	LOGIN   = "begin"
+	LOGOUT  = "end"
+	REQ     = "req"
+	UNAME   = "uname"
+	PWORD   = "pword"
+	PROJECT = "project"
+	MODE    = "mode"
+	LANG = "lang"
+)

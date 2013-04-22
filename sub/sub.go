@@ -7,6 +7,9 @@ import (
 	"time"
 )
 
+
+
+
 /*
 A struct used to store information about individual project submissions
 in the database.
@@ -17,25 +20,28 @@ type Submission struct {
 	User    string        "user"
 	Time    int64         "time"
 	Mode    string        "mode"
+	Lang string "lang"
 }
+
 
 func (s *Submission) IsTest() bool {
-	return s.Mode == "TEST"
+	return s.Mode == TEST
 }
 
-func NewSubmission(project, user, mode string) *Submission {
+func NewSubmission(project, user, mode, lang string) *Submission {
 	subId := bson.NewObjectId()
 	now := time.Now().UnixNano()
-	return &Submission{subId, project, user, now, mode}
+	return &Submission{subId, project, user, now, mode, lang}
 }
 
 func ReadSubmission(smap bson.M) *Submission {
-	id := smap["_id"].(bson.ObjectId)
-	proj := smap["project"].(string)
-	usr := smap["user"].(string)
-	time := smap["time"].(int64)
-	mode := smap["mode"].(string)
-	return &Submission{id, proj, usr, time, mode}
+	id := smap[ID].(bson.ObjectId)
+	proj := smap[PROJECT].(string)
+	usr := smap[USER].(string)
+	time := smap[TIME].(int64)
+	mode := smap[MODE].(string)
+	lang := smap[LANG].(string)
+	return &Submission{id, proj, usr, time, mode, lang}
 }
 
 type File struct {
@@ -47,11 +53,11 @@ type File struct {
 }
 
 func ReadFile(fmap bson.M) *File {
-	id := fmap["_id"].(bson.ObjectId)
-	subid := fmap["subid"].(bson.ObjectId)
-	info := fmap["info"].(bson.M)
-	data := fmap["data"].([]byte)
-	res := fmap["results"].([]interface{})
+	id := fmap[ID].(bson.ObjectId)
+	subid := fmap[SUBID].(bson.ObjectId)
+	info := fmap[INFO].(bson.M)
+	data := fmap[DATA].([]byte)
+	res := fmap[RES].([]interface{})
 	return &File{id, subid, info, data, res}
 }
 
@@ -91,21 +97,14 @@ func ParseName(name string) (info map[string]interface{}) {
 	return info
 }
 
-/*
-func getFileInfo(info string)(f *File, err error){
-	params := strings.Split(fname, "_")
-	mod := char(params[len(params)-1])
-	num,_ := strconv.Atoi(params[len(params)-2])
-	modtime,_ := strconv.ParseInt(params[len(params)-3], 10, 64)
-	fname := strings.Split(params[len(params)-4], ".")
-	name := fname[0]
-	ext := fname[1]
-	pkg := params[len(params)-5]
-}
-*/
 
-//File metadata
+
 const (
+	ID = "_id"
+	PROJECT = "project"
+	USER = "user"
+	TIME = "time"
+	MODE = "mode"
 	TYPE    = "type"
 	SRC     = "src"
 	EXEC    = "exec"
@@ -116,6 +115,10 @@ const (
 	NAME    = "name"
 	PKG     = "pkg"
 	NUM     = "num"
-	TIME    = "time"
 	MOD     = "mod"
+	LANG = "lang"
+	SUBID = "subid"
+	INFO = "info"
+	DATA = "data"
+	RES = "results"
 )
