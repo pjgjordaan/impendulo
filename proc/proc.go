@@ -23,31 +23,35 @@ func NewTestBuilder() *TestBuilder {
 	return &TestBuilder{make(map[string]bool), new(sync.Mutex), dir}
 }
 
-func (t *TestBuilder) Setup(project string) {
+func (t *TestBuilder) Setup(project string)(ret bool){
 	t.m.Lock()
 	if !t.Tests[project] {
-		tests := GetTests(project)
-		err := utils.Unzip(filepath.Join(t.TestDir, project), tests.Data)
-		if err != nil {
-			panic(err)
-		}
-		t.Tests[project] = true
+		tests, err := GetTests(project)
+		if err == nil{
+			err := utils.Unzip(filepath.Join(t.TestDir, project), tests.Data)
+			if err != nil {
+				panic(err)
+			}
+			t.Tests[project] = true
+			ret = true
+		} 
 	}
 	t.m.Unlock()
+	return ret
 }
 
-func GetTests(project string) (tests *sub.File) {
+func GetTests(project string) (tests *sub.File, err error) {
 	smap, err := db.GetMatching(db.SUBMISSIONS, bson.M{sub.PROJECT: project, sub.MODE: sub.TEST})
 	if err != nil {
-		panic(err)
+		return tests, err
 	}
 	s := sub.ReadSubmission(smap)
 	fmap, err := db.GetMatching(db.FILES, bson.M{"subid": s.Id})
 	if err != nil {
-		panic(err)
+		return tests, err
 	}
 	tests = sub.ReadFile(fmap)
-	return tests
+	return tests, err
 }
 
 var testBuilder *TestBuilder
@@ -59,6 +63,7 @@ func Serve(files chan *sub.File) {
 	status := make(chan string)
 	go StatusListener(status)
 	for f := range files {
+		fmt.Println(f)
 		go Process(f, status)
 	}
 }
@@ -122,8 +127,11 @@ func setupSource(src *sub.File, s *sub.Submission) (ti *tools.TargetInfo) {
 }
 
 func runTests(src *sub.File, project string, ti *tools.TargetInfo) {
-	testBuilder.Setup(project)
-	tools.RunTests(src.Id, project, ti)
+	if testBuilder.Setup(project){
+		tools.RunTests(src.Id, project, ti)
+	} else {
+		utils.Log("No tests found for ", project)
+	}
 }
 
 func ProcessExec(s *sub.File) {

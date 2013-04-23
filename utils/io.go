@@ -127,16 +127,16 @@ func ReadFile(r io.Reader, term []byte) (buffer *bytes.Buffer, err error) {
 	for receiving {
 		bytesRead, err := r.Read(p)
 		read := p[:bytesRead]
-		if bytes.HasSuffix(read, term) || err != nil {
+		if bytes.HasSuffix(read, term)  {
 			read = read[:len(read)-len(term)]
+			receiving = false
+		} else if err != nil{
 			receiving = false
 		}
 		if err == nil || err == io.EOF {
 			buffer.Write(read)
+			err = nil
 		}
-	}
-	if err == io.EOF {
-		err = nil
 	}
 	return buffer, err
 }
