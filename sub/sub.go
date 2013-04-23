@@ -11,8 +11,7 @@ import (
 
 
 /*
-A struct used to store information about individual project submissions
-in the database.
+Individual project submissions
 */
 type Submission struct {
 	Id      bson.ObjectId "_id"
@@ -34,6 +33,9 @@ func NewSubmission(project, user, mode, lang string) *Submission {
 	return &Submission{subId, project, user, now, mode, lang}
 }
 
+/*
+Extract submission from a mongo map.
+*/
 func ReadSubmission(smap bson.M) *Submission {
 	id := smap[ID].(bson.ObjectId)
 	proj := smap[PROJECT].(string)
@@ -44,37 +46,49 @@ func ReadSubmission(smap bson.M) *Submission {
 	return &Submission{id, proj, usr, time, mode, lang}
 }
 
+/*
+Single file's data from a submission. 
+*/
 type File struct {
 	Id      bson.ObjectId "_id"
 	SubId   bson.ObjectId "subid"
 	Info    bson.M        "info"
 	Data    []byte        "data"
-	Results []interface{} "results"
+	Results bson.M "results"
 }
 
+/*
+Extract file data from a mongo map
+*/
 func ReadFile(fmap bson.M) *File {
 	id := fmap[ID].(bson.ObjectId)
 	subid := fmap[SUBID].(bson.ObjectId)
 	info := fmap[INFO].(bson.M)
 	data := fmap[DATA].([]byte)
-	res := fmap[RES].([]interface{})
+	res := fmap[RES].(bson.M)
 	return &File{id, subid, info, data, res}
 }
 
 func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) *File {
 	id := bson.NewObjectId()
-	return &File{id, subId, info, data, make([]interface{}, 0)}
+	return &File{id, subId, info, data, bson.M{}}
 }
 
 func (f *File) Type() string {
 	return f.InfoStr(TYPE)
 }
 
+/*
+Retrieve file metadata
+*/
 func (f *File) InfoStr(key string) (val string) {
 	val, _ = f.Info[key].(string)
 	return val
 }
 
+/*
+Retrieve file metadata encoded in a file name.
+*/
 func ParseName(name string) (info map[string]interface{}) {
 	info = make(map[string]interface{})
 	elems := strings.Split(name, "_")
@@ -96,7 +110,6 @@ func ParseName(name string) (info map[string]interface{}) {
 	}
 	return info
 }
-
 
 
 const (

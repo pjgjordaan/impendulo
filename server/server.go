@@ -20,7 +20,7 @@ type Client struct {
 }
 
 /*
-Manages an incoming connection request.
+Manage incoming connection request.
 */
 func ConnHandler(conn net.Conn, fileChan chan *sub.File) {
 	jobj, err := utils.ReadJSON(conn)
@@ -58,7 +58,7 @@ func ConnHandler(conn net.Conn, fileChan chan *sub.File) {
 }
 
 /*
-Determines whether a file send request is valid and reads a file if it is.
+Reads file data from connection and sends data to be processed.
 */
 func ProcessFile(subId bson.ObjectId, finfo map[string]interface{}, conn net.Conn, fileChan chan *sub.File) (err error) {
 	conn.Write([]byte(OK))
@@ -72,14 +72,13 @@ func ProcessFile(subId bson.ObjectId, finfo map[string]interface{}, conn net.Con
 }
 
 /*
-Determines whether a login request is valid and delivers this 
-result to the client 
+Creates a new submission if the login request is valid.
 */
 func Login(jobj map[string]interface{}, conn net.Conn) (subId bson.ObjectId, err error) {
 	c, err := createClient(jobj)
 	if err == nil {
 		s := sub.NewSubmission(c.project, c.username, c.mode, c.lang)
-		err = db.AddSingle(db.SUBMISSIONS, s)
+		err = db.AddOne(db.SUBMISSIONS, s)
 		if err == nil {
 			conn.Write([]byte(OK))
 			subId = s.Id
@@ -89,8 +88,7 @@ func Login(jobj map[string]interface{}, conn net.Conn) (subId bson.ObjectId, err
 }
 
 /*
-Handles an error by logging it as well as reporting it to the connected
-user if possible.
+Ends a client session and reports any errors to the client. 
 */
 func EndSession(conn net.Conn, err error) {
 	var msg string
@@ -104,6 +102,10 @@ func EndSession(conn net.Conn, err error) {
 	conn.Close()
 }
 
+/*
+Reads client values from a json object.
+Determines whether client has neccesary privileges for submission and is using correct password 
+*/
 func createClient(jobj map[string]interface{}) (c *Client, err error) {
 	uname, err := utils.JSONValue(jobj, UNAME)
 	if err != nil {

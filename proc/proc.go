@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"sync"
 "fmt"
+	"os/signal"
 )
 
 type TestBuilder struct {
@@ -23,6 +24,9 @@ func NewTestBuilder() *TestBuilder {
 	return &TestBuilder{make(map[string]bool), new(sync.Mutex), dir}
 }
 
+/*
+Extracts project tests from db to filesystem for execution.
+*/
 func (t *TestBuilder) Setup(project string)(ret bool){
 	t.m.Lock()
 	if !t.Tests[project] {
@@ -40,13 +44,16 @@ func (t *TestBuilder) Setup(project string)(ret bool){
 	return ret
 }
 
+/*
+Retrieves project tests from database.
+*/
 func GetTests(project string) (tests *sub.File, err error) {
-	smap, err := db.GetMatching(db.SUBMISSIONS, bson.M{sub.PROJECT: project, sub.MODE: sub.TEST})
+	smap, err := db.GetOne(db.SUBMISSIONS, bson.M{sub.PROJECT: project, sub.MODE: sub.TEST})
 	if err != nil {
 		return tests, err
 	}
 	s := sub.ReadSubmission(smap)
-	fmap, err := db.GetMatching(db.FILES, bson.M{"subid": s.Id})
+	fmap, err := db.GetOne(db.FILES, bson.M{"subid": s.Id})
 	if err != nil {
 		return tests, err
 	}
@@ -56,34 +63,80 @@ func GetTests(project string) (tests *sub.File, err error) {
 
 var testBuilder *TestBuilder
 
+/*
+Spawns new processing routines for each file which needs to be processed.
+*/
 func Serve(files chan *sub.File) {
-	tools.AddTool(tools.FB)
 	testBuilder = NewTestBuilder()
 	// Start handlers
-	status := make(chan string)
-	go StatusListener(status)
+	status := make(chan *Status)
+	 statusListener(status, getQueued())
 	for f := range files {
 		fmt.Println(f)
 		go Process(f, status)
 	}
 }
 
-func StatusListener(status chan string){
-	for stat := range status{
-		fmt.Println(stat)
+type Status struct{
+	Id bson.ObjectId
+	Phase int
+}
+
+const(
+	BUSY = iota
+DONE 
+)
+
+func getQueued()(queued map[bson.ObjectId] *Status){
+	err := utils.ReadStruct(utils.BASE_DIR, "queue.txt", queued)
+	if err != nil{
+		utils.Log(err)
+		queued = make(map[bson.ObjectId] *Status)
+	}
+	return queued
+}
+
+
+/*
+Keeps track of currently active processing routines.
+*/
+func statusListener(status chan *Status, active map[bson.ObjectId] *Status){
+	signals := make(chan os.Signal)
+	signal.Notify(signals)
+	for {
+		select{
+		case stat := <- status:
+			if stat.Phase == DONE{
+				delete(active, stat.Id)
+			} else if _, ok := active[stat.Id]; !ok{
+				active[stat.Id] = stat
+			}
+		case sig := <- signals:
+			utils.Log(sig)
+			fmt.Println(sig)
+			err := utils.SaveStruct(utils.BASE_DIR, "queue.txt", active)
+			if err != nil{
+				utils.Log(err)
+			}
+			os.Exit(0)
+		}
 	}
 }
 
-func Process(f *sub.File, status chan string) {
-	status <- "Processing: "+f.InfoStr(sub.NAME)
+
+/*
+Adds a file to the database and processes it according to its type.
+*/
+func Process(f *sub.File, status chan *Status) {
 	t := f.Type()
 	if t == sub.ARCHIVE {
 		ProcessArchive(f, status)
 	} else {
-		err := db.AddSingle(db.FILES, f)
+		err := db.AddOne(db.FILES, f)
 		if err != nil {
 			panic(err)
 		}
+		status <- &Status{f.Id, BUSY}
 		if t == sub.SRC {
 			ProcessSource(f)
 		} else if t == sub.EXEC {
@@ -93,10 +146,13 @@ func Process(f *sub.File, status chan string) {
 		} else if t == sub.TEST {
 			ProcessTest(f)
 		}
+		status <- &Status{f.Id, DONE}
 	}
-	status <- "Processed: "+f.InfoStr(sub.NAME)
 }
 
+/*
+Compiles a source file. Runs tools and tests on compiled file.
+*/
 func ProcessSource(src *sub.File) {
 	smap, err := db.GetById(db.SUBMISSIONS, src.SubId)
 	if err != nil {
@@ -115,7 +171,9 @@ func ProcessSource(src *sub.File) {
 		panic(err)
 	}
 }
-
+/*
+Saves source file to filesystem.
+*/
 func setupSource(src *sub.File, s *sub.Submission) (ti *tools.TargetInfo) {
 	dir := filepath.Join(os.TempDir(), src.Id.Hex())
 	ti = tools.NewTarget(src.InfoStr(sub.NAME),s.Lang, src.InfoStr(sub.PKG), dir)
@@ -126,6 +184,9 @@ func setupSource(src *sub.File, s *sub.Submission) (ti *tools.TargetInfo) {
 	return ti
 }
 
+/*
+Sets up and runs test on executable file.
+*/
 func runTests(src *sub.File, project string, ti *tools.TargetInfo) {
 	if testBuilder.Setup(project){
 		tools.RunTests(src.Id, project, ti)
@@ -143,7 +204,10 @@ func ProcessChange(s *sub.File) {
 func ProcessTest(s *sub.File) {
 }
 
-func ProcessArchive(s *sub.File, status chan string) {
+/*
+Extracts files from archive and processes them.
+*/
+func ProcessArchive(s *sub.File, status chan *Status) {
 	files, err := utils.ReadZip(s.Data)
 	if err != nil {
 		utils.Log("Bad archive: ", err)

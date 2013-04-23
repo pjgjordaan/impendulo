@@ -12,6 +12,7 @@ const (
 	FILES       = "files"
 	TOOLS       = "tools"
 	ADDRESS     = "localhost"
+	RESULTS = "results"
 )
 
 var activeSession *mgo.Session
@@ -44,7 +45,7 @@ func GetAll(col string, matcher interface{}) (ret []bson.M, err error) {
 	return ret, err
 }
 
-func GetMatching(col string, matcher interface{}) (ret bson.M, err error) {
+func GetOne(col string, matcher interface{}) (ret bson.M, err error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB(DB).C(col)
@@ -52,7 +53,7 @@ func GetMatching(col string, matcher interface{}) (ret bson.M, err error) {
 	return ret, err
 }
 
-func AddSingle(col string, item interface{}) (err error) {
+func AddOne(col string, item interface{}) (err error) {
 	session := getSession()
 	defer session.Close()
 	tcol := session.DB(DB).C(col)

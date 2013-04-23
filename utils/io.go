@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"encoding/json"
+	"encoding/gob"
 	"errors"
 	"github.com/disco-volante/intlola/db"
 	myuser "github.com/disco-volante/intlola/user"
@@ -143,13 +144,40 @@ func ReadFile(r io.Reader, term []byte) (buffer *bytes.Buffer, err error) {
 
 func SaveFile(dir, fname string, data []byte) (err error) {
 	err = os.MkdirAll(dir, DPERM)
-	if err == nil {
-		f, err := os.Create(filepath.Join(dir, fname))
-		if err == nil {
-			_, err = f.Write(data)
-		}
+	if err != nil {
+		return err
 	}
+	f, err := os.Create(filepath.Join(dir, fname))
+	if err != nil {
+		return err
+	}
+	_, err = f.Write(data)
 	return err
+}
+
+func SaveStruct(dir, fname string, strct interface{}) (err error){
+	err = os.MkdirAll(dir, DPERM)
+	if err != nil {
+		return err
+	}
+	f, err := os.Create(filepath.Join(dir, fname))
+	if err != nil {
+		return err
+	}
+	enc := gob.NewEncoder(f) 
+	err  = enc.Encode(strct)
+	return err
+}
+
+func ReadStruct(dir, fname string, strct interface{}) (err error){
+	f, err := os.Open(filepath.Join(dir, fname))
+	if err != nil{
+		return err
+	}
+	dec := gob.NewDecoder(f) 
+	err = dec.Decode(strct)
+	return err
+
 }
 
 func Unzip(dir string, data []byte) (err error) {

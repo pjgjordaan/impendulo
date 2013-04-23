@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+"time"
 )
 
 const (
@@ -17,12 +18,23 @@ const (
 	FILE_PATH
 )
 
-var FB *Tool
-
+//Tool configuration for testing
 func init() {
-	FB = &Tool{"findbugs", "java", "/home/disco/apps/findbugs-2.0.2/lib/findbugs.jar", "warnings", "warning_count", []string{"java", "-jar"}, []string{"-textui", "-low"}, PKG_PATH}
+	_, err := db.GetOne(db.TOOLS, bson.M{"name": "findbugs"}) 
+	if err != nil{
+		fb := &Tool{bson.NewObjectId(),"findbugs", "java", "/home/disco/apps/findbugs-2.0.2/lib/findbugs.jar", "warning_count", "warnings", []string{"java", "-jar"}, []string{"-textui", "-low"}, PKG_PATH}
+		AddTool(fb)
+	}
+	_, err = db.GetOne(db.TOOLS, bson.M{"name": "compile"}) 
+	if err != nil{
+		javac := &Tool{bson.NewObjectId(), "compile", "java", "javac", "warnings", "errors", []string{}, []string{"-implicit:class"}, FILE_PATH} 
+		AddTool(javac)
+	}
 }
 
+/*
+Information about the target file
+*/
 type TargetInfo struct {
 	Name    string
 	Lang string
@@ -30,7 +42,9 @@ type TargetInfo struct {
 	Ext     string
 	Dir     string
 }
-
+/*
+Helper functions to retrieve various target path strings used by tools.
+*/
 func (ti *TargetInfo) FilePath() string {
 	return filepath.Join(ti.Dir, ti.Package, ti.FullName())
 }
@@ -64,17 +78,24 @@ func NewTarget(name, lang, pkg, dir string) *TargetInfo {
 	return &TargetInfo{split[0], lang, pkg, split[1], dir}
 }
 
+/*
+Generic tool specification
+*/
 type Tool struct {
-	Name     string   "_id"
+	Id bson.ObjectId "_id"
+	Name     string   "name"
 	Lang string "lang"
 	Exec     string   "exec"
-	ErrName  string   "err"
 	OutName  string   "out"
+	ErrName  string   "err"
 	Preamble []string "pre"
 	Flags    []string "flags"
 	Target   int      "target"
 }
 
+/*
+Setup tool arguments for execution.
+*/
 func (tool *Tool) GetArgs(target string) (args []string) {
 	args = make([]string, len(tool.Preamble)+len(tool.Flags)+2)
 	for i, p := range tool.Preamble {
@@ -90,12 +111,16 @@ func (tool *Tool) GetArgs(target string) (args []string) {
 	return args
 }
 
+/*
+Retrieves a tool from a mongo map.
+*/
 func ReadTool(tmap bson.M) *Tool {
-	name := tmap["_id"].(string)
+	id := tmap["_id"].(bson.ObjectId)
+	name := tmap["name"].(string)
 	lang := tmap["lang"].(string)
 	exec := tmap["exec"].(string)
+	outName := tmap["out"].(string)	
 	errName := tmap["err"].(string)
-	outName := tmap["out"].(string)
 	pint := tmap["pre"].([]interface{})
 	pre := make([]string, len(pint))
 	for i, pval := range pint {
@@ -107,30 +132,44 @@ func ReadTool(tmap bson.M) *Tool {
 		flags[j] = fval.(string)
 	}
 	target := tmap["target"].(int)
-	return &Tool{name, lang, exec, errName, outName, pre, flags, target}
+	return &Tool{id, name, lang, exec, outName, errName, pre, flags, target}
 }
 
-func RunTool(id bson.ObjectId, ti *TargetInfo, tool *Tool) {
+/*
+Runs a tool and writes its results to the database.
+*/
+func RunTool(id bson.ObjectId, ti *TargetInfo, tool *Tool) error {
 	args := tool.GetArgs(ti.GetTarget(tool.Target))
 	stderr, stdout, err := RunCommand(args...)
 	if err != nil {
 		utils.Log(stderr.String(), stdout.String(), err)
 	}
-	AddResults(id, tool.Name, tool.ErrName, stderr.Bytes())
-	AddResults(id, tool.Name, tool.OutName, stdout.Bytes())
+	AddResult(NewResult(id, tool.Id, tool.Name, tool.OutName, tool.ErrName,stdout.Bytes(), stderr.Bytes()))
+	return err
 }
 
+/*
+Compiles a java source file and writes the results thereof to the database.
+*/
 func Compile(id bson.ObjectId, ti *TargetInfo) bool {
-	//Hardcode for now
-	stderr, stdout, err := RunCommand("javac", "-implicit:class", ti.FilePath())
-	AddResults(id, "compile", "error", stderr.Bytes())
-	AddResults(id, "compile", "warning", stdout.Bytes())
-	if err != nil {
-		utils.Log(stderr.String(), stdout.String(), err)
+	cint, err := db.GetOne(db.TOOLS, bson.M{"lang": ti.Lang, "name": "compile"})
+	if err != nil{
+		utils.Log(ti.Lang+" compiler not found: ", err)
+		return false
 	}
-	return err == nil
+	comp := ReadTool(cint)
+	err = RunTool(id, ti, comp)
+	if err != nil{
+		utils.Log("Unsuccesful compile: ", err)
+		return false
+	}
+	return true
 }
 
+
+/*
+Runs java tests on a source file
+*/
 func RunTests(id bson.ObjectId, project string, ti *TargetInfo) {
 	testdir := filepath.Join(os.TempDir(), "tests", project)
 	cp := ti.Dir + ":" + testdir
@@ -138,16 +177,14 @@ func RunTests(id bson.ObjectId, project string, ti *TargetInfo) {
 	tests := []*TargetInfo{&TargetInfo{"EasyTests", "java", "testing", "java", testdir}, &TargetInfo{"AllTests","java", "testing", "java", testdir}}
 	for _, test := range tests {
 		stderr, stdout, err := RunCommand("javac", "-cp", cp, "-d", ti.Dir, "-s", ti.Dir, "-implicit:class", test.FilePath())
-		AddResults(id, test.Name, "compile_error", stderr.Bytes())
-		AddResults(id, test.Name, "compile_warning", stdout.Bytes())
+		AddResult(NewResult(id, id, test.Name, "compile_warning", "compile_error",stdout.Bytes(), stderr.Bytes()))
 		if err != nil {
 			utils.Log(stderr.String(), stdout.String(), err)
 		}
 		//compiled successfully
 		if err == nil {
 			stderr, stdout, err = RunCommand("java", "-cp", cp, "org.junit.runner.JUnitCore", test.Executable()) //
-			AddResults(id, test.Name, "run_error", stderr.Bytes())
-			AddResults(id, test.Name, "run_result", stdout.Bytes())
+			AddResult(NewResult(id, id, test.Name, "run_result", "run_error",stdout.Bytes(), stderr.Bytes()))
 			if err != nil {
 				utils.Log(stderr.String(), stdout.String(), err)
 			}
@@ -155,6 +192,9 @@ func RunTests(id bson.ObjectId, project string, ti *TargetInfo) {
 	}
 }
 
+/*
+Runs all available tools on a file.
+*/
 func RunTools(id bson.ObjectId, ti *TargetInfo) {
 	tools, err := db.GetAll(db.TOOLS, bson.M{"lang": ti.Lang})
 	//db error
@@ -167,6 +207,9 @@ func RunTools(id bson.ObjectId, ti *TargetInfo) {
 	}
 }
 
+/*
+Executes a given external command.
+*/
 func RunCommand(args ...string) (stdout, stderr bytes.Buffer, err error) {
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
@@ -177,17 +220,43 @@ func RunCommand(args ...string) (stdout, stderr bytes.Buffer, err error) {
 	return stdout, stderr, err
 }
 
-func AddResults(fileId bson.ObjectId, name, result string, data []byte) {
-	matcher := bson.M{"_id": fileId}
-	change := bson.M{"$push": bson.M{"results": bson.M{name: bson.M{"result": result, "data": data}}}}
+type Result struct{
+	Id bson.ObjectId "_id"
+	ToolId bson.ObjectId "toolId"
+	FileId bson.ObjectId "fileid"
+	Name string "name"
+	OutName string "outname"
+	ErrName string "errname"
+	OutData []byte "outdata"
+	ErrData []byte "errdata"
+	Time int64 "time"
+}
+
+func NewResult(fileId, toolId bson.ObjectId, name, outname,errname string, outdata, errdata []byte)*Result{
+	return &Result{bson.NewObjectId(), fileId, toolId, name, outname, errname, outdata, errdata, time.Now().UnixNano()}
+}
+/*
+Adds execution results to the database.
+*/
+func AddResult(res *Result) {
+	matcher := bson.M{"_id": res.FileId}
+	//change := bson.M{"$push": bson.M{"results": bson.M{name: bson.M{"result": result, "data": data}}}}
+	change := bson.M{"$set": bson.M{"results."+res.Name: res.Id}}
 	err := db.Update(db.FILES, matcher, change)
+	if err != nil {
+		panic(err)
+	}
+	err = db.AddOne(db.RESULTS, res)
 	if err != nil {
 		panic(err)
 	}
 }
 
+/*
+Adds a new tool to the database.
+*/
 func AddTool(tool *Tool) {
-	err := db.UpsertId(db.TOOLS, tool.Name, tool)
+	err := db.AddOne(db.TOOLS, tool)
 	if err != nil {
 		panic(err)
 	}
