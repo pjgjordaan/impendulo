@@ -138,27 +138,27 @@ func ReadTool(tmap bson.M) *Tool {
 /*
 Runs a tool and writes its results to the database.
 */
-func RunTool(id bson.ObjectId, ti *TargetInfo, tool *Tool) error {
+func RunTool(fileId bson.ObjectId, ti *TargetInfo, tool *Tool) error {
 	args := tool.GetArgs(ti.GetTarget(tool.Target))
 	stderr, stdout, err := RunCommand(args...)
 	if err != nil {
 		utils.Log(stderr.String(), stdout.String(), err)
 	}
-	AddResult(NewResult(id, tool.Id, tool.Name, tool.OutName, tool.ErrName,stdout.Bytes(), stderr.Bytes()))
+	AddResult(NewResult(fileId, tool.Id, tool.Name, tool.OutName, tool.ErrName,stdout.Bytes(), stderr.Bytes()))
 	return err
 }
 
 /*
 Compiles a java source file and writes the results thereof to the database.
 */
-func Compile(id bson.ObjectId, ti *TargetInfo) bool {
+func Compile(fileId bson.ObjectId, ti *TargetInfo) bool {
 	cint, err := db.GetOne(db.TOOLS, bson.M{"lang": ti.Lang, "name": "compile"})
 	if err != nil{
 		utils.Log(ti.Lang+" compiler not found: ", err)
 		return false
 	}
 	comp := ReadTool(cint)
-	err = RunTool(id, ti, comp)
+	err = RunTool(fileId, ti, comp)
 	if err != nil{
 		utils.Log("Unsuccesful compile: ", err)
 		return false
@@ -170,21 +170,21 @@ func Compile(id bson.ObjectId, ti *TargetInfo) bool {
 /*
 Runs java tests on a source file
 */
-func RunTests(id bson.ObjectId, project string, ti *TargetInfo) {
+func RunTests(fileId bson.ObjectId, project string, ti *TargetInfo) {
 	testdir := filepath.Join(os.TempDir(), "tests", project)
 	cp := ti.Dir + ":" + testdir
 	//Hardcode for now
 	tests := []*TargetInfo{&TargetInfo{"EasyTests", "java", "testing", "java", testdir}, &TargetInfo{"AllTests","java", "testing", "java", testdir}}
 	for _, test := range tests {
 		stderr, stdout, err := RunCommand("javac", "-cp", cp, "-d", ti.Dir, "-s", ti.Dir, "-implicit:class", test.FilePath())
-		AddResult(NewResult(id, id, test.Name, "compile_warning", "compile_error",stdout.Bytes(), stderr.Bytes()))
+		AddResult(NewResult(fileId, fileId, test.Name, "compile_warning", "compile_error",stdout.Bytes(), stderr.Bytes()))
 		if err != nil {
 			utils.Log(stderr.String(), stdout.String(), err)
 		}
 		//compiled successfully
 		if err == nil {
 			stderr, stdout, err = RunCommand("java", "-cp", cp, "org.junit.runner.JUnitCore", test.Executable()) //
-			AddResult(NewResult(id, id, test.Name, "run_result", "run_error",stdout.Bytes(), stderr.Bytes()))
+			AddResult(NewResult(fileId, fileId, test.Name, "run_result", "run_error",stdout.Bytes(), stderr.Bytes()))
 			if err != nil {
 				utils.Log(stderr.String(), stdout.String(), err)
 			}
@@ -195,7 +195,7 @@ func RunTests(id bson.ObjectId, project string, ti *TargetInfo) {
 /*
 Runs all available tools on a file.
 */
-func RunTools(id bson.ObjectId, ti *TargetInfo) {
+func RunTools(fileId bson.ObjectId, ti *TargetInfo) {
 	tools, err := db.GetAll(db.TOOLS, bson.M{"lang": ti.Lang})
 	//db error
 	if err != nil {
@@ -203,7 +203,7 @@ func RunTools(id bson.ObjectId, ti *TargetInfo) {
 	}
 	for _, t := range tools {
 		tool := ReadTool(t)
-		RunTool(id, ti, tool)
+		RunTool(fileId, ti, tool)
 	}
 }
 
@@ -222,8 +222,8 @@ func RunCommand(args ...string) (stdout, stderr bytes.Buffer, err error) {
 
 type Result struct{
 	Id bson.ObjectId "_id"
-	ToolId bson.ObjectId "toolId"
 	FileId bson.ObjectId "fileid"
+	ToolId bson.ObjectId "toolId"
 	Name string "name"
 	OutName string "outname"
 	ErrName string "errname"

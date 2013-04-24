@@ -11,7 +11,7 @@ import (
 var port, address, users, mode string
 
 func init() {
-	flag.StringVar(&port, "p", "9999", "Specify the port to listen on.")
+	flag.StringVar(&port, "p", "9000", "Specify the port to listen on.")
 	flag.StringVar(&address, "a", "0.0.0.0", "Specify the address.")
 	flag.StringVar(&users, "u", "", "Specify a file with new users.")
 	flag.StringVar(&mode, "m", "s", "Specify a mode to run in.")

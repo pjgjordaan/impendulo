@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"bytes"
 	"encoding/json"
-	"encoding/gob"
 	"errors"
 	"github.com/disco-volante/intlola/db"
 	myuser "github.com/disco-volante/intlola/user"
@@ -23,8 +22,8 @@ import (
 const DPERM = 0777
 const FPERM = os.O_WRONLY | os.O_CREATE | os.O_TRUNC
 const DEBUG = true
-const BASE_DIR = ".intlola"
-const LOG_DIR = "logs"
+var BASE_DIR = ".intlola"
+var LOG_DIR = "logs"
 
 var logger *log.Logger
 var logM *sync.Mutex
@@ -32,21 +31,22 @@ var logM *sync.Mutex
 func init() {
 	logM = new(sync.Mutex)
 	cur, err := user.Current()
-	if err == nil {
-		y, m, d := time.Now().Date()
-		dir := filepath.Join(cur.HomeDir, BASE_DIR, LOG_DIR, strconv.Itoa(y), m.String(), strconv.Itoa(d))
-		err = os.MkdirAll(dir, DPERM)
-		if err == nil {
-			fo, err := os.Create(filepath.Join(dir, time.Now().String()+".log"))
-			if err == nil {
-				logger = log.New(fo, "Inlola server log >> ", log.LstdFlags)
-
-			}
-		}
-	}
 	if err != nil {
 		panic(err)
 	}
+	y, m, d := time.Now().Date()
+	BASE_DIR = filepath.Join(cur.HomeDir, BASE_DIR)
+	LOG_DIR = filepath.Join(BASE_DIR, LOG_DIR)
+	dir := filepath.Join(LOG_DIR, strconv.Itoa(y), m.String(), strconv.Itoa(d))
+	err = os.MkdirAll(dir, DPERM)
+	if err != nil {
+		panic(err)
+	}
+	fo, err := os.Create(filepath.Join(dir, time.Now().String()+".log"))
+	if err != nil {
+		panic(err)
+	}
+	logger = log.New(fo, "Inlola server log >> ", log.LstdFlags)
 }
 
 func AddUsers(fname string) error {
@@ -155,30 +155,6 @@ func SaveFile(dir, fname string, data []byte) (err error) {
 	return err
 }
 
-func SaveStruct(dir, fname string, strct interface{}) (err error){
-	err = os.MkdirAll(dir, DPERM)
-	if err != nil {
-		return err
-	}
-	f, err := os.Create(filepath.Join(dir, fname))
-	if err != nil {
-		return err
-	}
-	enc := gob.NewEncoder(f) 
-	err  = enc.Encode(strct)
-	return err
-}
-
-func ReadStruct(dir, fname string, strct interface{}) (err error){
-	f, err := os.Open(filepath.Join(dir, fname))
-	if err != nil{
-		return err
-	}
-	dec := gob.NewDecoder(f) 
-	err = dec.Decode(strct)
-	return err
-
-}
 
 func Unzip(dir string, data []byte) (err error) {
 	br := bytes.NewReader(data)

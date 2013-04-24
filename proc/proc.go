@@ -9,8 +9,9 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-"fmt"
 	"os/signal"
+	"encoding/gob"
+	"fmt"
 )
 
 type TestBuilder struct {
@@ -70,9 +71,8 @@ func Serve(files chan *sub.File) {
 	testBuilder = NewTestBuilder()
 	// Start handlers
 	status := make(chan *Status)
-	 statusListener(status, getQueued())
+	go statusListener(status, getQueued())
 	for f := range files {
-		fmt.Println(f)
 		go Process(f, status)
 	}
 }
@@ -88,12 +88,29 @@ DONE
 )
 
 func getQueued()(queued map[bson.ObjectId] *Status){
-	err := utils.ReadStruct(utils.BASE_DIR, "queue.txt", queued)
+	f, err := os.Open(filepath.Join(utils.BASE_DIR, "queue.gob"))
+	if err == nil{
+		dec := gob.NewDecoder(f) 
+		err = dec.Decode(&queued)
+	}
 	if err != nil{
-		utils.Log(err)
+		utils.Log("Unable to read queue: ", err)
 		queued = make(map[bson.ObjectId] *Status)
 	}
+	fmt.Println("Reading: ",queued)
 	return queued
+}
+
+
+
+func saveQueued(queued map[bson.ObjectId] *Status) error{
+	f, err := os.Create(filepath.Join(utils.BASE_DIR, "queue.gob"))
+	if err != nil {
+		return err
+	}
+	enc := gob.NewEncoder(f)
+	fmt.Println("Saving: ",queued)
+	return enc.Encode(&queued)
 }
 
 
@@ -102,7 +119,7 @@ Keeps track of currently active processing routines.
 */
 func statusListener(status chan *Status, active map[bson.ObjectId] *Status){
 	signals := make(chan os.Signal)
-	signal.Notify(signals)
+	signal.Notify(signals, os.Kill, os.Interrupt)
 	for {
 		select{
 		case stat := <- status:
@@ -112,12 +129,13 @@ func statusListener(status chan *Status, active map[bson.ObjectId] *Status){
 				active[stat.Id] = stat
 			}
 		case sig := <- signals:
-			utils.Log(sig)
-			fmt.Println(sig)
-			err := utils.SaveStruct(utils.BASE_DIR, "queue.txt", active)
+			utils.Log("Received interrupt signal: ", sig)
+			fmt.Println("Received interrupt signal: ", sig)
+			err := saveQueued(active)
 			if err != nil{
-				utils.Log(err)
+				utils.Log("Saving queue failed: ", err)
 			}
+			fmt.Println("Saved queue: ", err)
 			os.Exit(0)
 		}
 	}
@@ -136,6 +154,7 @@ func Process(f *sub.File, status chan *Status) {
 		if err != nil {
 			panic(err)
 		}
+		fmt.Println(t)
 		status <- &Status{f.Id, BUSY}
 		if t == sub.SRC {
 			ProcessSource(f)
@@ -164,6 +183,8 @@ func ProcessSource(src *sub.File) {
 	if tools.Compile(src.Id, ti) {
 		runTests(src, s.Project, ti)
 		tools.RunTools(src.Id, ti)
+	} else{
+		fmt.Println("Could not compile: ", src)
 	}
 	//clean up
 	err = os.RemoveAll(ti.Dir)
