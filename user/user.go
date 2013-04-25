@@ -16,9 +16,9 @@ const (
 )
 
 const(
-	INDIVIDUAL = "individual"
-ARCHIVE = "archive"
-TEST = "test"
+SINGLE = "file_remote"
+ARCHIVE = "archive_remote"
+TEST = "archive_test"
 UPDATE = "update"
 ID = "_id"
 PWORD = "password"
@@ -55,7 +55,7 @@ func ReadUser(umap bson.M) *User {
 	return &User{name, pword, salt, access}
 }
 func (u *User) CheckSubmit(mode string) (ret bool) {
-	if mode == INDIVIDUAL || mode == ARCHIVE {
+	if mode == SINGLE || mode == ARCHIVE {
 		ret = u.hasAccess(F_SUB)
 	} else if mode == TEST {
 		ret = u.hasAccess(T_SUB)

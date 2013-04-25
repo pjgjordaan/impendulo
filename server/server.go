@@ -22,7 +22,7 @@ type Client struct {
 /*
 Manage incoming connection request.
 */
-func ConnHandler(conn net.Conn, fileChan chan *sub.File) {
+func ConnHandler(conn net.Conn, fileChan chan bson.ObjectId) {
 	jobj, err := utils.ReadJSON(conn)
 	if err != nil {
 		EndSession(conn, err)
@@ -60,14 +60,19 @@ func ConnHandler(conn net.Conn, fileChan chan *sub.File) {
 /*
 Reads file data from connection and sends data to be processed.
 */
-func ProcessFile(subId bson.ObjectId, finfo map[string]interface{}, conn net.Conn, fileChan chan *sub.File) error {
+func ProcessFile(subId bson.ObjectId, finfo map[string]interface{}, conn net.Conn, fileChan chan bson.ObjectId) error {
 	conn.Write([]byte(OK))
 	buffer, err := utils.ReadFile(conn, []byte(EOF))
 	if err != nil {
 		return err
 	}
 	conn.Write([]byte(OK))
-	fileChan <- sub.NewFile(subId, finfo, buffer.Bytes())
+	f := sub.NewFile(subId, finfo, buffer.Bytes())
+	err = db.AddOne(db.FILES, f)
+	if err != nil {
+		return err
+	}
+	fileChan <- f.Id
 	return nil
 }
 
@@ -146,7 +151,7 @@ func createClient(jobj map[string]interface{}) (c *Client, err error) {
 Listens for new connections and creates a new goroutine for each connection.
 */
 func Run(address string, port string) {
-	fileChan := make(chan *sub.File)
+	fileChan := make(chan bson.ObjectId)
 	go proc.Serve(fileChan)
 	service := address + ":" + port
 	tcpAddr, err := net.ResolveTCPAddr("tcp", service)

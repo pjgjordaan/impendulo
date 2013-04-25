@@ -29,6 +29,14 @@ func getSession() (s *mgo.Session) {
 	return s
 }
 
+func RemoveById(col string, id interface{}) (err error){
+	session := getSession()
+	defer session.Close()
+	c := session.DB(DB).C(col)
+	err = c.RemoveId(id)
+	return err
+}
+
 func GetById(col string, id interface{}) (ret bson.M, err error) {
 	session := getSession()
 	defer session.Close()
