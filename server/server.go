@@ -38,11 +38,13 @@ func ConnHandler(conn net.Conn, fileChan chan bson.ObjectId) {
 	for receiving && err == nil {
 		jobj, err = utils.ReadJSON(conn)
 		if err != nil {
+			utils.Log("JSON error: ", err)
 			EndSession(conn, err)
 			return
 		}
 		req, err := utils.JSONValue(jobj, REQ)
 		if err != nil {
+			utils.Log("JSON error: ", err)
 			EndSession(conn, err)
 			return
 		}
@@ -66,6 +68,7 @@ func ProcessFile(subId bson.ObjectId, finfo map[string]interface{}, conn net.Con
 	conn.Write([]byte(OK))
 	buffer, err := utils.ReadFile(conn, []byte(EOF))
 	if err != nil {
+		utils.Log("Conn read error: ", err)
 		return err
 	}
 	utils.Log("Read file: ", finfo)
@@ -73,6 +76,7 @@ func ProcessFile(subId bson.ObjectId, finfo map[string]interface{}, conn net.Con
 	f := sub.NewFile(subId, finfo, buffer.Bytes())
 	err = db.AddOne(db.FILES, f)
 	if err != nil {
+		utils.Log("DB error: ", err)
 		return err
 	}
 	utils.Log("Saved file: ", f.Id)
@@ -86,11 +90,13 @@ Creates a new submission if the login request is valid.
 func Login(jobj map[string]interface{}, conn net.Conn) (subId bson.ObjectId, err error) {
 	c, err := createClient(jobj)
 	if err != nil {
+		utils.Log("Login error: ", err)
 		return subId, err
 	}
 	s := sub.NewSubmission(c.project, c.username, c.mode, c.lang)
 	err = db.AddOne(db.SUBMISSIONS, s)
 	if err != nil {
+		utils.Log("DB error: ", err)
 		return subId, err
 	}
 	conn.Write([]byte(OK))

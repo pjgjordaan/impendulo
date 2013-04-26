@@ -205,7 +205,7 @@ func processSource(src *sub.File) {
 /*
 Saves source file to filesystem.
 */
-	func setupSource(src *sub.File, s *sub.Submission) (ti *tools.TargetInfo, ok bool) {
+func setupSource(src *sub.File, s *sub.Submission) (ti *tools.TargetInfo, ok bool) {
 	dir := filepath.Join(os.TempDir(), src.Id.Hex())
 	ti = tools.NewTarget(src.InfoStr(sub.NAME),s.Lang, src.InfoStr(sub.PKG), dir)
 	err := utils.SaveFile(filepath.Join(dir, ti.Package), ti.FullName(), src.Data)
