@@ -33,6 +33,7 @@ func ConnHandler(conn net.Conn, fileChan chan bson.ObjectId) {
 		EndSession(conn, err)
 		return
 	}
+	utils.Log("Created submission: ", subId)
 	receiving := true
 	for receiving && err == nil {
 		jobj, err = utils.ReadJSON(conn)
@@ -50,6 +51,7 @@ func ConnHandler(conn net.Conn, fileChan chan bson.ObjectId) {
 			err = ProcessFile(subId, jobj, conn, fileChan)
 		} else if req == LOGOUT {
 			receiving = false
+			utils.Log("Completed submission: ", subId)
 		} else {
 			err = errors.New("Unknown request: " + req)
 		}
@@ -66,12 +68,14 @@ func ProcessFile(subId bson.ObjectId, finfo map[string]interface{}, conn net.Con
 	if err != nil {
 		return err
 	}
+	utils.Log("Read file: ", finfo)
 	conn.Write([]byte(OK))
 	f := sub.NewFile(subId, finfo, buffer.Bytes())
 	err = db.AddOne(db.FILES, f)
 	if err != nil {
 		return err
 	}
+	utils.Log("Saved file: ", f.Id)
 	fileChan <- f.Id
 	return nil
 }

@@ -199,7 +199,8 @@ func RunTools(fileId bson.ObjectId, ti *TargetInfo) {
 	tools, err := db.GetAll(db.TOOLS, bson.M{"lang": ti.Lang})
 	//db error
 	if err != nil {
-		panic(err)
+		utils.Log("Error retrieving tools: ", ti.Lang)
+		return
 	}
 	for _, t := range tools {
 		tool := ReadTool(t)
@@ -240,15 +241,15 @@ Adds execution results to the database.
 */
 func AddResult(res *Result) {
 	matcher := bson.M{"_id": res.FileId}
-	//change := bson.M{"$push": bson.M{"results": bson.M{name: bson.M{"result": result, "data": data}}}}
 	change := bson.M{"$set": bson.M{"results."+res.Name: res.Id}}
 	err := db.Update(db.FILES, matcher, change)
 	if err != nil {
-		panic(err)
+		utils.Log("Error adding results:", change)
+		return
 	}
 	err = db.AddOne(db.RESULTS, res)
 	if err != nil {
-		panic(err)
+		utils.Log("Error adding results:", res)
 	}
 }
 
@@ -258,6 +259,6 @@ Adds a new tool to the database.
 func AddTool(tool *Tool) {
 	err := db.AddOne(db.TOOLS, tool)
 	if err != nil {
-		panic(err)
+		utils.Log("Error adding tool:", tool)
 	}
 }

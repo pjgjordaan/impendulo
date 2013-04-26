@@ -10,7 +10,6 @@ import (
 	"sync"
 	"os/signal"
 	"encoding/gob"
-	"fmt"
 	"os"
 )
 
@@ -35,7 +34,8 @@ func (t *testBuilder) setup(project string)(ret bool){
 		if err == nil{
 			err := utils.Unzip(filepath.Join(t.testDir, project), tests.Data)
 			if err != nil {
-				panic(err)
+				utils.Log("Error extracting tests:", project, err)
+				return ret 
 			}
 			t.tests[project] = true
 			ret = true
@@ -103,7 +103,6 @@ func getQueued()(queued map[bson.ObjectId] *status){
 		utils.Log("Unable to read queue: ", err)
 		queued = make(map[bson.ObjectId] *status)
 	}
-	fmt.Println("Reading: ",queued)
 	return queued
 }
 
@@ -115,7 +114,6 @@ func saveQueued(queued map[bson.ObjectId] *status) error{
 		return err
 	}
 	enc := gob.NewEncoder(f)
-	fmt.Println("Saving: ",queued)
 	return enc.Encode(&queued)
 }
 
@@ -136,12 +134,10 @@ func statusListener(stat chan *status, active map[bson.ObjectId] *status){
 			}
 		case sig := <- signals:
 			utils.Log("Received interrupt signal: ", sig)
-			fmt.Println("Received interrupt signal: ", sig)
 			err := saveQueued(active)
 			if err != nil{
 				utils.Log("Saving queue failed: ", err)
 			}
-			fmt.Println("Saved queue: ", err)
 			os.Exit(0)
 		}
 	}
@@ -151,13 +147,15 @@ func processID(fId bson.ObjectId, stat chan *status){
 	stat <- &status{fId, BUSY}
 	fmap, err := db.GetById(db.FILES, fId)
 	if err != nil{
-		panic(err)
+		utils.Log("Error retrieving file: ", fId, err)
+		return
 	}
 	f := sub.ReadFile(fmap)
 	processFile(f, stat)
 }
 
 func processFile(f *sub.File, stat chan *status){
+	utils.Log("Processing file: ", f.Id)
 	t := f.Type()
 	if t == sub.ARCHIVE {
 		processArchive(f, stat)
@@ -171,6 +169,7 @@ func processFile(f *sub.File, stat chan *status){
 	} else if t == sub.TEST {
 		processTest(f)
 	}
+	utils.Log("Processed file: ", f.Id)
 	stat <- &status{f.Id, DONE}
 }
 
@@ -184,30 +183,37 @@ func processSource(src *sub.File) {
 		return
 	}
 	s := sub.ReadSubmission(smap)
-	ti := setupSource(src, s)
+	ti, ok := setupSource(src, s)
+	if !ok{
+		return
+	}
 	if tools.Compile(src.Id, ti) {
+		utils.Log("Compiled: ", src.Id)
 		runTests(src, s.Project, ti)
+		utils.Log("Tested: ", src.Id)
 		tools.RunTools(src.Id, ti)
+		utils.Log("Ran tools: ", src.Id)
 	} else{
-		fmt.Println("Could not compile: ", src)
+		utils.Log("No compile: ", src.Id)
 	}
 	//clean up
 	err = os.RemoveAll(ti.Dir)
 	if err != nil {
-		panic(err)
+		utils.Log("Error cleaning files:", err, src.Id)
 	}
 }
 /*
 Saves source file to filesystem.
 */
-func setupSource(src *sub.File, s *sub.Submission) (ti *tools.TargetInfo) {
+	func setupSource(src *sub.File, s *sub.Submission) (ti *tools.TargetInfo, ok bool) {
 	dir := filepath.Join(os.TempDir(), src.Id.Hex())
 	ti = tools.NewTarget(src.InfoStr(sub.NAME),s.Lang, src.InfoStr(sub.PKG), dir)
 	err := utils.SaveFile(filepath.Join(dir, ti.Package), ti.FullName(), src.Data)
 	if err != nil {
-		panic(err)
+		utils.Log("Error saving file: ", src.Id, err)
+		return ti, false
 	}
-	return ti
+	return ti, true
 }
 
 /*
@@ -246,7 +252,8 @@ func processArchive(archive *sub.File, stat chan *status) {
 			stat <- &status{f.Id, BUSY}
 			err = db.AddOne(db.FILES, f)
 			if err != nil{
-				panic(err)
+				utils.Log("Error storing file: ", f.Id, err)
+				return
 			}
 			go processFile(f, stat)
 		}

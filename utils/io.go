@@ -209,7 +209,7 @@ func getBytes(r io.Reader) []byte {
 	buffer := new(bytes.Buffer)
 	_, err := buffer.ReadFrom(r)
 	if err != nil {
-		panic(err)
+		return make([]byte, 0)
 	}
 	return buffer.Bytes()
 }
