@@ -141,6 +141,7 @@ func statusListener(stat chan *status, active map[bson.ObjectId] *status){
 			if err != nil{
 				utils.Log("Saving queue failed: ", err)
 			}
+			os.RemoveAll(filepath.Join(os.TempDir(), "tests"))
 			os.Exit(0)
 		}
 	}

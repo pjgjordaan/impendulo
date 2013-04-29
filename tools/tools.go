@@ -171,7 +171,7 @@ func Compile(fileId bson.ObjectId, ti *TargetInfo) bool {
 Runs java tests on a source file
 */
 func RunTests(fileId bson.ObjectId, project string, ti *TargetInfo) {
-	testdir := filepath.Join(os.TempDir(), "tests", project)
+	testdir := filepath.Join(os.TempDir(), "tests", project, "src")
 	cp := ti.Dir + ":" + testdir
 	//Hardcode for now
 	tests := []*TargetInfo{&TargetInfo{"EasyTests", "java", "testing", "java", testdir}, &TargetInfo{"AllTests","java", "testing", "java", testdir}}
@@ -183,7 +183,7 @@ func RunTests(fileId bson.ObjectId, project string, ti *TargetInfo) {
 		}
 		//compiled successfully
 		if err == nil {
-			stderr, stdout, err = RunCommand("java", "-cp", cp, "org.junit.runner.JUnitCore", test.Executable()) //
+			stderr, stdout, err = RunCommand("java", "-cp", cp+":"+testdir, "org.junit.runner.JUnitCore", test.Executable()) //
 			AddResult(NewResult(fileId, fileId, test.Name, "run_result", "run_error",stdout.Bytes(), stderr.Bytes()))
 			if err != nil {
 				utils.Log(stderr.String(), stdout.String(), err)
