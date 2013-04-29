@@ -24,7 +24,7 @@ type Submission struct {
 
 
 func (s *Submission) IsTest() bool {
-	return s.Mode == TEST
+	return s.Mode == TEST_MODE
 }
 
 func NewSubmission(project, user, mode, lang string) *Submission {
@@ -122,8 +122,11 @@ const (
 	SRC     = "src"
 	EXEC    = "exec"
 	CHANGE  = "change"
-	TEST    = "test"
 	ARCHIVE = "archive"
+	TEST = "test"
+	FILE_MODE = "file_remote"
+	TEST_MODE    = "archive_test"
+	ARCHIVE_MODE = "archive_remote"
 	FTYPE   = "ftype"
 	NAME    = "name"
 	PKG     = "pkg"

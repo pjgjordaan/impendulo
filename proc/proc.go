@@ -31,6 +31,7 @@ func (t *testBuilder) setup(project string)(ret bool){
 	t.m.Lock()
 	if !t.tests[project] {
 		tests, err := getTests(project)
+		utils.Log(err)
 		if err == nil{
 			err := utils.Unzip(filepath.Join(t.testDir, project), tests.Data)
 			if err != nil {
@@ -49,12 +50,14 @@ func (t *testBuilder) setup(project string)(ret bool){
 Retrieves project tests from database.
 */
 func getTests(project string) (tests *sub.File, err error) {
-	smap, err := db.GetOne(db.SUBMISSIONS, bson.M{sub.PROJECT: project, sub.MODE: sub.TEST})
+	smap, err := db.GetOne(db.SUBMISSIONS, bson.M{sub.PROJECT: project, sub.MODE: sub.TEST_MODE})
+	utils.Log(db.SUBMISSIONS, bson.M{sub.PROJECT: project, sub.MODE: sub.TEST_MODE})
 	if err != nil {
 		return tests, err
 	}
 	s := sub.ReadSubmission(smap)
 	fmap, err := db.GetOne(db.FILES, bson.M{"subid": s.Id})
+	utils.Log(db.FILES, bson.M{"subid": s.Id})
 	if err != nil {
 		return tests, err
 	}
