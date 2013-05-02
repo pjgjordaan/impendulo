@@ -3,6 +3,7 @@ package tools
 import (
 	"bytes"
 	"github.com/disco-volante/intlola/db"
+	"github.com/disco-volante/intlola/sub"
 	"github.com/disco-volante/intlola/utils"
 	"labix.org/v2/mgo/bson"
 	"os"
@@ -139,6 +140,14 @@ func ReadTool(tmap bson.M) *Tool {
 Runs a tool and writes its results to the database.
 */
 func RunTool(fileId bson.ObjectId, ti *TargetInfo, tool *Tool) error {
+	f, err := db.GetById(db.FILES, fileId)
+	if err != nil{
+		return err
+	}
+	file := sub.ReadFile(f)
+	if _, ok := file.Results[tool.Name]; ok{
+		return nil
+	}
 	args := tool.GetArgs(ti.GetTarget(tool.Target))
 	stderr, stdout, err := RunCommand(args...)
 	if err != nil {
@@ -171,10 +180,22 @@ func Compile(fileId bson.ObjectId, ti *TargetInfo) bool {
 Runs java tests on a source file
 */
 func RunTests(fileId bson.ObjectId, project string, ti *TargetInfo) {
+	f, err := db.GetById(db.FILES, fileId)
+	if err != nil{
+		utils.Log(fileId, " not found in ", db.FILES)
+		return 
+	}
+	file := sub.ReadFile(f)
 	testdir := filepath.Join(os.TempDir(), "tests", project, "src")
 	cp := ti.Dir + ":" + testdir
+	tests := make([]*TargetInfo, 0)
 	//Hardcode for now
-	tests := []*TargetInfo{&TargetInfo{"EasyTests", "java", "testing", "java", testdir}, &TargetInfo{"AllTests","java", "testing", "java", testdir}}
+	if _, ok := file.Results["EasyTests"]; !ok{
+		tests = append(tests,&TargetInfo{"EasyTests", "java", "testing", "java", testdir})
+	}
+	if _, ok := file.Results["AllTests"]; !ok{
+		tests = append(tests, &TargetInfo{"AllTests","java", "testing", "java", testdir})
+	}
 	for _, test := range tests {
 		stderr, stdout, err := RunCommand("javac", "-cp", cp, "-d", ti.Dir, "-s", ti.Dir, "-implicit:class", test.FilePath())
 		AddResult(NewResult(fileId, fileId, test.Name, "compile_warning", "compile_error",stdout.Bytes(), stderr.Bytes()))
