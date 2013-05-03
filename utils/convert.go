@@ -1,5 +1,6 @@
 package utils
-import(
+
+import (
 	"errors"
 	"labix.org/v2/mgo/bson"
 )
@@ -37,7 +38,6 @@ func GetInt64(jobj map[string]interface{}, key string) (val int64, err error) {
 	return val, err
 }
 
-
 func GetID(jobj map[string]interface{}, key string) (val bson.ObjectId, err error) {
 	ival, ok := jobj[key]
 	if ok {
@@ -48,7 +48,6 @@ func GetID(jobj map[string]interface{}, key string) (val bson.ObjectId, err erro
 	}
 	return val, err
 }
-
 
 func GetM(jobj map[string]interface{}, key string) (val bson.M, err error) {
 	ival, ok := jobj[key]
@@ -61,11 +60,10 @@ func GetM(jobj map[string]interface{}, key string) (val bson.M, err error) {
 	return val, err
 }
 
-
-func GetBytes(jobj map[string]interface{}, key string) (val [] byte, err error) {
+func GetBytes(jobj map[string]interface{}, key string) (val []byte, err error) {
 	ival, ok := jobj[key]
 	if ok {
-		val, ok = ival.([] byte)
+		val, ok = ival.([]byte)
 	}
 	if !ok {
 		err = errors.New("Error reading value for: " + key)

@@ -15,16 +15,16 @@ const (
 	ALL_SUB = 7
 )
 
-const(
-SINGLE = "file_remote"
-ARCHIVE = "archive_remote"
-TEST = "archive_test"
-UPDATE = "update"
-ID = "_id"
-PWORD = "password"
-SALT = "salt"
-ACCESS = "access"
-	)
+const (
+	SINGLE  = "file_remote"
+	ARCHIVE = "archive_remote"
+	TEST    = "archive_test"
+	UPDATE  = "update"
+	ID      = "_id"
+	PWORD   = "password"
+	SALT    = "salt"
+	ACCESS  = "access"
+)
 
 type User struct {
 	Name     string "_id"

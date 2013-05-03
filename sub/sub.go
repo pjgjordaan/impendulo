@@ -17,9 +17,8 @@ type Submission struct {
 	User    string        "user"
 	Time    int64         "time"
 	Mode    string        "mode"
-	Lang string "lang"
+	Lang    string        "lang"
 }
-
 
 func (s *Submission) IsTest() bool {
 	return s.Mode == TEST_MODE
@@ -35,28 +34,28 @@ func NewSubmission(project, user, mode, lang string) *Submission {
 Extract submission from a mongo map.
 */
 func ReadSubmission(smap bson.M) (*Submission, error) {
-	id, err := utils.GetID(smap, ID) 
-	if err != nil{
+	id, err := utils.GetID(smap, ID)
+	if err != nil {
 		return nil, err
 	}
 	proj, err := utils.GetString(smap, PROJECT)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	usr, err := utils.GetString(smap, USER)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	time, err := utils.GetInt64(smap, TIME)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	mode, err := utils.GetString(smap, MODE)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	lang, err := utils.GetString(smap, LANG)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	return &Submission{id, proj, usr, time, mode, lang}, nil
@@ -70,31 +69,31 @@ type File struct {
 	SubId   bson.ObjectId "subid"
 	Info    bson.M        "info"
 	Data    []byte        "data"
-	Results bson.M "results"
+	Results bson.M        "results"
 }
 
 /*
 Extract file data from a mongo map
 */
-func ReadFile(fmap bson.M)(*File, error) {
+func ReadFile(fmap bson.M) (*File, error) {
 	id, err := utils.GetID(fmap, ID)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	subid, err := utils.GetID(fmap, SUBID)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	info, err := utils.GetM(fmap, INFO)
-		if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	data, err := utils.GetBytes(fmap, DATA)
-		if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	res, err := utils.GetM(fmap, RES)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	return &File{id, subid, info, data, res}, nil
@@ -150,28 +149,28 @@ Constants used client and server-side to describe file and
 submission data
 */
 const (
-	ID = "_id"
-	PROJECT = "project"
-	USER = "user"
-	TIME = "time"
-	MODE = "mode"
-	TYPE    = "type"
-	SRC     = "src"
-	EXEC    = "exec"
-	CHANGE  = "change"
-	ARCHIVE = "archive"
-	TEST = "test"
-	FILE_MODE = "file_remote"
+	ID           = "_id"
+	PROJECT      = "project"
+	USER         = "user"
+	TIME         = "time"
+	MODE         = "mode"
+	TYPE         = "type"
+	SRC          = "src"
+	EXEC         = "exec"
+	CHANGE       = "change"
+	ARCHIVE      = "archive"
+	TEST         = "test"
+	FILE_MODE    = "file_remote"
 	TEST_MODE    = "archive_test"
 	ARCHIVE_MODE = "archive_remote"
-	FTYPE   = "ftype"
-	NAME    = "name"
-	PKG     = "pkg"
-	NUM     = "num"
-	MOD     = "mod"
-	LANG = "lang"
-	SUBID = "subid"
-	INFO = "info"
-	DATA = "data"
-	RES = "results"
+	FTYPE        = "ftype"
+	NAME         = "name"
+	PKG          = "pkg"
+	NUM          = "num"
+	MOD          = "mod"
+	LANG         = "lang"
+	SUBID        = "subid"
+	INFO         = "info"
+	DATA         = "data"
+	RES          = "results"
 )

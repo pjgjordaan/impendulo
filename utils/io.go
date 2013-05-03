@@ -20,6 +20,7 @@ import (
 const DPERM = 0777
 const FPERM = os.O_WRONLY | os.O_CREATE | os.O_TRUNC
 const DEBUG = true
+
 var BASE_DIR = ".intlola"
 var LOG_DIR = "logs"
 
@@ -119,10 +120,10 @@ func ReadData(r io.Reader, term []byte) (buffer *bytes.Buffer, err error) {
 	for receiving {
 		bytesRead, err := r.Read(p)
 		read := p[:bytesRead]
-		if bytes.HasSuffix(read, term)  {
+		if bytes.HasSuffix(read, term) {
 			read = read[:len(read)-len(term)]
 			receiving = false
-		} else if err != nil{
+		} else if err != nil {
 			receiving = false
 		}
 		if err == nil || err == io.EOF {

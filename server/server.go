@@ -11,12 +11,11 @@ import (
 	"net"
 )
 
-
 type Client struct {
 	username string
 	project  string
 	mode     string
-	lang string
+	lang     string
 }
 
 /*
@@ -171,7 +170,7 @@ func Run(address string, port string) {
 		if err != nil {
 			utils.Log("Listening error: ", err)
 			return
-		} 
+		}
 		defer netListen.Close()
 		for {
 			conn, err := netListen.Accept()
@@ -195,5 +194,5 @@ const (
 	PWORD   = "pword"
 	PROJECT = "project"
 	MODE    = "mode"
-	LANG = "lang"
+	LANG    = "lang"
 )

@@ -12,7 +12,7 @@ const (
 	FILES       = "files"
 	TOOLS       = "tools"
 	ADDRESS     = "localhost"
-	RESULTS = "results"
+	RESULTS     = "results"
 )
 
 var activeSession *mgo.Session
@@ -29,7 +29,7 @@ func getSession() (s *mgo.Session) {
 	return s
 }
 
-func RemoveById(col string, id interface{}) (err error){
+func RemoveById(col string, id interface{}) (err error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB(DB).C(col)

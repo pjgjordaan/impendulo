@@ -3,9 +3,9 @@ package main
 import (
 	"errors"
 	"flag"
+	"github.com/disco-volante/intlola/db"
 	"github.com/disco-volante/intlola/server"
 	"github.com/disco-volante/intlola/utils"
-	"github.com/disco-volante/intlola/db"
 	"log"
 )
 
@@ -32,7 +32,6 @@ func main() {
 	}
 }
 
-
 func AddUsers(fname string) error {
 	users, err := utils.ReadUsers(fname)
 	if err == nil {
@@ -40,7 +39,6 @@ func AddUsers(fname string) error {
 	}
 	return err
 }
-
 
 func runServer(addr, port string) {
 	utils.Log("Starting server at: ", address, " on port ", port)
