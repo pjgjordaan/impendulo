@@ -1,14 +1,12 @@
 package sub
 
 import (
+	"github.com/disco-volante/intlola/utils"
 	"labix.org/v2/mgo/bson"
 	"strconv"
 	"strings"
 	"time"
 )
-
-
-
 
 /*
 Individual project submissions
@@ -36,14 +34,32 @@ func NewSubmission(project, user, mode, lang string) *Submission {
 /*
 Extract submission from a mongo map.
 */
-func ReadSubmission(smap bson.M) *Submission {
-	id := smap[ID].(bson.ObjectId)
-	proj := smap[PROJECT].(string)
-	usr := smap[USER].(string)
-	time := smap[TIME].(int64)
-	mode := smap[MODE].(string)
-	lang := smap[LANG].(string)
-	return &Submission{id, proj, usr, time, mode, lang}
+func ReadSubmission(smap bson.M) (*Submission, error) {
+	id, err := utils.GetID(smap, ID) 
+	if err != nil{
+		return nil, err
+	}
+	proj, err := utils.GetString(smap, PROJECT)
+	if err != nil{
+		return nil, err
+	}
+	usr, err := utils.GetString(smap, USER)
+	if err != nil{
+		return nil, err
+	}
+	time, err := utils.GetInt64(smap, TIME)
+	if err != nil{
+		return nil, err
+	}
+	mode, err := utils.GetString(smap, MODE)
+	if err != nil{
+		return nil, err
+	}
+	lang, err := utils.GetString(smap, LANG)
+	if err != nil{
+		return nil, err
+	}
+	return &Submission{id, proj, usr, time, mode, lang}, nil
 }
 
 /*
@@ -60,13 +76,28 @@ type File struct {
 /*
 Extract file data from a mongo map
 */
-func ReadFile(fmap bson.M) *File {
-	id := fmap[ID].(bson.ObjectId)
-	subid := fmap[SUBID].(bson.ObjectId)
-	info := fmap[INFO].(bson.M)
-	data := fmap[DATA].([]byte)
-	res := fmap[RES].(bson.M)
-	return &File{id, subid, info, data, res}
+func ReadFile(fmap bson.M)(*File, error) {
+	id, err := utils.GetID(fmap, ID)
+	if err != nil{
+		return nil, err
+	}
+	subid, err := utils.GetID(fmap, SUBID)
+	if err != nil{
+		return nil, err
+	}
+	info, err := utils.GetM(fmap, INFO)
+		if err != nil{
+		return nil, err
+	}
+	data, err := utils.GetBytes(fmap, DATA)
+		if err != nil{
+		return nil, err
+	}
+	res, err := utils.GetM(fmap, RES)
+	if err != nil{
+		return nil, err
+	}
+	return &File{id, subid, info, data, res}, nil
 }
 
 func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) *File {
@@ -79,7 +110,7 @@ func (f *File) Type() string {
 }
 
 /*
-Retrieve file metadata
+Retrieve file metadata from a mongo map
 */
 func (f *File) InfoStr(key string) (val string) {
 	val, _ = f.Info[key].(string)
@@ -87,7 +118,10 @@ func (f *File) InfoStr(key string) (val string) {
 }
 
 /*
-Retrieve file metadata encoded in a file name.
+ Retrieve file metadata encoded in a file name. These file names must have the format:
+ [[<package descriptor>"_"]*<file name>"_"]<time in nanoseconds>"_"<file number in current submission>"_"<modification char>
+ Where values between '[]' are optional, '*' indicates 0 to many, values inside '""' are literals and values inside '<>' 
+ describe the contents at that position.  
 */
 func ParseName(name string) (info map[string]interface{}) {
 	info = make(map[string]interface{})
@@ -111,7 +145,10 @@ func ParseName(name string) (info map[string]interface{}) {
 	return info
 }
 
-
+/*
+Constants used client and server-side to describe file and
+submission data
+*/
 const (
 	ID = "_id"
 	PROJECT = "project"

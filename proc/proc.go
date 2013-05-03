@@ -31,7 +31,6 @@ func (t *testBuilder) setup(project string)(ret bool){
 	t.m.Lock()
 	if !t.tests[project] {
 		tests, err := getTests(project)
-		utils.Log(err)
 		if err == nil{
 			err := utils.Unzip(filepath.Join(t.testDir, project), tests.Data)
 			if err != nil {
@@ -49,19 +48,20 @@ func (t *testBuilder) setup(project string)(ret bool){
 /*
 Retrieves project tests from database.
 */
-func getTests(project string) (tests *sub.File, err error) {
+func getTests(project string) (*sub.File, error) {
 	smap, err := db.GetOne(db.SUBMISSIONS, bson.M{sub.PROJECT: project, sub.MODE: sub.TEST_MODE})
-	utils.Log(db.SUBMISSIONS, bson.M{sub.PROJECT: project, sub.MODE: sub.TEST_MODE})
 	if err != nil {
-		return tests, err
+		return nil, err
 	}
-	s := sub.ReadSubmission(smap)
+	s, err := sub.ReadSubmission(smap)
+	if err != nil {
+		return nil, err
+	}
 	fmap, err := db.GetOne(db.FILES, bson.M{"subid": s.Id})
-	utils.Log(db.FILES, bson.M{"subid": s.Id})
 	if err != nil {
-		return tests, err
+		return nil, err
 	}
-	tests = sub.ReadFile(fmap)
+	tests, err := sub.ReadFile(fmap)
 	return tests, err
 }
 
@@ -86,6 +86,9 @@ func Serve(files chan bson.ObjectId) {
 	}
 }
 
+/*
+
+*/
 type status struct{
 	Id bson.ObjectId
 	Phase int
@@ -154,7 +157,11 @@ func processID(fId bson.ObjectId, stat chan *status){
 		utils.Log("Error retrieving file: ", fId, err)
 		return
 	}
-	f := sub.ReadFile(fmap)
+	f, err := sub.ReadFile(fmap)
+	if err != nil{
+		utils.Log("Error reading  file: ", fId, err)
+		return
+	}
 	processFile(f, stat)
 }
 
@@ -165,79 +172,78 @@ func processFile(f *sub.File, stat chan *status){
 		processArchive(f, stat)
 		db.RemoveById(db.FILES, f.Id)
 	} else if t == sub.SRC {
-		processSource(f)
+		evaluate(f, true)
 	} else if t == sub.EXEC {
-		processExec(f)
-	} else if t == sub.CHANGE {
-		processChange(f)
-	} else if t == sub.TEST {
-		processTest(f)
+		evaluate(f, false)
 	}
 	utils.Log("Processed file: ", f.Id)
 	stat <- &status{f.Id, DONE}
 }
 
 /*
-Compiles a source file. Runs tools and tests on compiled file.
+ Evaluates a submitted file (source or compiled) by 
+ attempting to run tests and tools on it.
 */
-func processSource(src *sub.File) {
-	smap, err := db.GetById(db.SUBMISSIONS, src.SubId)
-	if err != nil {
-		utils.Log("Submission not found:", err)
-		return
-	}
-	s := sub.ReadSubmission(smap)
-	ti, ok := setupSource(src, s)
+func evaluate(f *sub.File, compile bool){
+	ti, ok := setupFile(f)
 	if !ok{
 		return
 	}
-	if tools.Compile(src.Id, ti) {
-		utils.Log("Compiled: ", src.Id)
-		runTests(src, s.Project, ti)
-		utils.Log("Tested: ", src.Id)
-		tools.RunTools(src.Id, ti)
-		utils.Log("Ran tools: ", src.Id)
+	if !compile || tools.Compile(f.Id, ti) {
+		utils.Log("Compiled: ", f.Id)
+		runTests(f, ti)
+		utils.Log("Tested: ", f.Id)
+		tools.RunTools(f.Id, ti, f.Results)
+		utils.Log("Ran tools: ", f.Id)
 	} else{
-		utils.Log("No compile: ", src.Id)
+		utils.Log("No compile: ", f.Id)
 	}
 	//clean up
-	err = os.RemoveAll(ti.Dir)
+	err := os.RemoveAll(ti.Dir)
 	if err != nil {
-		utils.Log("Error cleaning files:", err, src.Id)
+		utils.Log("Error cleaning files:", err, f.Id)
 	}
 }
+
 /*
-Saves source file to filesystem.
+ Saves file to filesystem. Returns file info used by tools & tests.  
 */
-func setupSource(src *sub.File, s *sub.Submission) (ti *tools.TargetInfo, ok bool) {
-	dir := filepath.Join(os.TempDir(), src.Id.Hex())
-	ti = tools.NewTarget(src.InfoStr(sub.NAME),s.Lang, src.InfoStr(sub.PKG), dir)
-	err := utils.SaveFile(filepath.Join(dir, ti.Package), ti.FullName(), src.Data)
+func setupFile(f *sub.File) (*tools.TargetInfo, bool) {
+	smap, err := db.GetById(db.SUBMISSIONS, f.SubId)
 	if err != nil {
-		utils.Log("Error saving file: ", src.Id, err)
-		return ti, false
+		utils.Log("Submission not found:", err)
+		return nil, false
+	}
+	s, err := sub.ReadSubmission(smap)
+	if err != nil {
+		utils.Log("Error reading submission :", err)
+		return nil, false
+	}
+	dir := filepath.Join(os.TempDir(), f.Id.Hex())
+	ti := tools.NewTarget(s.Project, f.InfoStr(sub.NAME), s.Lang, f.InfoStr(sub.PKG), dir)
+	err = utils.SaveFile(filepath.Join(dir, ti.Package), ti.FullName(), f.Data)
+	if err != nil {
+		utils.Log("Error saving file: ", f.Id, err)
+		return nil, false
 	}
 	return ti, true
 }
 
 /*
-Sets up and runs test on executable file.
+ Sets up and runs test on executable file.
 */
-func runTests(src *sub.File, project string, ti *tools.TargetInfo) {
-	if builder.setup(project){
-		tools.RunTests(src.Id, project, ti)
+func runTests(src *sub.File, ti *tools.TargetInfo) {
+	tests := [] string{"EasyTests", "AllTests"}
+	if builder.setup(ti.Project){
+		for _, test := range tests{
+			//Run if not run previously
+			if _, ok := src.Results[test+"_compile"]; !ok{
+				tools.RunTest(src.Id, ti, test)
+			}
+		}	
 	} else {
-		utils.Log("No tests found for ", project)
+		utils.Log("No tests found for ", ti.Project)
 	}
-}
-
-func processExec(s *sub.File) {
-}
-
-func processChange(s *sub.File) {
-}
-
-func processTest(s *sub.File) {
 }
 
 /*

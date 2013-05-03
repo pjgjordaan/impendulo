@@ -42,7 +42,7 @@ func ConnHandler(conn net.Conn, fileChan chan bson.ObjectId) {
 			EndSession(conn, err)
 			return
 		}
-		req, err := utils.JSONValue(jobj, REQ)
+		req, err := utils.GetString(jobj, REQ)
 		if err != nil {
 			utils.Log("JSON error: ", err)
 			EndSession(conn, err)
@@ -66,7 +66,7 @@ Reads file data from connection and sends data to be processed.
 */
 func ProcessFile(subId bson.ObjectId, finfo map[string]interface{}, conn net.Conn, fileChan chan bson.ObjectId) error {
 	conn.Write([]byte(OK))
-	buffer, err := utils.ReadFile(conn, []byte(EOF))
+	buffer, err := utils.ReadData(conn, []byte(EOF))
 	if err != nil {
 		utils.Log("Conn read error: ", err)
 		return err
@@ -124,24 +124,23 @@ Reads client values from a json object.
 Determines whether client has neccesary privileges for submission and is using correct password 
 */
 func createClient(jobj map[string]interface{}) (c *Client, err error) {
-	uname, err := utils.JSONValue(jobj, UNAME)
+	uname, err := utils.GetString(jobj, UNAME)
 	if err != nil {
 		return c, err
 	}
-	pword, err := utils.JSONValue(jobj, PWORD)
+	pword, err := utils.GetString(jobj, PWORD)
 	if err != nil {
 		return c, err
 	}
-	project, err := utils.JSONValue(jobj, PROJECT)
+	project, err := utils.GetString(jobj, PROJECT)
 	if err != nil {
 		return c, err
 	}
-	mode, err := utils.JSONValue(jobj, MODE)
+	mode, err := utils.GetString(jobj, MODE)
 	if err != nil {
 		return c, err
 	}
-
-	lang, err := utils.JSONValue(jobj, LANG)
+	lang, err := utils.GetString(jobj, LANG)
 	if err != nil {
 		return c, err
 	}

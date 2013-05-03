@@ -3,21 +3,16 @@ package tools
 import (
 	"bytes"
 	"github.com/disco-volante/intlola/db"
-	"github.com/disco-volante/intlola/sub"
 	"github.com/disco-volante/intlola/utils"
 	"labix.org/v2/mgo/bson"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-"time"
+	"time"
 )
 
-const (
-	DIR_PATH = iota
-	PKG_PATH
-	FILE_PATH
-)
+
 
 //Tool configuration for testing
 func init() {
@@ -37,18 +32,23 @@ func init() {
 Information about the target file
 */
 type TargetInfo struct {
+	Project string
+	//File name without extension
 	Name    string
+	//Language file is written in
 	Lang string
 	Package string
 	Ext     string
 	Dir     string
 }
+
 /*
 Helper functions to retrieve various target path strings used by tools.
 */
 func (ti *TargetInfo) FilePath() string {
 	return filepath.Join(ti.Dir, ti.Package, ti.FullName())
 }
+
 
 func (ti *TargetInfo) PkgPath() string {
 	return filepath.Join(ti.Dir, ti.Package)
@@ -58,10 +58,16 @@ func (ti *TargetInfo) FullName() string {
 	return ti.Name + "." + ti.Ext
 }
 
+/*
+Path to compiled executable with package. 
+*/
 func (ti *TargetInfo) Executable() string {
 	return ti.Package + "." + ti.Name
 }
 
+/*
+Retrieves the target path based on the type required. 
+*/
 func (ti *TargetInfo) GetTarget(id int) (target string) {
 	switch id {
 	case DIR_PATH:
@@ -74,10 +80,19 @@ func (ti *TargetInfo) GetTarget(id int) (target string) {
 	return target
 }
 
-func NewTarget(name, lang, pkg, dir string) *TargetInfo {
+func NewTarget(project, name, lang, pkg, dir string) *TargetInfo {
 	split := strings.Split(name, ".")
-	return &TargetInfo{split[0], lang, pkg, split[1], dir}
+	return &TargetInfo{project, split[0], lang, pkg, split[1], dir}
 }
+
+/*
+Used by tool to specify target 
+*/
+const (
+	DIR_PATH = iota
+	PKG_PATH
+	FILE_PATH
+)
 
 /*
 Generic tool specification
@@ -86,11 +101,15 @@ type Tool struct {
 	Id bson.ObjectId "_id"
 	Name     string   "name"
 	Lang string "lang"
+	//Tool executable, e.g. findbugs.jar
 	Exec     string   "exec"
 	OutName  string   "out"
 	ErrName  string   "err"
+	//Arguments which occur prior to tool executable, e.g. java -jar
 	Preamble []string "pre"
+	//Flags which occur after executable, e.g. -v -cp
 	Flags    []string "flags"
+	//Tool target type, used to get the actual target. e.g. FILE_PATH
 	Target   int      "target"
 }
 
@@ -137,22 +156,11 @@ func ReadTool(tmap bson.M) *Tool {
 }
 
 /*
-Runs a tool and writes its results to the database.
+Runs a tool and records its results in the db.
 */
-func RunTool(fileId bson.ObjectId, ti *TargetInfo, tool *Tool) error {
-	f, err := db.GetById(db.FILES, fileId)
-	if err != nil{
-		return err
-	}
-	file := sub.ReadFile(f)
-	if _, ok := file.Results[tool.Name]; ok{
-		return nil
-	}
+func RunTool(fileId bson.ObjectId, ti *TargetInfo, tool *Tool)(err error){
 	args := tool.GetArgs(ti.GetTarget(tool.Target))
 	stderr, stdout, err := RunCommand(args...)
-	if err != nil {
-		utils.Log(stderr.String(), stdout.String(), err)
-	}
 	AddResult(NewResult(fileId, tool.Id, tool.Name, tool.OutName, tool.ErrName,stdout.Bytes(), stderr.Bytes()))
 	return err
 }
@@ -175,57 +183,49 @@ func Compile(fileId bson.ObjectId, ti *TargetInfo) bool {
 	return true
 }
 
-
 /*
-Runs java tests on a source file
+Runs a java test suite on a source file. Records the results in the db. 
 */
-func RunTests(fileId bson.ObjectId, project string, ti *TargetInfo) {
-	f, err := db.GetById(db.FILES, fileId)
-	if err != nil{
-		utils.Log(fileId, " not found in ", db.FILES)
-		return 
-	}
-	file := sub.ReadFile(f)
-	testdir := filepath.Join(os.TempDir(), "tests", project, "src")
+func RunTest(fileId bson.ObjectId, ti *TargetInfo, testName string) {
+	testdir := filepath.Join(os.TempDir(), "tests", ti.Project, "src")
+	test := &TargetInfo{ti.Project, testName, "java", "testing", "java", testdir}
 	cp := ti.Dir + ":" + testdir
-	tests := make([]*TargetInfo, 0)
 	//Hardcode for now
-	if _, ok := file.Results["EasyTests"]; !ok{
-		tests = append(tests,&TargetInfo{"EasyTests", "java", "testing", "java", testdir})
+	stderr, stdout, err := RunCommand("javac", "-cp", cp, "-d", ti.Dir, "-s", ti.Dir, "-implicit:class", test.FilePath())
+	AddResult(NewResult(fileId, fileId, test.Name+"_compile", "warnings", "errors",stdout.Bytes(), stderr.Bytes()))
+	if err != nil {
+		utils.Log(stderr.String(), stdout.String(), err)
 	}
-	if _, ok := file.Results["AllTests"]; !ok{
-		tests = append(tests, &TargetInfo{"AllTests","java", "testing", "java", testdir})
-	}
-	for _, test := range tests {
-		stderr, stdout, err := RunCommand("javac", "-cp", cp, "-d", ti.Dir, "-s", ti.Dir, "-implicit:class", test.FilePath())
-		AddResult(NewResult(fileId, fileId, test.Name, "compile_warning", "compile_error",stdout.Bytes(), stderr.Bytes()))
+	//compiled successfully
+	if err == nil {
+		stderr, stdout, err = RunCommand("java", "-cp", cp+":"+testdir, "org.junit.runner.JUnitCore", test.Executable()) //
+		AddResult(NewResult(fileId, fileId, test.Name+"_execute", "results", "errors",stdout.Bytes(), stderr.Bytes()))
 		if err != nil {
 			utils.Log(stderr.String(), stdout.String(), err)
-		}
-		//compiled successfully
-		if err == nil {
-			stderr, stdout, err = RunCommand("java", "-cp", cp+":"+testdir, "org.junit.runner.JUnitCore", test.Executable()) //
-			AddResult(NewResult(fileId, fileId, test.Name, "run_result", "run_error",stdout.Bytes(), stderr.Bytes()))
-			if err != nil {
-				utils.Log(stderr.String(), stdout.String(), err)
-			}
 		}
 	}
 }
 
 /*
-Runs all available tools on a file.
+ Runs all available tools on a file, skipping the tools which have already been
+ run.
 */
-func RunTools(fileId bson.ObjectId, ti *TargetInfo) {
+func RunTools(fileId bson.ObjectId, ti *TargetInfo, alreadyRun bson.M) {
 	tools, err := db.GetAll(db.TOOLS, bson.M{"lang": ti.Lang})
 	//db error
 	if err != nil {
 		utils.Log("Error retrieving tools: ", ti.Lang)
 		return
 	}
-	for _, t := range tools {
-		tool := ReadTool(t)
-		RunTool(fileId, ti, tool)
+	for _, tmap := range tools {
+		//Check if tool has already been run
+		if _, ok := alreadyRun[tmap["name"].(string)]; !ok{
+			tool := ReadTool(tmap)
+			err = RunTool(fileId, ti, tool)
+			if err != nil{
+				utils.Log(tool.Name, " gave error: ", err)
+			}
+		}
 	}
 }
 
@@ -242,6 +242,9 @@ func RunCommand(args ...string) (stdout, stderr bytes.Buffer, err error) {
 	return stdout, stderr, err
 }
 
+/*
+Describes a tool or test's results for a given file.
+*/
 type Result struct{
 	Id bson.ObjectId "_id"
 	FileId bson.ObjectId "fileid"
@@ -257,9 +260,7 @@ type Result struct{
 func NewResult(fileId, toolId bson.ObjectId, name, outname,errname string, outdata, errdata []byte)*Result{
 	return &Result{bson.NewObjectId(), fileId, toolId, name, outname, errname, outdata, errdata, time.Now().UnixNano()}
 }
-/*
-Adds execution results to the database.
-*/
+
 func AddResult(res *Result) {
 	matcher := bson.M{"_id": res.FileId}
 	change := bson.M{"$set": bson.M{"results."+res.Name: res.Id}}
@@ -274,9 +275,6 @@ func AddResult(res *Result) {
 	}
 }
 
-/*
-Adds a new tool to the database.
-*/
 func AddTool(tool *Tool) {
 	err := db.AddOne(db.TOOLS, tool)
 	if err != nil {

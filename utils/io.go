@@ -4,8 +4,6 @@ import (
 	"archive/zip"
 	"bytes"
 	"encoding/json"
-	"errors"
-	"github.com/disco-volante/intlola/db"
 	myuser "github.com/disco-volante/intlola/user"
 	"io"
 	"io/ioutil"
@@ -28,6 +26,9 @@ var LOG_DIR = "logs"
 var logger *log.Logger
 var logM *sync.Mutex
 
+/*
+Setup logger.
+*/
 func init() {
 	logM = new(sync.Mutex)
 	cur, err := user.Current()
@@ -46,17 +47,12 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	logger = log.New(fo, "Inlola server log >> ", log.LstdFlags)
+	logger = log.New(fo, "", log.LstdFlags)
 }
 
-func AddUsers(fname string) error {
-	users, err := ReadUsers(fname)
-	if err == nil {
-		err = db.AddMany(db.USERS, users...)
-	}
-	return err
-}
-
+/*
+Reads users configurations from file. Sets up passwords.
+*/
 func ReadUsers(fname string) (users []interface{}, err error) {
 	data, err := ioutil.ReadFile(fname)
 	if err == nil {
@@ -96,17 +92,9 @@ func Log(v ...interface{}) {
 	}
 }
 
-func JSONValue(jobj map[string]interface{}, key string) (val string, err error) {
-	ival, ok := jobj[key]
-	if ok {
-		val, ok = ival.(string)
-	}
-	if !ok {
-		err = errors.New("Error retrieving JSON value for: " + key)
-	}
-	return val, err
-}
-
+/*
+ Reads all JSON data from reader (maximum of 1024 bytes). 
+*/
 func ReadJSON(r io.Reader) (jobj map[string]interface{}, err error) {
 	buffer := make([]byte, 1024)
 	bytesRead, err := r.Read(buffer)
@@ -121,7 +109,10 @@ func ReadJSON(r io.Reader) (jobj map[string]interface{}, err error) {
 	return jobj, err
 }
 
-func ReadFile(r io.Reader, term []byte) (buffer *bytes.Buffer, err error) {
+/*
+Read data from reader until io.EOF or term is encountered. 
+*/
+func ReadData(r io.Reader, term []byte) (buffer *bytes.Buffer, err error) {
 	buffer = new(bytes.Buffer)
 	p := make([]byte, 2048)
 	receiving := true
@@ -142,6 +133,9 @@ func ReadFile(r io.Reader, term []byte) (buffer *bytes.Buffer, err error) {
 	return buffer, err
 }
 
+/*
+Saves a file in a given directory. Creates directory if it doesn't exist.
+*/
 func SaveFile(dir, fname string, data []byte) (err error) {
 	err = os.MkdirAll(dir, DPERM)
 	if err != nil {
@@ -155,7 +149,9 @@ func SaveFile(dir, fname string, data []byte) (err error) {
 	return err
 }
 
-
+/*
+ Unzip a file (data) to a given directory.
+*/
 func Unzip(dir string, data []byte) (err error) {
 	br := bytes.NewReader(data)
 	zr, err := zip.NewReader(br, int64(br.Len()))
@@ -183,6 +179,10 @@ func Unzip(dir string, data []byte) (err error) {
 	return err
 }
 
+/*
+Read contents of zip file into a map with each file's path being a map
+key and data being the value. 
+*/
 func ReadZip(data []byte) (extracted map[string][]byte, err error) {
 	br := bytes.NewReader(data)
 	zr, err := zip.NewReader(br, int64(br.Len()))
@@ -192,7 +192,7 @@ func ReadZip(data []byte) (extracted map[string][]byte, err error) {
 			frc, err := zf.Open()
 			if err == nil {
 				if !zf.FileInfo().IsDir() {
-					extracted[zf.FileInfo().Name()] = getBytes(frc)
+					extracted[zf.FileInfo().Name()] = ReadBytes(frc)
 				}
 				frc.Close()
 			}
@@ -202,10 +202,9 @@ func ReadZip(data []byte) (extracted map[string][]byte, err error) {
 		}
 	}
 	return extracted, err
-
 }
 
-func getBytes(r io.Reader) []byte {
+func ReadBytes(r io.Reader) []byte {
 	buffer := new(bytes.Buffer)
 	_, err := buffer.ReadFrom(r)
 	if err != nil {
