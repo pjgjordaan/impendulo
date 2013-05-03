@@ -184,6 +184,20 @@ func Compile(fileId bson.ObjectId, ti *TargetInfo) bool {
 }
 
 /*
+Compiles a java source file and writes the results thereof to the database.
+*/
+func AlreadyCompiled(fileId bson.ObjectId, ti *TargetInfo) {
+	tint, err := db.GetOne(db.TOOLS, bson.M{"lang": ti.Lang, "name": "compile"})
+	if err != nil{
+		utils.Log(ti.Lang+" compiler not found: ", err)
+		return
+	}
+	tool := ReadTool(tint)
+	AddResult(NewResult(fileId, tool.Id, tool.Name, tool.OutName, tool.ErrName,[] byte(""), [] byte("")))
+}
+
+
+/*
 Runs a java test suite on a source file. Records the results in the db. 
 */
 func RunTest(fileId bson.ObjectId, ti *TargetInfo, testName string) {

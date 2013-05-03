@@ -172,9 +172,9 @@ func processFile(f *sub.File, stat chan *status){
 		processArchive(f, stat)
 		db.RemoveById(db.FILES, f.Id)
 	} else if t == sub.SRC {
-		evaluate(f, true)
-	} else if t == sub.EXEC {
 		evaluate(f, false)
+	} else if t == sub.EXEC {
+		evaluate(f, true)
 	}
 	utils.Log("Processed file: ", f.Id)
 	stat <- &status{f.Id, DONE}
@@ -184,12 +184,18 @@ func processFile(f *sub.File, stat chan *status){
  Evaluates a submitted file (source or compiled) by 
  attempting to run tests and tools on it.
 */
-func evaluate(f *sub.File, compile bool){
+func evaluate(f *sub.File, compiled bool){
+	utils.Log("Evaluating: ", f.Id, f.Info)
 	ti, ok := setupFile(f)
 	if !ok{
 		return
 	}
-	if !compile || tools.Compile(f.Id, ti) {
+	if compiled{
+		tools.AlreadyCompiled(f.Id, ti)
+	} else{
+		compiled = tools.Compile(f.Id, ti)
+	}
+	if compiled{
 		utils.Log("Compiled: ", f.Id)
 		runTests(f, ti)
 		utils.Log("Tested: ", f.Id)
