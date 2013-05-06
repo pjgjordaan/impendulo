@@ -9,6 +9,7 @@ import (
 	"github.com/disco-volante/intlola/utils"
 	"labix.org/v2/mgo/bson"
 	"net"
+"runtime"
 )
 
 type Client struct {
@@ -159,6 +160,7 @@ func createClient(jobj map[string]interface{}) (c *Client, err error) {
 Listens for new connections and creates a new goroutine for each connection.
 */
 func Run(address string, port string) {
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	fileChan := make(chan bson.ObjectId)
 	go proc.Serve(fileChan)
 	service := address + ":" + port

@@ -30,8 +30,8 @@ Extracts project tests from db to filesystem for execution.
 func (t *testBuilder) setup(project string) (ret bool) {
 	t.m.Lock()
 	if !t.tests[project] {
-		tests, err := getTests(project)
-		if err == nil {
+		tests, ok := getTests(project)
+		if ok {
 			err := utils.Unzip(filepath.Join(t.testDir, project), tests.Data)
 			if err != nil {
 				utils.Log("Error extracting tests:", project, err)
@@ -48,21 +48,12 @@ func (t *testBuilder) setup(project string) (ret bool) {
 /*
 Retrieves project tests from database.
 */
-func getTests(project string) (*sub.File, error) {
-	smap, err := db.GetOne(db.SUBMISSIONS, bson.M{sub.PROJECT: project, sub.MODE: sub.TEST_MODE})
-	if err != nil {
-		return nil, err
+func getTests(project string) (*sub.File, bool) {
+	s, ok := LoadSubmission(db.GetOne, bson.M{sub.PROJECT: project, sub.MODE: sub.TEST_MODE})
+	if !ok {
+		return nil, false
 	}
-	s, err := sub.ReadSubmission(smap)
-	if err != nil {
-		return nil, err
-	}
-	fmap, err := db.GetOne(db.FILES, bson.M{"subid": s.Id})
-	if err != nil {
-		return nil, err
-	}
-	tests, err := sub.ReadFile(fmap)
-	return tests, err
+	return LoadFile(db.GetOne, bson.M{"subid": s.Id})
 }
 
 var builder *testBuilder
@@ -77,7 +68,7 @@ func Serve(files chan bson.ObjectId) {
 	queued := getQueued()
 	go func(queued map[bson.ObjectId]*status, stat chan *status) {
 		for fileId, _ := range queued {
-			processID(fileId, stat)
+			go processID(fileId, stat)
 		}
 	}(queued, stat)
 	go statusListener(stat, queued)
@@ -147,26 +138,24 @@ func statusListener(stat chan *status, active map[bson.ObjectId]*status) {
 	}
 }
 
+/*
+Loads a file from the db and processes it.
+*/
 func processID(fId bson.ObjectId, stat chan *status) {
 	stat <- &status{fId, BUSY}
-	fmap, err := db.GetById(db.FILES, fId)
-	if err != nil {
-		utils.Log("Error retrieving file: ", fId, err)
+	f, ok := LoadFile(db.GetById, fId)
+	if !ok{
 		return
 	}
-	f, err := sub.ReadFile(fmap)
-	if err != nil {
-		utils.Log("Error reading  file: ", fId, err)
-		return
-	}
-	processFile(f, stat)
+	processFile(f)
+	stat <- &status{f.Id, DONE}
 }
 
-func processFile(f *sub.File, stat chan *status) {
+func processFile(f *sub.File) {
 	utils.Log("Processing file: ", f.Id)
 	t := f.Type()
 	if t == sub.ARCHIVE {
-		processArchive(f, stat)
+		processArchive(f)
 		db.RemoveById(db.FILES, f.Id)
 	} else if t == sub.SRC {
 		evaluate(f, false)
@@ -174,7 +163,6 @@ func processFile(f *sub.File, stat chan *status) {
 		evaluate(f, true)
 	}
 	utils.Log("Processed file: ", f.Id)
-	stat <- &status{f.Id, DONE}
 }
 
 /*
@@ -189,6 +177,7 @@ func evaluate(f *sub.File, compiled bool) {
 	}
 	if compiled {
 		tools.AlreadyCompiled(f.Id, ti)
+		f, compiled = LoadFile(db.GetById, f.Id) 			
 	} else {
 		compiled = tools.Compile(f.Id, ti)
 	}
@@ -208,23 +197,47 @@ func evaluate(f *sub.File, compiled bool) {
 	}
 }
 
+func LoadFile(getter db.SingleGet, matcher interface{})(*sub.File, bool){
+	fmap, err := getter(db.FILES, matcher)
+	if err != nil {
+		utils.Log("Error reading from db:", err)
+		return nil, false
+	} 
+	f, err := sub.ReadFile(fmap)	
+	if err != nil {
+		utils.Log("Error reading file:", err)
+		return nil, false
+	} 
+	return f, true
+}
+
+func LoadSubmission(getter db.SingleGet, matcher interface{})(*sub.Submission, bool){
+	smap, err := getter(db.SUBMISSIONS, matcher)
+	if err != nil {
+		utils.Log("Error reading from db:", err)
+		return nil, false
+	} 
+	s, err := sub.ReadSubmission(smap)	
+	if err != nil {
+		utils.Log("Error reading submission:", err)
+		return nil, false
+	} 
+	return s, true
+
+}
+
+
 /*
  Saves file to filesystem. Returns file info used by tools & tests.  
 */
 func setupFile(f *sub.File) (*tools.TargetInfo, bool) {
-	smap, err := db.GetById(db.SUBMISSIONS, f.SubId)
-	if err != nil {
-		utils.Log("Submission not found:", err)
-		return nil, false
-	}
-	s, err := sub.ReadSubmission(smap)
-	if err != nil {
-		utils.Log("Error reading submission :", err)
+	s, ok := LoadSubmission(db.GetById, f.SubId)
+	if !ok{
 		return nil, false
 	}
 	dir := filepath.Join(os.TempDir(), f.Id.Hex())
 	ti := tools.NewTarget(s.Project, f.InfoStr(sub.NAME), s.Lang, f.InfoStr(sub.PKG), dir)
-	err = utils.SaveFile(filepath.Join(dir, ti.Package), ti.FullName(), f.Data)
+	err := utils.SaveFile(filepath.Join(dir, ti.Package), ti.FullName(), f.Data)
 	if err != nil {
 		utils.Log("Error saving file: ", f.Id, err)
 		return nil, false
@@ -252,7 +265,7 @@ func runTests(src *sub.File, ti *tools.TargetInfo) {
 /*
 Extracts files from archive and processes them.
 */
-func processArchive(archive *sub.File, stat chan *status) {
+func processArchive(archive *sub.File) {
 	files, err := utils.ReadZip(archive.Data)
 	if err != nil {
 		utils.Log("Bad archive: ", err)
@@ -264,15 +277,15 @@ func processArchive(archive *sub.File, stat chan *status) {
 			utils.Log("Error reading file metadata: ", name, err)
 			continue
 		}
-		if _, err = db.GetOne(db.FILES, bson.M{sub.INFO: info}); err != nil {
-			f := sub.NewFile(archive.SubId, info, data)
-			stat <- &status{f.Id, BUSY}
+		f, ok := LoadFile(db.GetOne, bson.M{sub.INFO: info})
+		if !ok {
+			f = sub.NewFile(archive.SubId, info, data)
 			err = db.AddOne(db.FILES, f)
 			if err != nil {
 				utils.Log("Error storing file: ", f.Id, err)
 				continue
 			}
-			go processFile(f, stat)
 		}
+		processFile(f)
 	}
 }

@@ -17,6 +17,8 @@ const (
 
 var activeSession *mgo.Session
 
+type SingleGet func(col string, matcher interface{})(ret bson.M, err error)
+
 func getSession() (s *mgo.Session) {
 	if activeSession == nil {
 		var err error
