@@ -159,6 +159,9 @@ func RunTool(fileId bson.ObjectId, ti *TargetInfo, tool *Tool) (err error) {
 	args := tool.GetArgs(ti.GetTarget(tool.Target))
 	stderr, stdout, err := RunCommand(args...)
 	AddResult(NewResult(fileId, tool.Id, tool.Name, tool.OutName, tool.ErrName, stdout.Bytes(), stderr.Bytes()))
+	if err != nil {
+		utils.Log(stderr.String(), stdout.String(), err)
+	}
 	return err
 }
 

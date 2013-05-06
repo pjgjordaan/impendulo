@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+"errors"
 )
 
 /*
@@ -122,26 +123,51 @@ func (f *File) InfoStr(key string) (val string) {
  Where values between '[]' are optional, '*' indicates 0 to many, values inside '""' are literals and values inside '<>' 
  describe the contents at that position.  
 */
-func ParseName(name string) (info map[string]interface{}) {
-	info = make(map[string]interface{})
+func ParseName(name string) (map[string]interface{}, error) {
 	elems := strings.Split(name, "_")
+	if len(elems) < 3{
+		return nil, errors.New("Encoded name "+name+" too short.")
+	}
+	info := make(map[string]interface{})
 	info[MOD] = elems[len(elems)-1]
-	num, _ := strconv.Atoi(elems[len(elems)-2])
+	num, err := strconv.Atoi(elems[len(elems)-2])
+	if err != nil{
+		return nil, err
+	}
 	info[NUM] = num
-	time, _ := strconv.ParseInt(elems[len(elems)-3], 10, 64)
+	time, err := strconv.ParseInt(elems[len(elems)-3], 10, 64)
+	if err != nil{
+		return nil, err
+	}
 	info[TIME] = time
+	fname := ""
 	if len(elems) > 3 {
 		info[NAME] = elems[len(elems)-4]
+		fname = elems[len(elems)-4]
 		pkg := ""
 		for i := 0; i < len(elems)-4; i++ {
 			pkg += elems[i]
-			if i < len(elems)-4 {
+			if i < len(elems)-5 {
 				pkg += "."
+			}
+			if isOutFolder(elems[i]){
+				pkg = ""
 			}
 		}
 		info[PKG] = pkg
 	}
-	return info
+	if strings.HasSuffix(fname, JSRC){
+		info[TYPE] = SRC
+	} else if strings.HasSuffix(fname, JCOMP){
+		info[TYPE] = EXEC
+	} else{
+		info[TYPE] = CHANGE
+	}
+	return info, nil 
+}
+
+func isOutFolder(arg string)bool{
+	return arg == SRC_DIR || arg == BIN_DIR
 }
 
 /*
@@ -173,4 +199,8 @@ const (
 	INFO         = "info"
 	DATA         = "data"
 	RES          = "results"
+		JSRC = ".java"
+		JCOMP = ".class"
+	BIN_DIR = "bin"
+	SRC_DIR = "src"
 )

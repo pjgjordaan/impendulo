@@ -259,14 +259,18 @@ func processArchive(archive *sub.File, stat chan *status) {
 		return
 	}
 	for name, data := range files {
-		info := sub.ParseName(name)
+		info, err := sub.ParseName(name)
+		if err != nil {
+			utils.Log("Error reading file metadata: ", name, err)
+			continue
+		}
 		if _, err = db.GetOne(db.FILES, bson.M{sub.INFO: info}); err != nil {
 			f := sub.NewFile(archive.SubId, info, data)
 			stat <- &status{f.Id, BUSY}
 			err = db.AddOne(db.FILES, f)
 			if err != nil {
 				utils.Log("Error storing file: ", f.Id, err)
-				return
+				continue
 			}
 			go processFile(f, stat)
 		}
