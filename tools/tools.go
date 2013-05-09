@@ -207,14 +207,14 @@ func RunTest(fileId bson.ObjectId, ti *TargetInfo, testName string) {
 	stderr, stdout, err := RunCommand("javac", "-cp", cp, "-d", ti.Dir, "-s", ti.Dir, "-implicit:class", test.FilePath())
 	AddResult(NewResult(fileId, fileId, test.Name+"_compile", "warnings", "errors", stdout.Bytes(), stderr.Bytes()))
 	if err != nil {
-		utils.Log(stderr.String(), stdout.String(), err)
+		utils.Log("Test compile error ", err)
 	}
 	//compiled successfully
 	if err == nil {
 		stderr, stdout, err = RunCommand("java", "-cp", cp+":"+testdir, "org.junit.runner.JUnitCore", test.Executable()) //
 		AddResult(NewResult(fileId, fileId, test.Name+"_execute", "results", "errors", stdout.Bytes(), stderr.Bytes()))
 		if err != nil {
-			utils.Log(stderr.String(), stdout.String(), err)
+			utils.Log("Test run error ", err)
 		}
 	}
 }

@@ -23,7 +23,7 @@ func main() {
 	if mode == "u" {
 		err := AddUsers(users)
 		if err != nil {
-			utils.Log("DB error ", err)
+			utils.Log("Adding users encountered error ", err)
 		}
 	} else if mode == "s" {
 		runServer(address, port)

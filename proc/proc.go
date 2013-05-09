@@ -29,18 +29,21 @@ Extracts project tests from db to filesystem for execution.
 */
 func (t *testBuilder) setup(project string) (ret bool) {
 	t.m.Lock()
+	ret = true
 	if !t.tests[project] {
 		tests, ok := getTests(project)
-		if ok {
+		if !ok {
+			ret = false
+		} else{
 			err := utils.Unzip(filepath.Join(t.testDir, project), tests.Data)
 			if err != nil {
 				utils.Log("Error extracting tests:", project, err)
-				return ret
+				ret = false
+			} else{
+				t.tests[project] = true
 			}
-			t.tests[project] = true
-			ret = true
 		}
-	}
+	} 
 	t.m.Unlock()
 	return ret
 }
