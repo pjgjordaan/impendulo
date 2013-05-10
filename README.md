@@ -1,4 +1,4 @@
-intlola
+Cabanga
 =======
 
-Server for goanna plugin
+Server for impendulo system. Processes data received from intlola.
