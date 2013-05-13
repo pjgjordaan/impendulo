@@ -1,7 +1,7 @@
 package sub
 
 import (
-	"github.com/disco-volante/intlola/utils"
+	"github.com/godfired/intlola/utils"
 	"labix.org/v2/mgo/bson"
 	"strconv"
 	"strings"

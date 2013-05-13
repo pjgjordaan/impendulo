@@ -2,8 +2,8 @@ package tools
 
 import (
 	"bytes"
-	"github.com/disco-volante/intlola/db"
-	"github.com/disco-volante/intlola/utils"
+	"github.com/godfried/intlola/db"
+	"github.com/godfried/intlola/utils"
 	"labix.org/v2/mgo/bson"
 	"os"
 	"os/exec"

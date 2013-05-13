@@ -2,11 +2,11 @@ package server
 
 import (
 	"errors"
-	"github.com/disco-volante/intlola/db"
-	"github.com/disco-volante/intlola/proc"
-	"github.com/disco-volante/intlola/sub"
-	"github.com/disco-volante/intlola/user"
-	"github.com/disco-volante/intlola/utils"
+	"github.com/godfried/intlola/db"
+	"github.com/godfried/intlola/proc"
+	"github.com/godfried/intlola/sub"
+	"github.com/godfried/intlola/user"
+	"github.com/godfried/intlola/utils"
 	"labix.org/v2/mgo/bson"
 	"net"
 "runtime"

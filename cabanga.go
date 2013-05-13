@@ -3,9 +3,9 @@ package main
 import (
 	"errors"
 	"flag"
-	"github.com/disco-volante/intlola/db"
-	"github.com/disco-volante/intlola/server"
-	"github.com/disco-volante/intlola/utils"
+	"github.com/godfried/intlola/db"
+	"github.com/godfried/intlola/server"
+	"github.com/godfried/intlola/utils"
 	"log"
 )
 
