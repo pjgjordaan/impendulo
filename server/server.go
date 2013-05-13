@@ -2,11 +2,11 @@ package server
 
 import (
 	"errors"
-	"github.com/godfried/intlola/db"
-	"github.com/godfried/intlola/proc"
-	"github.com/godfried/intlola/sub"
-	"github.com/godfried/intlola/user"
-	"github.com/godfried/intlola/utils"
+	"github.com/godfried/cabanga/db"
+	"github.com/godfried/cabanga/proc"
+	"github.com/godfried/cabanga/sub"
+	"github.com/godfried/cabanga/user"
+	"github.com/godfried/cabanga/utils"
 	"labix.org/v2/mgo/bson"
 	"net"
 "runtime"
@@ -22,7 +22,7 @@ type Client struct {
 /*
 Manage incoming connection request.
 */
-func ConnHandler(conn net.Conn, fileChan chan bson.ObjectId) {
+func ConnHandler(conn net.Conn, fileChan chan proc.Item) {
 	jobj, err := utils.ReadJSON(conn)
 	if err != nil {
 		EndSession(conn, err)
@@ -64,7 +64,7 @@ func ConnHandler(conn net.Conn, fileChan chan bson.ObjectId) {
 /*
 Reads file data from connection and sends data to be processed.
 */
-func ProcessFile(subId bson.ObjectId, finfo map[string]interface{}, conn net.Conn, fileChan chan bson.ObjectId) error {
+func ProcessFile(subId bson.ObjectId, finfo map[string]interface{}, conn net.Conn, fileChan chan proc.Item) error {
 	conn.Write([]byte(OK))
 	buffer, err := utils.ReadData(conn, []byte(EOF))
 	if err != nil {
@@ -80,7 +80,7 @@ func ProcessFile(subId bson.ObjectId, finfo map[string]interface{}, conn net.Con
 		return err
 	}
 	utils.Log("Saved file: ", f.Id)
-	fileChan <- f.Id
+	fileChan <- proc.Item{f.Id, f.SubId}
 	return nil
 }
 
@@ -161,7 +161,7 @@ Listens for new connections and creates a new goroutine for each connection.
 */
 func Run(address string, port string) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	fileChan := make(chan bson.ObjectId)
+	fileChan := make(chan proc.Item)
 	go proc.Serve(fileChan)
 	service := address + ":" + port
 	tcpAddr, err := net.ResolveTCPAddr("tcp", service)

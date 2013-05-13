@@ -1,7 +1,7 @@
 package sub
 
 import (
-	"github.com/godfired/intlola/utils"
+	"github.com/godfried/cabanga/utils"
 	"labix.org/v2/mgo/bson"
 	"strconv"
 	"strings"

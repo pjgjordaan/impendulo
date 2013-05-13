@@ -2,10 +2,10 @@ package proc
 
 import (
 	"encoding/gob"
-	"github.com/godfried/intlola/db"
-	"github.com/godfried/intlola/sub"
-	"github.com/godfried/intlola/tools"
-	"github.com/godfried/intlola/utils"
+	"github.com/godfried/cabanga/db"
+	"github.com/godfried/cabanga/sub"
+	"github.com/godfried/cabanga/tools"
+	"github.com/godfried/cabanga/utils"
 	"labix.org/v2/mgo/bson"
 	"os"
 	"os/signal"
@@ -64,25 +64,39 @@ var builder *testBuilder
 /*
 Spawns new processing routines for each file which needs to be processed.
 */
-func Serve(files chan bson.ObjectId) {
+func Serve(items chan Item) {
 	builder = newTestBuilder()
 	// Start handlers
-	stat := make(chan *status)
+	stat := make(chan status)
 	queued := getQueued()
-	go func(queued map[bson.ObjectId]*status, stat chan *status) {
-		for fileId, _ := range queued {
-			go processID(fileId, stat)
+	go statusListener(stat, queued)
+	go func(queued map[bson.ObjectId] status, stat chan status){
+		for subId, _ := range queued {
+			processStored(subId, stat)
 		}
 	}(queued, stat)
-	go statusListener(stat, queued)
-	for fileId := range files {
-		go processID(fileId, stat)
+	subs := make(map[bson.ObjectId] chan bson.ObjectId)
+	for item := range items {
+		if ch, ok := subs[item.SubId]; ok{
+			ch <- item.FileId
+		} else{
+			subs[item.SubId] = make(chan bson.ObjectId)
+			go processNew(item.SubId, subs[item.SubId], stat)
+			subs[item.SubId] <- item.FileId
+		}
 	}
 }
 
-/*
 
-*/
+type Item struct{
+	FileId bson.ObjectId
+	SubId bson.ObjectId
+} 
+
+
+
+
+
 type status struct {
 	Id    bson.ObjectId
 	Phase int
@@ -93,7 +107,9 @@ const (
 	DONE
 )
 
-func getQueued() (queued map[bson.ObjectId]*status) {
+
+
+func getQueued() (queued map[bson.ObjectId] status) {
 	f, err := os.Open(filepath.Join(utils.BASE_DIR, "queue.gob"))
 	if err == nil {
 		dec := gob.NewDecoder(f)
@@ -101,12 +117,12 @@ func getQueued() (queued map[bson.ObjectId]*status) {
 	}
 	if err != nil {
 		utils.Log("Unable to read queue: ", err)
-		queued = make(map[bson.ObjectId]*status)
+		queued = make(map[bson.ObjectId] status)
 	}
 	return queued
 }
 
-func saveQueued(queued map[bson.ObjectId]*status) error {
+func saveQueued(queued map[bson.ObjectId] status) error {
 	f, err := os.Create(filepath.Join(utils.BASE_DIR, "queue.gob"))
 	if err != nil {
 		return err
@@ -115,10 +131,8 @@ func saveQueued(queued map[bson.ObjectId]*status) error {
 	return enc.Encode(&queued)
 }
 
-/*
-Keeps track of currently active processing routines.
-*/
-func statusListener(stat chan *status, active map[bson.ObjectId]*status) {
+
+func statusListener(stat chan status, active map[bson.ObjectId] status) {
 	signals := make(chan os.Signal)
 	signal.Notify(signals, os.Kill, os.Interrupt)
 	for {
@@ -141,17 +155,51 @@ func statusListener(stat chan *status, active map[bson.ObjectId]*status) {
 	}
 }
 
+func processStored(subId bson.ObjectId, stat chan status){
+	stat <- status{subId, BUSY} 
+	count := 0
+	for {
+		matcher := bson.M{sub.SUBID : subId, sub.NUM : count}
+		fmap, err := db.GetOne(db.FILES, matcher) 
+		if err != nil {
+			break
+		}
+		f, err := sub.ReadFile(fmap)	
+		if err != nil {
+			utils.Log("Error reading file:", err)
+			break
+		}
+		processFile(f)
+	}
+	err := os.RemoveAll(filepath.Join(os.TempDir(), subId.Hex()))
+	if err != nil {
+		utils.Log("Error cleaning files:", err)
+	}
+	stat <- status{subId, DONE}
+}
+
+
+func processNew(subId bson.ObjectId, fileIds chan bson.ObjectId, stat chan status){
+	stat <- status{subId, BUSY} 
+	for fileId := range fileIds{
+		processId(fileId)
+	}
+	err := os.RemoveAll(filepath.Join(os.TempDir(), subId.Hex()))
+	if err != nil {
+		utils.Log("Error cleaning files:", err)
+	}
+	stat <- status{subId, DONE}
+}
+
 /*
 Loads a file from the db and processes it.
 */
-func processID(fId bson.ObjectId, stat chan *status) {
-	stat <- &status{fId, BUSY}
+func processId(fId bson.ObjectId) {
 	f, ok := LoadFile(db.GetById, fId)
 	if !ok{
 		return
 	}
 	processFile(f)
-	stat <- &status{f.Id, DONE}
 }
 
 func processFile(f *sub.File) {
@@ -193,11 +241,6 @@ func evaluate(f *sub.File, compiled bool) {
 	} else {
 		utils.Log("No compile: ", f.Id)
 	}
-	//clean up
-	err := os.RemoveAll(ti.Dir)
-	if err != nil {
-		utils.Log("Error cleaning files:", err, f.Id)
-	}
 }
 
 func LoadFile(getter db.SingleGet, matcher interface{})(*sub.File, bool){
@@ -238,7 +281,7 @@ func setupFile(f *sub.File) (*tools.TargetInfo, bool) {
 	if !ok{
 		return nil, false
 	}
-	dir := filepath.Join(os.TempDir(), f.Id.Hex())
+	dir := filepath.Join(os.TempDir(), f.SubId.Hex())
 	ti := tools.NewTarget(s.Project, f.InfoStr(sub.NAME), s.Lang, f.InfoStr(sub.PKG), dir)
 	err := utils.SaveFile(filepath.Join(dir, ti.Package), ti.FullName(), f.Data)
 	if err != nil {

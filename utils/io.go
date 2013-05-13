@@ -4,7 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"encoding/json"
-	myuser "github.com/godfried/intlola/user"
+	myuser "github.com/godfried/cabanga/user"
 	"io"
 	"io/ioutil"
 	"log"

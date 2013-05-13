@@ -3,9 +3,9 @@ package main
 import (
 	"errors"
 	"flag"
-	"github.com/godfried/intlola/db"
-	"github.com/godfried/intlola/server"
-	"github.com/godfried/intlola/utils"
+	"github.com/godfried/cabanga/db"
+	"github.com/godfried/cabanga/server"
+	"github.com/godfried/cabanga/utils"
 	"log"
 )
 

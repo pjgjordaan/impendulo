@@ -2,8 +2,8 @@ package tools
 
 import (
 	"bytes"
-	"github.com/godfried/intlola/db"
-	"github.com/godfried/intlola/utils"
+	"github.com/godfried/cabanga/db"
+	"github.com/godfried/cabanga/utils"
 	"labix.org/v2/mgo/bson"
 	"os"
 	"os/exec"
@@ -14,14 +14,14 @@ import (
 
 //Tool configuration for testing
 func init() {
-	_, err := db.GetOne(db.TOOLS, bson.M{"name": "findbugs"})
+	_, err := db.GetOne(db.TOOLS, bson.M{NAME: "findbugs"})
 	if err != nil {
-		fb := &Tool{bson.NewObjectId(), "findbugs", "java", "/home/disco/apps/findbugs-2.0.2/lib/findbugs.jar", "warning_count", "warnings", []string{"java", "-jar"}, []string{"-textui", "-low"}, PKG_PATH}
+		fb := &Tool{bson.NewObjectId(), "findbugs", "java", "/home/disco/apps/findbugs-2.0.2/lib/findbugs.jar", "warning_count", "warnings", []string{"java", "-jar"}, []string{"-textui", "-low"}, bson.M{"":""}, PKG_PATH}
 		AddTool(fb)
 	}
-	_, err = db.GetOne(db.TOOLS, bson.M{"name": "compile"})
+	_, err = db.GetOne(db.TOOLS, bson.M{NAME: COMPILE})
 	if err != nil {
-		javac := &Tool{bson.NewObjectId(), "compile", "java", "javac", "warnings", "errors", []string{}, []string{"-implicit:class"}, FILE_PATH}
+		javac := &Tool{bson.NewObjectId(), COMPILE, "java", "javac", "warnings", "errors", []string{""}, []string{"-implicit:class"}, bson.M{CP:""}, FILE_PATH}
 		AddTool(javac)
 	}
 }
@@ -89,6 +89,18 @@ const (
 	DIR_PATH = iota
 	PKG_PATH
 	FILE_PATH
+	ID = "_id"
+	NAME = "name"
+	LANG = "lang"
+	EXEC = "exec"
+	OUT = "out"
+	ERR = "err"
+	PRE = "pre"
+	FLAGS = "flags"
+	ARGFLAGS = "argflags"
+	TARGET = "target"
+	CP = "-cp"
+	COMPILE = "compile"
 )
 
 /*
@@ -104,8 +116,10 @@ type Tool struct {
 	ErrName string "err"
 	//Arguments which occur prior to tool executable, e.g. java -jar
 	Preamble []string "pre"
-	//Flags which occur after executable, e.g. -v -cp
+	//Flags which occur after executable, e.g. -v 
 	Flags []string "flags"
+	//Flags which occur after executable which require arguments, e.g. -cp src
+	ArgFlags bson.M "argflags"
 	//Tool target type, used to get the actual target. e.g. FILE_PATH
 	Target int "target"
 }
@@ -113,49 +127,94 @@ type Tool struct {
 /*
 Setup tool arguments for execution.
 */
-func (tool *Tool) GetArgs(target string) (args []string) {
-	args = make([]string, len(tool.Preamble)+len(tool.Flags)+2)
-	for i, p := range tool.Preamble {
+func (this *Tool) GetArgs(target string) (args []string) {
+	args = make([]string, len(this.Preamble)+len(this.Flags)+(len(this.ArgFlags)*2)+2)
+	for i, p := range this.Preamble {
 		args[i] = p
 	}
-	args[len(tool.Preamble)] = tool.Exec
-	start := len(tool.Preamble) + 1
-	stop := start + len(tool.Flags)
+	args[len(this.Preamble)] = this.Exec
+	start := len(this.Preamble) + 1
+	stop := start + len(this.Flags)
 	for j := start; j < stop; j++ {
-		args[j] = tool.Flags[j-start]
+		args[j] = this.Flags[j-start]
+	}
+	cur := stop
+	stop += len(this.ArgFlags)*2
+	for k,v := range this.ArgFlags {
+		args[cur] = k
+		val := v.(string)
+		args[cur + 1] = val
+		cur += 2
 	}
 	args[stop] = target
 	return args
 }
 
+func (this *Tool) setFlagArgs(args map[string] string){
+	for k, arg := range args{
+		if _, ok := this.ArgFlags[k]; ok{
+			this.ArgFlags[k] = arg
+		}
+	}
+	for flag, val := range this.ArgFlags{
+		if strings.TrimSpace(val.(string)) == ""{
+			delete(this.ArgFlags, flag)
+		}
+	}
+}
+
 /*
 Retrieves a tool from a mongo map.
 */
-func ReadTool(tmap bson.M) *Tool {
-	id := tmap["_id"].(bson.ObjectId)
-	name := tmap["name"].(string)
-	lang := tmap["lang"].(string)
-	exec := tmap["exec"].(string)
-	outName := tmap["out"].(string)
-	errName := tmap["err"].(string)
-	pint := tmap["pre"].([]interface{})
-	pre := make([]string, len(pint))
-	for i, pval := range pint {
-		pre[i] = pval.(string)
+func ReadTool(tmap bson.M) (*Tool,error) {
+	id, err := utils.GetID(tmap, ID)
+	if err != nil {
+		return nil, err
 	}
-	fint := tmap["flags"].([]interface{})
-	flags := make([]string, len(fint))
-	for j, fval := range fint {
-		flags[j] = fval.(string)
+	name, err := utils.GetString(tmap, NAME)
+	if err != nil {
+		return nil, err
 	}
-	target := tmap["target"].(int)
-	return &Tool{id, name, lang, exec, outName, errName, pre, flags, target}
+	lang, err := utils.GetString(tmap, LANG)
+	if err != nil {
+		return nil, err
+	}
+	exec, err := utils.GetString(tmap, EXEC)
+	if err != nil {
+		return nil, err
+	}
+	outName, err := utils.GetString(tmap, OUT)
+	if err != nil {
+		return nil, err
+	}
+	errName, err := utils.GetString(tmap, ERR)
+	if err != nil {
+		return nil, err
+	}
+	pre, err := utils.GetStrings(tmap, PRE)
+	if err != nil {
+		return nil, err
+	}
+	flags, err := utils.GetStrings(tmap, FLAGS)
+	if err != nil {
+		return nil, err
+	}
+	argflags, err := utils.GetM(tmap, ARGFLAGS)
+	if err != nil {
+		return nil, err
+	}
+	target, err := utils.GetInt(tmap, TARGET)
+	if err != nil {
+		return nil, err
+	}
+	return &Tool{id, name, lang, exec, outName, errName, pre, flags, argflags, target}, err
 }
 
 /*
 Runs a tool and records its results in the db.
 */
-func RunTool(fileId bson.ObjectId, ti *TargetInfo, tool *Tool) (err error) {
+func RunTool(fileId bson.ObjectId, ti *TargetInfo, tool *Tool, fArgs map[string]string) (err error) {
+	tool.setFlagArgs(fArgs)
 	args := tool.GetArgs(ti.GetTarget(tool.Target))
 	stderr, stdout, err := RunCommand(args...)
 	AddResult(NewResult(fileId, tool.Id, tool.Name, tool.OutName, tool.ErrName, stdout.Bytes(), stderr.Bytes()))
@@ -169,13 +228,17 @@ func RunTool(fileId bson.ObjectId, ti *TargetInfo, tool *Tool) (err error) {
 Compiles a java source file and writes the results thereof to the database.
 */
 func Compile(fileId bson.ObjectId, ti *TargetInfo) bool {
-	cint, err := db.GetOne(db.TOOLS, bson.M{"lang": ti.Lang, "name": "compile"})
+	cint, err := db.GetOne(db.TOOLS, bson.M{LANG: ti.Lang, NAME: COMPILE})
 	if err != nil {
 		utils.Log(ti.Lang+" compiler not found: ", err)
 		return false
 	}
-	comp := ReadTool(cint)
-	err = RunTool(fileId, ti, comp)
+	comp, err := ReadTool(cint)
+	if err != nil {
+		utils.Log("Could not read compiler: ", err)
+		return false
+	}
+	err = RunTool(fileId, ti, comp, map[string]string{CP : ti.Dir})
 	if err != nil {
 		utils.Log("Unsuccesful compile: ", err)
 		return false
@@ -187,13 +250,17 @@ func Compile(fileId bson.ObjectId, ti *TargetInfo) bool {
 Compiles a java source file and writes the results thereof to the database.
 */
 func AlreadyCompiled(fileId bson.ObjectId, ti *TargetInfo) {
-	tint, err := db.GetOne(db.TOOLS, bson.M{"lang": ti.Lang, "name": "compile"})
+	cint, err := db.GetOne(db.TOOLS, bson.M{LANG: ti.Lang, NAME: COMPILE})
 	if err != nil {
 		utils.Log(ti.Lang+" compiler not found: ", err)
 		return
 	}
-	tool := ReadTool(tint)
-	AddResult(NewResult(fileId, tool.Id, tool.Name, tool.OutName, tool.ErrName, []byte(""), []byte("")))
+	compiler, err := ReadTool(cint)
+	if err != nil {
+		utils.Log("Could not read compiler: ", err)
+		return
+	}
+	AddResult(NewResult(fileId, compiler.Id, compiler.Name, compiler.OutName, compiler.ErrName, []byte(""), []byte("")))
 }
 
 /*
@@ -204,14 +271,14 @@ func RunTest(fileId bson.ObjectId, ti *TargetInfo, testName string) {
 	test := &TargetInfo{ti.Project, testName, "java", "testing", "java", testdir}
 	cp := ti.Dir + ":" + testdir
 	//Hardcode for now
-	stderr, stdout, err := RunCommand("javac", "-cp", cp, "-d", ti.Dir, "-s", ti.Dir, "-implicit:class", test.FilePath())
+	stderr, stdout, err := RunCommand("javac", CP, cp, "-d", ti.Dir, "-s", ti.Dir, "-implicit:class", test.FilePath())
 	AddResult(NewResult(fileId, fileId, test.Name+"_compile", "warnings", "errors", stdout.Bytes(), stderr.Bytes()))
 	if err != nil {
 		utils.Log("Test compile error ", err)
 	}
 	//compiled successfully
 	if err == nil {
-		stderr, stdout, err = RunCommand("java", "-cp", cp+":"+testdir, "org.junit.runner.JUnitCore", test.Executable()) //
+		stderr, stdout, err = RunCommand("java", CP, cp+":"+testdir, "org.junit.runner.JUnitCore", test.Executable()) //
 		AddResult(NewResult(fileId, fileId, test.Name+"_execute", "results", "errors", stdout.Bytes(), stderr.Bytes()))
 		if err != nil {
 			utils.Log("Test run error ", err)
@@ -233,8 +300,12 @@ func RunTools(fileId bson.ObjectId, ti *TargetInfo, alreadyRun bson.M) {
 	for _, tmap := range tools {
 		//Check if tool has already been run
 		if _, ok := alreadyRun[tmap["name"].(string)]; !ok {
-			tool := ReadTool(tmap)
-			err = RunTool(fileId, ti, tool)
+			tool, err := ReadTool(tmap)
+			if err != nil {
+				utils.Log("Could not read tool: ", err)
+				continue
+			}
+			err = RunTool(fileId, ti, tool, map[string]string{})
 			if err != nil {
 				utils.Log(tool.Name, " gave error: ", err)
 			}
@@ -246,6 +317,7 @@ func RunTools(fileId bson.ObjectId, ti *TargetInfo, alreadyRun bson.M) {
 Executes a given external command.
 */
 func RunCommand(args ...string) (stdout, stderr bytes.Buffer, err error) {
+	utils.Log(args)
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	err = cmd.Start()
