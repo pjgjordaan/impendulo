@@ -15,6 +15,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"labix.org/v2/mgo/bson"
+	"encoding/gob"
 )
 
 const DPERM = 0777
@@ -213,3 +215,37 @@ func ReadBytes(r io.Reader) []byte {
 	}
 	return buffer.Bytes()
 }
+
+func LoadMap(fname string) (map[bson.ObjectId]bool, error){
+	f, err := os.Open(filepath.Join(BASE_DIR, fname))
+	if err != nil {
+		return nil, err
+	}
+	dec := gob.NewDecoder(f)
+	var mp map[bson.ObjectId]bool
+	err = dec.Decode(&mp)
+	if err != nil {
+		return nil, err
+	}
+	return mp, nil
+}
+
+/*
+Saves map to the filesystem.
+*/
+func SaveMap(mp map[bson.ObjectId]bool, fname string) error {
+	f, err := os.Create(filepath.Join(BASE_DIR, fname))
+	if err != nil {
+		return err
+	}
+	enc := gob.NewEncoder(f)
+	return enc.Encode(&mp)
+}
+
+
+
+func Merge(m1 map[bson.ObjectId]bool, m2 map[bson.ObjectId]bool){
+	for k, v := range m2{
+		m1[k] = v
+	}
+} 

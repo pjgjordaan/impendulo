@@ -1,7 +1,6 @@
 package proc
 
 import (
-	"encoding/gob"
 	"github.com/godfried/cabanga/db"
 	"github.com/godfried/cabanga/sub"
 	"github.com/godfried/cabanga/tools"
@@ -13,10 +12,27 @@ import (
 	"sync"
 )
 
+const (
+	INCOMPLETE = "incomplete.gob"
+)
+
+
+var builder *testBuilder
+
 type testBuilder struct {
 	tests   map[string]bool
 	m       *sync.Mutex
 	testDir string
+}
+
+type Item struct {
+	FileId bson.ObjectId
+	SubId  bson.ObjectId
+}
+
+type status struct {
+	busy chan  bson.ObjectId
+	done chan  bson.ObjectId
 }
 
 func newTestBuilder() *testBuilder {
@@ -27,24 +43,24 @@ func newTestBuilder() *testBuilder {
 /*
 Extracts project tests from db to filesystem for execution.
 */
-func (t *testBuilder) setup(project string) (ret bool) {
-	t.m.Lock()
+func (this *testBuilder) setup(project string) (ret bool) {
+	this.m.Lock()
 	ret = true
-	if !t.tests[project] {
+	if !this.tests[project] {
 		tests, ok := getTests(project)
 		if !ok {
 			ret = false
-		} else{
-			err := utils.Unzip(filepath.Join(t.testDir, project), tests.Data)
+		} else {
+			err := utils.Unzip(filepath.Join(this.testDir, project), tests.Data)
 			if err != nil {
 				utils.Log("Error extracting tests:", project, err)
 				ret = false
-			} else{
-				t.tests[project] = true
+			} else {
+				this.tests[project] = true
 			}
 		}
-	} 
-	t.m.Unlock()
+	}
+	this.m.Unlock()
 	return ret
 }
 
@@ -59,27 +75,25 @@ func getTests(project string) (*sub.File, bool) {
 	return LoadFile(db.GetOne, bson.M{"subid": s.Id})
 }
 
-var builder *testBuilder
-
 /*
 Spawns new processing routines for each file which needs to be processed.
 */
 func Serve(items chan Item) {
 	builder = newTestBuilder()
 	// Start handlers
-	stat := make(chan status)
-	queued := getQueued()
-	go statusListener(stat, queued)
-	go func(queued map[bson.ObjectId] status, stat chan status){
-		for subId, _ := range queued {
+	stat := new(status)
+	go statusListener(stat)
+	go func() {
+		stored := getStored()
+		for subId, _ := range stored {
 			processStored(subId, stat)
 		}
-	}(queued, stat)
-	subs := make(map[bson.ObjectId] chan bson.ObjectId)
+	}()
+	subs := make(map[bson.ObjectId]chan bson.ObjectId)
 	for item := range items {
-		if ch, ok := subs[item.SubId]; ok{
+		if ch, ok := subs[item.SubId]; ok {
 			ch <- item.FileId
-		} else{
+		} else {
 			subs[item.SubId] = make(chan bson.ObjectId)
 			go processNew(item.SubId, subs[item.SubId], stat)
 			subs[item.SubId] <- item.FileId
@@ -87,84 +101,67 @@ func Serve(items chan Item) {
 	}
 }
 
-
-type Item struct{
-	FileId bson.ObjectId
-	SubId bson.ObjectId
-} 
-
-
-
-
-
-type status struct {
-	Id    bson.ObjectId
-	Phase int
-}
-
-const (
-	BUSY = iota
-	DONE
-)
-
-
-
-func getQueued() (queued map[bson.ObjectId] status) {
-	f, err := os.Open(filepath.Join(utils.BASE_DIR, "queue.gob"))
-	if err == nil {
-		dec := gob.NewDecoder(f)
-		err = dec.Decode(&queued)
+/*
+Retrieves incompletely processed submissions from  the filesystem.
+*/
+func getStored()  map[bson.ObjectId]bool {
+	stored, err := utils.LoadMap(INCOMPLETE)
+	if err != nil{
+		utils.Log("Unable to read stored map: ", err)
+		stored = make(map[bson.ObjectId]bool)
 	}
-	if err != nil {
-		utils.Log("Unable to read queue: ", err)
-		queued = make(map[bson.ObjectId] status)
-	}
-	return queued
-}
-
-func saveQueued(queued map[bson.ObjectId] status) error {
-	f, err := os.Create(filepath.Join(utils.BASE_DIR, "queue.gob"))
-	if err != nil {
-		return err
-	}
-	enc := gob.NewEncoder(f)
-	return enc.Encode(&queued)
+	return stored
 }
 
 
-func statusListener(stat chan status, active map[bson.ObjectId] status) {
-	signals := make(chan os.Signal)
-	signal.Notify(signals, os.Kill, os.Interrupt)
+/*
+Retrieves incompletely processed submissions from  the filesystem.
+*/
+func saveActive(active map[bson.ObjectId]bool) {
+	err := utils.SaveMap(active, INCOMPLETE)
+	if err != nil{
+		utils.Log("Unable to save active processes map: ", err)
+	}
+}
+
+/*
+Listens for new submissions and adds them to the map of active processes. Listens for completed submissions and 
+removes them from the active process map. Listens for Kill or Interrupt signals and saves the active processes if
+these signals are detected. 
+*/
+func statusListener(stat *status) {
+	active := getStored()
+	quitCh := make(chan os.Signal)
+	signal.Notify(quitCh, os.Kill, os.Interrupt)
 	for {
 		select {
-		case s := <-stat:
-			if s.Phase == DONE {
-				delete(active, s.Id)
-			} else if _, ok := active[s.Id]; !ok {
-				active[s.Id] = s
-			}
-		case sig := <-signals:
+		case id := <-stat.busy:
+			active[id] = true
+		case id := <-stat.done:
+			delete(active, id)
+		case sig := <-quitCh:
 			utils.Log("Received interrupt signal: ", sig)
-			err := saveQueued(active)
-			if err != nil {
-				utils.Log("Saving queue failed: ", err)
-			}
+			saveActive(active)
 			os.RemoveAll(filepath.Join(os.TempDir(), "tests"))
 			os.Exit(0)
 		}
 	}
 }
 
-func processStored(subId bson.ObjectId, stat chan status){
-	stat <- status{subId, BUSY} 
+/*
+Processes an incomplete submission. Retrieves all files in the submission from the db
+and processes them. 
+*/
+func processStored(subId bson.ObjectId, stat *status) {
+	stat.busy <- subId
 	count := 0
 	for {
-		matcher := bson.M{sub.SUBID : subId, sub.NUM : count}
-		fmap, err := db.GetOne(db.FILES, matcher) 
+		matcher := bson.M{sub.SUBID: subId, sub.NUM: count}
+		fmap, err := db.GetOne(db.FILES, matcher)
 		if err != nil {
 			break
 		}
-		f, err := sub.ReadFile(fmap)	
+		f, err := sub.ReadFile(fmap)
 		if err != nil {
 			utils.Log("Error reading file:", err)
 			break
@@ -175,20 +172,23 @@ func processStored(subId bson.ObjectId, stat chan status){
 	if err != nil {
 		utils.Log("Error cleaning files:", err)
 	}
-	stat <- status{subId, DONE}
+	stat.done <- subId
 }
 
 
-func processNew(subId bson.ObjectId, fileIds chan bson.ObjectId, stat chan status){
-	stat <- status{subId, BUSY} 
-	for fileId := range fileIds{
+/*
+Processes a new submission. Listens for incoming files and processes them.
+*/
+func processNew(subId bson.ObjectId, fileIds chan bson.ObjectId, stat *status) {
+	stat.busy <- subId
+	for fileId := range fileIds {
 		processId(fileId)
 	}
 	err := os.RemoveAll(filepath.Join(os.TempDir(), subId.Hex()))
 	if err != nil {
 		utils.Log("Error cleaning files:", err)
 	}
-	stat <- status{subId, DONE}
+	stat.done <- subId
 }
 
 /*
@@ -196,12 +196,15 @@ Loads a file from the db and processes it.
 */
 func processId(fId bson.ObjectId) {
 	f, ok := LoadFile(db.GetById, fId)
-	if !ok{
+	if !ok {
 		return
 	}
 	processFile(f)
 }
 
+/*
+Processes a file according to its type.
+*/
 func processFile(f *sub.File) {
 	utils.Log("Processing file: ", f.Id)
 	t := f.Type()
@@ -217,7 +220,7 @@ func processFile(f *sub.File) {
 }
 
 /*
- Evaluates a submitted file (source or compiled) by 
+ Evaluates a submitted file (source or compiled) by
  attempting to run tests and tools on it.
 */
 func evaluate(f *sub.File, compiled bool) {
@@ -228,7 +231,7 @@ func evaluate(f *sub.File, compiled bool) {
 	}
 	if compiled {
 		tools.AlreadyCompiled(f.Id, ti)
-		f, compiled = LoadFile(db.GetById, f.Id) 			
+		f, compiled = LoadFile(db.GetById, f.Id)
 	} else {
 		compiled = tools.Compile(f.Id, ti)
 	}
@@ -243,42 +246,47 @@ func evaluate(f *sub.File, compiled bool) {
 	}
 }
 
-func LoadFile(getter db.SingleGet, matcher interface{})(*sub.File, bool){
+/*
+Loads a file from the db and returns it.
+*/
+func LoadFile(getter db.SingleGet, matcher interface{}) (*sub.File, bool) {
 	fmap, err := getter(db.FILES, matcher)
 	if err != nil {
 		utils.Log("Error reading from db:", err)
 		return nil, false
-	} 
-	f, err := sub.ReadFile(fmap)	
+	}
+	f, err := sub.ReadFile(fmap)
 	if err != nil {
 		utils.Log("Error reading file:", err)
 		return nil, false
-	} 
+	}
 	return f, true
 }
 
-func LoadSubmission(getter db.SingleGet, matcher interface{})(*sub.Submission, bool){
+/*
+Loads a submission from the db and returns it.
+*/
+func LoadSubmission(getter db.SingleGet, matcher interface{}) (*sub.Submission, bool) {
 	smap, err := getter(db.SUBMISSIONS, matcher)
 	if err != nil {
 		utils.Log("Error reading from db:", err)
 		return nil, false
-	} 
-	s, err := sub.ReadSubmission(smap)	
+	}
+	s, err := sub.ReadSubmission(smap)
 	if err != nil {
 		utils.Log("Error reading submission:", err)
 		return nil, false
-	} 
+	}
 	return s, true
 
 }
 
-
 /*
- Saves file to filesystem. Returns file info used by tools & tests.  
+ Saves file to filesystem. Returns file info used by tools & tests.
 */
 func setupFile(f *sub.File) (*tools.TargetInfo, bool) {
 	s, ok := LoadSubmission(db.GetById, f.SubId)
-	if !ok{
+	if !ok {
 		return nil, false
 	}
 	dir := filepath.Join(os.TempDir(), f.SubId.Hex())
