@@ -17,6 +17,7 @@ import (
 	"time"
 	"labix.org/v2/mgo/bson"
 	"encoding/gob"
+	"errors"
 )
 
 const DPERM = 0777
@@ -56,32 +57,33 @@ func init() {
 /*
 Reads users configurations from file. Sets up passwords.
 */
-func ReadUsers(fname string) (users []interface{}, err error) {
+func ReadUsers(fname string) ([]interface{}, error) {
 	data, err := ioutil.ReadFile(fname)
-	if err == nil {
-		buff := bytes.NewBuffer(data)
-		line, err := buff.ReadString(byte('\n'))
-		users = make([]interface{}, 100, 1000)
-		i := 0
-		for err == nil {
-			vals := strings.Split(line, ":")
-			uname := strings.TrimSpace(vals[0])
-			pword := strings.TrimSpace(vals[1])
-			hash, salt := Hash(pword)
-			data := &myuser.User{uname, hash, salt, myuser.ALL_SUB}
-			if i == len(users) {
-				users = append(users, data)
-			} else {
-				users[i] = data
-			}
-			i++
-			line, err = buff.ReadString(byte('\n'))
+	if err != nil {
+		return nil, err
+	}
+	buff := bytes.NewBuffer(data)
+	line, err := buff.ReadString(byte('\n'))
+	users := make([]interface{}, 100, 1000)
+	i := 0
+	for err == nil {
+		vals := strings.Split(line, ":")
+		uname := strings.TrimSpace(vals[0])
+		pword := strings.TrimSpace(vals[1])
+		hash, salt := Hash(pword)
+		data := &myuser.User{uname, hash, salt, myuser.ALL_SUB}
+		if i == len(users) {
+			users = append(users, data)
+		} else {
+			users[i] = data
 		}
-		if err == io.EOF {
-			err = nil
-			if i < len(users) {
-				users = users[:i]
-			}
+		i++
+		line, err = buff.ReadString(byte('\n'))
+	}
+	if err == io.EOF {
+		err = nil
+		if i < len(users) {
+			users = users[:i]
 		}
 	}
 	return users, err
@@ -98,18 +100,18 @@ func Log(v ...interface{}) {
 /*
  Reads all JSON data from reader (maximum of 1024 bytes). 
 */
-func ReadJSON(r io.Reader) (jobj map[string]interface{}, err error) {
-	buffer := make([]byte, 1024)
-	bytesRead, err := r.Read(buffer)
-	if err == nil {
-		buffer = buffer[:bytesRead]
-		var holder interface{}
-		err = json.Unmarshal(buffer, &holder)
-		if err == nil {
-			jobj = holder.(map[string]interface{})
-		}
+func ReadJSON(r io.Reader) (map[string]interface{}, error) {
+	read := ReadBytes(r)
+	var holder interface{}
+	err := json.Unmarshal(read, &holder)
+	if err != nil {
+		return nil, err
 	}
-	return jobj, err
+	jmap, ok := holder.(map[string]interface{})
+	if !ok {
+		return nil, errors.New("Failed to cast to JSON: "+string(read))
+	}
+	return jmap, nil
 }
 
 /*
@@ -139,8 +141,8 @@ func ReadData(r io.Reader, term []byte) (buffer *bytes.Buffer, err error) {
 /*
 Saves a file in a given directory. Creates directory if it doesn't exist.
 */
-func SaveFile(dir, fname string, data []byte) (err error) {
-	err = os.MkdirAll(dir, DPERM)
+func SaveFile(dir, fname string, data []byte) error {
+	err := os.MkdirAll(dir, DPERM)
 	if err != nil {
 		return err
 	}
@@ -186,25 +188,45 @@ func Unzip(dir string, data []byte) (err error) {
 Read contents of zip file into a map with each file's path being a map
 key and data being the value. 
 */
-func ReadZip(data []byte) (extracted map[string][]byte, err error) {
+func UnZip(data []byte) (map[string][]byte, error) {
 	br := bytes.NewReader(data)
 	zr, err := zip.NewReader(br, int64(br.Len()))
-	extracted = make(map[string][]byte)
-	if err == nil {
-		for _, zf := range zr.File {
-			frc, err := zf.Open()
-			if err == nil {
-				if !zf.FileInfo().IsDir() {
-					extracted[zf.FileInfo().Name()] = ReadBytes(frc)
-				}
-				frc.Close()
-			}
-			if err != nil {
-				break
-			}
+	if err != nil {
+		return nil, err
+	}
+	extracted := make(map[string][]byte)
+	for _, zf := range zr.File {
+		frc, err := zf.Open()
+		if err != nil {
+			return nil, err
+		}
+		if !zf.FileInfo().IsDir() {
+			extracted[zf.FileInfo().Name()] = ReadBytes(frc)
+		}
+		frc.Close()		
+	}
+	return extracted, nil
+}
+
+
+func Zip(files map[string] []byte)([]byte, error){
+	buf := new(bytes.Buffer)
+	w := zip.NewWriter(buf)
+	for name, data := range files {
+		f, err := w.Create(name)
+		if err != nil {
+			return nil, err
+		}
+		_, err = f.Write(data)
+		if err != nil {
+			return nil, err
 		}
 	}
-	return extracted, err
+	err := w.Close()
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 func ReadBytes(r io.Reader) []byte {

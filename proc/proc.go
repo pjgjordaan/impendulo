@@ -320,7 +320,7 @@ func runTests(src *sub.File, ti *tools.TargetInfo) {
 Extracts files from archive and processes them.
 */
 func processArchive(archive *sub.File) {
-	files, err := utils.ReadZip(archive.Data)
+	files, err := utils.UnZip(archive.Data)
 	if err != nil {
 		utils.Log("Bad archive: ", err)
 		return
