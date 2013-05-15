@@ -27,16 +27,6 @@ func TestReadJSON(t *testing.T) {
 	}
 }
 
-func TestGetString(t *testing.T) {
-	jmap := map[string]interface{}{"A": "2 3", "B": " Hallo ", "C": "", "D": "''"}
-	for k, v := range jmap {
-		if res, err := GetString(jmap, k); err != nil || res != v {
-			t.Error(err, res, "!=", v)
-		}
-	}
-}
-
-
 func TestMapStorage(t *testing.T){
 	id1 := bson.NewObjectId()
 	id2 := bson.NewObjectId()

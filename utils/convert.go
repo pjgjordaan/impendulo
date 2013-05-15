@@ -7,6 +7,7 @@ import (
 
 func GetString(jobj map[string]interface{}, key string) (val string, err error) {
 	ival, ok := jobj[key]
+	
 	if ok {
 		val, ok = ival.(string)
 	}
@@ -50,39 +51,77 @@ func GetID(jobj map[string]interface{}, key string) (val bson.ObjectId, err erro
 }
 
 func GetM(jobj map[string]interface{}, key string) (val bson.M, err error) {
-	ival, _ := jobj[key]
-	//if ok {
-	val, _ = ival.(bson.M)
-	/*}
+	ival, ok := jobj[key]
+	if ok {
+		val, ok = ival.(bson.M)
+	}
 	if !ok {
 		err = errors.New("Error reading value for: " + key)
-	}*/
+	}
 	return val, err
 }
 
 func GetBytes(jobj map[string]interface{}, key string) (val []byte, err error) {
 	ival, ok := jobj[key]
-	if ok {
-		val, ok = ival.([]byte)
-	}
 	if !ok {
 		err = errors.New("Error reading value for: " + key)
 	}
-	return val, err
+	return ToBytes(ival)
 }
 
 func GetStrings(jobj map[string]interface{}, key string) ([]string, error) {
-	ivals, ok := jobj[key].([]interface{})
+	ival, ok := jobj[key]
 	if !ok{
 		return nil, errors.New("Error reading value for: " + key)
 	}
-	vals := make([]string, len(ivals))
+	return ToStrings(ival)
+}
+
+func ToBytes(bint interface{})([]byte, error){
+	val, ok := bint.([]byte)
+	if !ok{
+		return nil, errors.New("Error casting interface to []byte")
+	}
+	return val, nil
+}
+
+
+func ToStrings(sint interface{})([]string, error){
+	ivals, ok := sint.([]string)
+	if !ok{
+		return nil, errors.New("Error casting interface to []interface")
+	}
+/*	vals := make([]string, len(ivals))
 	for i, ival := range ivals{
 		val, ok := ival.(string)
 		if !ok{
-			return nil, errors.New("Error reading value for: " + key)
+			return nil, errors.New("Error casting interface to string")
 		}
-		vals[i] = val
+		vals[i] = ival
+	}*/
+	return ivals, nil
+}
+
+func MEqual(m1, m2 bson.M) bool{
+	if len(m1) != len(m2){
+		return false
 	}
-	return vals, nil
+	for k, v := range m1{
+		if m2[k] != v{
+			return false
+		}
+	}
+	return true
+}
+
+func StringsEqual(s1, s2 []string) bool{
+	if len(s1) != len(s2){
+		return false
+	}
+	for k, v := range s1{
+		if s2[k] != v{
+			return false
+		}
+	}
+	return true
 }
