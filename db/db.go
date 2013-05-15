@@ -3,6 +3,9 @@ package db
 import (
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
+	"github.com/godfried/cabanga/submission"
+	"github.com/godfried/cabanga/tool"
+	"github.com/godfried/cabanga/user"
 )
 
 const (
@@ -31,58 +34,89 @@ func getSession() (s *mgo.Session) {
 	return s
 }
 
-func RemoveById(col string, id interface{}) (err error) {
+func RemoveFileByID(id interface{}) (err error) {
 	session := getSession()
 	defer session.Close()
-	c := session.DB(DB).C(col)
+	c := session.DB(DB).C(FILES)
 	err = c.RemoveId(id)
 	return err
 }
 
-func GetById(col string, id interface{}) (ret bson.M, err error) {
+func GetUserById(id interface{})(ret *user.User, err error){
 	session := getSession()
 	defer session.Close()
-	c := session.DB(DB).C(col)
+	c := session.DB(DB).C(USERS)
 	err = c.FindId(id).One(&ret)
 	return ret, err
 }
 
-func GetAll(col string, matcher interface{}) (ret []bson.M, err error) {
-	session := getSession()
-	defer session.Close()
-	tcol := session.DB(DB).C(col)
-	err = tcol.Find(matcher).All(&ret)
-	return ret, err
-}
 
-func GetOne(col string, matcher interface{}) (ret bson.M, err error) {
+func GetFile(matcher interface{})(ret *submission.File, err error){
 	session := getSession()
 	defer session.Close()
-	c := session.DB(DB).C(col)
+	c := session.DB(DB).C(FILES)
 	err = c.Find(matcher).One(&ret)
 	return ret, err
 }
 
-func AddOne(col string, item interface{}) (err error) {
+func GetSubmission(matcher interface{})(ret *submission.Submission, err error){
 	session := getSession()
 	defer session.Close()
-	tcol := session.DB(DB).C(col)
-	err = tcol.Insert(item)
+	c := session.DB(DB).C(SUBMISSIONS)
+	err = c.Find(matcher).One(&ret)
+	return ret, err
+}
+
+func GetTool(matcher interface{})(ret *tool.Tool, err error){
+	session := getSession()
+	defer session.Close()
+	c := session.DB(DB).C(TOOLS)
+	err = c.Find(matcher).One(&ret)
+	return ret, err
+}
+
+
+func GetTools(matcher interface{}) (ret []*tool.Tool, err error) {
+	session := getSession()
+	defer session.Close()
+	tcol := session.DB(DB).C(TOOLS)
+	err = tcol.Find(matcher).All(&ret)
+	return ret, err
+}
+
+
+func AddFile(f *submission.File) error{
+	session := getSession()
+	defer session.Close()
+	col := session.DB(DB).C(FILES)
+	err := col.Insert(f)
 	return err
 }
 
-func AddMany(col string, items ...interface{}) (err error) {
+func AddSubmission(s *submission.Submission) error{
 	session := getSession()
 	defer session.Close()
-	c := session.DB(DB).C(col)
-	for _, item := range items {
-		err = c.Insert(item)
-		if err != nil {
-			break
-		}
-	}
+	col := session.DB(DB).C(SUBMISSIONS)
+	err := col.Insert(s)
 	return err
 }
+
+func AddTool(t *tool.Tool) error{
+	session := getSession()
+	defer session.Close()
+	col := session.DB(DB).C(TOOLS)
+	err := col.Insert(t)
+	return err
+}
+
+func AddResult(r *tool.Result) error{
+	session := getSession()
+	defer session.Close()
+	col := session.DB(DB).C(RESULTS)
+	err := col.Insert(r)
+	return err
+}
+
 
 func Update(col string, matcher, change interface{}) (err error) {
 	session := getSession()
@@ -92,10 +126,10 @@ func Update(col string, matcher, change interface{}) (err error) {
 	return err
 }
 
-func UpsertId(col string, id, item interface{}) (err error) {
+
+func AddUsers(users ...*user.User) (error) {
 	session := getSession()
 	defer session.Close()
-	tcol := session.DB(DB).C(col)
-	_, err = tcol.UpsertId(id, item)
-	return err
+	c := session.DB(DB).C(USERS)
+	return c.Insert(users)
 }

@@ -1,7 +1,6 @@
-package sub
+package submission
 
 import (
-	"github.com/godfried/cabanga/utils"
 	"labix.org/v2/mgo/bson"
 	"strconv"
 	"strings"
@@ -32,37 +31,6 @@ func NewSubmission(project, user, mode, lang string) *Submission {
 }
 
 /*
-Extract submission from a mongo map.
-*/
-func ReadSubmission(smap bson.M) (*Submission, error) {
-	id, err := utils.GetID(smap, ID)
-	if err != nil {
-		return nil, err
-	}
-	proj, err := utils.GetString(smap, PROJECT)
-	if err != nil {
-		return nil, err
-	}
-	usr, err := utils.GetString(smap, USER)
-	if err != nil {
-		return nil, err
-	}
-	time, err := utils.GetInt64(smap, TIME)
-	if err != nil {
-		return nil, err
-	}
-	mode, err := utils.GetString(smap, MODE)
-	if err != nil {
-		return nil, err
-	}
-	lang, err := utils.GetString(smap, LANG)
-	if err != nil {
-		return nil, err
-	}
-	return &Submission{id, proj, usr, time, mode, lang}, nil
-}
-
-/*
 Single file's data from a submission. 
 */
 type File struct {
@@ -71,33 +39,6 @@ type File struct {
 	Info    bson.M        "info"
 	Data    []byte        "data"
 	Results bson.M        "results"
-}
-
-/*
-Extract file data from a mongo map
-*/
-func ReadFile(fmap bson.M) (*File, error) {
-	id, err := utils.GetID(fmap, ID)
-	if err != nil {
-		return nil, err
-	}
-	subid, err := utils.GetID(fmap, SUBID)
-	if err != nil {
-		return nil, err
-	}
-	info, err := utils.GetM(fmap, INFO)
-	if err != nil {
-		return nil, err
-	}
-	data, err := utils.GetBytes(fmap, DATA)
-	if err != nil {
-		return nil, err
-	}
-	res, err := utils.GetM(fmap, RES)
-	if err != nil {
-		return nil, err
-	}
-	return &File{id, subid, info, data, res}, nil
 }
 
 func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) *File {

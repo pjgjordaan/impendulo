@@ -57,14 +57,14 @@ func init() {
 /*
 Reads users configurations from file. Sets up passwords.
 */
-func ReadUsers(fname string) ([]interface{}, error) {
+func ReadUsers(fname string) ([]*myuser.User, error) {
 	data, err := ioutil.ReadFile(fname)
 	if err != nil {
 		return nil, err
 	}
 	buff := bytes.NewBuffer(data)
 	line, err := buff.ReadString(byte('\n'))
-	users := make([]interface{}, 100, 1000)
+	users := make([]*myuser.User, 100, 1000)
 	i := 0
 	for err == nil {
 		vals := strings.Split(line, ":")
@@ -101,9 +101,12 @@ func Log(v ...interface{}) {
  Reads all JSON data from reader (maximum of 1024 bytes). 
 */
 func ReadJSON(r io.Reader) (map[string]interface{}, error) {
-	read := ReadBytes(r)
+	read, err := ReadData(r)
+	if err != nil {
+		return nil, err
+	} 
 	var holder interface{}
-	err := json.Unmarshal(read, &holder)
+	err = json.Unmarshal(read, &holder)
 	if err != nil {
 		return nil, err
 	}
@@ -117,25 +120,24 @@ func ReadJSON(r io.Reader) (map[string]interface{}, error) {
 /*
 Read data from reader until io.EOF or term is encountered. 
 */
-func ReadData(r io.Reader, term []byte) (buffer *bytes.Buffer, err error) {
-	buffer = new(bytes.Buffer)
+func ReadData(r io.Reader)([]byte, error) {
+	buffer := new(bytes.Buffer)
+	eof := []byte("eof")
 	p := make([]byte, 2048)
 	receiving := true
 	for receiving {
 		bytesRead, err := r.Read(p)
 		read := p[:bytesRead]
-		if bytes.HasSuffix(read, term) {
-			read = read[:len(read)-len(term)]
+		if bytes.HasSuffix(read, eof) {
+			read = read[:len(read)-len(eof)]
 			receiving = false
-		} else if err != nil {
-			receiving = false
+		} 
+		if err != nil {
+			return nil, err
 		}
-		if err == nil || err == io.EOF {
-			buffer.Write(read)
-			err = nil
-		}
+		buffer.Write(read)
 	}
-	return buffer, err
+	return buffer.Bytes(), nil
 }
 
 /*
