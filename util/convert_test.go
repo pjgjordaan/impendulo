@@ -1,4 +1,5 @@
-package utils
+package util
+
 import (
 	"errors"
 	"labix.org/v2/mgo/bson"

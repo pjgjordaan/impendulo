@@ -18,18 +18,12 @@ const (
 	SRC = "src"
 )
 
-
 var builder *testBuilder
 
 type testBuilder struct {
 	tests   map[string]bool
 	m       *sync.Mutex
 	testDir string
-}
-
-type Item struct {
-	FileId bson.ObjectId
-	SubId  bson.ObjectId
 }
 
 func newTestBuilder() *testBuilder {
@@ -40,25 +34,23 @@ func newTestBuilder() *testBuilder {
 /*
 Extracts project tests from db to filesystem for execution.
 */
-func (this *testBuilder) setup(project string) (ret bool) {
+func (this *testBuilder) setup(project string) bool {
 	this.m.Lock()
-	ret = true
-	if !this.tests[project] {
-		tests, ok := getTests(project)
-		if !ok {
-			ret = false
-		} else {
-			err := utils.Unzip(filepath.Join(this.testDir, project), tests.Data)
-			if err != nil {
-				utils.Log("Error extracting tests:", project, err)
-				ret = false
-			} else {
-				this.tests[project] = true
-			}
-		}
+	defer this.m.Unlock()
+	if this.tests[project] {
+		return true
 	}
-	this.m.Unlock()
-	return ret
+	tests, ok := getTests(project)
+	if !ok {
+		return false
+	} 
+	err := util.Unzip(filepath.Join(this.testDir, project), tests.Data)
+	if err != nil {
+		util.Log("Error extracting tests:", project, err)
+		return false
+	} 
+	this.tests[project] = true
+	return true
 }
 
 /*
@@ -68,23 +60,22 @@ func getTests(project string) (*submission.File, bool) {
 	smatcher := bson.M{submission.PROJECT: project, submission.MODE: submission.TEST_MODE}
 	s, err := db.GetSubmission(smatcher)
 	if err != nil {
-		utils.Log("Error retrieving test submission:", err)
+		util.Log("Error retrieving test submission:", err)
 		return nil, false
 	}
 	fmatcher := bson.M{submission.SUBID: s.Id}
 	f, err := db.GetFile(fmatcher)
 	if err != nil {
-		utils.Log("Error retrieving test files:", err)
+		util.Log("Error retrieving test files:", err)
 		return nil, false
 	}
 	return f, true
 }
 
-
 /*
 Spawns new processing routines for each file which needs to be processed.
 */
-func Serve(items chan Item) {
+func Serve(fileChan chan *submission.File) {
 	builder = newTestBuilder()
 	// Start handlers
 	busy := make(chan bson.ObjectId)
@@ -96,15 +87,14 @@ func Serve(items chan Item) {
 			processStored(subId, busy, done)
 		}
 	}()
-	subs := make(map[bson.ObjectId]chan bson.ObjectId)
-	for item := range items {
-		utils.Log(item)
-		if ch, ok := subs[item.SubId]; ok {
-			ch <- item.FileId
+	subs := make(map[bson.ObjectId]chan *submission.File)
+	for file := range fileChan {
+		if ch, ok := subs[file.SubId]; ok {
+			ch <- file
 		} else {
-			subs[item.SubId] = make(chan bson.ObjectId)
-			go processNew(item.SubId, subs[item.SubId], busy, done)
-			subs[item.SubId] <- item.FileId
+			subs[file.SubId] = make(chan *submission.File)
+			go processNew(file.SubId, subs[file.SubId], busy, done)
+			subs[file.SubId] <- file
 		}
 	}
 }
@@ -113,9 +103,9 @@ func Serve(items chan Item) {
 Retrieves incompletely processed submissions from  the filesystem.
 */
 func getStored()  map[bson.ObjectId]bool {
-	stored, err := utils.LoadMap(INCOMPLETE)
+	stored, err := util.LoadMap(INCOMPLETE)
 	if err != nil{
-		utils.Log("Unable to read stored map: ", err)
+		util.Log("Unable to read stored map: ", err)
 		stored = make(map[bson.ObjectId]bool)
 	}
 	return stored
@@ -126,9 +116,9 @@ func getStored()  map[bson.ObjectId]bool {
 Retrieves incompletely processed submissions from  the filesystem.
 */
 func saveActive(active map[bson.ObjectId]bool) {
-	err := utils.SaveMap(active, INCOMPLETE)
+	err := util.SaveMap(active, INCOMPLETE)
 	if err != nil{
-		utils.Log("Unable to save active processes map: ", err)
+		util.Log("Unable to save active processes map: ", err)
 	}
 }
 
@@ -148,7 +138,7 @@ func statusListener(busy, done chan bson.ObjectId) {
 		case id := <-done:
 			delete(active, id)
 		case sig := <-quit:
-			utils.Log("Received interrupt signal: ", sig)
+			util.Log("Received interrupt signal: ", sig)
 			saveActive(active)
 			os.RemoveAll(filepath.Join(os.TempDir(), TESTS))
 			os.Exit(0)
@@ -162,19 +152,16 @@ and processes them.
 */
 func processStored(subId bson.ObjectId, busy, done chan bson.ObjectId) {
 	busy <- subId
+	defer os.RemoveAll(filepath.Join(os.TempDir(), subId.Hex()))
 	count := 0
 	for {
 		matcher := bson.M{submission.SUBID: subId, submission.NUM: count}
 		f, err := db.GetFile(matcher)
 		if err != nil {
-			utils.Log("Error retrieving file:", err)
-			break
+			util.Log("Error retrieving file:", err)
+			return
 		}
 		processFile(f)
-	}
-	err := os.RemoveAll(filepath.Join(os.TempDir(), subId.Hex()))
-	if err != nil {
-		utils.Log("Error cleaning files:", err)
 	}
 	done <- subId
 }
@@ -183,36 +170,24 @@ func processStored(subId bson.ObjectId, busy, done chan bson.ObjectId) {
 /*
 Processes a new submission. Listens for incoming files and processes them.
 */
-func processNew(subId bson.ObjectId, fileIds, busy, done chan bson.ObjectId) {
+func processNew(subId bson.ObjectId, fileChan chan *submission.File, busy, done chan bson.ObjectId) {
 	busy <- subId
-	for fileId := range fileIds {
-		processId(fileId)
+	for file := range fileChan {
+		processFile(file)
 	}
 	err := os.RemoveAll(filepath.Join(os.TempDir(), subId.Hex()))
 	if err != nil {
-		utils.Log("Error cleaning files:", err)
+		util.Log("Error cleaning files:", err)
 	}
 	done <- subId
 }
 
-/*
-Loads a file from the db and processes it.
-*/
-func processId(fId bson.ObjectId) {
-	matcher := bson.M{submission.ID: fId}
-	f, err := db.GetFile(matcher)
-	if err != nil {
-		utils.Log("Error retrieving file",err)
-		return
-	}
-	processFile(f)
-}
 
 /*
 Processes a file according to its type.
 */
 func processFile(f *submission.File) {
-	utils.Log("Processing file: ", f.Id)
+	util.Log("Processing file: ", f.Id)
 	t := f.Type()
 	if t == submission.ARCHIVE {
 		processArchive(f)
@@ -222,7 +197,7 @@ func processFile(f *submission.File) {
 	} else if t == submission.EXEC {
 		evaluate(f, alreadyCompiled)
 	}
-	utils.Log("Processed file: ", f.Id)
+	util.Log("Processed file: ", f.Id)
 }
 
 /*
@@ -232,11 +207,11 @@ func processFile(f *submission.File) {
 func evaluate(orig *submission.File, comp compFunc) {
 	f, ti, ok := setupFile(orig, comp)
 	if ok {
-		utils.Log("Evaluating: ", f.Id, f.Info)
+		util.Log("Evaluating: ", f.Id, f.Info)
 		runTests(f, ti)
-		utils.Log("Tested: ", f.Id)
+		util.Log("Tested: ", f.Id)
 		runTools(f, ti)
-		utils.Log("Ran tools: ", f.Id)
+		util.Log("Ran tools: ", f.Id)
 	}
 }
 
@@ -251,10 +226,10 @@ func setupFile(f *submission.File, comp compFunc)(*submission.File, *tool.Target
 	matcher := bson.M{submission.ID: f.Id}
 	f, err := db.GetFile(matcher)
 	if err != nil{
-		utils.Log("Error retrieving file", err)
+		util.Log("Error retrieving file", err)
 		return nil, nil, false
 	}
-	utils.Log("Compiled: ", f.Id)
+	util.Log("Compiled: ", f.Id)
 	return f, ti, true
 }
 
@@ -265,14 +240,14 @@ func extractFile(f *submission.File) (*tool.TargetInfo, bool) {
 	matcher := bson.M{submission.ID:f.SubId}
 	s, err := db.GetSubmission(matcher)
 	if err != nil {
-		utils.Log("Error retrieving submission",err)
+		util.Log("Error retrieving submission",err)
 		return nil, false
 	}
 	dir := filepath.Join(os.TempDir(), f.SubId.Hex())
 	ti := tool.NewTarget(s.Project, f.InfoStr(submission.NAME), s.Lang, f.InfoStr(submission.PKG), dir)
-	err = utils.SaveFile(filepath.Join(dir, ti.Package), ti.FullName(), f.Data)
+	err = util.SaveFile(filepath.Join(dir, ti.Package), ti.FullName(), f.Data)
 	if err != nil {
-		utils.Log("Error saving file: ", f.Id, err)
+		util.Log("Error saving file: ", f.Id, err)
 		return nil, false
 	}
 	return ti, true
@@ -285,7 +260,7 @@ func runTests(f *submission.File, ti *tool.TargetInfo) {
 	tests := []string{"EasyTests", "AllTests"}
 	ok := builder.setup(ti.Project)
 	if !ok{
-		utils.Log("No tests found for ", ti.Project)
+		util.Log("No tests found for ", ti.Project)
 		return
 	}
 	for _, test := range tests {
@@ -297,7 +272,7 @@ func runTests(f *submission.File, ti *tool.TargetInfo) {
 		compRes, compErr := tool.CompileTest(f.Id, ti, test, dir)
 		dbErr := addResult(compRes)
 		if dbErr != nil{
-			utils.Log("Error adding result", dbErr)
+			util.Log("Error adding result", dbErr)
 			return
 		}
 		if compErr != nil{
@@ -306,7 +281,7 @@ func runTests(f *submission.File, ti *tool.TargetInfo) {
 		runRes := tool.RunTest(f.Id, ti, test, dir)
 		dbErr = addResult(runRes)
 		if dbErr != nil{
-			utils.Log("Error adding result", dbErr)
+			util.Log("Error adding result", dbErr)
 			return
 		}
 	}
@@ -320,18 +295,19 @@ func runTests(f *submission.File, ti *tool.TargetInfo) {
 func runTools(f *submission.File, ti *tool.TargetInfo) {
 	all, err := db.GetTools(bson.M{tool.LANG: ti.Lang})
 	if err != nil {
-		utils.Log("Error retrieving tools: ", ti.Lang)
+		util.Log("Error retrieving tools: ", ti.Lang)
 		return
 	}
 	for _, t := range all {
 		//Check if tool has already been run
-		if _, ok := f.Results[t.Name]; !ok {
-			res := tool.RunTool(f.Id, ti, t, map[string]string{})
-			err = addResult(res)
-			if err != nil {
-				utils.Log("Could not add result: ", err)
-				return
-			}
+		if _, ok := f.Results[t.Name];ok {
+			continue
+		}
+		res := tool.RunTool(f.Id, ti, t, map[string]string{})
+		err = addResult(res)
+		if err != nil {
+			util.Log("Could not add result: ", err)
+			return
 		}
 	}
 }
@@ -341,15 +317,15 @@ func runTools(f *submission.File, ti *tool.TargetInfo) {
 Extracts files from archive and processes them.
 */
 func processArchive(archive *submission.File) {
-	files, err := utils.UnZip(archive.Data)
+	files, err := util.UnzipToMap(archive.Data)
 	if err != nil {
-		utils.Log("Bad archive: ", err)
+		util.Log("Bad archive: ", err)
 		return
 	}
 	for name, data := range files {
 		info, err := submission.ParseName(name)
 		if err != nil {
-			utils.Log("Error reading file metadata: ", name, err)
+			util.Log("Error reading file metadata: ", name, err)
 			continue
 		}
 		matcher := bson.M{submission.INFO: info}
@@ -358,7 +334,7 @@ func processArchive(archive *submission.File) {
 			f = submission.NewFile(archive.SubId, info, data)
 			err = db.AddFile(f)
 			if err != nil {
-				utils.Log("Error storing file: ", f.Id, err)
+				util.Log("Error storing file: ", f.Id, err)
 				continue
 			}
 		}
@@ -375,13 +351,13 @@ Compiles a java source file and writes the results thereof to the database.
 func compile(fileId bson.ObjectId, ti *tool.TargetInfo) bool {
 	comp, err := db.GetTool(ti.GetCompiler())
 	if err != nil {
-		utils.Log(ti.Lang+" compiler not found: ", err)
+		util.Log(ti.Lang+" compiler not found: ", err)
 		return false
 	}
 	res := tool.RunTool(fileId, ti, comp, map[string]string{tool.CP : ti.Dir})
 	err = addResult(res)
 	if err != nil {
-		utils.Log("Could not add result:", res, err)
+		util.Log("Could not add result:", res, err)
 		return false
 	}
 	return true
@@ -393,13 +369,13 @@ Compiles a java source file and writes the results thereof to the database.
 func alreadyCompiled(fileId bson.ObjectId, ti *tool.TargetInfo)bool {
 	comp, err := db.GetTool(ti.GetCompiler())
 	if err != nil {
-		utils.Log(ti.Lang+" compiler not found: ", err)
+		util.Log(ti.Lang+" compiler not found: ", err)
 		return false
 	}
 	res := tool.NewResult(fileId, comp.Id, comp.Name, comp.OutName, comp.ErrName, []byte(""), []byte(""))
 	err = addResult(res)
 	if err != nil {
-		utils.Log("Could not add result:", res, err)
+		util.Log("Could not add result:", res, err)
 		return false
 	}
 	return true	

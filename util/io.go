@@ -1,4 +1,4 @@
-package utils
+package util
 
 import (
 	"archive/zip"
@@ -159,38 +159,52 @@ func SaveFile(dir, fname string, data []byte) error {
 /*
  Unzip a file (data) to a given directory.
 */
-func Unzip(dir string, data []byte) (err error) {
+func Unzip(dir string, data []byte) (error) {
 	br := bytes.NewReader(data)
 	zr, err := zip.NewReader(br, int64(br.Len()))
-	if err == nil {
-		for _, zf := range zr.File {
-			frc, err := zf.Open()
-			if err == nil {
-				path := filepath.Join(dir, zf.Name)
-				if zf.FileInfo().IsDir() {
-					err = os.MkdirAll(path, zf.Mode())
-				} else {
-					f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, zf.Mode())
-					if err == nil {
-						_, err = io.Copy(f, frc)
-						f.Close()
-					}
-				}
-				frc.Close()
-			}
-			if err != nil {
-				break
-			}
+	if err != nil {
+		return err
+	}
+	for _, zf := range zr.File {
+		err = extractFile(zf, dir)
+		if err != nil {
+			return err
 		}
 	}
-	return err
+	return nil
+}
+
+func extractFile(zf *zip.File, dir string) error{
+	frc, err := zf.Open()
+	if err != nil {
+		return err
+	}
+	defer frc.Close()
+	path := filepath.Join(dir, zf.Name)
+	if zf.FileInfo().IsDir() {
+		err = os.MkdirAll(path, zf.Mode())
+		if err != nil {
+			return err
+		}
+	} else {
+		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, zf.Mode())
+		if err != nil {
+			return err
+		}
+		defer f.Close() 
+		_, err = io.Copy(f, frc)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 /*
 Read contents of zip file into a map with each file's path being a map
 key and data being the value. 
 */
-func UnZip(data []byte) (map[string][]byte, error) {
+func UnzipToMap(data []byte) (map[string][]byte, error) {
 	br := bytes.NewReader(data)
 	zr, err := zip.NewReader(br, int64(br.Len()))
 	if err != nil {
@@ -198,18 +212,26 @@ func UnZip(data []byte) (map[string][]byte, error) {
 	}
 	extracted := make(map[string][]byte)
 	for _, zf := range zr.File {
-		frc, err := zf.Open()
-		if err != nil {
+		if zf.FileInfo().IsDir() {
+			continue
+		}
+		data, err := extractBytes(zf)
+		if err != nil{
 			return nil, err
 		}
-		if !zf.FileInfo().IsDir() {
-			extracted[zf.FileInfo().Name()] = ReadBytes(frc)
-		}
-		frc.Close()		
+		extracted[zf.FileInfo().Name()] = data
 	}
 	return extracted, nil
 }
 
+func extractBytes(zf *zip.File)([]byte, error){
+	frc, err := zf.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer frc.Close()
+	return ReadBytes(frc), nil
+}
 
 func Zip(files map[string] []byte)([]byte, error){
 	buf := new(bytes.Buffer)

@@ -10,24 +10,12 @@ import (
 	"os/exec"
 )
 
-const (
-	DIR_PATH = iota
-	PKG_PATH
-	FILE_PATH
-	ID = "_id"
-	NAME = "name"
-	LANG = "lang"
-	EXEC = "exec"
-	OUT = "out"
-	ERR = "err"
-	PRE = "pre"
-	FLAGS = "flags"
-	ARGFLAGS = "argflags"
-	TARGET = "target"
+const(
 	CP = "-cp"
 	COMPILE = "compile"
+	NAME = "name"
+	LANG = "lang"
 )
-
 
 /*
 Information about the target file
@@ -69,19 +57,24 @@ func (this *TargetInfo) GetCompiler()bson.M{
 	return 	bson.M{LANG: this.Lang, NAME: COMPILE}
 }
 
+const (
+	DIR_PATH = iota
+	PKG_PATH
+	FILE_PATH
+)
 /*
 Retrieves the target path based on the type required. 
 */
-func (ti *TargetInfo) GetTarget(id int) (target string) {
+func (ti *TargetInfo) GetTarget(id int) string {
 	switch id {
 	case DIR_PATH:
-		target = ti.Dir
+		return ti.Dir
 	case PKG_PATH:
-		target = ti.PkgPath()
+		return ti.PkgPath()
 	case FILE_PATH:
-		target = ti.FilePath()
+		return ti.FilePath()
 	}
-	return target
+	return ""
 }
 
 func NewTarget(project, name, lang, pkg, dir string) *TargetInfo {
@@ -173,14 +166,15 @@ func NewResult(fileId, toolId bson.ObjectId, name, outname, errname string, outd
 Executes a given external command.
 */
 func RunCommand(args ...string) (stdout, stderr bytes.Buffer, err error) {
-	utils.Log(args)
+	util.Log(args)
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	err = cmd.Start()
-	if err == nil {
-		err = cmd.Wait()
+	if err != nil {
+		return stdout, stderr, err
 	}
-	return stdout, stderr, err
+	err = cmd.Wait()
+	return stdout, stderr, err 
 }
 
 /*
@@ -191,7 +185,7 @@ func RunTool(fileId bson.ObjectId, ti *TargetInfo, tool *Tool, fArgs map[string]
 	args := tool.GetArgs(ti.GetTarget(tool.Target))
 	stderr, stdout, err := RunCommand(args...)
 	if err != nil {
-		utils.Log(stderr.String(), stdout.String(), err)
+		util.Log(stderr.String(), stdout.String(), err)
 	}
 	return NewResult(fileId, tool.Id, tool.Name, tool.OutName, tool.ErrName, stdout.Bytes(), stderr.Bytes())
 }
@@ -202,7 +196,7 @@ func CompileTest(fileId bson.ObjectId, ti *TargetInfo, testName, testDir string)
 	//Hardcode for now
 	stderr, stdout, err := RunCommand("javac", CP, cp, "-d", ti.Dir, "-s", ti.Dir, "-implicit:class", test.FilePath())
 	if err != nil {
-		utils.Log("Test compile error ", err)
+		util.Log("Test compile error ", err)
 	}
 	res := NewResult(fileId, fileId, test.Name+"_compile", "warnings", "errors", stdout.Bytes(), stderr.Bytes())
 	return res, err
@@ -216,7 +210,7 @@ func RunTest(fileId bson.ObjectId, ti *TargetInfo, testName, testDir string)(*Re
 	cp := ti.Dir + ":" + testDir
 	stderr, stdout, err := RunCommand("java", CP, cp+":"+testDir, "org.junit.runner.JUnitCore", test.Executable())
 	if err != nil {
-		utils.Log("Test run error ", err)
+		util.Log("Test run error ", err)
 	}
 	res := NewResult(fileId, fileId, test.Name+"_compile", "warnings", "errors", stdout.Bytes(), stderr.Bytes())
 	return res

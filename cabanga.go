@@ -22,7 +22,7 @@ func main() {
 	if mode == "u" {
 		err := AddUsers(users)
 		if err != nil {
-			utils.Log("Adding users encountered error ", err)
+			util.Log("Adding users encountered error ", err)
 		}
 	} else if mode == "s" {
 		runServer(port)
@@ -32,14 +32,14 @@ func main() {
 }
 
 func AddUsers(fname string) error {
-	users, err := utils.ReadUsers(fname)
-	if err == nil {
-		err = db.AddUsers(users...)
+	users, err := util.ReadUsers(fname)
+	if err != nil {
+		return err
 	}
-	return err
+	return db.AddUsers(users...)
 }
 
 func runServer(port string) {
-	utils.Log("Starting server on port ", port)
+	util.Log("Starting server on port ", port)
 	server.Run(port)
 }
