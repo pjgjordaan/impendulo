@@ -140,8 +140,8 @@ const (
 	INFO         = "info"
 	DATA         = "data"
 	RES          = "results"
-		JSRC = ".java"
-		JCOMP = ".class"
+	JSRC = ".java"
+	JCOMP = ".class"
 	BIN_DIR = "bin"
 	SRC_DIR = "src"
 )

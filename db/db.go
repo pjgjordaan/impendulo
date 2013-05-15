@@ -16,6 +16,7 @@ const (
 	TOOLS       = "tools"
 	ADDRESS     = "localhost"
 	RESULTS     = "results"
+	SET = "$set"
 )
 
 var activeSession *mgo.Session

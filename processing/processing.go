@@ -14,6 +14,8 @@ import (
 
 const (
 	INCOMPLETE = "incomplete.gob"
+	TESTS = "tests"
+	SRC = "src"
 )
 
 
@@ -31,7 +33,7 @@ type Item struct {
 }
 
 func newTestBuilder() *testBuilder {
-	dir := filepath.Join(os.TempDir(), "tests")
+	dir := filepath.Join(os.TempDir(), TESTS)
 	return &testBuilder{make(map[string]bool), new(sync.Mutex), dir}
 }
 
@@ -65,18 +67,16 @@ Retrieves project tests from database.
 func getTests(project string) (*submission.File, bool) {
 	smatcher := bson.M{submission.PROJECT: project, submission.MODE: submission.TEST_MODE}
 	s, err := db.GetSubmission(smatcher)
-	//s, ok := LoadSubmission(db.GetOne, bson.M{sub.PROJECT: project, sub.MODE: sub.TEST_MODE})
 	if err != nil {
 		utils.Log("Error retrieving test submission:", err)
 		return nil, false
 	}
-	fmatcher := bson.M{"subid": s.Id}
+	fmatcher := bson.M{submission.SUBID: s.Id}
 	f, err := db.GetFile(fmatcher)
 	if err != nil {
 		utils.Log("Error retrieving test files:", err)
 		return nil, false
 	}
-	//return LoadFile(db.GetOne, bson.M{"subid": s.Id})
 	return f, true
 }
 
@@ -104,9 +104,7 @@ func Serve(items chan Item) {
 		} else {
 			subs[item.SubId] = make(chan bson.ObjectId)
 			go processNew(item.SubId, subs[item.SubId], busy, done)
-			utils.Log("s1")
 			subs[item.SubId] <- item.FileId
-			utils.Log("s2")
 		}
 	}
 }
@@ -146,15 +144,13 @@ func statusListener(busy, done chan bson.ObjectId) {
 	for {
 		select {
 		case id := <-busy:
-			utils.Log("recv busy", id)
 			active[id] = true
 		case id := <-done:
-			utils.Log("recv done", id)
 			delete(active, id)
 		case sig := <-quit:
 			utils.Log("Received interrupt signal: ", sig)
 			saveActive(active)
-			os.RemoveAll(filepath.Join(os.TempDir(), "tests"))
+			os.RemoveAll(filepath.Join(os.TempDir(), TESTS))
 			os.Exit(0)
 		}
 	}
@@ -203,8 +199,8 @@ func processNew(subId bson.ObjectId, fileIds, busy, done chan bson.ObjectId) {
 Loads a file from the db and processes it.
 */
 func processId(fId bson.ObjectId) {
-	matcher := bson.M{"_id": fId}
-	f, err := db.GetFile(matcher)//LoadFile(db.GetById, fId)
+	matcher := bson.M{submission.ID: fId}
+	f, err := db.GetFile(matcher)
 	if err != nil {
 		utils.Log("Error retrieving file",err)
 		return
@@ -252,7 +248,7 @@ func setupFile(f *submission.File, comp compFunc)(*submission.File, *tool.Target
 	if !comp(f.Id, ti){
 		return nil, nil, false
 	}
-	matcher := bson.M{"_id": f.Id}
+	matcher := bson.M{submission.ID: f.Id}
 	f, err := db.GetFile(matcher)
 	if err != nil{
 		utils.Log("Error retrieving file", err)
@@ -266,7 +262,7 @@ func setupFile(f *submission.File, comp compFunc)(*submission.File, *tool.Target
  Saves file to filesystem. Returns file info used by tools & tests.
 */
 func extractFile(f *submission.File) (*tool.TargetInfo, bool) {
-	matcher := bson.M{"_id":f.SubId}
+	matcher := bson.M{submission.ID:f.SubId}
 	s, err := db.GetSubmission(matcher)
 	if err != nil {
 		utils.Log("Error retrieving submission",err)
@@ -287,15 +283,32 @@ func extractFile(f *submission.File) (*tool.TargetInfo, bool) {
 */
 func runTests(f *submission.File, ti *tool.TargetInfo) {
 	tests := []string{"EasyTests", "AllTests"}
-	if builder.setup(ti.Project) {
-		for _, test := range tests {
-			//Run if not run previously
-			if _, ok := f.Results[test+"_compile"]; !ok {
-				tool.RunTest(f.Id, ti, test)
-			}
-		}
-	} else {
+	ok := builder.setup(ti.Project)
+	if !ok{
 		utils.Log("No tests found for ", ti.Project)
+		return
+	}
+	for _, test := range tests {
+		if _, ok := f.Results[test+"_compile"]; ok {
+			continue
+		}
+		//Run if not run previously
+		dir := filepath.Join(os.TempDir(), TESTS, ti.Project, SRC)
+		compRes, compErr := tool.CompileTest(f.Id, ti, test, dir)
+		dbErr := addResult(compRes)
+		if dbErr != nil{
+			utils.Log("Error adding result", dbErr)
+			return
+		}
+		if compErr != nil{
+			continue
+		}
+		runRes := tool.RunTest(f.Id, ti, test, dir)
+		dbErr = addResult(runRes)
+		if dbErr != nil{
+			utils.Log("Error adding result", dbErr)
+			return
+		}
 	}
 }
 
@@ -305,7 +318,7 @@ func runTests(f *submission.File, ti *tool.TargetInfo) {
  run.
 */
 func runTools(f *submission.File, ti *tool.TargetInfo) {
-	all, err := db.GetTools(bson.M{"lang": ti.Lang})
+	all, err := db.GetTools(bson.M{tool.LANG: ti.Lang})
 	if err != nil {
 		utils.Log("Error retrieving tools: ", ti.Lang)
 		return
@@ -394,8 +407,8 @@ func alreadyCompiled(fileId bson.ObjectId, ti *tool.TargetInfo)bool {
 
 
 func addResult(res *tool.Result)error {
-	matcher := bson.M{"_id": res.FileId}
-	change := bson.M{"$set": bson.M{"results." + res.Name: res.Id}}
+	matcher := bson.M{submission.ID: res.FileId}
+	change := bson.M{db.SET: bson.M{submission.RES+"." + res.Name: res.Id}}
 	err := db.Update(db.FILES, matcher, change)
 	if err != nil {
 		return err

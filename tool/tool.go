@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 	"bytes"
-	"os"
 	"os/exec"
 )
 
@@ -197,10 +196,9 @@ func RunTool(fileId bson.ObjectId, ti *TargetInfo, tool *Tool, fArgs map[string]
 	return NewResult(fileId, tool.Id, tool.Name, tool.OutName, tool.ErrName, stdout.Bytes(), stderr.Bytes())
 }
 
-func CompileTest(fileId bson.ObjectId, ti *TargetInfo, testName string)(*Result, error) {
-	testdir := filepath.Join(os.TempDir(), "tests", ti.Project, "src")
-	test := &TargetInfo{ti.Project, testName, "java", "testing", "java", testdir}
-	cp := ti.Dir + ":" + testdir
+func CompileTest(fileId bson.ObjectId, ti *TargetInfo, testName, testDir string)(*Result, error) {
+	test := &TargetInfo{ti.Project, testName, "java", "testing", "java", testDir}
+	cp := ti.Dir + ":" + testDir
 	//Hardcode for now
 	stderr, stdout, err := RunCommand("javac", CP, cp, "-d", ti.Dir, "-s", ti.Dir, "-implicit:class", test.FilePath())
 	if err != nil {
@@ -213,16 +211,15 @@ func CompileTest(fileId bson.ObjectId, ti *TargetInfo, testName string)(*Result,
 /*
 Runs a java test suite on a source file. 
 */
-func RunTest(fileId bson.ObjectId, ti *TargetInfo, testName string)(*Result, error) {
-	testdir := filepath.Join(os.TempDir(), "tests", ti.Project, "src")
-	test := &TargetInfo{ti.Project, testName, "java", "testing", "java", testdir}
-	cp := ti.Dir + ":" + testdir
-	stderr, stdout, err := RunCommand("java", CP, cp+":"+testdir, "org.junit.runner.JUnitCore", test.Executable())
+func RunTest(fileId bson.ObjectId, ti *TargetInfo, testName, testDir string)(*Result) {
+	test := &TargetInfo{ti.Project, testName, "java", "testing", "java", testDir}
+	cp := ti.Dir + ":" + testDir
+	stderr, stdout, err := RunCommand("java", CP, cp+":"+testDir, "org.junit.runner.JUnitCore", test.Executable())
 	if err != nil {
 		utils.Log("Test run error ", err)
 	}
 	res := NewResult(fileId, fileId, test.Name+"_compile", "warnings", "errors", stdout.Bytes(), stderr.Bytes())
-	return res, err
+	return res
 
 }
 
