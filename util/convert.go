@@ -1,105 +1,101 @@
 package util
 
 import (
-	"errors"
+	"fmt"
 	"labix.org/v2/mgo/bson"
 )
 
-func GetString(jobj map[string]interface{}, key string) (val string, err error) {
+func GetString(jobj map[string]interface{}, key string) (string, error) {
 	ival, ok := jobj[key]
-	
-	if ok {
-		val, ok = ival.(string)
-	}
 	if !ok {
-		err = errors.New("Error reading value for: " + key)
+		return "", fmt.Errorf("Error reading value for %q ", key)
 	}
-	return val, err
+	val, ok := ival.(string)
+	if !ok {
+		return "", fmt.Errorf("Error casting value %q to string", ival)
+	}
+	return val, nil
 }
 
-func GetInt(jobj map[string]interface{}, key string) (val int, err error) {
+func GetInt(jobj map[string]interface{}, key string) (int, error) {
 	ival, ok := jobj[key]
-	if ok {
-		val, ok = ival.(int)
-	}
 	if !ok {
-		err = errors.New("Error reading value for: " + key)
+		return -1, fmt.Errorf("Error reading value for %q ", key)
 	}
-	return val, err
+	val, ok := ival.(int)
+	if !ok {
+		return -1, fmt.Errorf("Error casting value %q to int", ival)
+	}
+	return val, nil
 }
 
-func GetInt64(jobj map[string]interface{}, key string) (val int64, err error) {
+func GetInt64(jobj map[string]interface{}, key string) (int64, error) {
 	ival, ok := jobj[key]
-	if ok {
-		val, ok = ival.(int64)
-	}
 	if !ok {
-		err = errors.New("Error reading value for: " + key)
+		return -1, fmt.Errorf("Error reading value for %q ", key)
 	}
-	return val, err
+	val, ok := ival.(int64)
+	if !ok {
+		return -1, fmt.Errorf("Error casting value %q to int64", ival)
+	}
+	return val, nil
 }
 
-func GetID(jobj map[string]interface{}, key string) (val bson.ObjectId, err error) {
+func GetID(jobj map[string]interface{}, key string) (bson.ObjectId, error) {
 	ival, ok := jobj[key]
-	if ok {
-		val, ok = ival.(bson.ObjectId)
-	}
 	if !ok {
-		err = errors.New("Error reading value for: " + key)
+		return bson.NewObjectId(), fmt.Errorf("Error reading value for %q ", key)
 	}
-	return val, err
+	val, ok := ival.(bson.ObjectId)
+	if !ok {
+		return bson.NewObjectId(), fmt.Errorf("Error casting value %q to bson.ObjectId", ival)
+	}
+	return val, nil
 }
 
-func GetM(jobj map[string]interface{}, key string) (val bson.M, err error) {
+func GetM(jobj map[string]interface{}, key string) (bson.M, error) {
 	ival, ok := jobj[key]
-	if ok {
-		val, ok = ival.(bson.M)
-	}
 	if !ok {
-		err = errors.New("Error reading value for: " + key)
+		return nil, fmt.Errorf("Error reading value for %q ", key)
 	}
-	return val, err
+	val, ok := ival.(bson.M)
+	if !ok {
+		return nil, fmt.Errorf("Error casting value %q to bson.M", ival)
+	}
+	return val, nil
 }
 
-func GetBytes(jobj map[string]interface{}, key string) (val []byte, err error) {
+func GetBytes(jobj map[string]interface{}, key string) ([]byte, error) {
 	ival, ok := jobj[key]
 	if !ok {
-		err = errors.New("Error reading value for: " + key)
+		return nil, fmt.Errorf("Error reading value for %q ", key)
 	}
-	return ToBytes(ival)
+	return toBytes(ival)
 }
 
 func GetStrings(jobj map[string]interface{}, key string) ([]string, error) {
 	ival, ok := jobj[key]
-	if !ok{
-		return nil, errors.New("Error reading value for: " + key)
+	if !ok {
+		return nil, fmt.Errorf("Error reading value for %q ", key)
 	}
-	return ToStrings(ival)
+	return toStrings(ival)
 }
 
-func ToBytes(bint interface{})([]byte, error){
-	val, ok := bint.([]byte)
+func toBytes(ival interface{})([]byte, error){
+	val, ok := ival.([]byte)
 	if !ok{
-		return nil, errors.New("Error casting interface to []byte")
+		return nil, fmt.Errorf("Error casting value %q to []byte", ival)
 	}
 	return val, nil
 }
 
 
-func ToStrings(sint interface{})([]string, error){
-	ivals, ok := sint.([]string)
+func toStrings(ivals interface{})([]string, error){
+	vals, ok := ivals.([]string)
 	if !ok{
-		return nil, errors.New("Error casting interface to []interface")
+		return nil, fmt.Errorf("Error casting value %q to []string", ivals)
 	}
-/*	vals := make([]string, len(ivals))
-	for i, ival := range ivals{
-		val, ok := ival.(string)
-		if !ok{
-			return nil, errors.New("Error casting interface to string")
-		}
-		vals[i] = ival
-	}*/
-	return ivals, nil
+	return vals, nil
 }
 
 func MEqual(m1, m2 bson.M) bool{

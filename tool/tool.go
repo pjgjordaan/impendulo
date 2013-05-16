@@ -7,6 +7,7 @@ import (
 	"time"
 	"bytes"
 	"os/exec"
+	"fmt"
 )
 
 
@@ -47,7 +48,7 @@ func (ti *TargetInfo) Executable() string {
 }
 
 func (this *TargetInfo) GetCompiler()bson.M{
-	return 	bson.M{LANG: this.Lang, NAME: COMPILE}
+	return bson.M{LANG: this.Lang, NAME: COMPILE}
 }
 
 const (
@@ -159,43 +160,55 @@ func NewResult(fileId, toolId bson.ObjectId, name, outname, errname string, outd
 /*
 Executes a given external command.
 */
-func RunCommand(args ...string) (stdout, stderr bytes.Buffer, err error) {
+func RunCommand(args ...string) ([]byte, []byte, bool, error) {
 	cmd := exec.Command(args[0], args[1:]...)
+	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
-	err = cmd.Start()
+	err := cmd.Start()
 	if err != nil {
-		return stdout, stderr, err
+		return nil, nil, false, fmt.Errorf("Encountered error %q executing command %q", err, args)
 	}
 	err = cmd.Wait()
-	return stdout, stderr, err 
+	return stdout.Bytes(), stderr.Bytes(), true, err 
 }
 
 /*
 Runs a tool and records its results in the db.
 */
-func RunTool(fileId bson.ObjectId, ti *TargetInfo, tool *Tool, fArgs map[string]string) *Result {
+func RunTool(fileId bson.ObjectId, ti *TargetInfo, tool *Tool, fArgs map[string]string) (*Result, error) {
 	tool.setFlagArgs(fArgs)
 	args := tool.GetArgs(ti.GetTarget(tool.Target))
-	stderr, stdout, err := RunCommand(args...)
-	return NewResult(fileId, tool.Id, tool.Name, tool.OutName, tool.ErrName, stdout.Bytes(), stderr.Bytes(), err)
+	stderr, stdout, ok, err := RunCommand(args...)
+	if !ok{
+		return nil, err
+	}
+	res := NewResult(fileId, tool.Id, tool.Name, tool.OutName, tool.ErrName, stdout, stderr, err)
+	return res, nil
 }
 
-func CompileTest(fileId bson.ObjectId, ti *TargetInfo, testName, testDir string)*Result {
+func CompileTest(fileId bson.ObjectId, ti *TargetInfo, testName, testDir string)(*Result, error) {
 	test := &TargetInfo{ti.Project, testName, JAVA, TESTS_PKG, JAVA, testDir}
 	cp := ti.Dir + ":" + testDir
-	stderr, stdout, err := RunCommand(JAVAC, CP, cp, "-d", ti.Dir, "-s", ti.Dir, "-implicit:class", test.FilePath())
-	return NewResult(fileId, fileId, test.Name+"_"+COMPILE, WARNS, ERRS, stdout.Bytes(), stderr.Bytes(), err)
+	stderr, stdout, ok, err := RunCommand(JAVAC, CP, cp, "-d", ti.Dir, "-s", ti.Dir, "-implicit:class", test.FilePath())
+	if !ok{
+		return nil, err
+	}
+	res := NewResult(fileId, fileId, test.Name+"_"+COMPILE, WARNS, ERRS, stdout, stderr, err)
+	return res, nil
 }
 
 /*
 Runs a java test suite on a source file. 
 */
-func RunTest(fileId bson.ObjectId, ti *TargetInfo, testName, testDir string)(*Result) {
+func RunTest(fileId bson.ObjectId, ti *TargetInfo, testName, testDir string)(*Result, error) {
 	test := &TargetInfo{ti.Project, testName, JAVA, TESTS_PKG, JAVA, testDir}
 	cp := ti.Dir + ":" + testDir
-	stderr, stdout, err := RunCommand(JAVA, CP, cp+":"+testDir, JUNIT, test.Executable())
-	return NewResult(fileId, fileId, test.Name+"_"+RUN, WARNS, ERRS, stdout.Bytes(), stderr.Bytes(), err)
-
+	stderr, stdout,ok, err := RunCommand(JAVA, CP, cp+":"+testDir, JUNIT, test.Executable())
+	if !ok{
+		return nil, err
+	}
+	res := NewResult(fileId, fileId, test.Name+"_"+RUN, WARNS, ERRS, stdout, stderr, err)
+	return res, nil
 }
 
 

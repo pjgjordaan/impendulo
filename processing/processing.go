@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"sync"
+	"fmt"
 )
 
 const (
@@ -17,9 +18,9 @@ const (
 	TESTS = "tests"
 	SRC = "src"
 )
-
-var builder *testBuilder
-
+/*
+Used to setup a project's tests
+*/
 type testBuilder struct {
 	tests   map[string]bool
 	m       *sync.Mutex
@@ -32,7 +33,8 @@ func newTestBuilder() *testBuilder {
 }
 
 /*
-Extracts project tests from db to filesystem for execution.
+Extracts a project's tests from db to filesystem for execution.
+Returns true if this was successful.
 */
 func (this *testBuilder) setup(project string) bool {
 	this.m.Lock()
@@ -46,7 +48,7 @@ func (this *testBuilder) setup(project string) bool {
 	} 
 	err := util.Unzip(filepath.Join(this.testDir, project), tests.Data)
 	if err != nil {
-		util.Log("Error extracting tests:", project, err)
+		util.Log(err)
 		return false
 	} 
 	this.tests[project] = true
@@ -54,7 +56,7 @@ func (this *testBuilder) setup(project string) bool {
 }
 
 /*
-Retrieves project tests from database.
+Retrieves project tests from database. Returns true if this was successful.
 */
 func getTests(project string) (*submission.File, bool) {
 	smatcher := bson.M{submission.PROJECT: project, submission.MODE: submission.TEST_MODE}
@@ -66,25 +68,28 @@ func getTests(project string) (*submission.File, bool) {
 	fmatcher := bson.M{submission.SUBID: s.Id}
 	f, err := db.GetFile(fmatcher)
 	if err != nil {
-		util.Log("Error retrieving test files:", err)
+		util.Log(err)
 		return nil, false
 	}
 	return f, true
 }
 
 /*
-Spawns new processing routines for each file which needs to be processed.
+Spawns new processing routines for each new submission received on subChan.
+New files are received on fileChan and then sent to the relevant submission process.
+Incomplete submissions are read from disk and processed again using the processStored 
+function.   
 */
 func Serve(subChan chan *submission.Submission, fileChan chan *submission.File) {
-	builder = newTestBuilder()
 	// Start handlers
 	busy := make(chan bson.ObjectId)
 	done := make(chan bson.ObjectId)
 	go statusListener(busy, done)
+	builder := newTestBuilder()
 	go func() {
 		stored := getStored()
 		for subId, _ := range stored {
-			processStored(subId, busy, done)
+			processStored(subId, busy, done, builder)
 		}
 	}()
 	subs := make(map[bson.ObjectId]chan *submission.File)
@@ -92,24 +97,24 @@ func Serve(subChan chan *submission.Submission, fileChan chan *submission.File) 
 		select{
 		case sub := <-subChan:
 			subs[sub.Id] = make(chan *submission.File)
-			go processNew(sub, subs[sub.Id], busy, done)
+			go processNew(sub, subs[sub.Id], busy, done, builder)
 		case file := <- fileChan:
 			if ch, ok := subs[file.SubId]; ok {
 				ch <- file
 			} else{
-				util.Log("No channel found for submission:", file.SubId)
+				util.Log(fmt.Errorf("No channel found for submission: %q", file.SubId))
 			}
 		}
 	}
 }
 
 /*
-Retrieves incompletely processed submissions from  the filesystem.
+Retrieves incompletely processed submissions from the filesystem.
 */
 func getStored()  map[bson.ObjectId]bool {
 	stored, err := util.LoadMap(INCOMPLETE)
 	if err != nil{
-		util.Log("Unable to read stored map: ", err)
+		util.Log(err)
 		stored = make(map[bson.ObjectId]bool)
 	}
 	return stored
@@ -117,12 +122,12 @@ func getStored()  map[bson.ObjectId]bool {
 
 
 /*
-Retrieves incompletely processed submissions from  the filesystem.
+Saves active submissions to the filesystem.
 */
 func saveActive(active map[bson.ObjectId]bool) {
 	err := util.SaveMap(active, INCOMPLETE)
 	if err != nil{
-		util.Log("Unable to save active processes map: ", err)
+		util.Log(err)
 	}
 }
 
@@ -141,8 +146,7 @@ func statusListener(busy, done chan bson.ObjectId) {
 			active[id] = true
 		case id := <-done:
 			delete(active, id)
-		case sig := <-quit:
-			util.Log("Received interrupt signal: ", sig)
+		case <-quit:
 			saveActive(active)
 			os.RemoveAll(filepath.Join(os.TempDir(), TESTS))
 			os.Exit(0)
@@ -151,15 +155,15 @@ func statusListener(busy, done chan bson.ObjectId) {
 }
 
 /*
-Processes an incomplete submission. Retrieves all files in the submission from the db
+Processes an incompletely processed submission. Retrieves all files in the submission from the db
 and processes them. 
 */
-func processStored(subId bson.ObjectId, busy, done chan bson.ObjectId) {
+func processStored(subId bson.ObjectId, busy, done chan bson.ObjectId, builder *testBuilder) {
 	busy <- subId
 	defer os.RemoveAll(filepath.Join(os.TempDir(), subId.Hex()))
 	sub, err := db.GetSubmission(bson.M{submission.SUBID: subId})
 	if err != nil {
-			util.Log("Error retrieving submission:", err)
+			util.Log(err)
 			return
 	}
 	count := 0
@@ -168,12 +172,12 @@ func processStored(subId bson.ObjectId, busy, done chan bson.ObjectId) {
 		matcher := bson.M{submission.SUBID: subId, submission.NUM: count}
 		file, err := db.GetFile(matcher)
 		if err != nil {
-			util.Log("Error retrieving file:", err)
+			util.Log(err)
 			return
 		}
 		err = processFile(file, hasTests)
 		if err != nil {
-			util.Log("Error processing file:", err, file)
+			util.Log(err)
 			return
 		}
 	}
@@ -182,16 +186,16 @@ func processStored(subId bson.ObjectId, busy, done chan bson.ObjectId) {
 
 
 /*
-Processes a new submission. Listens for incoming files and processes them.
+Processes a new submission. Listens for incoming files on fileChan and processes them.
 */
-func processNew(sub *submission.Submission, fileChan chan *submission.File, busy, done chan bson.ObjectId) {
+func processNew(sub *submission.Submission, fileChan chan *submission.File, busy, done chan bson.ObjectId, builder *testBuilder) {
 	busy <- sub.Id
 	defer os.RemoveAll(filepath.Join(os.TempDir(), sub.Id.Hex()))
 	hasTests := builder.setup(sub.Project)
 	for file := range fileChan {
 		err := processFile(file, hasTests)
 		if err != nil {
-			util.Log("Error processing file:", err, file)
+			util.Log(err)
 			return
 		}
 	}
@@ -200,7 +204,7 @@ func processNew(sub *submission.Submission, fileChan chan *submission.File, busy
 
 
 /*
-Processes a file according to its type.
+ Processes a file according to its type. If an error occurs, it is returned.
 */
 func processFile(f *submission.File, hasTests bool) error {
 	util.Log("Processing file: ", f.Id)
@@ -324,7 +328,10 @@ func compile(fileId bson.ObjectId, ti *tool.TargetInfo)( bool, error) {
 	if err != nil {
 		return false, err
 	}
-	res := tool.RunTool(fileId, ti, comp, map[string]string{tool.CP : ti.Dir})
+	res, err := tool.RunTool(fileId, ti, comp, map[string]string{tool.CP : ti.Dir})
+	if err != nil {
+		return false, err
+	}
 	err = addResult(res)
 	if err != nil {
 		return false, err
@@ -378,8 +385,11 @@ func compileTest(f *submission.File, ti *tool.TargetInfo, test, dir string)(bool
 		return true, nil
 	}
 	//Run if not run previously
-	res := tool.CompileTest(f.Id, ti, test, dir)
-	err := addResult(res)
+	res, err := tool.CompileTest(f.Id, ti, test, dir)
+	if err != nil {
+		return false, err
+	}
+	err = addResult(res)
 	if err != nil{
 		return false, err
 	}
@@ -392,7 +402,10 @@ func runTest(f *submission.File, ti *tool.TargetInfo, test, dir string)error{
 		return nil
 	}
 	//Run if not run previously
-	res := tool.RunTest(f.Id, ti, test, dir)
+	res, err := tool.RunTest(f.Id, ti, test, dir)
+	if err != nil {
+			return err
+	}
 	return addResult(res)
 }
 
@@ -411,7 +424,10 @@ func runTools(f *submission.File, ti *tool.TargetInfo)error {
 		if _, ok := f.Results[t.Name];ok {
 			continue
 		}
-		res := tool.RunTool(f.Id, ti, t, map[string]string{})
+		res, err := tool.RunTool(f.Id, ti, t, map[string]string{})
+		if err != nil {
+			return err
+		}
 		err = addResult(res)
 		if err != nil {
 			return err
@@ -435,16 +451,17 @@ func addResult(res *tool.Result)error {
 }
 
 /*Tool configuration for testing
+*/
 func init() {
-	_, err := db.GetTool(bson.M{NAME: "findbugs"})
+	_, err := db.GetTool(bson.M{tool.NAME: "findbugs"})
 	if err != nil {
-		fb := &Tool{bson.NewObjectId(), "findbugs", "java", "/home/disco/apps/findbugs-2.0.2/lib/findbugs.jar", "warning_count", "warnings", []string{"java", "-jar"}, []string{"-textui", "-low"}, bson.M{"":""}, PKG_PATH}
+		fb := &tool.Tool{bson.NewObjectId(), "findbugs", tool.JAVA, "/home/disco/apps/findbugs-2.0.2/lib/findbugs.jar", "warning_count", tool.WARNS, []string{tool.JAVA, "-jar"}, []string{"-textui", "-low"}, bson.M{}, tool.PKG_PATH}
 		db.AddTool(fb)
 	}
-	_, err = db.GetTool(bson.M{NAME: COMPILE})
+	_, err = db.GetTool(bson.M{tool.NAME: tool.COMPILE})
 	if err != nil {
-		javac := &Tool{bson.NewObjectId(), COMPILE, "java", "javac", "warnings", "errors", []string{""}, []string{"-implicit:class"}, bson.M{CP:""}, FILE_PATH}
+		javac := &tool.Tool{bson.NewObjectId(), tool.COMPILE, tool.JAVA, tool.JAVAC, tool.WARNS, tool.ERRS, []string{}, []string{"-implicit:class"}, bson.M{tool.CP:""}, tool.FILE_PATH}
 		db.AddTool(javac)
 	}
-}*/
+}
 

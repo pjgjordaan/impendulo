@@ -33,18 +33,18 @@ type User struct {
 	Access   int    "access"
 }
 
-func (u *User) hasAccess(access int) (ret bool) {
+func (u *User) hasAccess(access int) bool {
 	switch access {
 	case NONE:
-		ret = u.Access == NONE
+		return u.Access == NONE
 	case F_SUB:
-		ret = EqualsOne(u.Access, F_SUB, FT_SUB, UF_SUB, ALL_SUB)
+		return EqualsOne(u.Access, F_SUB, FT_SUB, UF_SUB, ALL_SUB)
 	case T_SUB:
-		ret = EqualsOne(u.Access, T_SUB, FT_SUB, UT_SUB, ALL_SUB)
+		return EqualsOne(u.Access, T_SUB, FT_SUB, UT_SUB, ALL_SUB)
 	case U_SUB:
-		ret = EqualsOne(u.Access, U_SUB, UF_SUB, UT_SUB, ALL_SUB)
+		return EqualsOne(u.Access, U_SUB, UF_SUB, UT_SUB, ALL_SUB)
 	}
-	return ret
+	return false
 }
 
 func ReadUser(umap bson.M) *User {
@@ -54,26 +54,26 @@ func ReadUser(umap bson.M) *User {
 	access := umap[ACCESS].(int)
 	return &User{name, pword, salt, access}
 }
-func (u *User) CheckSubmit(mode string) (ret bool) {
+func (u *User) CheckSubmit(mode string) bool {
 	if mode == SINGLE || mode == ARCHIVE {
-		ret = u.hasAccess(F_SUB)
+		return u.hasAccess(F_SUB)
 	} else if mode == TEST {
-		ret = u.hasAccess(T_SUB)
+		return u.hasAccess(T_SUB)
 	} else if mode == UPDATE {
-		ret = u.hasAccess(U_SUB)
+		return u.hasAccess(U_SUB)
 	}
-	return ret
+	return false
 }
 
 func NewUser(uname, pword, salt string) *User {
 	return &User{uname, pword, salt, F_SUB}
 }
 
-func EqualsOne(test interface{}, args ...interface{}) (eq bool) {
+func EqualsOne(test interface{}, args ...interface{}) bool {
 	for _, arg := range args {
-		if eq = test == arg; eq {
-			break
+		if test == arg{
+			return true
 		}
 	}
-	return eq
+	return false
 }

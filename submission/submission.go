@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-"errors"
+	"fmt"
 )
 
 /*
@@ -67,18 +67,18 @@ func (f *File) InfoStr(key string) (val string) {
 func ParseName(name string) (map[string]interface{}, error) {
 	elems := strings.Split(name, "_")
 	if len(elems) < 3{
-		return nil, errors.New("Encoded name "+name+" too short.")
+		return nil, fmt.Errorf("Encoded name %q does not have enough parameters.", name)
 	}
 	info := make(map[string]interface{})
 	info[MOD] = elems[len(elems)-1]
 	num, err := strconv.Atoi(elems[len(elems)-2])
 	if err != nil{
-		return nil, err
+		return nil, fmt.Errorf("%q in name %q could not be parsed as an int.", elems[len(elems)-2], name)
 	}
 	info[NUM] = num
 	time, err := strconv.ParseInt(elems[len(elems)-3], 10, 64)
 	if err != nil{
-		return nil, err
+		return nil, fmt.Errorf("%q in name %q could not be parsed as an int64.", elems[len(elems)-3], name)
 	}
 	info[TIME] = time
 	fname := ""

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"errors"
 	"github.com/godfried/cabanga/db"
 	"github.com/godfried/cabanga/processing"
 	"github.com/godfried/cabanga/submission"
@@ -9,7 +8,8 @@ import (
 	"github.com/godfried/cabanga/user"
 	"labix.org/v2/mgo/bson"
 	"net"
-"runtime"
+	"runtime"
+	"fmt"
 )
 
 const (
@@ -30,14 +30,14 @@ func Run(port string) {
 	go processing.Serve(subChan, fileChan)
 	netListen, err := net.Listen("tcp", ":" + port)
 	if err != nil {
-		util.Log("Listening error: ", err)
+		util.Log(fmt.Errorf("Encountered error %q when listening on port %q", err, port))
 		return
 	}
 	defer netListen.Close()
 	for {
 		conn, err := netListen.Accept()
 		if err != nil {
-			util.Log("Client error: ", err)
+			util.Log(fmt.Errorf("Encountered error %q when accepting connection", err))
 		} else {
 			go connHandler(conn, subChan, fileChan)
 		}
@@ -65,13 +65,13 @@ func connHandler(conn net.Conn, subChan chan *submission.Submission, fileChan ch
 	for receiving && err == nil {
 		jobj, err = util.ReadJSON(conn)
 		if err != nil {
-			util.Log("JSON error: ", err)
+			util.Log(err)
 			endSession(conn, err)
 			return
 		}
 		req, err := util.GetString(jobj, REQ)
 		if err != nil {
-			util.Log("JSON error: ", err)
+			util.Log(err)
 			endSession(conn, err)
 			return
 		}
@@ -82,9 +82,8 @@ func connHandler(conn net.Conn, subChan chan *submission.Submission, fileChan ch
 			receiving = false
 			util.Log("Completed submission: ", sub)
 		} else {
-			err = errors.New("Unknown request: " + req)
+			err = fmt.Errorf("Unknown request %q", req)
 		}
-		util.Log("received", jobj)
 	}
 	endSession(conn, err)
 }
@@ -96,14 +95,12 @@ func processFile(subId bson.ObjectId, finfo map[string]interface{}, conn net.Con
 	conn.Write([]byte(OK))
 	buffer, err := util.ReadData(conn)
 	if err != nil {
-		util.Log("Conn read error: ", err)
 		return err
 	}
 	conn.Write([]byte(OK))
 	f := submission.NewFile(subId, finfo, buffer)
 	err = db.AddFile(f)
 	if err != nil {
-		util.Log("DB error: ", err)
 		return err
 	}
 	fileChan <- f
@@ -116,12 +113,10 @@ Creates a new submission if the login request is valid.
 func login(jobj map[string]interface{}, conn net.Conn) (*submission.Submission, error) {
 	sub, err := createSubmission(jobj)
 	if err != nil {
-		util.Log("Login error: ", err)
 		return nil, err
 	}
 	err = db.AddSubmission(sub)
 	if err != nil {
-		util.Log("DB error: ", err)
 		return nil, err
 	}
 	conn.Write([]byte(OK))
@@ -135,7 +130,7 @@ func endSession(conn net.Conn, err error) {
 	var msg string
 	if err != nil {
 		msg = "ERROR: " + err.Error()
-		util.Log("Sending error: ", msg)
+		util.Log(err)
 	} else {
 		msg = OK
 	}
@@ -172,8 +167,11 @@ func createSubmission(jobj map[string]interface{}) (*submission.Submission, erro
 	if err != nil {
 		return nil, err
 	}
-	if !u.CheckSubmit(mode) || !util.Validate(u.Password, u.Salt, pword) {
-		return nil, errors.New("Invalid username or password")
+	if !u.CheckSubmit(mode){
+		return nil, fmt.Errorf("User %q has insufficient permissions for %q", username, mode)
+	}
+	if !util.Validate(u.Password, u.Salt, pword) {
+		return nil, fmt.Errorf("User %q attempted to login with an invalid username or password", username)
 	}
 	return submission.NewSubmission(project, username, mode, lang), nil
 }

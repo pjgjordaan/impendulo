@@ -1,7 +1,7 @@
 package main
 
 import (
-	"errors"
+	"fmt"
 	"flag"
 	"github.com/godfried/cabanga/db"
 	"github.com/godfried/cabanga/server"
@@ -22,12 +22,12 @@ func main() {
 	if mode == "u" {
 		err := AddUsers(users)
 		if err != nil {
-			util.Log("Adding users encountered error ", err)
+			util.Log(err)
 		}
 	} else if mode == "s" {
 		runServer(port)
 	} else {
-		log.Fatal(errors.New("Unknown running mode: "), mode)
+		log.Fatal(fmt.Errorf("Unknown running mode %q", mode))
 	}
 }
 

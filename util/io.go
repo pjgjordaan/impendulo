@@ -17,7 +17,7 @@ import (
 	"time"
 	"labix.org/v2/mgo/bson"
 	"encoding/gob"
-	"errors"
+	"fmt"
 )
 
 const DPERM = 0777
@@ -26,15 +26,11 @@ const DEBUG = true
 
 var BASE_DIR = ".intlola"
 var LOG_DIR = "logs"
-
-var logger *log.Logger
-var logM *sync.Mutex
-
+var errLogger, infoLogger *syncLogger
 /*
 Setup logger.
 */
 func init() {
-	logM = new(sync.Mutex)
 	cur, err := user.Current()
 	if err != nil {
 		panic(err)
@@ -47,12 +43,51 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	fo, err := os.Create(filepath.Join(dir, time.Now().String()+".log"))
+	errLogger, err = newLogger(filepath.Join(dir, "E_"+time.Now().String()+".log"))
 	if err != nil {
 		panic(err)
 	}
-	logger = log.New(fo, "", log.LstdFlags)
+	infoLogger, err = newLogger(filepath.Join(dir, "I_"+time.Now().String()+".log"))
+	if err != nil {
+		panic(err)
+	}
 }
+
+type syncLogger struct{
+	logger *log.Logger
+	lock *sync.Mutex
+}
+
+func (this syncLogger) log(vals ...interface{}){
+	this.lock.Lock()
+	this.logger.Print(vals...)
+	this.lock.Unlock()
+}
+
+
+func newLogger(fname string)(*syncLogger, error){
+	fo, err := os.Create(fname)
+	if err != nil {
+		return nil, err
+	}
+	return &syncLogger{log.New(fo, "", log.LstdFlags), new(sync.Mutex)}, nil
+}
+
+func Log(v ...interface{}) {
+	if len(v) > 0{
+		if _, ok := v[0].(error); ok{
+			errLogger.log(v)
+		} else{
+			infoLogger.log(v)
+		}
+	}
+}
+
+
+func LogI(v ...interface{}) {
+	infoLogger.log(v)
+}
+
 
 /*
 Reads users configurations from file. Sets up passwords.
@@ -60,7 +95,7 @@ Reads users configurations from file. Sets up passwords.
 func ReadUsers(fname string) ([]*myuser.User, error) {
 	data, err := ioutil.ReadFile(fname)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Encountered error %q when attempting to read file %q", err, fname)
 	}
 	buff := bytes.NewBuffer(data)
 	line, err := buff.ReadString(byte('\n'))
@@ -85,16 +120,8 @@ func ReadUsers(fname string) ([]*myuser.User, error) {
 		if i < len(users) {
 			users = users[:i]
 		}
-	}
+	} 
 	return users, err
-}
-
-func Log(v ...interface{}) {
-	if DEBUG {
-		logM.Lock()
-		logger.Print(v...)
-		logM.Unlock()
-	}
 }
 
 /*
@@ -108,11 +135,11 @@ func ReadJSON(r io.Reader) (map[string]interface{}, error) {
 	var holder interface{}
 	err = json.Unmarshal(read, &holder)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Encountered error %q when unmarshaling data %q", err, read)
 	}
 	jmap, ok := holder.(map[string]interface{})
 	if !ok {
-		return nil, errors.New("Failed to cast to JSON: "+string(read))
+		return nil, fmt.Errorf("Encountered error when attempting to cast %q to json map", holder)
 	}
 	return jmap, nil
 }
@@ -133,7 +160,7 @@ func ReadData(r io.Reader)([]byte, error) {
 			receiving = false
 		} 
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Encountered error %q while reading from %q", err,r)
 		}
 		buffer.Write(read)
 	}
@@ -146,14 +173,17 @@ Saves a file in a given directory. Creates directory if it doesn't exist.
 func SaveFile(dir, fname string, data []byte) error {
 	err := os.MkdirAll(dir, DPERM)
 	if err != nil {
-		return err
+		return fmt.Errorf("Encountered error %q while creating directory %q", err,dir)
 	}
 	f, err := os.Create(filepath.Join(dir, fname))
 	if err != nil {
-		return err
+		return fmt.Errorf("Encountered error %q while creating file %q", err,fname)
 	}
 	_, err = f.Write(data)
-	return err
+	if err != nil{
+		return fmt.Errorf("Encountered error %q while writing data to %q", err,f)
+	}
+	return nil
 }
 
 /*
@@ -163,7 +193,7 @@ func Unzip(dir string, data []byte) (error) {
 	br := bytes.NewReader(data)
 	zr, err := zip.NewReader(br, int64(br.Len()))
 	if err != nil {
-		return err
+		return fmt.Errorf("Encountered error %q while creating zip reader from from %q", err,data)
 	}
 	for _, zf := range zr.File {
 		err = extractFile(zf, dir)
@@ -177,24 +207,24 @@ func Unzip(dir string, data []byte) (error) {
 func extractFile(zf *zip.File, dir string) error{
 	frc, err := zf.Open()
 	if err != nil {
-		return err
+		return fmt.Errorf("Encountered error %q while opening zip file %q", err, zf)
 	}
 	defer frc.Close()
 	path := filepath.Join(dir, zf.Name)
 	if zf.FileInfo().IsDir() {
 		err = os.MkdirAll(path, zf.Mode())
 		if err != nil {
-			return err
+			return fmt.Errorf("Encountered error %q while creating directory %q", err,path)
 		}
 	} else {
 		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, zf.Mode())
 		if err != nil {
-			return err
+			return fmt.Errorf("Encountered error %q while opening file %q", err,path)
 		}
 		defer f.Close() 
 		_, err = io.Copy(f, frc)
 		if err != nil {
-			return err
+			return fmt.Errorf("Encountered error %q while copying from %q to %q", err, frc, f)
 		}
 	}
 	return nil
@@ -208,7 +238,7 @@ func UnzipToMap(data []byte) (map[string][]byte, error) {
 	br := bytes.NewReader(data)
 	zr, err := zip.NewReader(br, int64(br.Len()))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Encountered error %q while creating zip reader from from %q", err, data)
 	}
 	extracted := make(map[string][]byte)
 	for _, zf := range zr.File {
@@ -227,10 +257,10 @@ func UnzipToMap(data []byte) (map[string][]byte, error) {
 func extractBytes(zf *zip.File)([]byte, error){
 	frc, err := zf.Open()
 	if err != nil {
-		return nil, err
+		return nil,  fmt.Errorf("Encountered error %q while opening zip file %q", err, zf) 
 	}
 	defer frc.Close()
-	return ReadBytes(frc), nil
+	return readBytes(frc), nil
 }
 
 func Zip(files map[string] []byte)([]byte, error){
@@ -239,21 +269,21 @@ func Zip(files map[string] []byte)([]byte, error){
 	for name, data := range files {
 		f, err := w.Create(name)
 		if err != nil {
-			return nil, err
+			return nil,  fmt.Errorf("Encountered error %q while creating file %q in zip %q", err, name, w)
 		}
 		_, err = f.Write(data)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Encountered error %q while writing to file %q in zip %q", err, f, w)
 		}
 	}
 	err := w.Close()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Encountered error %q while closing zip %q", err, w)
 	}
 	return buf.Bytes(), nil
 }
 
-func ReadBytes(r io.Reader) []byte {
+func readBytes(r io.Reader) []byte {
 	buffer := new(bytes.Buffer)
 	_, err := buffer.ReadFrom(r)
 	if err != nil {
@@ -265,13 +295,13 @@ func ReadBytes(r io.Reader) []byte {
 func LoadMap(fname string) (map[bson.ObjectId]bool, error){
 	f, err := os.Open(filepath.Join(BASE_DIR, fname))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Encountered error %q while opening file %q", err, fname)
 	}
 	dec := gob.NewDecoder(f)
 	var mp map[bson.ObjectId]bool
 	err = dec.Decode(&mp)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Encountered error %q while decoding map stored in %q", err, f)
 	}
 	return mp, nil
 }
@@ -282,10 +312,14 @@ Saves map to the filesystem.
 func SaveMap(mp map[bson.ObjectId]bool, fname string) error {
 	f, err := os.Create(filepath.Join(BASE_DIR, fname))
 	if err != nil {
-		return err
+		return fmt.Errorf("Encountered error %q while creating file %q", err, fname)
 	}
 	enc := gob.NewEncoder(f)
-	return enc.Encode(&mp)
+	err = enc.Encode(&mp)
+	if err != nil{
+		return fmt.Errorf("Encountered error %q while encoding map %q to file %q", err, mp, fname)
+	}
+	return nil
 }
 
 
