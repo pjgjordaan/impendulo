@@ -71,7 +71,7 @@ func NewUser(uname, pword, salt string) *User {
 
 func EqualsOne(test interface{}, args ...interface{}) bool {
 	for _, arg := range args {
-		if test == arg{
+		if test == arg {
 			return true
 		}
 	}

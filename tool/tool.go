@@ -1,15 +1,14 @@
 package tool
 
 import (
+	"bytes"
+	"fmt"
 	"labix.org/v2/mgo/bson"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
-	"bytes"
-	"os/exec"
-	"fmt"
 )
-
 
 /*
 Information about the target file
@@ -47,7 +46,7 @@ func (ti *TargetInfo) Executable() string {
 	return ti.Package + "." + ti.Name
 }
 
-func (this *TargetInfo) GetCompiler()bson.M{
+func (this *TargetInfo) GetCompiler() bson.M {
 	return bson.M{LANG: this.Lang, NAME: COMPILE}
 }
 
@@ -56,6 +55,7 @@ const (
 	PKG_PATH
 	FILE_PATH
 )
+
 /*
 Retrieves the target path based on the type required. 
 */
@@ -112,25 +112,25 @@ func (this *Tool) GetArgs(target string) (args []string) {
 		args[j] = this.Flags[j-start]
 	}
 	cur := stop
-	stop += len(this.ArgFlags)*2
-	for k,v := range this.ArgFlags {
+	stop += len(this.ArgFlags) * 2
+	for k, v := range this.ArgFlags {
 		args[cur] = k
 		val := v.(string)
-		args[cur + 1] = val
+		args[cur+1] = val
 		cur += 2
 	}
 	args[stop] = target
 	return args
 }
 
-func (this *Tool) setFlagArgs(args map[string] string){
-	for k, arg := range args{
-		if _, ok := this.ArgFlags[k]; ok{
+func (this *Tool) setFlagArgs(args map[string]string) {
+	for k, arg := range args {
+		if _, ok := this.ArgFlags[k]; ok {
 			this.ArgFlags[k] = arg
 		}
 	}
-	for flag, val := range this.ArgFlags{
-		if strings.TrimSpace(val.(string)) == ""{
+	for flag, val := range this.ArgFlags {
+		if strings.TrimSpace(val.(string)) == "" {
 			delete(this.ArgFlags, flag)
 		}
 	}
@@ -148,14 +148,13 @@ type Result struct {
 	ErrName string        "errname"
 	OutData []byte        "outdata"
 	ErrData []byte        "errdata"
-	Error error "error"
+	Error   error         "error"
 	Time    int64         "time"
 }
 
 func NewResult(fileId, toolId bson.ObjectId, name, outname, errname string, outdata, errdata []byte, err error) *Result {
 	return &Result{bson.NewObjectId(), fileId, toolId, name, outname, errname, outdata, errdata, err, time.Now().UnixNano()}
 }
-
 
 /*
 Executes a given external command.
@@ -169,7 +168,7 @@ func RunCommand(args ...string) ([]byte, []byte, bool, error) {
 		return nil, nil, false, fmt.Errorf("Encountered error %q executing command %q", err, args)
 	}
 	err = cmd.Wait()
-	return stdout.Bytes(), stderr.Bytes(), true, err 
+	return stdout.Bytes(), stderr.Bytes(), true, err
 }
 
 /*
@@ -179,18 +178,18 @@ func RunTool(fileId bson.ObjectId, ti *TargetInfo, tool *Tool, fArgs map[string]
 	tool.setFlagArgs(fArgs)
 	args := tool.GetArgs(ti.GetTarget(tool.Target))
 	stderr, stdout, ok, err := RunCommand(args...)
-	if !ok{
+	if !ok {
 		return nil, err
 	}
 	res := NewResult(fileId, tool.Id, tool.Name, tool.OutName, tool.ErrName, stdout, stderr, err)
 	return res, nil
 }
 
-func CompileTest(fileId bson.ObjectId, ti *TargetInfo, testName, testDir string)(*Result, error) {
+func CompileTest(fileId bson.ObjectId, ti *TargetInfo, testName, testDir string) (*Result, error) {
 	test := &TargetInfo{ti.Project, testName, JAVA, TESTS_PKG, JAVA, testDir}
 	cp := ti.Dir + ":" + testDir
 	stderr, stdout, ok, err := RunCommand(JAVAC, CP, cp, "-d", ti.Dir, "-s", ti.Dir, "-implicit:class", test.FilePath())
-	if !ok{
+	if !ok {
 		return nil, err
 	}
 	res := NewResult(fileId, fileId, test.Name+"_"+COMPILE, WARNS, ERRS, stdout, stderr, err)
@@ -200,29 +199,27 @@ func CompileTest(fileId bson.ObjectId, ti *TargetInfo, testName, testDir string)
 /*
 Runs a java test suite on a source file. 
 */
-func RunTest(fileId bson.ObjectId, ti *TargetInfo, testName, testDir string)(*Result, error) {
+func RunTest(fileId bson.ObjectId, ti *TargetInfo, testName, testDir string) (*Result, error) {
 	test := &TargetInfo{ti.Project, testName, JAVA, TESTS_PKG, JAVA, testDir}
 	cp := ti.Dir + ":" + testDir
-	stderr, stdout,ok, err := RunCommand(JAVA, CP, cp+":"+testDir, JUNIT, test.Executable())
-	if !ok{
+	stderr, stdout, ok, err := RunCommand(JAVA, CP, cp+":"+testDir, JUNIT, test.Executable())
+	if !ok {
 		return nil, err
 	}
 	res := NewResult(fileId, fileId, test.Name+"_"+RUN, WARNS, ERRS, stdout, stderr, err)
 	return res, nil
 }
 
-
-const(
-	CP = "-cp"
-	COMPILE = "compile"
-RUN = "run"
-	NAME = "name"
-	LANG = "lang"
-JUNIT = "org.junit.runner.JUnitCore"
-JAVA = "java"
-WARNS = "warnings"
-	ERRS = "errors"
+const (
+	CP        = "-cp"
+	COMPILE   = "compile"
+	RUN       = "run"
+	NAME      = "name"
+	LANG      = "lang"
+	JUNIT     = "org.junit.runner.JUnitCore"
+	JAVA      = "java"
+	WARNS     = "warnings"
+	ERRS      = "errors"
 	TESTS_PKG = "testing"
-JAVAC = "javac"
+	JAVAC     = "javac"
 )
-

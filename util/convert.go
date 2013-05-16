@@ -81,41 +81,40 @@ func GetStrings(jobj map[string]interface{}, key string) ([]string, error) {
 	return toStrings(ival)
 }
 
-func toBytes(ival interface{})([]byte, error){
+func toBytes(ival interface{}) ([]byte, error) {
 	val, ok := ival.([]byte)
-	if !ok{
+	if !ok {
 		return nil, fmt.Errorf("Error casting value %q to []byte", ival)
 	}
 	return val, nil
 }
 
-
-func toStrings(ivals interface{})([]string, error){
+func toStrings(ivals interface{}) ([]string, error) {
 	vals, ok := ivals.([]string)
-	if !ok{
+	if !ok {
 		return nil, fmt.Errorf("Error casting value %q to []string", ivals)
 	}
 	return vals, nil
 }
 
-func MEqual(m1, m2 bson.M) bool{
-	if len(m1) != len(m2){
+func MEqual(m1, m2 bson.M) bool {
+	if len(m1) != len(m2) {
 		return false
 	}
-	for k, v := range m1{
-		if m2[k] != v{
+	for k, v := range m1 {
+		if m2[k] != v {
 			return false
 		}
 	}
 	return true
 }
 
-func StringsEqual(s1, s2 []string) bool{
-	if len(s1) != len(s2){
+func StringsEqual(s1, s2 []string) bool {
+	if len(s1) != len(s2) {
 		return false
 	}
-	for k, v := range s1{
-		if s2[k] != v{
+	for k, v := range s1 {
+		if s2[k] != v {
 			return false
 		}
 	}

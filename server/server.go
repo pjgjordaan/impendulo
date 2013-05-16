@@ -1,23 +1,23 @@
 package server
 
 import (
+	"fmt"
 	"github.com/godfried/cabanga/db"
 	"github.com/godfried/cabanga/processing"
 	"github.com/godfried/cabanga/submission"
-	"github.com/godfried/cabanga/util"
 	"github.com/godfried/cabanga/user"
+	"github.com/godfried/cabanga/util"
 	"labix.org/v2/mgo/bson"
 	"net"
 	"runtime"
-	"fmt"
 )
 
 const (
-	OK      = "ok"
-	SEND    = "send"
-	LOGIN   = "begin"
-	LOGOUT  = "end"
-	REQ     = "req"
+	OK     = "ok"
+	SEND   = "send"
+	LOGIN  = "begin"
+	LOGOUT = "end"
+	REQ    = "req"
 )
 
 /*
@@ -28,7 +28,7 @@ func Run(port string) {
 	fileChan := make(chan *submission.File)
 	subChan := make(chan *submission.Submission)
 	go processing.Serve(subChan, fileChan)
-	netListen, err := net.Listen("tcp", ":" + port)
+	netListen, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		util.Log(fmt.Errorf("Encountered error %q when listening on port %q", err, port))
 		return
@@ -43,7 +43,6 @@ func Run(port string) {
 		}
 	}
 }
-
 
 /*
 Manage incoming connection request.
@@ -167,7 +166,7 @@ func createSubmission(jobj map[string]interface{}) (*submission.Submission, erro
 	if err != nil {
 		return nil, err
 	}
-	if !u.CheckSubmit(mode){
+	if !u.CheckSubmit(mode) {
 		return nil, fmt.Errorf("User %q has insufficient permissions for %q", username, mode)
 	}
 	if !util.Validate(u.Password, u.Salt, pword) {
@@ -175,5 +174,3 @@ func createSubmission(jobj map[string]interface{}) (*submission.Submission, erro
 	}
 	return submission.NewSubmission(project, username, mode, lang), nil
 }
-
-

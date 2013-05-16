@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"flag"
+	"fmt"
 	"github.com/godfried/cabanga/db"
 	"github.com/godfried/cabanga/server"
 	"github.com/godfried/cabanga/util"

@@ -1,13 +1,13 @@
 package util
 
 import (
+	"bytes"
 	"errors"
 	"labix.org/v2/mgo/bson"
 	"testing"
-	"bytes"
 )
 
-var testmap = map[string]interface{}{"string": "2 3", "int": 2, "id": bson.NewObjectId(), "map": bson.M{"a":"b"}, "bytes": []byte("AB"), "strings":  []string{"A","B"}}
+var testmap = map[string]interface{}{"string": "2 3", "int": 2, "id": bson.NewObjectId(), "map": bson.M{"a": "b"}, "bytes": []byte("AB"), "strings": []string{"A", "B"}}
 
 func TestGetString(t *testing.T) {
 	this := "string"
@@ -17,7 +17,7 @@ func TestGetString(t *testing.T) {
 			if err != nil || res != v {
 				t.Error(err, res, "!=", v)
 			}
-		} else if err == nil{
+		} else if err == nil {
 			t.Error(errors.New("Error function should not cast"))
 		}
 	}
@@ -31,12 +31,11 @@ func TestGetInt(t *testing.T) {
 			if err != nil || res != v {
 				t.Error(err, res, "!=", v)
 			}
-		} else if err == nil{
+		} else if err == nil {
 			t.Error(errors.New("Error function should not cast"))
 		}
 	}
 }
-
 
 func TestGetID(t *testing.T) {
 	this := "id"
@@ -46,12 +45,11 @@ func TestGetID(t *testing.T) {
 			if err != nil || res != v {
 				t.Error(err, res, "!=", v)
 			}
-		} else if err == nil{
+		} else if err == nil {
 			t.Error(errors.New("Error function should not cast"))
 		}
 	}
 }
-
 
 func TestGetMap(t *testing.T) {
 	this := "map"
@@ -62,39 +60,37 @@ func TestGetMap(t *testing.T) {
 			if err != nil || !MEqual(res, val) {
 				t.Error(err, res, "!=", v)
 			}
-		} else if err == nil{
+		} else if err == nil {
 			t.Error(errors.New("Error function should not cast"))
 		}
 	}
 }
-
 
 func TestGetBytes(t *testing.T) {
 	this := "bytes"
 	for k, v := range testmap {
 		res, err := GetBytes(testmap, k)
 		if k == this {
-			val, _ := ToBytes(v)
+			val, _ := toBytes(v)
 			if err != nil || !bytes.Equal(res, val) {
 				t.Error(err, res, "!=", v)
 			}
-		} else if err == nil{
+		} else if err == nil {
 			t.Error(errors.New("Error function should not cast"))
 		}
 	}
 }
-
 
 func TestGetStrings(t *testing.T) {
 	this := "strings"
 	for k, v := range testmap {
 		res, err := GetStrings(testmap, k)
 		if k == this {
-			val,_ := ToStrings(v)
+			val, _ := toStrings(v)
 			if err != nil || !StringsEqual(res, val) {
 				t.Error(err)
 			}
-		} else if err == nil{
+		} else if err == nil {
 			t.Error(errors.New("Error function should not cast"), k, res)
 		}
 	}

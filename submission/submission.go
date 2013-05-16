@@ -1,11 +1,11 @@
 package submission
 
 import (
+	"fmt"
 	"labix.org/v2/mgo/bson"
 	"strconv"
 	"strings"
 	"time"
-	"fmt"
 )
 
 /*
@@ -66,18 +66,18 @@ func (f *File) InfoStr(key string) (val string) {
 */
 func ParseName(name string) (map[string]interface{}, error) {
 	elems := strings.Split(name, "_")
-	if len(elems) < 3{
+	if len(elems) < 3 {
 		return nil, fmt.Errorf("Encoded name %q does not have enough parameters.", name)
 	}
 	info := make(map[string]interface{})
 	info[MOD] = elems[len(elems)-1]
 	num, err := strconv.Atoi(elems[len(elems)-2])
-	if err != nil{
+	if err != nil {
 		return nil, fmt.Errorf("%q in name %q could not be parsed as an int.", elems[len(elems)-2], name)
 	}
 	info[NUM] = num
 	time, err := strconv.ParseInt(elems[len(elems)-3], 10, 64)
-	if err != nil{
+	if err != nil {
 		return nil, fmt.Errorf("%q in name %q could not be parsed as an int64.", elems[len(elems)-3], name)
 	}
 	info[TIME] = time
@@ -91,23 +91,23 @@ func ParseName(name string) (map[string]interface{}, error) {
 			if i < len(elems)-5 {
 				pkg += "."
 			}
-			if isOutFolder(elems[i]){
+			if isOutFolder(elems[i]) {
 				pkg = ""
 			}
 		}
 		info[PKG] = pkg
 	}
-	if strings.HasSuffix(fname, JSRC){
+	if strings.HasSuffix(fname, JSRC) {
 		info[TYPE] = SRC
-	} else if strings.HasSuffix(fname, JCOMP){
+	} else if strings.HasSuffix(fname, JCOMP) {
 		info[TYPE] = EXEC
-	} else{
+	} else {
 		info[TYPE] = CHANGE
 	}
-	return info, nil 
+	return info, nil
 }
 
-func isOutFolder(arg string)bool{
+func isOutFolder(arg string) bool {
 	return arg == SRC_DIR || arg == BIN_DIR
 }
 
@@ -140,8 +140,8 @@ const (
 	INFO         = "info"
 	DATA         = "data"
 	RES          = "results"
-	JSRC = ".java"
-	JCOMP = ".class"
-	BIN_DIR = "bin"
-	SRC_DIR = "src"
+	JSRC         = ".java"
+	JCOMP        = ".class"
+	BIN_DIR      = "bin"
+	SRC_DIR      = "src"
 )
