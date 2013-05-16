@@ -1,7 +1,6 @@
 package tool
 
 import (
-	"github.com/godfried/cabanga/util"
 	"labix.org/v2/mgo/bson"
 	"path/filepath"
 	"strings"
@@ -10,12 +9,6 @@ import (
 	"os/exec"
 )
 
-const(
-	CP = "-cp"
-	COMPILE = "compile"
-	NAME = "name"
-	LANG = "lang"
-)
 
 /*
 Information about the target file
@@ -154,11 +147,12 @@ type Result struct {
 	ErrName string        "errname"
 	OutData []byte        "outdata"
 	ErrData []byte        "errdata"
+	Error error "error"
 	Time    int64         "time"
 }
 
-func NewResult(fileId, toolId bson.ObjectId, name, outname, errname string, outdata, errdata []byte) *Result {
-	return &Result{bson.NewObjectId(), fileId, toolId, name, outname, errname, outdata, errdata, time.Now().UnixNano()}
+func NewResult(fileId, toolId bson.ObjectId, name, outname, errname string, outdata, errdata []byte, err error) *Result {
+	return &Result{bson.NewObjectId(), fileId, toolId, name, outname, errname, outdata, errdata, err, time.Now().UnixNano()}
 }
 
 
@@ -166,7 +160,6 @@ func NewResult(fileId, toolId bson.ObjectId, name, outname, errname string, outd
 Executes a given external command.
 */
 func RunCommand(args ...string) (stdout, stderr bytes.Buffer, err error) {
-	util.Log(args)
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	err = cmd.Start()
@@ -184,38 +177,39 @@ func RunTool(fileId bson.ObjectId, ti *TargetInfo, tool *Tool, fArgs map[string]
 	tool.setFlagArgs(fArgs)
 	args := tool.GetArgs(ti.GetTarget(tool.Target))
 	stderr, stdout, err := RunCommand(args...)
-	if err != nil {
-		util.Log(stderr.String(), stdout.String(), err)
-	}
-	return NewResult(fileId, tool.Id, tool.Name, tool.OutName, tool.ErrName, stdout.Bytes(), stderr.Bytes())
+	return NewResult(fileId, tool.Id, tool.Name, tool.OutName, tool.ErrName, stdout.Bytes(), stderr.Bytes(), err)
 }
 
-func CompileTest(fileId bson.ObjectId, ti *TargetInfo, testName, testDir string)(*Result, error) {
-	test := &TargetInfo{ti.Project, testName, "java", "testing", "java", testDir}
+func CompileTest(fileId bson.ObjectId, ti *TargetInfo, testName, testDir string)*Result {
+	test := &TargetInfo{ti.Project, testName, JAVA, TESTS_PKG, JAVA, testDir}
 	cp := ti.Dir + ":" + testDir
-	//Hardcode for now
-	stderr, stdout, err := RunCommand("javac", CP, cp, "-d", ti.Dir, "-s", ti.Dir, "-implicit:class", test.FilePath())
-	if err != nil {
-		util.Log("Test compile error ", err)
-	}
-	res := NewResult(fileId, fileId, test.Name+"_compile", "warnings", "errors", stdout.Bytes(), stderr.Bytes())
-	return res, err
+	stderr, stdout, err := RunCommand(JAVAC, CP, cp, "-d", ti.Dir, "-s", ti.Dir, "-implicit:class", test.FilePath())
+	return NewResult(fileId, fileId, test.Name+"_"+COMPILE, WARNS, ERRS, stdout.Bytes(), stderr.Bytes(), err)
 }
 
 /*
 Runs a java test suite on a source file. 
 */
 func RunTest(fileId bson.ObjectId, ti *TargetInfo, testName, testDir string)(*Result) {
-	test := &TargetInfo{ti.Project, testName, "java", "testing", "java", testDir}
+	test := &TargetInfo{ti.Project, testName, JAVA, TESTS_PKG, JAVA, testDir}
 	cp := ti.Dir + ":" + testDir
-	stderr, stdout, err := RunCommand("java", CP, cp+":"+testDir, "org.junit.runner.JUnitCore", test.Executable())
-	if err != nil {
-		util.Log("Test run error ", err)
-	}
-	res := NewResult(fileId, fileId, test.Name+"_compile", "warnings", "errors", stdout.Bytes(), stderr.Bytes())
-	return res
+	stderr, stdout, err := RunCommand(JAVA, CP, cp+":"+testDir, JUNIT, test.Executable())
+	return NewResult(fileId, fileId, test.Name+"_"+RUN, WARNS, ERRS, stdout.Bytes(), stderr.Bytes(), err)
 
 }
 
 
+const(
+	CP = "-cp"
+	COMPILE = "compile"
+RUN = "run"
+	NAME = "name"
+	LANG = "lang"
+JUNIT = "org.junit.runner.JUnitCore"
+JAVA = "java"
+WARNS = "warnings"
+	ERRS = "errors"
+	TESTS_PKG = "testing"
+JAVAC = "javac"
+)
 

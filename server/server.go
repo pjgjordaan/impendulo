@@ -26,7 +26,8 @@ Listens for new connections and creates a new goroutine for each connection.
 func Run(port string) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	fileChan := make(chan *submission.File)
-	go processing.Serve(fileChan)
+	subChan := make(chan *submission.Submission)
+	go processing.Serve(subChan, fileChan)
 	netListen, err := net.Listen("tcp", ":" + port)
 	if err != nil {
 		util.Log("Listening error: ", err)
@@ -38,7 +39,7 @@ func Run(port string) {
 		if err != nil {
 			util.Log("Client error: ", err)
 		} else {
-			go connHandler(conn, fileChan)
+			go connHandler(conn, subChan, fileChan)
 		}
 	}
 }
@@ -47,7 +48,7 @@ func Run(port string) {
 /*
 Manage incoming connection request.
 */
-func connHandler(conn net.Conn, fileChan chan *submission.File) {
+func connHandler(conn net.Conn, subChan chan *submission.Submission, fileChan chan *submission.File) {
 	jobj, err := util.ReadJSON(conn)
 	if err != nil {
 		endSession(conn, err)
@@ -58,6 +59,7 @@ func connHandler(conn net.Conn, fileChan chan *submission.File) {
 		endSession(conn, err)
 		return
 	}
+	subChan <- sub
 	util.Log("Created submission: ", sub)
 	receiving := true
 	for receiving && err == nil {
