@@ -119,7 +119,7 @@ func MEqual(m1, m2 bson.M) bool {
 	return true
 }
 
-//StringsEqual
+//StringsEqual 
 func StringsEqual(s1, s2 []string) bool {
 	if len(s1) != len(s2) {
 		return false

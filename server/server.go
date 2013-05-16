@@ -78,7 +78,6 @@ func connHandler(conn net.Conn, subChan chan *submission.Submission, fileChan ch
 	endSession(conn, err)
 }
 
-
 //processFile reads file data from connection and stores it in the db.
 //The file data is then sent on fileChan for further processing.
 func processFile(subId bson.ObjectId, finfo map[string]interface{}, conn net.Conn, fileChan chan *submission.File) error {
@@ -97,7 +96,6 @@ func processFile(subId bson.ObjectId, finfo map[string]interface{}, conn net.Con
 	return nil
 }
 
-
 //login creates a new submission if the login request is valid.
 func login(jobj map[string]interface{}, conn net.Conn) (*submission.Submission, error) {
 	sub, err := createSubmission(jobj)
@@ -112,7 +110,6 @@ func login(jobj map[string]interface{}, conn net.Conn) (*submission.Submission, 
 	return sub, nil
 }
 
-
 //endSession ends a session and reports any errors to the client. 
 func endSession(conn net.Conn, err error) {
 	var msg string
@@ -125,7 +122,6 @@ func endSession(conn net.Conn, err error) {
 	conn.Write([]byte(msg))
 	conn.Close()
 }
-
 
 //createSubmission validates a login request. 
 //It reads submission values from a json object and checks privilege level and password. 

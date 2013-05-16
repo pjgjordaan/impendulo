@@ -29,39 +29,39 @@ type User struct {
 	Access   int    "access"
 }
 
-//hasAccess
-func (u *User) hasAccess(access int) bool {
+//HasAccess checks whether a user has the required access level.
+func (this *User) HasAccess(access int) bool {
 	switch access {
 	case NONE:
-		return u.Access == NONE
+		return this.Access == NONE
 	case F_SUB:
-		return EqualsOne(u.Access, F_SUB, FT_SUB, UF_SUB, ALL_SUB)
+		return EqualsOne(this.Access, F_SUB, FT_SUB, UF_SUB, ALL_SUB)
 	case T_SUB:
-		return EqualsOne(u.Access, T_SUB, FT_SUB, UT_SUB, ALL_SUB)
+		return EqualsOne(this.Access, T_SUB, FT_SUB, UT_SUB, ALL_SUB)
 	case U_SUB:
-		return EqualsOne(u.Access, U_SUB, UF_SUB, UT_SUB, ALL_SUB)
+		return EqualsOne(this.Access, U_SUB, UF_SUB, UT_SUB, ALL_SUB)
 	}
 	return false
 }
 
-//CheckSubmit
-func (u *User) CheckSubmit(mode string) bool {
+//CheckSubmit checks whether the user may provide the requested submission. 
+func (this *User) CheckSubmit(mode string) bool {
 	if mode == SINGLE || mode == ARCHIVE {
-		return u.hasAccess(F_SUB)
+		return this.HasAccess(F_SUB)
 	} else if mode == TEST {
-		return u.hasAccess(T_SUB)
+		return this.HasAccess(T_SUB)
 	} else if mode == UPDATE {
-		return u.hasAccess(U_SUB)
+		return this.HasAccess(U_SUB)
 	}
 	return false
 }
 
-//NewUser
+//NewUser creates a new user with file submission permissions.
 func NewUser(uname, pword, salt string) *User {
 	return &User{uname, pword, salt, F_SUB}
 }
 
-//EqualsOne
+//EqualsOne returns true if test is equal to any of the members of args. 
 func EqualsOne(test interface{}, args ...interface{}) bool {
 	for _, arg := range args {
 		if test == arg {

@@ -8,26 +8,26 @@ import (
 	"io"
 )
 
-//Validate
+//Validate authenticates a provided password against a hashed password.
 func Validate(hashed, salt, pword string) bool {
-	computed := computeHash(pword, salt)
+	computed := ComputeHash(pword, salt)
 	return hashed == computed
 }
 
-//Hash
+//Hash hashes the provided password.
 func Hash(pword string) (hash, salt string) {
 	salt = GenString(32)
-	return computeHash(pword, salt), salt
+	return ComputeHash(pword, salt), salt
 }
 
-//computeHash
-func computeHash(pword, salt string) string {
+//ComputeHash computes the hash for a password and its salt.
+func ComputeHash(pword, salt string) string {
 	h := sha1.New()
 	io.WriteString(h, pword+salt)
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-//GenString
+//GenString generates a psuedo-random string using the crypto/rand package.
 func GenString(size int) string {
 	b := make([]byte, size)
 	rand.Read(b)

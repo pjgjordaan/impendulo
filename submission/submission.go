@@ -8,7 +8,6 @@ import (
 	"time"
 )
 
-
 //Submission is used for individual project submissions
 type Submission struct {
 	Id      bson.ObjectId "_id"

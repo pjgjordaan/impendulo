@@ -25,8 +25,7 @@ const FPERM = os.O_WRONLY | os.O_CREATE | os.O_TRUNC
 
 var BASE_DIR = ".intlola"
 var LOG_DIR = "logs"
-var errLogger, infoLogger *syncLogger
-
+var errLogger, infoLogger *SyncLogger
 
 //init sets up the loggers.
 func init() {
@@ -42,48 +41,48 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	errLogger, err = newLogger(filepath.Join(dir, "E_"+time.Now().String()+".log"))
+	errLogger, err = NewLogger(filepath.Join(dir, "E_"+time.Now().String()+".log"))
 	if err != nil {
 		panic(err)
 	}
-	infoLogger, err = newLogger(filepath.Join(dir, "I_"+time.Now().String()+".log"))
+	infoLogger, err = NewLogger(filepath.Join(dir, "I_"+time.Now().String()+".log"))
 	if err != nil {
 		panic(err)
 	}
 }
 
-type syncLogger struct {
+//SyncLogger allows for concurrent logging.
+type SyncLogger struct {
 	logger *log.Logger
 	lock   *sync.Mutex
 }
 
-//log
-func (this syncLogger) log(vals ...interface{}) {
+//Log safely logs data to this logger's log file.
+func (this SyncLogger) Log(vals ...interface{}) {
 	this.lock.Lock()
 	this.logger.Print(vals...)
 	this.lock.Unlock()
 }
 
-//newLogger
-func newLogger(fname string) (*syncLogger, error) {
+//NewLogger creates a new SyncLogger which writes its logs to the specified file.
+func NewLogger(fname string) (*SyncLogger, error) {
 	fo, err := os.Create(fname)
 	if err != nil {
 		return nil, err
 	}
-	return &syncLogger{log.New(fo, "", log.LstdFlags), new(sync.Mutex)}, nil
+	return &SyncLogger{log.New(fo, "", log.LstdFlags), new(sync.Mutex)}, nil
 }
 
-//Log
+//Log sends data to be logged to the appropriate logger.
 func Log(v ...interface{}) {
 	if len(v) > 0 {
 		if _, ok := v[0].(error); ok {
-			errLogger.log(v)
+			errLogger.Log(v)
 		} else {
-			infoLogger.log(v)
+			infoLogger.Log(v)
 		}
 	}
 }
-
 
 //ReadUsers reads user configurations from a file.
 //It also sets up their passwords.
@@ -119,7 +118,6 @@ func ReadUsers(fname string) ([]*myuser.User, error) {
 	return users, err
 }
 
-
 //ReadJSON reads all JSON data from a reader. 
 func ReadJSON(r io.Reader) (map[string]interface{}, error) {
 	read, err := ReadData(r)
@@ -138,7 +136,7 @@ func ReadJSON(r io.Reader) (map[string]interface{}, error) {
 	return jmap, nil
 }
 
-//ReadData reads data from a reader until io.EOF or "eof" is encountered. 
+//ReadData reads data from a reader until io.EOF or []byte("eof") is encountered. 
 func ReadData(r io.Reader) ([]byte, error) {
 	buffer := new(bytes.Buffer)
 	eof := []byte("eof")
@@ -160,8 +158,7 @@ func ReadData(r io.Reader) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-
-//SaveFile saves a file in a given directory.
+//SaveFile saves a file (given as a []byte)  in dir.
 func SaveFile(dir, fname string, data []byte) error {
 	err := os.MkdirAll(dir, DPERM)
 	if err != nil {
@@ -178,7 +175,7 @@ func SaveFile(dir, fname string, data []byte) error {
 	return nil
 }
 
-//Unzip unzips a file to a given directory.
+//Unzip extracts a file (given as a []byte) to dir.
 func Unzip(dir string, data []byte) error {
 	br := bytes.NewReader(data)
 	zr, err := zip.NewReader(br, int64(br.Len()))
@@ -186,7 +183,7 @@ func Unzip(dir string, data []byte) error {
 		return fmt.Errorf("Encountered error %q while creating zip reader from from %q", err, data)
 	}
 	for _, zf := range zr.File {
-		err = extractFile(zf, dir)
+		err = ExtractFile(zf, dir)
 		if err != nil {
 			return err
 		}
@@ -194,8 +191,8 @@ func Unzip(dir string, data []byte) error {
 	return nil
 }
 
-//extractFile
-func extractFile(zf *zip.File, dir string) error {
+//ExtractFile extracts the contents of a zip.File and saves it in dir.
+func ExtractFile(zf *zip.File, dir string) error {
 	frc, err := zf.Open()
 	if err != nil {
 		return fmt.Errorf("Encountered error %q while opening zip file %q", err, zf)
@@ -234,7 +231,7 @@ func UnzipToMap(data []byte) (map[string][]byte, error) {
 		if zf.FileInfo().IsDir() {
 			continue
 		}
-		data, err := extractBytes(zf)
+		data, err := ExtractBytes(zf)
 		if err != nil {
 			return nil, err
 		}
@@ -243,17 +240,17 @@ func UnzipToMap(data []byte) (map[string][]byte, error) {
 	return extracted, nil
 }
 
-//extractBytes
-func extractBytes(zf *zip.File) ([]byte, error) {
+//ExtractBytes extracts data from a zip.File. 
+func ExtractBytes(zf *zip.File) ([]byte, error) {
 	frc, err := zf.Open()
 	if err != nil {
 		return nil, fmt.Errorf("Encountered error %q while opening zip file %q", err, zf)
 	}
 	defer frc.Close()
-	return readBytes(frc), nil
+	return ReadBytes(frc), nil
 }
 
-//Zip
+//Zip creates a zip archive from a map which has file names as its keys and file contents as its values.
 func Zip(files map[string][]byte) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	w := zip.NewWriter(buf)
@@ -274,8 +271,9 @@ func Zip(files map[string][]byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-//readBytes
-func readBytes(r io.Reader) []byte {
+//ReadBytes reads bytes from a reader until io.EOF is encountered.
+//If the reader can't be read an empty []byte is returned.
+func ReadBytes(r io.Reader) []byte {
 	buffer := new(bytes.Buffer)
 	_, err := buffer.ReadFrom(r)
 	if err != nil {
@@ -284,7 +282,7 @@ func readBytes(r io.Reader) []byte {
 	return buffer.Bytes()
 }
 
-//LoadMap
+//LoadMap loads a map stored in a file.
 func LoadMap(fname string) (map[bson.ObjectId]bool, error) {
 	f, err := os.Open(filepath.Join(BASE_DIR, fname))
 	if err != nil {
@@ -313,7 +311,7 @@ func SaveMap(mp map[bson.ObjectId]bool, fname string) error {
 	return nil
 }
 
-//Merge
+//Merge adds the contents of m2 to m1. Values in m1 may be overwritten.
 func Merge(m1 map[bson.ObjectId]bool, m2 map[bson.ObjectId]bool) {
 	for k, v := range m2 {
 		m1[k] = v

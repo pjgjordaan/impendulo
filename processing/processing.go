@@ -19,7 +19,6 @@ const (
 	SRC        = "src"
 )
 
-
 //testBuilder is used to setup a project's tests.
 type testBuilder struct {
 	tests   map[string]bool
@@ -32,7 +31,6 @@ func newTestBuilder() *testBuilder {
 	dir := filepath.Join(os.TempDir(), TESTS)
 	return &testBuilder{make(map[string]bool), new(sync.Mutex), dir}
 }
-
 
 //setup extracts a project's tests from db to filesystem for execution.
 //It returns true if this was successful.
@@ -376,7 +374,6 @@ func runTest(f *submission.File, ti *tool.TargetInfo, test, dir string) error {
 	return addResult(res)
 }
 
-
 //runTools runs all available tools on a file, skipping previously run tools.
 func runTools(f *submission.File, ti *tool.TargetInfo) error {
 	all, err := db.GetTools(bson.M{tool.LANG: ti.Lang})
@@ -398,7 +395,6 @@ func runTools(f *submission.File, ti *tool.TargetInfo) error {
 	}
 	return nil
 }
-
 
 //addResult adds a tool result to the db.
 //It updates the associated file's list of results to point to this new result.

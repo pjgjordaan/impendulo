@@ -4,10 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"github.com/godfried/cabanga/db"
-	"github.com/godfried/cabanga/server"
-	"github.com/godfried/cabanga/util"
-	"github.com/godfried/cabanga/submission"
 	"github.com/godfried/cabanga/processing"
+	"github.com/godfried/cabanga/server"
+	"github.com/godfried/cabanga/submission"
+	"github.com/godfried/cabanga/util"
 	"log"
 	"runtime"
 )

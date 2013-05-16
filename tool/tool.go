@@ -10,7 +10,6 @@ import (
 	"time"
 )
 
-
 //TargetInfo stores information about the target file.
 type TargetInfo struct {
 	Project string
@@ -22,7 +21,6 @@ type TargetInfo struct {
 	Ext     string
 	Dir     string
 }
-
 
 //FilePath
 func (ti *TargetInfo) FilePath() string {
@@ -39,13 +37,12 @@ func (ti *TargetInfo) FullName() string {
 	return ti.Name + "." + ti.Ext
 }
 
-
 //Executable retrieves the path to the compiled executable with its package. 
 func (ti *TargetInfo) Executable() string {
 	return ti.Package + "." + ti.Name
 }
 
-//GetCompiler
+//GetCompiler 
 func (this *TargetInfo) GetCompiler() bson.M {
 	return bson.M{LANG: this.Lang, NAME: COMPILE}
 }
@@ -176,7 +173,7 @@ func RunTool(fileId bson.ObjectId, ti *TargetInfo, tool *Tool, fArgs map[string]
 	return res, nil
 }
 
-//CompileTest
+//CompileTest compiles a java test suite against a given java source file.
 func CompileTest(fileId bson.ObjectId, ti *TargetInfo, testName, testDir string) (*Result, error) {
 	test := &TargetInfo{ti.Project, testName, JAVA, TESTS_PKG, JAVA, testDir}
 	cp := ti.Dir + ":" + testDir
