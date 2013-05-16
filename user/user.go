@@ -1,9 +1,5 @@
 package user
 
-import (
-	"labix.org/v2/mgo/bson"
-)
-
 const (
 	NONE    = 0
 	F_SUB   = 1
@@ -33,6 +29,7 @@ type User struct {
 	Access   int    "access"
 }
 
+//hasAccess
 func (u *User) hasAccess(access int) bool {
 	switch access {
 	case NONE:
@@ -47,13 +44,7 @@ func (u *User) hasAccess(access int) bool {
 	return false
 }
 
-func ReadUser(umap bson.M) *User {
-	name := umap[ID].(string)
-	pword := umap[PWORD].(string)
-	salt := umap[SALT].(string)
-	access := umap[ACCESS].(int)
-	return &User{name, pword, salt, access}
-}
+//CheckSubmit
 func (u *User) CheckSubmit(mode string) bool {
 	if mode == SINGLE || mode == ARCHIVE {
 		return u.hasAccess(F_SUB)
@@ -65,10 +56,12 @@ func (u *User) CheckSubmit(mode string) bool {
 	return false
 }
 
+//NewUser
 func NewUser(uname, pword, salt string) *User {
 	return &User{uname, pword, salt, F_SUB}
 }
 
+//EqualsOne
 func EqualsOne(test interface{}, args ...interface{}) bool {
 	for _, arg := range args {
 		if test == arg {

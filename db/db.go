@@ -24,6 +24,7 @@ var activeSession *mgo.Session
 
 type SingleGet func(col string, matcher interface{}) (ret bson.M, err error)
 
+//getSession
 func getSession() (s *mgo.Session) {
 	if activeSession == nil {
 		var err error
@@ -36,6 +37,7 @@ func getSession() (s *mgo.Session) {
 	return s
 }
 
+//RemoveFileById
 func RemoveFileByID(id interface{}) error {
 	session := getSession()
 	defer session.Close()
@@ -47,6 +49,7 @@ func RemoveFileByID(id interface{}) error {
 	return nil
 }
 
+//GetUserById
 func GetUserById(id interface{}) (*user.User, error) {
 	session := getSession()
 	defer session.Close()
@@ -59,6 +62,7 @@ func GetUserById(id interface{}) (*user.User, error) {
 	return ret, nil
 }
 
+//GetFile
 func GetFile(matcher interface{}) (*submission.File, error) {
 	session := getSession()
 	defer session.Close()
@@ -71,6 +75,7 @@ func GetFile(matcher interface{}) (*submission.File, error) {
 	return ret, nil
 }
 
+//GetSubmission
 func GetSubmission(matcher interface{}) (*submission.Submission, error) {
 	session := getSession()
 	defer session.Close()
@@ -83,6 +88,7 @@ func GetSubmission(matcher interface{}) (*submission.Submission, error) {
 	return ret, nil
 }
 
+//GetTool
 func GetTool(matcher interface{}) (*tool.Tool, error) {
 	session := getSession()
 	defer session.Close()
@@ -95,6 +101,7 @@ func GetTool(matcher interface{}) (*tool.Tool, error) {
 	return ret, nil
 }
 
+//GetTools
 func GetTools(matcher interface{}) ([]*tool.Tool, error) {
 	session := getSession()
 	defer session.Close()
@@ -107,6 +114,7 @@ func GetTools(matcher interface{}) ([]*tool.Tool, error) {
 	return ret, nil
 }
 
+//AddFile
 func AddFile(f *submission.File) error {
 	session := getSession()
 	defer session.Close()
@@ -118,6 +126,7 @@ func AddFile(f *submission.File) error {
 	return nil
 }
 
+//AddSubmission
 func AddSubmission(s *submission.Submission) error {
 	session := getSession()
 	defer session.Close()
@@ -129,6 +138,7 @@ func AddSubmission(s *submission.Submission) error {
 	return nil
 }
 
+//AddTool
 func AddTool(t *tool.Tool) error {
 	session := getSession()
 	defer session.Close()
@@ -140,6 +150,7 @@ func AddTool(t *tool.Tool) error {
 	return nil
 }
 
+//AddResult
 func AddResult(r *tool.Result) error {
 	session := getSession()
 	defer session.Close()
@@ -151,6 +162,7 @@ func AddResult(r *tool.Result) error {
 	return nil
 }
 
+//Update
 func Update(col string, matcher, change interface{}) error {
 	session := getSession()
 	defer session.Close()
@@ -162,6 +174,7 @@ func Update(col string, matcher, change interface{}) error {
 	return nil
 }
 
+//AddUsers
 func AddUsers(users ...*user.User) error {
 	session := getSession()
 	defer session.Close()

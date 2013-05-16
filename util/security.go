@@ -8,22 +8,26 @@ import (
 	"io"
 )
 
+//Validate
 func Validate(hashed, salt, pword string) bool {
 	computed := computeHash(pword, salt)
 	return hashed == computed
 }
 
+//Hash
 func Hash(pword string) (hash, salt string) {
 	salt = GenString(32)
 	return computeHash(pword, salt), salt
 }
 
+//computeHash
 func computeHash(pword, salt string) string {
 	h := sha1.New()
 	io.WriteString(h, pword+salt)
 	return hex.EncodeToString(h.Sum(nil))
 }
 
+//GenString
 func GenString(size int) string {
 	b := make([]byte, size)
 	rand.Read(b)

@@ -8,9 +8,8 @@ import (
 	"time"
 )
 
-/*
-Individual project submissions
-*/
+
+//Submission is used for individual project submissions
 type Submission struct {
 	Id      bson.ObjectId "_id"
 	Project string        "project"
@@ -20,19 +19,19 @@ type Submission struct {
 	Lang    string        "lang"
 }
 
+//IsTest
 func (s *Submission) IsTest() bool {
 	return s.Mode == TEST_MODE
 }
 
+//NewSubmission
 func NewSubmission(project, user, mode, lang string) *Submission {
 	subId := bson.NewObjectId()
 	now := time.Now().UnixNano()
 	return &Submission{subId, project, user, now, mode, lang}
 }
 
-/*
-Single file's data from a submission. 
-*/
+//File stores a single file's data from a submission. 
 type File struct {
 	Id      bson.ObjectId "_id"
 	SubId   bson.ObjectId "subid"
@@ -41,29 +40,28 @@ type File struct {
 	Results bson.M        "results"
 }
 
+//NewFile
 func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) *File {
 	id := bson.NewObjectId()
 	return &File{id, subId, info, data, bson.M{}}
 }
 
+//Type
 func (f *File) Type() string {
 	return f.InfoStr(TYPE)
 }
 
-/*
-Retrieve file metadata from a mongo map
-*/
+//InfoStr retrieves file metadata.
 func (f *File) InfoStr(key string) (val string) {
 	val, _ = f.Info[key].(string)
 	return val
 }
 
-/*
- Retrieve file metadata encoded in a file name. These file names must have the format:
- [[<package descriptor>"_"]*<file name>"_"]<time in nanoseconds>"_"<file number in current submission>"_"<modification char>
- Where values between '[]' are optional, '*' indicates 0 to many, values inside '""' are literals and values inside '<>' 
- describe the contents at that position.  
-*/
+//ParseName retrieves file metadata encoded in a file name.
+//These file names must have the format:
+//[[<package descriptor>"_"]*<file name>"_"]<time in nanoseconds>"_"<file number in current submission>"_"<modification char>
+//Where values between '[]' are optional, '*' indicates 0 to many, values inside '""' are literals and values inside '<>' 
+//describe the contents at that position.  
 func ParseName(name string) (map[string]interface{}, error) {
 	elems := strings.Split(name, "_")
 	if len(elems) < 3 {
@@ -107,14 +105,12 @@ func ParseName(name string) (map[string]interface{}, error) {
 	return info, nil
 }
 
+//isOutFolder
 func isOutFolder(arg string) bool {
 	return arg == SRC_DIR || arg == BIN_DIR
 }
 
-/*
-Constants used client and server-side to describe file and
-submission data
-*/
+//Constants used client and server-side to for submission data.
 const (
 	ID           = "_id"
 	PROJECT      = "project"

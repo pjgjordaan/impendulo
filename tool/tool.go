@@ -10,9 +10,8 @@ import (
 	"time"
 )
 
-/*
-Information about the target file
-*/
+
+//TargetInfo stores information about the target file.
 type TargetInfo struct {
 	Project string
 	//File name without extension
@@ -24,28 +23,29 @@ type TargetInfo struct {
 	Dir     string
 }
 
-/*
-Helper functions to retrieve various target path strings used by tools.
-*/
+
+//FilePath
 func (ti *TargetInfo) FilePath() string {
 	return filepath.Join(ti.Dir, ti.Package, ti.FullName())
 }
 
+//PkgPath
 func (ti *TargetInfo) PkgPath() string {
 	return filepath.Join(ti.Dir, ti.Package)
 }
 
+//FullName
 func (ti *TargetInfo) FullName() string {
 	return ti.Name + "." + ti.Ext
 }
 
-/*
-Path to compiled executable with package. 
-*/
+
+//Executable retrieves the path to the compiled executable with its package. 
 func (ti *TargetInfo) Executable() string {
 	return ti.Package + "." + ti.Name
 }
 
+//GetCompiler
 func (this *TargetInfo) GetCompiler() bson.M {
 	return bson.M{LANG: this.Lang, NAME: COMPILE}
 }
@@ -56,9 +56,7 @@ const (
 	FILE_PATH
 )
 
-/*
-Retrieves the target path based on the type required. 
-*/
+//GetTarget retrieves the target path based on the type required. 
 func (ti *TargetInfo) GetTarget(id int) string {
 	switch id {
 	case DIR_PATH:
@@ -71,14 +69,13 @@ func (ti *TargetInfo) GetTarget(id int) string {
 	return ""
 }
 
+//NewTarget
 func NewTarget(project, name, lang, pkg, dir string) *TargetInfo {
 	split := strings.Split(name, ".")
 	return &TargetInfo{project, split[0], lang, pkg, split[1], dir}
 }
 
-/*
-Generic tool specification
-*/
+//Tool is a generic tool specification.
 type Tool struct {
 	Id   bson.ObjectId "_id"
 	Name string        "name"
@@ -97,9 +94,7 @@ type Tool struct {
 	Target int "target"
 }
 
-/*
-Setup tool arguments for execution.
-*/
+//GetArgs sets up tool arguments for execution.
 func (this *Tool) GetArgs(target string) (args []string) {
 	args = make([]string, len(this.Preamble)+len(this.Flags)+(len(this.ArgFlags)*2)+2)
 	for i, p := range this.Preamble {
@@ -123,6 +118,7 @@ func (this *Tool) GetArgs(target string) (args []string) {
 	return args
 }
 
+//setFlagArgs
 func (this *Tool) setFlagArgs(args map[string]string) {
 	for k, arg := range args {
 		if _, ok := this.ArgFlags[k]; ok {
@@ -136,9 +132,7 @@ func (this *Tool) setFlagArgs(args map[string]string) {
 	}
 }
 
-/*
-Describes a tool or test's results for a given file.
-*/
+//Result describes a tool or test's results for a given file.
 type Result struct {
 	Id      bson.ObjectId "_id"
 	FileId  bson.ObjectId "fileid"
@@ -152,13 +146,12 @@ type Result struct {
 	Time    int64         "time"
 }
 
+//NewResult
 func NewResult(fileId, toolId bson.ObjectId, name, outname, errname string, outdata, errdata []byte, err error) *Result {
 	return &Result{bson.NewObjectId(), fileId, toolId, name, outname, errname, outdata, errdata, err, time.Now().UnixNano()}
 }
 
-/*
-Executes a given external command.
-*/
+//RunCommand executes a given external command.
 func RunCommand(args ...string) ([]byte, []byte, bool, error) {
 	cmd := exec.Command(args[0], args[1:]...)
 	var stdout, stderr bytes.Buffer
@@ -171,9 +164,7 @@ func RunCommand(args ...string) ([]byte, []byte, bool, error) {
 	return stdout.Bytes(), stderr.Bytes(), true, err
 }
 
-/*
-Runs a tool and records its results in the db.
-*/
+//RunTool runs a tool and records its results in the db.
 func RunTool(fileId bson.ObjectId, ti *TargetInfo, tool *Tool, fArgs map[string]string) (*Result, error) {
 	tool.setFlagArgs(fArgs)
 	args := tool.GetArgs(ti.GetTarget(tool.Target))
@@ -185,6 +176,7 @@ func RunTool(fileId bson.ObjectId, ti *TargetInfo, tool *Tool, fArgs map[string]
 	return res, nil
 }
 
+//CompileTest
 func CompileTest(fileId bson.ObjectId, ti *TargetInfo, testName, testDir string) (*Result, error) {
 	test := &TargetInfo{ti.Project, testName, JAVA, TESTS_PKG, JAVA, testDir}
 	cp := ti.Dir + ":" + testDir
@@ -196,9 +188,7 @@ func CompileTest(fileId bson.ObjectId, ti *TargetInfo, testName, testDir string)
 	return res, nil
 }
 
-/*
-Runs a java test suite on a source file. 
-*/
+//RunTest runs a java test suite on a java class file. 
 func RunTest(fileId bson.ObjectId, ti *TargetInfo, testName, testDir string) (*Result, error) {
 	test := &TargetInfo{ti.Project, testName, JAVA, TESTS_PKG, JAVA, testDir}
 	cp := ti.Dir + ":" + testDir

@@ -3,13 +3,11 @@ package server
 import (
 	"fmt"
 	"github.com/godfried/cabanga/db"
-	"github.com/godfried/cabanga/processing"
 	"github.com/godfried/cabanga/submission"
 	"github.com/godfried/cabanga/user"
 	"github.com/godfried/cabanga/util"
 	"labix.org/v2/mgo/bson"
 	"net"
-	"runtime"
 )
 
 const (
@@ -20,14 +18,8 @@ const (
 	REQ    = "req"
 )
 
-/*
-Listens for new connections and creates a new goroutine for each connection.
-*/
-func Run(port string) {
-	runtime.GOMAXPROCS(runtime.NumCPU())
-	fileChan := make(chan *submission.File)
-	subChan := make(chan *submission.Submission)
-	go processing.Serve(subChan, fileChan)
+//Run listens for new connections and creates a new goroutine for each connection.
+func Run(port string, subChan chan *submission.Submission, fileChan chan *submission.File) {
 	netListen, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		util.Log(fmt.Errorf("Encountered error %q when listening on port %q", err, port))
@@ -44,9 +36,8 @@ func Run(port string) {
 	}
 }
 
-/*
-Manage incoming connection request.
-*/
+//connHandler manages an incoming connection request.
+//It authenticates the request and processes files sent on the connection.
 func connHandler(conn net.Conn, subChan chan *submission.Submission, fileChan chan *submission.File) {
 	jobj, err := util.ReadJSON(conn)
 	if err != nil {
@@ -87,9 +78,9 @@ func connHandler(conn net.Conn, subChan chan *submission.Submission, fileChan ch
 	endSession(conn, err)
 }
 
-/*
-Reads file data from connection and sends data to be processed.
-*/
+
+//processFile reads file data from connection and stores it in the db.
+//The file data is then sent on fileChan for further processing.
 func processFile(subId bson.ObjectId, finfo map[string]interface{}, conn net.Conn, fileChan chan *submission.File) error {
 	conn.Write([]byte(OK))
 	buffer, err := util.ReadData(conn)
@@ -106,9 +97,8 @@ func processFile(subId bson.ObjectId, finfo map[string]interface{}, conn net.Con
 	return nil
 }
 
-/*
-Creates a new submission if the login request is valid.
-*/
+
+//login creates a new submission if the login request is valid.
 func login(jobj map[string]interface{}, conn net.Conn) (*submission.Submission, error) {
 	sub, err := createSubmission(jobj)
 	if err != nil {
@@ -122,9 +112,8 @@ func login(jobj map[string]interface{}, conn net.Conn) (*submission.Submission, 
 	return sub, nil
 }
 
-/*
-Ends a client session and reports any errors to the client. 
-*/
+
+//endSession ends a session and reports any errors to the client. 
 func endSession(conn net.Conn, err error) {
 	var msg string
 	if err != nil {
@@ -137,10 +126,9 @@ func endSession(conn net.Conn, err error) {
 	conn.Close()
 }
 
-/*
-Reads submission values from a json object.
-Determines whether user has neccesary privileges for submission and is using correct password 
-*/
+
+//createSubmission validates a login request. 
+//It reads submission values from a json object and checks privilege level and password. 
 func createSubmission(jobj map[string]interface{}) (*submission.Submission, error) {
 	username, err := util.GetString(jobj, submission.USER)
 	if err != nil {

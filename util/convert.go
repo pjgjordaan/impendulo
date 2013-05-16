@@ -5,6 +5,7 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
+//GetString
 func GetString(jobj map[string]interface{}, key string) (string, error) {
 	ival, ok := jobj[key]
 	if !ok {
@@ -17,6 +18,7 @@ func GetString(jobj map[string]interface{}, key string) (string, error) {
 	return val, nil
 }
 
+//GetInt
 func GetInt(jobj map[string]interface{}, key string) (int, error) {
 	ival, ok := jobj[key]
 	if !ok {
@@ -29,6 +31,7 @@ func GetInt(jobj map[string]interface{}, key string) (int, error) {
 	return val, nil
 }
 
+//GetInt64
 func GetInt64(jobj map[string]interface{}, key string) (int64, error) {
 	ival, ok := jobj[key]
 	if !ok {
@@ -41,6 +44,7 @@ func GetInt64(jobj map[string]interface{}, key string) (int64, error) {
 	return val, nil
 }
 
+//GetID
 func GetID(jobj map[string]interface{}, key string) (bson.ObjectId, error) {
 	ival, ok := jobj[key]
 	if !ok {
@@ -53,6 +57,7 @@ func GetID(jobj map[string]interface{}, key string) (bson.ObjectId, error) {
 	return val, nil
 }
 
+//GetM
 func GetM(jobj map[string]interface{}, key string) (bson.M, error) {
 	ival, ok := jobj[key]
 	if !ok {
@@ -65,6 +70,7 @@ func GetM(jobj map[string]interface{}, key string) (bson.M, error) {
 	return val, nil
 }
 
+//GetBytes
 func GetBytes(jobj map[string]interface{}, key string) ([]byte, error) {
 	ival, ok := jobj[key]
 	if !ok {
@@ -73,6 +79,7 @@ func GetBytes(jobj map[string]interface{}, key string) ([]byte, error) {
 	return toBytes(ival)
 }
 
+//GetStrings
 func GetStrings(jobj map[string]interface{}, key string) ([]string, error) {
 	ival, ok := jobj[key]
 	if !ok {
@@ -81,6 +88,7 @@ func GetStrings(jobj map[string]interface{}, key string) ([]string, error) {
 	return toStrings(ival)
 }
 
+//toBytes
 func toBytes(ival interface{}) ([]byte, error) {
 	val, ok := ival.([]byte)
 	if !ok {
@@ -89,6 +97,7 @@ func toBytes(ival interface{}) ([]byte, error) {
 	return val, nil
 }
 
+//toStrings
 func toStrings(ivals interface{}) ([]string, error) {
 	vals, ok := ivals.([]string)
 	if !ok {
@@ -97,6 +106,7 @@ func toStrings(ivals interface{}) ([]string, error) {
 	return vals, nil
 }
 
+//MEqual
 func MEqual(m1, m2 bson.M) bool {
 	if len(m1) != len(m2) {
 		return false
@@ -109,6 +119,7 @@ func MEqual(m1, m2 bson.M) bool {
 	return true
 }
 
+//StringsEqual
 func StringsEqual(s1, s2 []string) bool {
 	if len(s1) != len(s2) {
 		return false
