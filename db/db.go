@@ -6,7 +6,6 @@ import (
 	"github.com/godfried/cabanga/tool"
 	"github.com/godfried/cabanga/user"
 	"labix.org/v2/mgo"
-	"labix.org/v2/mgo/bson"
 )
 
 const (
@@ -23,8 +22,8 @@ const (
 
 var activeSession *mgo.Session
 
-type SingleGet func(col string, matcher interface{}) (ret bson.M, err error)
-
+//Setup creates a mongodb session.
+//This must be called before using any other db functions.
 func Setup(conn string){
 	var err error
 	activeSession, err = mgo.Dial(conn)
@@ -33,15 +32,15 @@ func Setup(conn string){
 	}
 }
 
-//getSession
-func getSession() (s *mgo.Session) {
+//GetSession retrieves the current active session.  
+func GetSession() (s *mgo.Session) {
 	if activeSession == nil{
 		panic(fmt.Errorf("Could not retrieve session."))
 	}
 	return activeSession.Clone()
 }
 
-//RemoveFileById
+//RemoveFileById removes a file matching the given id from the active database.
 func RemoveFileByID(id interface{}) error {
 	session := getSession()
 	defer session.Close()
@@ -53,7 +52,7 @@ func RemoveFileByID(id interface{}) error {
 	return nil
 }
 
-//GetUserById
+//GetUserById retrieves a user matching the given id from the active database. 
 func GetUserById(id interface{}) (*user.User, error) {
 	session := getSession()
 	defer session.Close()
@@ -66,7 +65,7 @@ func GetUserById(id interface{}) (*user.User, error) {
 	return ret, nil
 }
 
-//GetFile
+//GetFile retrieves a file matching the given interface from the active database. 
 func GetFile(matcher interface{}) (*submission.File, error) {
 	session := getSession()
 	defer session.Close()
@@ -79,7 +78,7 @@ func GetFile(matcher interface{}) (*submission.File, error) {
 	return ret, nil
 }
 
-//GetSubmission
+//GetSubmission retrieves a submission matching the given interface from the active database.
 func GetSubmission(matcher interface{}) (*submission.Submission, error) {
 	session := getSession()
 	defer session.Close()
@@ -92,7 +91,7 @@ func GetSubmission(matcher interface{}) (*submission.Submission, error) {
 	return ret, nil
 }
 
-//GetTool
+//GetTool retrieves a tool matching the given interface from the active database.
 func GetTool(matcher interface{}) (*tool.Tool, error) {
 	session := getSession()
 	defer session.Close()
@@ -105,7 +104,7 @@ func GetTool(matcher interface{}) (*tool.Tool, error) {
 	return ret, nil
 }
 
-//GetTools
+//GetTools retrieves tools matching the given interface from the active database.
 func GetTools(matcher interface{}) ([]*tool.Tool, error) {
 	session := getSession()
 	defer session.Close()
@@ -118,7 +117,7 @@ func GetTools(matcher interface{}) ([]*tool.Tool, error) {
 	return ret, nil
 }
 
-//AddFile
+//AddFile adds a new file to the active database.
 func AddFile(f *submission.File) error {
 	session := getSession()
 	defer session.Close()
@@ -130,7 +129,7 @@ func AddFile(f *submission.File) error {
 	return nil
 }
 
-//AddSubmission
+//AddSubmission adds a new submission to the active database.
 func AddSubmission(s *submission.Submission) error {
 	session := getSession()
 	defer session.Close()
@@ -142,7 +141,7 @@ func AddSubmission(s *submission.Submission) error {
 	return nil
 }
 
-//AddTool
+//AddTool adds a new tool to the active database.
 func AddTool(t *tool.Tool) error {
 	session := getSession()
 	defer session.Close()
@@ -154,7 +153,7 @@ func AddTool(t *tool.Tool) error {
 	return nil
 }
 
-//AddResult
+//AddResult adds a new result to the active database.
 func AddResult(r *tool.Result) error {
 	session := getSession()
 	defer session.Close()
@@ -166,7 +165,7 @@ func AddResult(r *tool.Result) error {
 	return nil
 }
 
-//AddUsers
+//AddUsers adds new users to the active database.
 func AddUsers(users ...*user.User) error {
 	session := getSession()
 	defer session.Close()
@@ -179,7 +178,7 @@ func AddUsers(users ...*user.User) error {
 }
 
 
-//Update
+//Update updates documents from the collection col matching the matcher interface to the change interface.
 func Update(col string, matcher, change interface{}) error {
 	session := getSession()
 	defer session.Close()

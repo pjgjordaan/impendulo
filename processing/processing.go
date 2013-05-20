@@ -408,8 +408,10 @@ func addResult(res *tool.Result) error {
 	return db.AddResult(res)
 }
 
+/*
 //init sets up tool configuration for testing
 func init() {
+	db.Setup(db.DEFAULT_CONN)
 	_, err := db.GetTool(bson.M{tool.NAME: "findbugs"})
 	if err != nil {
 		fb := &tool.Tool{bson.NewObjectId(), "findbugs", tool.JAVA, "/home/disco/apps/findbugs-2.0.2/lib/findbugs.jar", "warning_count", tool.WARNS, []string{tool.JAVA, "-jar"}, []string{"-textui", "-low"}, bson.M{}, tool.PKG_PATH}
@@ -421,3 +423,4 @@ func init() {
 		db.AddTool(javac)
 	}
 }
+*/
