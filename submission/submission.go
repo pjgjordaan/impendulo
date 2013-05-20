@@ -3,10 +3,10 @@ package submission
 import (
 	"fmt"
 	"labix.org/v2/mgo/bson"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
-	"reflect"
 )
 
 //Submission is used for individual project submissions
@@ -24,15 +24,14 @@ func (s *Submission) IsTest() bool {
 	return s.Mode == TEST_MODE
 }
 
-func (this *Submission) String() string{
-	return "Project: "+this.Project+"; User: "+this.User+"; Time: "+time.Unix(0, this.Time).String()
+func (this *Submission) String() string {
+	return "Project: " + this.Project + "; User: " + this.User + "; Time: " + time.Unix(0, this.Time).String()
 
 }
 
-func (this *Submission) Equals(that *Submission) bool{
+func (this *Submission) Equals(that *Submission) bool {
 	return reflect.DeepEqual(this, that)
 }
-
 
 //NewSubmission
 func NewSubmission(project, user, mode, lang string) *Submission {
@@ -67,7 +66,7 @@ func (f *File) InfoStr(key string) (val string) {
 	return val
 }
 
-func (this *File) Equals(that *File) bool{
+func (this *File) Equals(that *File) bool {
 	return reflect.DeepEqual(this, that)
 }
 

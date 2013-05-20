@@ -302,7 +302,7 @@ func compile(fileId bson.ObjectId, ti *tool.TargetInfo) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	err = addResult(res)
+	err = AddResult(res)
 	if err != nil {
 		return false, err
 	}
@@ -316,7 +316,7 @@ func alreadyCompiled(fileId bson.ObjectId, ti *tool.TargetInfo) (bool, error) {
 		return false, err
 	}
 	res := tool.NewResult(fileId, comp.Id, comp.Name, comp.OutName, comp.ErrName, []byte(""), []byte(""), nil)
-	err = addResult(res)
+	err = AddResult(res)
 	if err != nil {
 		return false, err
 	}
@@ -354,7 +354,7 @@ func compileTest(f *submission.File, ti *tool.TargetInfo, test, dir string) (boo
 	if err != nil {
 		return false, err
 	}
-	err = addResult(res)
+	err = AddResult(res)
 	if err != nil {
 		return false, err
 	}
@@ -371,7 +371,7 @@ func runTest(f *submission.File, ti *tool.TargetInfo, test, dir string) error {
 	if err != nil {
 		return err
 	}
-	return addResult(res)
+	return AddResult(res)
 }
 
 //runTools runs all available tools on a file, skipping previously run tools.
@@ -388,7 +388,7 @@ func runTools(f *submission.File, ti *tool.TargetInfo) error {
 		if err != nil {
 			return err
 		}
-		err = addResult(res)
+		err = AddResult(res)
 		if err != nil {
 			return err
 		}
@@ -396,9 +396,9 @@ func runTools(f *submission.File, ti *tool.TargetInfo) error {
 	return nil
 }
 
-//addResult adds a tool result to the db.
+//AddResult adds a tool result to the db.
 //It updates the associated file's list of results to point to this new result.
-func addResult(res *tool.Result) error {
+func AddResult(res *tool.Result) error {
 	matcher := bson.M{submission.ID: res.FileId}
 	change := bson.M{db.SET: bson.M{submission.RES + "." + res.Name: res.Id}}
 	err := db.Update(db.FILES, matcher, change)

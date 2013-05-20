@@ -1,132 +1,128 @@
 package server
 
 import (
-	"testing"
+	"encoding/json"
+	"fmt"
 	"github.com/godfried/cabanga/db"
+	"github.com/godfried/cabanga/submission"
 	"github.com/godfried/cabanga/user"
 	"github.com/godfried/cabanga/util"
-	"github.com/godfried/cabanga/submission"
+	"labix.org/v2/mgo/bson"
 	"net"
 	"reflect"
-	"fmt"
-	"labix.org/v2/mgo/bson"
-	"encoding/json"
+	"testing"
 )
 
-
-func checkMessage(conn net.Conn, check string) error{
+func checkMessage(conn net.Conn, check string) error {
 	data := make([]byte, len([]byte(check)))
 	n, err := conn.Read(data)
-	if err != nil{
+	if err != nil {
 		return err
 	}
-	if n != len(check){
+	if n != len(check) {
 		return fmt.Errorf("Did not read all data from connection")
 	}
 	msg := string(data)
-	if msg != OK{
+	if msg != OK {
 		return fmt.Errorf("Got unexpected message %s", msg)
 	}
 	return nil
 }
 
-
-func clientLogin(conn net.Conn, subChan chan *submission.Submission) error{
-	umap := map[string]interface{}{REQ: LOGIN, submission.USER: "uname", user.PWORD: "pword", submission.PROJECT : "project", submission.MODE : submission.FILE_MODE, submission.LANG: "java"}
+func clientLogin(conn net.Conn, subChan chan *submission.Submission) error {
+	umap := map[string]interface{}{REQ: LOGIN, submission.USER: "uname", user.PWORD: "pword", submission.PROJECT: "project", submission.MODE: submission.FILE_MODE, submission.LANG: "java"}
 	ubytes, err := json.Marshal(umap)
 	if err != nil {
 		return err
 	}
 	conn.Write(ubytes)
 	conn.Write(eof)
-	err =  checkMessage(conn, OK)
-	if err != nil{
+	err = checkMessage(conn, OK)
+	if err != nil {
 		return err
 	}
-	 <- subChan
+	<-subChan
 	return nil
 }
 
 func clientLogout(conn net.Conn) error {
-	logout := map[string]interface{}{REQ:LOGOUT}
+	logout := map[string]interface{}{REQ: LOGOUT}
 	lbytes, err := json.Marshal(logout)
 	if err != nil {
 		return err
 	}
 	conn.Write(lbytes)
 	conn.Write(eof)
-	err =  checkMessage(conn, OK)
-	if err != nil{
+	err = checkMessage(conn, OK)
+	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func sendFile(conn net.Conn, fileChan chan *submission.File)error{
-	fmap := map[string]interface{}{REQ:SEND}
+func sendFile(conn net.Conn, fileChan chan *submission.File) error {
+	fmap := map[string]interface{}{REQ: SEND}
 	fbytes, err := json.Marshal(fmap)
 	if err != nil {
 		return err
 	}
 	conn.Write(fbytes)
 	conn.Write(eof)
-	err =  checkMessage(conn, OK)
-	if err != nil{
+	err = checkMessage(conn, OK)
+	if err != nil {
 		return err
 	}
 	conn.Write(fileData)
 	conn.Write(eof)
-	err =  checkMessage(conn, OK)
-	if err != nil{
+	err = checkMessage(conn, OK)
+	if err != nil {
 		return err
 	}
-	recv := <- fileChan
-	if !reflect.DeepEqual(fileData, recv.Data){
+	recv := <-fileChan
+	if !reflect.DeepEqual(fileData, recv.Data) {
 		return fmt.Errorf("Data not equal")
 	}
 	return nil
 }
 
-
-func TestCreateSubmission(t *testing.T){
+func TestCreateSubmission(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
 	hash, salt := util.Hash("pword")
 	u := user.NewUser("uname", hash, salt)
-	umap := map[string]interface{}{submission.USER: "uname", user.PWORD: "pword", submission.PROJECT : "project", submission.MODE : submission.FILE_MODE, submission.LANG: "java"}
+	umap := map[string]interface{}{submission.USER: "uname", user.PWORD: "pword", submission.PROJECT: "project", submission.MODE: submission.FILE_MODE, submission.LANG: "java"}
 	_, err := CreateSubmission(umap)
-	if err == nil{
+	if err == nil {
 		t.Error("should get not found error")
 	}
 	err = db.AddUser(u)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	_, err = CreateSubmission(umap)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	_, err = CreateSubmission(map[string]interface{}{})
-	if err == nil{
+	if err == nil {
 		t.Error("error expected")
 	}
 	umap[user.PWORD] = "a"
 	_, err = CreateSubmission(umap)
-	if err == nil{
+	if err == nil {
 		t.Error("error expected")
 	}
 }
 
-
-func TestEndSession(t *testing.T){
-	go func(){
+func TestEndSession(t *testing.T) {
+	go func() {
 		conn, err := net.Dial("tcp", "localhost:8000")
-		if err != nil{
+		if err != nil {
 			t.Error(err)
 		}
 		defer conn.Close()
-		err =  checkMessage(conn, OK)
-		if err != nil{
+		err = checkMessage(conn, OK)
+		if err != nil {
 			t.Error(err)
 		}
 	}()
@@ -139,27 +135,27 @@ func TestEndSession(t *testing.T){
 		t.Error(err)
 	}
 	EndSession(sconn, nil)
-	
+
 }
 
-func TestLogin(t *testing.T){
+func TestLogin(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
 	hash, salt := util.Hash("pword")
 	u := user.NewUser("uname", hash, salt)
-	umap := map[string]interface{}{submission.USER: "uname", user.PWORD: "pword", submission.PROJECT : "project", submission.MODE : submission.FILE_MODE, submission.LANG: "java"}
+	umap := map[string]interface{}{submission.USER: "uname", user.PWORD: "pword", submission.PROJECT: "project", submission.MODE: submission.FILE_MODE, submission.LANG: "java"}
 	err := db.AddUser(u)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
-	go func(){
+	go func() {
 		conn, err := net.Dial("tcp", "localhost:9000")
-		if err != nil{
+		if err != nil {
 			t.Error(err)
 		}
 		defer conn.Close()
-		err =  checkMessage(conn, OK)
-		if err != nil{
+		err = checkMessage(conn, OK)
+		if err != nil {
 			t.Error(err)
 		}
 	}()
@@ -176,33 +172,33 @@ func TestLogin(t *testing.T){
 	if err != nil {
 		t.Error(err)
 	}
-	
+
 }
 
-func TestProcessFile(t *testing.T){
+func TestProcessFile(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
 	fileChan := make(chan *submission.File)
 	subId := bson.NewObjectId()
 	fmap := map[string]interface{}{}
-	go func(){
+	go func() {
 		conn, err := net.Dial("tcp", "localhost:7000")
-		if err != nil{
+		if err != nil {
 			t.Error(err)
 		}
 		defer conn.Close()
-		err =  checkMessage(conn, OK)
-		if err != nil{
+		err = checkMessage(conn, OK)
+		if err != nil {
 			t.Error(err)
 		}
 		conn.Write(fileData)
 		conn.Write(eof)
-		err =  checkMessage(conn, OK)
-		if err != nil{
+		err = checkMessage(conn, OK)
+		if err != nil {
 			t.Error(err)
 		}
-		recv := <- fileChan
-		if !reflect.DeepEqual(fileData, recv.Data){
+		recv := <-fileChan
+		if !reflect.DeepEqual(fileData, recv.Data) {
 			t.Error(fileData, "!=", recv.Data)
 		}
 	}()
@@ -219,11 +215,10 @@ func TestProcessFile(t *testing.T){
 	if err != nil {
 		t.Error(err)
 	}
-	
+
 }
 
-
-func TestConnHandler(t *testing.T){
+func TestConnHandler(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
 	fileChan := make(chan *submission.File)
@@ -231,27 +226,27 @@ func TestConnHandler(t *testing.T){
 	hash, salt := util.Hash("pword")
 	u := user.NewUser("uname", hash, salt)
 	err := db.AddUser(u)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
-	go func(){
+	go func() {
 		conn, err := net.Dial("tcp", "localhost:6000")
-		if err != nil{
+		if err != nil {
 			t.Error(err)
 		}
 		defer conn.Close()
 		err = clientLogin(conn, subChan)
-		if err != nil{
+		if err != nil {
 			t.Error(err)
 		}
-		for i := 0; i < 10; i ++{
+		for i := 0; i < 10; i++ {
 			err = sendFile(conn, fileChan)
-			if err != nil{
+			if err != nil {
 				t.Error(err)
 			}
 		}
 		err = clientLogout(conn)
-		if err != nil{
+		if err != nil {
 			t.Error(err)
 		}
 	}()
@@ -319,4 +314,3 @@ He knew what he had to do
 He was responsible
 In the mirror
 He saw his friend`)
-

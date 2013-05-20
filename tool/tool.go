@@ -6,9 +6,9 @@ import (
 	"labix.org/v2/mgo/bson"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
-	"reflect"
 )
 
 //TargetInfo stores information about the target file.
@@ -48,7 +48,7 @@ func (this *TargetInfo) GetCompiler() bson.M {
 	return bson.M{LANG: this.Lang, NAME: COMPILE}
 }
 
-func (this *TargetInfo) Equals(that *TargetInfo) bool{
+func (this *TargetInfo) Equals(that *TargetInfo) bool {
 	return reflect.DeepEqual(this, that)
 }
 
@@ -134,7 +134,7 @@ func (this *Tool) setFlagArgs(args map[string]string) {
 	}
 }
 
-func (this *Tool) Equals(that *Tool) bool{
+func (this *Tool) Equals(that *Tool) bool {
 	return reflect.DeepEqual(this, that)
 }
 
@@ -152,10 +152,9 @@ type Result struct {
 	Time    int64         "time"
 }
 
-func (this *Result) Equals(that *Result) bool{
+func (this *Result) Equals(that *Result) bool {
 	return reflect.DeepEqual(this, that)
 }
-
 
 //NewResult
 func NewResult(fileId, toolId bson.ObjectId, name, outname, errname string, outdata, errdata []byte, err error) *Result {

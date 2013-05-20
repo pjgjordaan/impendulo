@@ -9,22 +9,22 @@ import (
 )
 
 const (
-	USERS       = "users"
-	SUBMISSIONS = "submissions"
-	FILES       = "files"
-	TOOLS       = "tools"
-	RESULTS     = "results"
-	SET         = "$set"
+	USERS        = "users"
+	SUBMISSIONS  = "submissions"
+	FILES        = "files"
+	TOOLS        = "tools"
+	RESULTS      = "results"
+	SET          = "$set"
 	DEFAULT_CONN = "mongodb://localhost/impendulo"
-	TEST_CONN = "mongodb://localhost/impendulo_test"
-	TEST_DB = "impendulo_test"
+	TEST_CONN    = "mongodb://localhost/impendulo_test"
+	TEST_DB      = "impendulo_test"
 )
 
 var activeSession *mgo.Session
 
 //Setup creates a mongodb session.
 //This must be called before using any other db functions.
-func Setup(conn string){
+func Setup(conn string) {
 	var err error
 	activeSession, err = mgo.Dial(conn)
 	if err != nil {
@@ -34,13 +34,13 @@ func Setup(conn string){
 
 //getSession retrieves the current active session.  
 func getSession() (s *mgo.Session) {
-	if activeSession == nil{
+	if activeSession == nil {
 		panic(fmt.Errorf("Could not retrieve session."))
 	}
 	return activeSession.Clone()
 }
 
-func DeleteDB(db string)error{
+func DeleteDB(db string) error {
 	session := getSession()
 	defer session.Close()
 	return session.DB(db).DropDatabase()
@@ -123,6 +123,19 @@ func GetTools(matcher interface{}) ([]*tool.Tool, error) {
 	return ret, nil
 }
 
+//GetResult retrieves a result matching the given interface from the active database.
+func GetResult(matcher interface{}) (*tool.Result, error) {
+	session := getSession()
+	defer session.Close()
+	c := session.DB("").C(RESULTS)
+	var ret *tool.Result
+	err := c.Find(matcher).One(&ret)
+	if err != nil {
+		return nil, fmt.Errorf("Encountered error %q when retrieving result matching %q from db", err, matcher)
+	}
+	return ret, nil
+}
+
 //AddFile adds a new file to the active database.
 func AddFile(f *submission.File) error {
 	session := getSession()
@@ -183,7 +196,6 @@ func AddUser(u *user.User) error {
 	return nil
 }
 
-
 //AddUsers adds new users to the active database.
 func AddUsers(users ...*user.User) error {
 	session := getSession()
@@ -196,7 +208,6 @@ func AddUsers(users ...*user.User) error {
 	return nil
 }
 
-
 //Update updates documents from the collection col matching the matcher interface to the change interface.
 func Update(col string, matcher, change interface{}) error {
 	session := getSession()
@@ -208,4 +219,3 @@ func Update(col string, matcher, change interface{}) error {
 	}
 	return nil
 }
-

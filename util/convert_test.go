@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"labix.org/v2/mgo/bson"
-	"testing"
 	"reflect"
+	"testing"
 )
 
 var testmap = map[string]interface{}{"string": "2 3", "int": 2, "id": bson.NewObjectId(), "map": bson.M{"a": "b"}, "bytes": []byte("AB"), "strings": []string{"A", "B"}}
