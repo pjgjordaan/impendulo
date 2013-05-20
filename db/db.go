@@ -10,38 +10,42 @@ import (
 )
 
 const (
-	DB          = "impendulo"
 	USERS       = "users"
 	SUBMISSIONS = "submissions"
 	FILES       = "files"
 	TOOLS       = "tools"
-	ADDRESS     = "localhost"
 	RESULTS     = "results"
 	SET         = "$set"
+	DEFAULT_CONN = "mongodb://localhost/impendulo"
+	TEST_CONN = "mongodb://localhost/impendulo_test"
+	TEST_DB = "impendulo_test"
 )
 
 var activeSession *mgo.Session
 
 type SingleGet func(col string, matcher interface{}) (ret bson.M, err error)
 
+func Setup(conn string){
+	var err error
+	activeSession, err = mgo.Dial(conn)
+	if err != nil {
+		panic(err)
+	}
+}
+
 //getSession
 func getSession() (s *mgo.Session) {
-	if activeSession == nil {
-		var err error
-		activeSession, err = mgo.Dial(ADDRESS)
-		if err != nil {
-			panic(err)
-		}
+	if activeSession == nil{
+		panic(fmt.Errorf("Could not retrieve session."))
 	}
-	s = activeSession.Clone()
-	return s
+	return activeSession.Clone()
 }
 
 //RemoveFileById
 func RemoveFileByID(id interface{}) error {
 	session := getSession()
 	defer session.Close()
-	c := session.DB(DB).C(FILES)
+	c := session.DB("").C(FILES)
 	err := c.RemoveId(id)
 	if err != nil {
 		return fmt.Errorf("Encountered error %q when removing file %q from db", err, id)
@@ -53,7 +57,7 @@ func RemoveFileByID(id interface{}) error {
 func GetUserById(id interface{}) (*user.User, error) {
 	session := getSession()
 	defer session.Close()
-	c := session.DB(DB).C(USERS)
+	c := session.DB("").C(USERS)
 	var ret *user.User
 	err := c.FindId(id).One(&ret)
 	if err != nil {
@@ -66,7 +70,7 @@ func GetUserById(id interface{}) (*user.User, error) {
 func GetFile(matcher interface{}) (*submission.File, error) {
 	session := getSession()
 	defer session.Close()
-	c := session.DB(DB).C(FILES)
+	c := session.DB("").C(FILES)
 	var ret *submission.File
 	err := c.Find(matcher).One(&ret)
 	if err != nil {
@@ -79,7 +83,7 @@ func GetFile(matcher interface{}) (*submission.File, error) {
 func GetSubmission(matcher interface{}) (*submission.Submission, error) {
 	session := getSession()
 	defer session.Close()
-	c := session.DB(DB).C(SUBMISSIONS)
+	c := session.DB("").C(SUBMISSIONS)
 	var ret *submission.Submission
 	err := c.Find(matcher).One(&ret)
 	if err != nil {
@@ -92,7 +96,7 @@ func GetSubmission(matcher interface{}) (*submission.Submission, error) {
 func GetTool(matcher interface{}) (*tool.Tool, error) {
 	session := getSession()
 	defer session.Close()
-	c := session.DB(DB).C(TOOLS)
+	c := session.DB("").C(TOOLS)
 	var ret *tool.Tool
 	err := c.Find(matcher).One(&ret)
 	if err != nil {
@@ -105,7 +109,7 @@ func GetTool(matcher interface{}) (*tool.Tool, error) {
 func GetTools(matcher interface{}) ([]*tool.Tool, error) {
 	session := getSession()
 	defer session.Close()
-	tcol := session.DB(DB).C(TOOLS)
+	tcol := session.DB("").C(TOOLS)
 	var ret []*tool.Tool
 	err := tcol.Find(matcher).All(&ret)
 	if err != nil {
@@ -118,7 +122,7 @@ func GetTools(matcher interface{}) ([]*tool.Tool, error) {
 func AddFile(f *submission.File) error {
 	session := getSession()
 	defer session.Close()
-	col := session.DB(DB).C(FILES)
+	col := session.DB("").C(FILES)
 	err := col.Insert(f)
 	if err != nil {
 		return fmt.Errorf("Encountered error %q when adding file %q to db", err, f)
@@ -130,7 +134,7 @@ func AddFile(f *submission.File) error {
 func AddSubmission(s *submission.Submission) error {
 	session := getSession()
 	defer session.Close()
-	col := session.DB(DB).C(SUBMISSIONS)
+	col := session.DB("").C(SUBMISSIONS)
 	err := col.Insert(s)
 	if err != nil {
 		return fmt.Errorf("Encountered error %q when adding submission %q to db", err, s)
@@ -142,7 +146,7 @@ func AddSubmission(s *submission.Submission) error {
 func AddTool(t *tool.Tool) error {
 	session := getSession()
 	defer session.Close()
-	col := session.DB(DB).C(TOOLS)
+	col := session.DB("").C(TOOLS)
 	err := col.Insert(t)
 	if err != nil {
 		return fmt.Errorf("Encountered error %q when adding tool %q to db", err, t)
@@ -154,22 +158,10 @@ func AddTool(t *tool.Tool) error {
 func AddResult(r *tool.Result) error {
 	session := getSession()
 	defer session.Close()
-	col := session.DB(DB).C(RESULTS)
+	col := session.DB("").C(RESULTS)
 	err := col.Insert(r)
 	if err != nil {
 		return fmt.Errorf("Encountered error %q when adding result %q to db", err, r)
-	}
-	return nil
-}
-
-//Update
-func Update(col string, matcher, change interface{}) error {
-	session := getSession()
-	defer session.Close()
-	tcol := session.DB(DB).C(col)
-	err := tcol.Update(matcher, change)
-	if err != nil {
-		return fmt.Errorf("Encountered error %q when updating %q matching %q to %q in db", err, col, matcher, change)
 	}
 	return nil
 }
@@ -178,10 +170,24 @@ func Update(col string, matcher, change interface{}) error {
 func AddUsers(users ...*user.User) error {
 	session := getSession()
 	defer session.Close()
-	c := session.DB(DB).C(USERS)
+	c := session.DB("").C(USERS)
 	err := c.Insert(users)
 	if err != nil {
 		return fmt.Errorf("Encountered error %q when adding users %q to db", err, users)
 	}
 	return nil
 }
+
+
+//Update
+func Update(col string, matcher, change interface{}) error {
+	session := getSession()
+	defer session.Close()
+	tcol := session.DB("").C(col)
+	err := tcol.Update(matcher, change)
+	if err != nil {
+		return fmt.Errorf("Encountered error %q when updating %q matching %q to %q in db", err, col, matcher, change)
+	}
+	return nil
+}
+

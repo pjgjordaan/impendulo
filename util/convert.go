@@ -105,29 +105,3 @@ func toStrings(ivals interface{}) ([]string, error) {
 	}
 	return vals, nil
 }
-
-//MEqual
-func MEqual(m1, m2 bson.M) bool {
-	if len(m1) != len(m2) {
-		return false
-	}
-	for k, v := range m1 {
-		if m2[k] != v {
-			return false
-		}
-	}
-	return true
-}
-
-//StringsEqual 
-func StringsEqual(s1, s2 []string) bool {
-	if len(s1) != len(s2) {
-		return false
-	}
-	for k, v := range s1 {
-		if s2[k] != v {
-			return false
-		}
-	}
-	return true
-}

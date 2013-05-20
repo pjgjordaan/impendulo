@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"reflect"
 )
 
 //TargetInfo stores information about the target file.
@@ -45,6 +46,10 @@ func (ti *TargetInfo) Executable() string {
 //GetCompiler 
 func (this *TargetInfo) GetCompiler() bson.M {
 	return bson.M{LANG: this.Lang, NAME: COMPILE}
+}
+
+func (this *TargetInfo) Equals(that *TargetInfo) bool{
+	return reflect.DeepEqual(this, that)
 }
 
 const (
@@ -129,6 +134,10 @@ func (this *Tool) setFlagArgs(args map[string]string) {
 	}
 }
 
+func (this *Tool) Equals(that *Tool) bool{
+	return reflect.DeepEqual(this, that)
+}
+
 //Result describes a tool or test's results for a given file.
 type Result struct {
 	Id      bson.ObjectId "_id"
@@ -142,6 +151,11 @@ type Result struct {
 	Error   error         "error"
 	Time    int64         "time"
 }
+
+func (this *Result) Equals(that *Result) bool{
+	return reflect.DeepEqual(this, that)
+}
+
 
 //NewResult
 func NewResult(fileId, toolId bson.ObjectId, name, outname, errname string, outdata, errdata []byte, err error) *Result {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"labix.org/v2/mgo/bson"
 	"testing"
+	"reflect"
 )
 
 var testmap = map[string]interface{}{"string": "2 3", "int": 2, "id": bson.NewObjectId(), "map": bson.M{"a": "b"}, "bytes": []byte("AB"), "strings": []string{"A", "B"}}
@@ -57,7 +58,7 @@ func TestGetMap(t *testing.T) {
 		res, err := GetM(testmap, k)
 		if k == this {
 			val := v.(bson.M)
-			if err != nil || !MEqual(res, val) {
+			if err != nil || !reflect.DeepEqual(res, val) {
 				t.Error(err, res, "!=", v)
 			}
 		} else if err == nil {
@@ -87,7 +88,7 @@ func TestGetStrings(t *testing.T) {
 		res, err := GetStrings(testmap, k)
 		if k == this {
 			val, _ := toStrings(v)
-			if err != nil || !StringsEqual(res, val) {
+			if err != nil || !reflect.DeepEqual(res, val) {
 				t.Error(err)
 			}
 		} else if err == nil {

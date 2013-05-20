@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"reflect"
 )
 
 //Submission is used for individual project submissions
@@ -22,6 +23,16 @@ type Submission struct {
 func (s *Submission) IsTest() bool {
 	return s.Mode == TEST_MODE
 }
+
+func (this *Submission) String() string{
+	return "Project: "+this.Project+"; User: "+this.User+"; Time: "+time.Unix(0, this.Time).String()
+
+}
+
+func (this *Submission) Equals(that *Submission) bool{
+	return reflect.DeepEqual(this, that)
+}
+
 
 //NewSubmission
 func NewSubmission(project, user, mode, lang string) *Submission {
@@ -54,6 +65,10 @@ func (f *File) Type() string {
 func (f *File) InfoStr(key string) (val string) {
 	val, _ = f.Info[key].(string)
 	return val
+}
+
+func (this *File) Equals(that *File) bool{
+	return reflect.DeepEqual(this, that)
 }
 
 //ParseName retrieves file metadata encoded in a file name.

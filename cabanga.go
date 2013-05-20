@@ -42,14 +42,16 @@ func AddUsers(fname string) error {
 	if err != nil {
 		return err
 	}
+	db.Setup(db.DEFAULT_CONN)
 	return db.AddUsers(users...)
 }
 
 //RunServer starts an instance of our tcp snapshot server on the given port.
 //A seperate routine is launched which processes the snapshots.
 func RunServer(port string) {
-	runtime.GOMAXPROCS(runtime.NumCPU())
 	util.Log("Starting server on port ", port)
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	db.Setup(db.DEFAULT_CONN)
 	fileChan := make(chan *submission.File)
 	subChan := make(chan *submission.Submission)
 	go processing.Serve(subChan, fileChan)

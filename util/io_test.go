@@ -76,7 +76,7 @@ func TestMerge(t *testing.T) {
 func TestReadBytes(t *testing.T) {
 	orig := []byte("bytes")
 	buff := bytes.NewBuffer(orig)
-	ret := readBytes(buff)
+	ret := ReadBytes(buff)
 	if !bytes.Equal(orig, ret) {
 		t.Error(errors.New("Bytes not equal"))
 	}
