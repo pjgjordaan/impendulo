@@ -31,22 +31,22 @@ func Run(port string, subChan chan *submission.Submission, fileChan chan *submis
 		if err != nil {
 			util.Log(fmt.Errorf("Encountered error %q when accepting connection", err))
 		} else {
-			go connHandler(conn, subChan, fileChan)
+			go ConnHandler(conn, subChan, fileChan)
 		}
 	}
 }
 
-//connHandler manages an incoming connection request.
+//ConnHandler manages an incoming connection request.
 //It authenticates the request and processes files sent on the connection.
-func connHandler(conn net.Conn, subChan chan *submission.Submission, fileChan chan *submission.File) {
+func ConnHandler(conn net.Conn, subChan chan *submission.Submission, fileChan chan *submission.File) {
 	jobj, err := util.ReadJSON(conn)
 	if err != nil {
-		endSession(conn, err)
+		EndSession(conn, err)
 		return
 	}
-	sub, err := login(jobj, conn)
+	sub, err := Login(jobj, conn)
 	if err != nil {
-		endSession(conn, err)
+		EndSession(conn, err)
 		return
 	}
 	subChan <- sub
@@ -56,18 +56,18 @@ func connHandler(conn net.Conn, subChan chan *submission.Submission, fileChan ch
 		jobj, err = util.ReadJSON(conn)
 		if err != nil {
 			util.Log(err)
-			endSession(conn, err)
+			EndSession(conn, err)
 			return
 		}
 		req, err := util.GetString(jobj, REQ)
 		if err != nil {
 			util.Log(err)
-			endSession(conn, err)
+			EndSession(conn, err)
 			return
 		}
 		if req == SEND {
 			delete(jobj, REQ)
-			err = processFile(sub.Id, jobj, conn, fileChan)
+			err = ProcessFile(sub.Id, jobj, conn, fileChan)
 		} else if req == LOGOUT {
 			receiving = false
 			util.Log("Completed submission: ", sub)
@@ -75,12 +75,12 @@ func connHandler(conn net.Conn, subChan chan *submission.Submission, fileChan ch
 			err = fmt.Errorf("Unknown request %q", req)
 		}
 	}
-	endSession(conn, err)
+	EndSession(conn, err)
 }
 
 //processFile reads file data from connection and stores it in the db.
 //The file data is then sent on fileChan for further processing.
-func processFile(subId bson.ObjectId, finfo map[string]interface{}, conn net.Conn, fileChan chan *submission.File) error {
+func ProcessFile(subId bson.ObjectId, finfo map[string]interface{}, conn net.Conn, fileChan chan *submission.File) error {
 	conn.Write([]byte(OK))
 	buffer, err := util.ReadData(conn)
 	if err != nil {
@@ -96,9 +96,9 @@ func processFile(subId bson.ObjectId, finfo map[string]interface{}, conn net.Con
 	return nil
 }
 
-//login creates a new submission if the login request is valid.
-func login(jobj map[string]interface{}, conn net.Conn) (*submission.Submission, error) {
-	sub, err := createSubmission(jobj)
+//Login creates a new submission if the login request is valid.
+func Login(jobj map[string]interface{}, conn net.Conn) (*submission.Submission, error) {
+	sub, err := CreateSubmission(jobj)
 	if err != nil {
 		return nil, err
 	}
@@ -110,8 +110,8 @@ func login(jobj map[string]interface{}, conn net.Conn) (*submission.Submission, 
 	return sub, nil
 }
 
-//endSession ends a session and reports any errors to the client. 
-func endSession(conn net.Conn, err error) {
+//EndSession ends a session and reports any errors to the client. 
+func EndSession(conn net.Conn, err error) {
 	var msg string
 	if err != nil {
 		msg = "ERROR: " + err.Error()
@@ -123,9 +123,9 @@ func endSession(conn net.Conn, err error) {
 	conn.Close()
 }
 
-//createSubmission validates a login request. 
+//CreateSubmission validates a login request. 
 //It reads submission values from a json object and checks privilege level and password. 
-func createSubmission(jobj map[string]interface{}) (*submission.Submission, error) {
+func CreateSubmission(jobj map[string]interface{}) (*submission.Submission, error) {
 	username, err := util.GetString(jobj, submission.USER)
 	if err != nil {
 		return nil, err

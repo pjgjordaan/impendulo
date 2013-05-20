@@ -40,6 +40,12 @@ func getSession() (s *mgo.Session) {
 	return activeSession.Clone()
 }
 
+func DeleteDB(db string)error{
+	session := getSession()
+	defer session.Close()
+	return session.DB(db).DropDatabase()
+}
+
 //RemoveFileById removes a file matching the given id from the active database.
 func RemoveFileByID(id interface{}) error {
 	session := getSession()
@@ -164,6 +170,19 @@ func AddResult(r *tool.Result) error {
 	}
 	return nil
 }
+
+//AddUser adds a new user to the active database.
+func AddUser(u *user.User) error {
+	session := getSession()
+	defer session.Close()
+	c := session.DB("").C(USERS)
+	err := c.Insert(u)
+	if err != nil {
+		return fmt.Errorf("Encountered error %q when adding user %q to db", err, u)
+	}
+	return nil
+}
+
 
 //AddUsers adds new users to the active database.
 func AddUsers(users ...*user.User) error {
