@@ -32,8 +32,8 @@ func Setup(conn string){
 	}
 }
 
-//GetSession retrieves the current active session.  
-func GetSession() (s *mgo.Session) {
+//getSession retrieves the current active session.  
+func getSession() (s *mgo.Session) {
 	if activeSession == nil{
 		panic(fmt.Errorf("Could not retrieve session."))
 	}
