@@ -19,7 +19,7 @@ const (
 )
 
 //Run listens for new connections and creates a new goroutine for each connection.
-func Run(port string, subChan chan *submission.Submission, fileChan chan *submission.File) {
+func RunFileReceiver(port string, subChan chan *submission.Submission, fileChan chan *submission.File) {
 	netListen, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		util.Log(fmt.Errorf("Encountered error %q when listening on port %q", err, port))
@@ -34,6 +34,64 @@ func Run(port string, subChan chan *submission.Submission, fileChan chan *submis
 			go ConnHandler(conn, subChan, fileChan)
 		}
 	}
+}
+
+func RunTestReceiver(port string){
+	netListen, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		util.Log(fmt.Errorf("Encountered error %q when listening on port %q", err, port))
+		return
+	}
+	defer netListen.Close()
+	for {
+		conn, err := netListen.Accept()
+		if err != nil {
+			util.Log(fmt.Errorf("Encountered error %q when accepting connection", err))
+		} else {
+			go ReceiveTests(conn)
+		}
+	}
+}
+
+//ConnHandler manages an incoming connection request.
+//It authenticates the request and processes files sent on the connection.
+func ReceiveTests(conn net.Conn) {
+	testInfo, err := util.ReadJSON(conn)
+	if err != nil {
+		EndSession(conn, err)
+		return
+	}
+	project, err := util.GetString(testInfo, submission.PROJECT)
+	if err != nil {
+		EndSession(conn, err)
+		return
+	}
+	lang, err := util.GetString(testInfo, submission.LANG)
+	if err != nil {
+		EndSession(conn, err)
+		return
+	}
+	names, err := util.GetStrings(testInfo, submission.NAMES)
+	if err != nil {
+		EndSession(conn, err)
+		return
+	}
+	conn.Write([]byte(OK))
+	testFiles, err := util.ReadData(conn)
+	if err != nil {
+		EndSession(conn, err)
+		return 
+	}
+	conn.Write([]byte(OK))
+	dataFiles, err := util.ReadData(conn)
+	if err != nil {
+		EndSession(conn, err)
+		return 
+	}
+	conn.Write([]byte(OK))
+	test := submission.NewTest(project, lang, names, testFiles, dataFiles)
+	err = db.AddTest(test)
+	EndSession(conn, err)
 }
 
 //ConnHandler manages an incoming connection request.
@@ -55,13 +113,11 @@ func ConnHandler(conn net.Conn, subChan chan *submission.Submission, fileChan ch
 	for receiving && err == nil {
 		jobj, err = util.ReadJSON(conn)
 		if err != nil {
-			util.Log(err)
 			EndSession(conn, err)
 			return
 		}
 		req, err := util.GetString(jobj, REQ)
 		if err != nil {
-			util.Log(err)
 			EndSession(conn, err)
 			return
 		}
@@ -70,7 +126,6 @@ func ConnHandler(conn net.Conn, subChan chan *submission.Submission, fileChan ch
 			err = ProcessFile(sub.Id, jobj, conn, fileChan)
 		} else if req == LOGOUT {
 			receiving = false
-			util.Log("Completed submission: ", sub)
 		} else {
 			err = fmt.Errorf("Unknown request %q", req)
 		}

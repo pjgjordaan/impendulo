@@ -1,15 +1,43 @@
 package tool
-
-import (
-	"bytes"
-	"fmt"
+import(
 	"labix.org/v2/mgo/bson"
-	"os/exec"
-	"path/filepath"
-	"reflect"
-	"strings"
-	"time"
+"reflect"
+"time"
+"strings"
+"path/filepath"
+"os/exec"
+"fmt"
+"bytes"
 )
+
+//Result describes a tool or test's results for a given file.
+type Result struct {
+	Id      bson.ObjectId "_id"
+	FileId  bson.ObjectId "fileid"
+	ToolId  bson.ObjectId "toolId"
+	Name    string        "name"
+	OutName string        "outname"
+	ErrName string        "errname"
+	OutData []byte        "outdata"
+	ErrData []byte        "errdata"
+	Error   error         "error"
+	Time    int64         "time"
+}
+
+func (this *Result) Equals(that *Result) bool {
+	return reflect.DeepEqual(this, that)
+}
+
+//NewResult
+func ToolResult(fileId bson.ObjectId, tool *Tool, outdata, errdata []byte, err error) *Result {
+	return &Result{bson.NewObjectId(), fileId, tool.Id, tool.Name, tool.OutName, tool.ErrName, outdata, errdata, err, time.Now().UnixNano()}
+}
+
+
+//NewResult
+func NewResult(fileId, toolId bson.ObjectId, name, outname, errname string, outdata, errdata []byte, err error) *Result {
+	return &Result{bson.NewObjectId(), fileId, toolId, name, outname, errname, outdata, errdata, err, time.Now().UnixNano()}
+}
 
 //TargetInfo stores information about the target file.
 type TargetInfo struct {
@@ -43,11 +71,6 @@ func (ti *TargetInfo) Executable() string {
 	return ti.Package + "." + ti.Name
 }
 
-//GetCompiler 
-func (this *TargetInfo) GetCompiler() bson.M {
-	return bson.M{LANG: this.Lang, NAME: COMPILE}
-}
-
 func (this *TargetInfo) Equals(that *TargetInfo) bool {
 	return reflect.DeepEqual(this, that)
 }
@@ -78,21 +101,16 @@ func NewTarget(project, name, lang, pkg, dir string) *TargetInfo {
 }
 
 //Tool is a generic tool specification.
-type Tool struct {
+type Tool struct{
 	Id   bson.ObjectId "_id"
 	Name string        "name"
 	Lang string        "lang"
-	//Tool executable, e.g. findbugs.jar
 	Exec    string "exec"
 	OutName string "out"
 	ErrName string "err"
-	//Arguments which occur prior to tool executable, e.g. java -jar
 	Preamble []string "pre"
-	//Flags which occur after executable, e.g. -v 
 	Flags []string "flags"
-	//Flags which occur after executable which require arguments, e.g. -cp src
 	ArgFlags bson.M "argflags"
-	//Tool target type, used to get the actual target. e.g. FILE_PATH
 	Target int "target"
 }
 
@@ -120,11 +138,12 @@ func (this *Tool) GetArgs(target string) (args []string) {
 	return args
 }
 
-//setFlagArgs
-func (this *Tool) setFlagArgs(args map[string]string) {
-	for k, arg := range args {
-		if _, ok := this.ArgFlags[k]; ok {
-			this.ArgFlags[k] = arg
+func (this *Tool) setArgFlags(args map[string]string) {
+	if args != nil{
+		for k, arg := range args {
+			if _, ok := this.ArgFlags[k]; ok {
+				this.ArgFlags[k] = arg
+			}
 		}
 	}
 	for flag, val := range this.ArgFlags {
@@ -138,28 +157,17 @@ func (this *Tool) Equals(that *Tool) bool {
 	return reflect.DeepEqual(this, that)
 }
 
-//Result describes a tool or test's results for a given file.
-type Result struct {
-	Id      bson.ObjectId "_id"
-	FileId  bson.ObjectId "fileid"
-	ToolId  bson.ObjectId "toolId"
-	Name    string        "name"
-	OutName string        "outname"
-	ErrName string        "errname"
-	OutData []byte        "outdata"
-	ErrData []byte        "errdata"
-	Error   error         "error"
-	Time    int64         "time"
+func (this *Tool) Run(fileId bson.ObjectId, ti *TargetInfo, fArgs map[string]string)(*Result, error){
+	this.setArgFlags(fArgs)
+	target := ti.GetTarget(this.Target)
+	args := this.GetArgs(target)
+	stderr, stdout, ok, err := RunCommand(args...)
+	if !ok {
+		return nil, err
+	}
+	return ToolResult(fileId, this, stdout, stderr, err), nil
 }
 
-func (this *Result) Equals(that *Result) bool {
-	return reflect.DeepEqual(this, that)
-}
-
-//NewResult
-func NewResult(fileId, toolId bson.ObjectId, name, outname, errname string, outdata, errdata []byte, err error) *Result {
-	return &Result{bson.NewObjectId(), fileId, toolId, name, outname, errname, outdata, errdata, err, time.Now().UnixNano()}
-}
 
 //RunCommand executes a given external command.
 func RunCommand(args ...string) ([]byte, []byte, bool, error) {
@@ -174,52 +182,3 @@ func RunCommand(args ...string) ([]byte, []byte, bool, error) {
 	return stdout.Bytes(), stderr.Bytes(), true, err
 }
 
-//RunTool runs a tool and records its results in the db.
-func RunTool(fileId bson.ObjectId, ti *TargetInfo, tool *Tool, fArgs map[string]string) (*Result, error) {
-	tool.setFlagArgs(fArgs)
-	args := tool.GetArgs(ti.GetTarget(tool.Target))
-	stderr, stdout, ok, err := RunCommand(args...)
-	if !ok {
-		return nil, err
-	}
-	res := NewResult(fileId, tool.Id, tool.Name, tool.OutName, tool.ErrName, stdout, stderr, err)
-	return res, nil
-}
-
-//CompileTest compiles a java test suite against a given java source file.
-func CompileTest(fileId bson.ObjectId, ti *TargetInfo, testName, testDir string) (*Result, error) {
-	test := &TargetInfo{ti.Project, testName, JAVA, TESTS_PKG, JAVA, testDir}
-	cp := ti.Dir + ":" + testDir
-	stderr, stdout, ok, err := RunCommand(JAVAC, CP, cp, "-d", ti.Dir, "-s", ti.Dir, "-implicit:class", test.FilePath())
-	if !ok {
-		return nil, err
-	}
-	res := NewResult(fileId, fileId, test.Name+"_"+COMPILE, WARNS, ERRS, stdout, stderr, err)
-	return res, nil
-}
-
-//RunTest runs a java test suite on a java class file. 
-func RunTest(fileId bson.ObjectId, ti *TargetInfo, testName, testDir string) (*Result, error) {
-	test := &TargetInfo{ti.Project, testName, JAVA, TESTS_PKG, JAVA, testDir}
-	cp := ti.Dir + ":" + testDir
-	stderr, stdout, ok, err := RunCommand(JAVA, CP, cp+":"+testDir, JUNIT, test.Executable())
-	if !ok {
-		return nil, err
-	}
-	res := NewResult(fileId, fileId, test.Name+"_"+RUN, WARNS, ERRS, stdout, stderr, err)
-	return res, nil
-}
-
-const (
-	CP        = "-cp"
-	COMPILE   = "compile"
-	RUN       = "run"
-	NAME      = "name"
-	LANG      = "lang"
-	JUNIT     = "org.junit.runner.JUnitCore"
-	JAVA      = "java"
-	WARNS     = "warnings"
-	ERRS      = "errors"
-	TESTS_PKG = "testing"
-	JAVAC     = "javac"
-)

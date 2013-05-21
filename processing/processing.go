@@ -3,73 +3,20 @@ package processing
 import (
 	"fmt"
 	"github.com/godfried/cabanga/db"
-	"github.com/godfried/cabanga/submission"
 	"github.com/godfried/cabanga/tool"
+	"github.com/godfried/cabanga/submission"
 	"github.com/godfried/cabanga/util"
 	"labix.org/v2/mgo/bson"
 	"os"
 	"os/signal"
 	"path/filepath"
-	"sync"
 )
 
 const (
 	INCOMPLETE = "incomplete.gob"
-	TESTS      = "tests"
 	SRC        = "src"
 )
 
-//testBuilder is used to setup a project's tests.
-type testBuilder struct {
-	tests   map[string]bool
-	m       *sync.Mutex
-	testDir string
-}
-
-//newTestBuilder
-func newTestBuilder() *testBuilder {
-	dir := filepath.Join(os.TempDir(), TESTS)
-	return &testBuilder{make(map[string]bool), new(sync.Mutex), dir}
-}
-
-//setup extracts a project's tests from db to filesystem for execution.
-//It returns true if this was successful.
-func (this *testBuilder) setup(project string) bool {
-	this.m.Lock()
-	defer this.m.Unlock()
-	if this.tests[project] {
-		return true
-	}
-	tests, ok := getTests(project)
-	if !ok {
-		return false
-	}
-	err := util.Unzip(filepath.Join(this.testDir, project), tests.Data)
-	if err != nil {
-		util.Log(err)
-		return false
-	}
-	this.tests[project] = true
-	return true
-}
-
-//getTests retrieves project tests from database.
-//It returns true if this was successful.
-func getTests(project string) (*submission.File, bool) {
-	smatcher := bson.M{submission.PROJECT: project, submission.MODE: submission.TEST_MODE}
-	s, err := db.GetSubmission(smatcher)
-	if err != nil {
-		util.Log("Error retrieving test submission:", err)
-		return nil, false
-	}
-	fmatcher := bson.M{submission.SUBID: s.Id}
-	f, err := db.GetFile(fmatcher)
-	if err != nil {
-		util.Log(err)
-		return nil, false
-	}
-	return f, true
-}
 
 //Serve spawns new processing routines for each new submission received on subChan.
 //New files are received on fileChan and then sent to the relevant submission process.
@@ -79,11 +26,12 @@ func Serve(subChan chan *submission.Submission, fileChan chan *submission.File) 
 	busy := make(chan bson.ObjectId)
 	done := make(chan bson.ObjectId)
 	go statusListener(busy, done)
-	builder := newTestBuilder()
-	go func() {
+	go func(){
 		stored := getStored()
-		for subId, _ := range stored {
-			processStored(subId, busy, done, builder)
+		for subId, busy :=  range stored{
+			if busy{
+				go processStored(subId, subChan, fileChan)
+			}
 		}
 	}()
 	subs := make(map[bson.ObjectId]chan *submission.File)
@@ -91,7 +39,7 @@ func Serve(subChan chan *submission.Submission, fileChan chan *submission.File) 
 		select {
 		case sub := <-subChan:
 			subs[sub.Id] = make(chan *submission.File)
-			go processNew(sub, subs[sub.Id], busy, done, builder)
+			go processSubmission(sub, subs[sub.Id], busy, done)
 		case file := <-fileChan:
 			if ch, ok := subs[file.SubId]; ok {
 				ch <- file
@@ -135,7 +83,6 @@ func statusListener(busy, done chan bson.ObjectId) {
 			delete(active, id)
 		case <-quit:
 			saveActive(active)
-			os.RemoveAll(filepath.Join(os.TempDir(), TESTS))
 			os.Exit(0)
 		}
 	}
@@ -143,40 +90,35 @@ func statusListener(busy, done chan bson.ObjectId) {
 
 //processStored processes an incompletely processed submission. 
 //It retrieves all files in the submission from the db and processes them. 
-func processStored(subId bson.ObjectId, busy, done chan bson.ObjectId, builder *testBuilder) {
-	busy <- subId
-	defer os.RemoveAll(filepath.Join(os.TempDir(), subId.Hex()))
+func processStored(subId bson.ObjectId, subChan chan *submission.Submission, fileChan chan *submission.File) {
 	sub, err := db.GetSubmission(bson.M{submission.SUBID: subId})
 	if err != nil {
 		util.Log(err)
 		return
 	}
+	subChan <- sub
 	count := 0
-	hasTests := builder.setup(sub.Project)
-	for {
+	for{
 		matcher := bson.M{submission.SUBID: subId, submission.NUM: count}
 		file, err := db.GetFile(matcher)
 		if err != nil {
 			util.Log(err)
 			return
 		}
-		err = processFile(file, hasTests)
-		if err != nil {
-			util.Log(err)
-			return
-		}
-	}
-	done <- subId
+		fileChan <- file
+		count ++
+	}				
 }
 
 //processNew processes a new submission.
 //It listens for incoming files on fileChan and processes them.
-func processNew(sub *submission.Submission, fileChan chan *submission.File, busy, done chan bson.ObjectId, builder *testBuilder) {
+func processSubmission(sub *submission.Submission, fileChan chan *submission.File, busy, done chan bson.ObjectId) {
 	busy <- sub.Id
-	defer os.RemoveAll(filepath.Join(os.TempDir(), sub.Id.Hex()))
-	hasTests := builder.setup(sub.Project)
+	dir := filepath.Join(os.TempDir(), sub.Id.Hex(), SRC)
+	defer os.RemoveAll(dir)
+	test := SetupTests(sub.Project, sub.Lang,  dir)
 	for file := range fileChan {
-		err := processFile(file, hasTests)
+		err := processFile(file, dir, test)
 		if err != nil {
 			util.Log(err)
 			return
@@ -185,34 +127,28 @@ func processNew(sub *submission.Submission, fileChan chan *submission.File, busy
 	done <- sub.Id
 }
 
+
 //processFile processes a file according to its type. 
 //If an error occurs, it is returned.
-func processFile(f *submission.File, hasTests bool) error {
-	util.Log("Processing file: ", f.Id)
+func processFile(f *submission.File, dir string, test *TestRunner) error {
 	t := f.Type()
 	if t == submission.ARCHIVE {
-		err := processArchive(f, hasTests)
+		err := processArchive(f, dir, test)
 		if err != nil {
 			return err
 		}
 		db.RemoveFileByID(f.Id)
-	} else if t == submission.SRC {
-		err := evaluate(f, compile, hasTests)
-		if err != nil {
-			return err
-		}
-	} else if t == submission.EXEC {
-		err := evaluate(f, alreadyCompiled, hasTests)
+	} else if t == submission.SRC || t == submission.EXEC {
+		err := evaluate(f, dir, test, t == submission.SRC)
 		if err != nil {
 			return err
 		}
 	}
-	util.Log("Processed file: ", f.Id)
 	return nil
 }
 
 //processArchive extracts files from an archive and processes them.
-func processArchive(archive *submission.File, hasTests bool) error {
+func processArchive(archive *submission.File, dir string, test *TestRunner) error {
 	files, err := util.UnzipToMap(archive.Data)
 	if err != nil {
 		return err
@@ -231,7 +167,7 @@ func processArchive(archive *submission.File, hasTests bool) error {
 				return err
 			}
 		}
-		err = processFile(f, hasTests)
+		err = processFile(f, dir, test)
 		if err != nil {
 			return err
 		}
@@ -240,47 +176,43 @@ func processArchive(archive *submission.File, hasTests bool) error {
 }
 
 //evaluate evaluates a source or compiled file by attempting to run tests and tools on it.
-func evaluate(orig *submission.File, comp compFunc, hasTests bool) error {
-	ti, err := extractFile(orig)
+func evaluate(f *submission.File, dir string, test *TestRunner, isSource bool) error {
+	target, err := extractFile(f, dir)
 	if err != nil {
 		return err
 	}
-	compiled, err := comp(orig.Id, ti)
+	compiled, err := Compile(f.Id, target, isSource)
 	if err != nil {
 		return err
 	}
 	if !compiled {
 		return nil
 	}
-	f, err := db.GetFile(bson.M{submission.ID: orig.Id})
+	f, err = db.GetFile(bson.M{submission.ID: f.Id})
 	if err != nil {
 		return err
 	}
-	util.Log("Evaluating: ", f.Id, f.Info)
-	if hasTests {
-		err = runTests(f, ti)
+	if test != nil {
+		err = test.Execute(f, target)
 		if err != nil {
 			return err
 		}
-		util.Log("Tested: ", f.Id)
 	}
-	err = runTools(f, ti)
+	err = runTools(f, target)
 	if err != nil {
 		return err
 	}
-	util.Log("Ran tools: ", f.Id)
 	return nil
 }
 
 //extractFile saves a file to filesystem.
 //It returns file info used by tools & tests.
-func extractFile(f *submission.File) (*tool.TargetInfo, error) {
+func extractFile(f *submission.File, dir string) (*tool.TargetInfo, error) {
 	matcher := bson.M{submission.ID: f.SubId}
 	s, err := db.GetSubmission(matcher)
 	if err != nil {
 		return nil, err
 	}
-	dir := filepath.Join(os.TempDir(), f.SubId.Hex())
 	ti := tool.NewTarget(s.Project, f.InfoStr(submission.NAME), s.Lang, f.InfoStr(submission.PKG), dir)
 	err = util.SaveFile(filepath.Join(dir, ti.Package), ti.FullName(), f.Data)
 	if err != nil {
@@ -289,112 +221,36 @@ func extractFile(f *submission.File) (*tool.TargetInfo, error) {
 	return ti, nil
 }
 
-type compFunc func(fileId bson.ObjectId, ti *tool.TargetInfo) (bool, error)
 
 //compile compiles a java source file and writes the results thereof to the database.
 //It returns true if compiled successfully.
-func compile(fileId bson.ObjectId, ti *tool.TargetInfo) (bool, error) {
-	comp, err := db.GetTool(ti.GetCompiler())
+func Compile(fileId bson.ObjectId, ti *tool.TargetInfo, isSource bool) (bool, error) {
+	matcher := bson.M{submission.LANG: submission.LANG, submission.NAME: "compile"}
+	compiler, err := db.GetTool(matcher)
 	if err != nil {
 		return false, err
 	}
-	res, err := tool.RunTool(fileId, ti, comp, map[string]string{tool.CP: ti.Dir})
-	if err != nil {
-		return false, err
-	}
-	err = AddResult(res)
-	if err != nil {
-		return false, err
-	}
-	return res.Error == nil, nil
-}
-
-//alreadyCompiled stores compilation info for compiled files in the db.
-func alreadyCompiled(fileId bson.ObjectId, ti *tool.TargetInfo) (bool, error) {
-	comp, err := db.GetTool(ti.GetCompiler())
-	if err != nil {
-		return false, err
-	}
-	res := tool.NewResult(fileId, comp.Id, comp.Name, comp.OutName, comp.ErrName, []byte(""), []byte(""), nil)
-	err = AddResult(res)
-	if err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
-//runTests sets up and runs tests on executable file. 
-//If an error is encountered, iteration stops and the error is returned.
-func runTests(f *submission.File, ti *tool.TargetInfo) error {
-	tests := []string{"EasyTests", "AllTests"}
-	for _, test := range tests {
-		dir := filepath.Join(os.TempDir(), TESTS, ti.Project, SRC)
-		compiled, err := compileTest(f, ti, test, dir)
+	var res *tool.Result
+	if isSource{
+		res, err := compiler.Run(fileId, ti, map[string]string{"-cp": ti.Dir}) 
 		if err != nil {
-			return err
-		}
-		if !compiled {
-			continue
-		}
-		err = runTest(f, ti, test, dir)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-//compileTest
-func compileTest(f *submission.File, ti *tool.TargetInfo, test, dir string) (bool, error) {
-	if _, ok := f.Results[test+"_"+tool.COMPILE]; ok {
-		return true, nil
-	}
-	//Run if not run previously
-	res, err := tool.CompileTest(f.Id, ti, test, dir)
-	if err != nil {
-		return false, err
-	}
-	err = AddResult(res)
-	if err != nil {
-		return false, err
-	}
-	return res.Error == nil, nil
-}
-
-//runTest
-func runTest(f *submission.File, ti *tool.TargetInfo, test, dir string) error {
-	if _, ok := f.Results[test+"_"+tool.RUN]; ok {
-		return nil
-	}
-	//Run if not run previously
-	res, err := tool.RunTest(f.Id, ti, test, dir)
-	if err != nil {
-		return err
-	}
-	return AddResult(res)
-}
-
-//runTools runs all available tools on a file, skipping previously run tools.
-func runTools(f *submission.File, ti *tool.TargetInfo) error {
-	all, err := db.GetTools(bson.M{tool.LANG: ti.Lang})
-	if err != nil {
-		return err
-	}
-	for _, t := range all {
-		if _, ok := f.Results[t.Name]; ok {
-			continue
-		}
-		res, err := tool.RunTool(f.Id, ti, t, map[string]string{})
-		if err != nil {
-			return err
+			return false, err
 		}
 		err = AddResult(res)
 		if err != nil {
-			return err
+			return false, err
 		}
+	}else{
+		res = tool.ToolResult(fileId, compiler, []byte(""), []byte(""), nil)
+	} 
+	err = AddResult(res)
+	if err != nil {
+		return false, err
 	}
-	return nil
+	return res.Error == nil, nil
 }
+
+
 
 //AddResult adds a tool result to the db.
 //It updates the associated file's list of results to point to this new result.
@@ -407,6 +263,115 @@ func AddResult(res *tool.Result) error {
 	}
 	return db.AddResult(res)
 }
+
+
+
+//setup extracts a project's tests from db to filesystem for execution.
+//It returns true if this was successful.
+func SetupTests(project, lang, dir string) *TestRunner {
+	testMatcher := bson.M{submission.PROJECT: project, submission.LANG: lang}
+	test, err := db.GetTest(testMatcher)
+	if err != nil {
+		util.Log(err)
+		return nil
+	}
+	err = util.Unzip(dir, test.Tests)
+	if err != nil {
+		util.Log(err)
+		return nil
+	}
+	err = util.Unzip(dir, test.Data)
+	if err != nil {
+		util.Log(err)
+		return nil
+	}
+	return &TestRunner{test.Project, test.Names, test.Lang, dir}
+}
+
+
+//TestInfo stores information about test files.
+type TestRunner struct {
+	Project string
+	//File name without extension
+	Names []string
+	//Language file is written in
+	Lang    string
+	Dir     string
+}
+
+//runTests sets up and runs tests on executable file. 
+//If an error is encountered, iteration stops and the error is returned.
+func (this *TestRunner)  Execute(f *submission.File, target *tool.TargetInfo) error {
+	for _, name := range this.Names {
+		compiled, err := this.Compile(name, f, target)
+		if err != nil {
+			return err
+		}
+		if !compiled {
+			continue
+		}
+		err = this.Run(name, f, target)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+//compileTest
+func (this *TestRunner) Compile(testName string, f *submission.File, target *tool.TargetInfo) (bool, error) {
+	if _, ok := f.Results[testName+"_compile"]; ok {
+		return true, nil
+	}
+	stderr, stdout, ok, err := tool.RunCommand("javac", "-cp", this.Dir, "-implicit:class", filepath.Join(this.Dir,"testing",testName))
+	if !ok{
+		return false, err
+	}
+	res := tool.NewResult(f.Id, f.Id, testName+"_compile", "warnings", "errors", stdout, stderr, err)
+	err = AddResult(res)
+	if err != nil {
+		return false, err
+	}
+	return res.Error == nil, nil
+}
+
+//runTest
+func (this *TestRunner) Run(testName string, f *submission.File, target *tool.TargetInfo) error {
+	if _, ok := f.Results[testName+"_run"]; ok {
+		return nil
+	}
+	env := "-Ddata.location="+this.Dir
+	stderr, stdout, ok, err := tool.RunCommand("java", "-cp", this.Dir, env, "org.junit.runner.JUnitCore", "testing."+testName)
+	if !ok {
+		return err
+	}
+	res := tool.NewResult(f.Id, f.Id, testName+"_run", "warnings", "errors", stdout, stderr, err)
+	return AddResult(res)
+}
+
+//runTools runs all available tools on a file, skipping previously run tools.
+func runTools(f *submission.File, ti *tool.TargetInfo) error {
+	all, err := db.GetTools(bson.M{submission.LANG: ti.Lang})
+	if err != nil {
+		return err
+	}
+	for _, t := range all {
+		if _, ok := f.Results[t.Name]; ok {
+			continue
+		}
+		res, err := t.Run(f.Id, ti, nil)
+		if err != nil {
+			return err
+		}
+		err = AddResult(res)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+
 
 /*
 //init sets up tool configuration for testing

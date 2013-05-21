@@ -123,6 +123,23 @@ func isOutFolder(arg string) bool {
 	return arg == SRC_DIR || arg == BIN_DIR
 }
 
+//File stores a single file's data from a submission. 
+type Test struct {
+	Id      bson.ObjectId "_id"
+	Project string "project"
+	Lang string "lang"
+	Names []string "names"
+	Tests    []byte        "tests"
+	Data  []byte  "data"
+}
+
+//NewFile
+func NewTest(project, lang string, names []string, tests, data []byte) *Test {
+	id := bson.NewObjectId()
+	return &Test{id, project, lang, names, tests, data}
+}
+
+
 //Constants used client and server-side to for submission data.
 const (
 	ID           = "_id"
@@ -153,4 +170,6 @@ const (
 	JCOMP        = ".class"
 	BIN_DIR      = "bin"
 	SRC_DIR      = "src"
+	TESTS = "tests"
+	NAMES = "names"
 )
