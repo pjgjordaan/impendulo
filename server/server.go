@@ -48,6 +48,7 @@ func RunTestReceiver(port string){
 		if err != nil {
 			util.Log(fmt.Errorf("Encountered error %q when accepting connection", err))
 		} else {
+			fmt.Println("received connection")
 			go ReceiveTests(conn)
 		}
 	}
@@ -57,6 +58,7 @@ func RunTestReceiver(port string){
 //It authenticates the request and processes files sent on the connection.
 func ReceiveTests(conn net.Conn) {
 	testInfo, err := util.ReadJSON(conn)
+	fmt.Println("received info", testInfo)
 	if err != nil {
 		EndSession(conn, err)
 		return
@@ -82,12 +84,14 @@ func ReceiveTests(conn net.Conn) {
 		EndSession(conn, err)
 		return 
 	}
+	fmt.Println("received tests", testFiles)
 	conn.Write([]byte(OK))
 	dataFiles, err := util.ReadData(conn)
 	if err != nil {
 		EndSession(conn, err)
 		return 
 	}
+	fmt.Println("received tests", dataFiles)
 	conn.Write([]byte(OK))
 	test := submission.NewTest(project, lang, names, testFiles, dataFiles)
 	err = db.AddTest(test)

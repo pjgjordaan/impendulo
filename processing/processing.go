@@ -25,12 +25,12 @@ func Serve(subChan chan *submission.Submission, fileChan chan *submission.File) 
 	// Start handlers
 	busy := make(chan bson.ObjectId)
 	done := make(chan bson.ObjectId)
-	go statusListener(busy, done)
+	go StatusListener(busy, done)
 	go func(){
 		stored := getStored()
 		for subId, busy :=  range stored{
 			if busy{
-				go processStored(subId, subChan, fileChan)
+				go ProcessStored(subId, subChan, fileChan)
 			}
 		}
 	}()
@@ -39,7 +39,7 @@ func Serve(subChan chan *submission.Submission, fileChan chan *submission.File) 
 		select {
 		case sub := <-subChan:
 			subs[sub.Id] = make(chan *submission.File)
-			go processSubmission(sub, subs[sub.Id], busy, done)
+			go ProcessSubmission(sub, subs[sub.Id], busy, done)
 		case file := <-fileChan:
 			if ch, ok := subs[file.SubId]; ok {
 				ch <- file
@@ -68,10 +68,10 @@ func saveActive(active map[bson.ObjectId]bool) {
 	}
 }
 
-//statusListener listens for new submissions and adds them to the map of active processes. 
+//StatusListener listens for new submissions and adds them to the map of active processes. 
 //It also listens for completed submissions and removes them from the active process map.
 //Finally it detects Kill and Interrupt signals, saving the active processes if they are detected.
-func statusListener(busy, done chan bson.ObjectId) {
+func StatusListener(busy, done chan bson.ObjectId) {
 	active := getStored()
 	quit := make(chan os.Signal)
 	signal.Notify(quit, os.Kill, os.Interrupt)
@@ -90,7 +90,7 @@ func statusListener(busy, done chan bson.ObjectId) {
 
 //processStored processes an incompletely processed submission. 
 //It retrieves all files in the submission from the db and processes them. 
-func processStored(subId bson.ObjectId, subChan chan *submission.Submission, fileChan chan *submission.File) {
+func ProcessStored(subId bson.ObjectId, subChan chan *submission.Submission, fileChan chan *submission.File) {
 	sub, err := db.GetSubmission(bson.M{submission.SUBID: subId})
 	if err != nil {
 		util.Log(err)
@@ -112,13 +112,13 @@ func processStored(subId bson.ObjectId, subChan chan *submission.Submission, fil
 
 //processNew processes a new submission.
 //It listens for incoming files on fileChan and processes them.
-func processSubmission(sub *submission.Submission, fileChan chan *submission.File, busy, done chan bson.ObjectId) {
+func ProcessSubmission(sub *submission.Submission, fileChan chan *submission.File, busy, done chan bson.ObjectId) {
 	busy <- sub.Id
 	dir := filepath.Join(os.TempDir(), sub.Id.Hex(), SRC)
 	defer os.RemoveAll(dir)
 	test := SetupTests(sub.Project, sub.Lang,  dir)
 	for file := range fileChan {
-		err := processFile(file, dir, test)
+		err := ProcessFile(file, dir, test)
 		if err != nil {
 			util.Log(err)
 			return
@@ -130,16 +130,16 @@ func processSubmission(sub *submission.Submission, fileChan chan *submission.Fil
 
 //processFile processes a file according to its type. 
 //If an error occurs, it is returned.
-func processFile(f *submission.File, dir string, test *TestRunner) error {
+func ProcessFile(f *submission.File, dir string, test *TestRunner) error {
 	t := f.Type()
 	if t == submission.ARCHIVE {
-		err := processArchive(f, dir, test)
+		err := ProcessArchive(f, dir, test)
 		if err != nil {
 			return err
 		}
 		db.RemoveFileByID(f.Id)
 	} else if t == submission.SRC || t == submission.EXEC {
-		err := evaluate(f, dir, test, t == submission.SRC)
+		err := Evaluate(f, dir, test, t == submission.SRC)
 		if err != nil {
 			return err
 		}
@@ -148,7 +148,7 @@ func processFile(f *submission.File, dir string, test *TestRunner) error {
 }
 
 //processArchive extracts files from an archive and processes them.
-func processArchive(archive *submission.File, dir string, test *TestRunner) error {
+func ProcessArchive(archive *submission.File, dir string, test *TestRunner) error {
 	files, err := util.UnzipToMap(archive.Data)
 	if err != nil {
 		return err
@@ -167,7 +167,7 @@ func processArchive(archive *submission.File, dir string, test *TestRunner) erro
 				return err
 			}
 		}
-		err = processFile(f, dir, test)
+		err = ProcessFile(f, dir, test)
 		if err != nil {
 			return err
 		}
@@ -176,8 +176,8 @@ func processArchive(archive *submission.File, dir string, test *TestRunner) erro
 }
 
 //evaluate evaluates a source or compiled file by attempting to run tests and tools on it.
-func evaluate(f *submission.File, dir string, test *TestRunner, isSource bool) error {
-	target, err := extractFile(f, dir)
+func Evaluate(f *submission.File, dir string, test *TestRunner, isSource bool) error {
+	target, err := ExtractFile(f, dir)
 	if err != nil {
 		return err
 	}
@@ -198,7 +198,7 @@ func evaluate(f *submission.File, dir string, test *TestRunner, isSource bool) e
 			return err
 		}
 	}
-	err = runTools(f, target)
+	err = RunTools(f, target)
 	if err != nil {
 		return err
 	}
@@ -207,7 +207,7 @@ func evaluate(f *submission.File, dir string, test *TestRunner, isSource bool) e
 
 //extractFile saves a file to filesystem.
 //It returns file info used by tools & tests.
-func extractFile(f *submission.File, dir string) (*tool.TargetInfo, error) {
+func ExtractFile(f *submission.File, dir string) (*tool.TargetInfo, error) {
 	matcher := bson.M{submission.ID: f.SubId}
 	s, err := db.GetSubmission(matcher)
 	if err != nil {
@@ -350,7 +350,7 @@ func (this *TestRunner) Run(testName string, f *submission.File, target *tool.Ta
 }
 
 //runTools runs all available tools on a file, skipping previously run tools.
-func runTools(f *submission.File, ti *tool.TargetInfo) error {
+func RunTools(f *submission.File, ti *tool.TargetInfo) error {
 	all, err := db.GetTools(bson.M{submission.LANG: ti.Lang})
 	if err != nil {
 		return err

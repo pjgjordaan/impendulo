@@ -101,7 +101,18 @@ func toBytes(ival interface{}) ([]byte, error) {
 func toStrings(ivals interface{}) ([]string, error) {
 	vals, ok := ivals.([]string)
 	if !ok {
-		return nil, fmt.Errorf("Error casting value %q to []string", ivals)
+		islice, ok := ivals.([]interface{})
+		if !ok{
+			return nil, fmt.Errorf("Error casting value %q to []string", ivals)
+		}
+		vals = make([]string, len(islice))
+		for i, ival := range islice{
+			val, ok := ival.(string)
+			if !ok{
+				return nil, fmt.Errorf("Error casting value %q to string", ival)
+			}
+			vals[i] = val
+		}
 	}
 	return vals, nil
 }
