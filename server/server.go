@@ -57,84 +57,112 @@ func RunTestReceiver(port string){
 //ConnHandler manages an incoming connection request.
 //It authenticates the request and processes files sent on the connection.
 func ReceiveTests(conn net.Conn) {
-	testInfo, err := util.ReadJSON(conn)
-	fmt.Println("received info", testInfo)
+	err := TestLogin(conn)
 	if err != nil {
 		EndSession(conn, err)
 		return
+	}
+	test, err := ReadTest(conn)
+	if err != nil {
+		EndSession(conn, err)
+		return
+	}
+	err = db.AddTest(test)
+	EndSession(conn, err)
+}
+
+//Login creates a new submission if the login request is valid.
+func TestLogin(conn net.Conn) error {
+	loginInfo, err := util.ReadJSON(conn)
+	if err != nil {
+		return err
+	}
+	username, err := util.GetString(loginInfo, submission.USER)
+	if err != nil {
+		return err
+	}
+	pword, err := util.GetString(loginInfo, user.PWORD)
+	if err != nil {
+		return err
+	}
+	u, err := db.GetUserById(username)
+	if err != nil {
+		return err
+	}
+	if !u.CheckSubmit(submission.TEST_MODE) {
+		return fmt.Errorf("User %q has insufficient permissions for %q", username, submission.TEST_MODE)
+	}
+	if !util.Validate(u.Password, u.Salt, pword) {
+		return fmt.Errorf("User %q attempted to login with an invalid username or password", username)
+	}
+	conn.Write([]byte(OK))
+	return nil
+}
+
+func ReadTest(conn net.Conn) (*submission.Test, error){
+	testInfo, err := util.ReadJSON(conn)
+	if err != nil {
+		return nil, err
 	}
 	project, err := util.GetString(testInfo, submission.PROJECT)
 	if err != nil {
-		EndSession(conn, err)
-		return
+		return nil, err
 	}
 	lang, err := util.GetString(testInfo, submission.LANG)
 	if err != nil {
-		EndSession(conn, err)
-		return
+		return nil, err
 	}
 	names, err := util.GetStrings(testInfo, submission.NAMES)
 	if err != nil {
-		EndSession(conn, err)
-		return
+		return nil, err
 	}
 	conn.Write([]byte(OK))
 	testFiles, err := util.ReadData(conn)
 	if err != nil {
-		EndSession(conn, err)
-		return 
+		return nil, err
 	}
-	fmt.Println("received tests", testFiles)
 	conn.Write([]byte(OK))
 	dataFiles, err := util.ReadData(conn)
 	if err != nil {
-		EndSession(conn, err)
-		return 
+		return nil, err
 	}
-	fmt.Println("received tests", dataFiles)
 	conn.Write([]byte(OK))
-	test := submission.NewTest(project, lang, names, testFiles, dataFiles)
-	err = db.AddTest(test)
-	EndSession(conn, err)
+	return submission.NewTest(project, lang, names, testFiles, dataFiles), nil
 }
 
 //ConnHandler manages an incoming connection request.
 //It authenticates the request and processes files sent on the connection.
 func ConnHandler(conn net.Conn, subChan chan *submission.Submission, fileChan chan *submission.File) {
-	jobj, err := util.ReadJSON(conn)
+	err := ReceiveFiles(conn, subChan, fileChan)
+	EndSession(conn, err)
+}
+
+func ReceiveFiles(conn net.Conn, subChan chan *submission.Submission, fileChan chan *submission.File)error{
+	sub, err := Login(conn)
 	if err != nil {
-		EndSession(conn, err)
-		return
-	}
-	sub, err := Login(jobj, conn)
-	if err != nil {
-		EndSession(conn, err)
-		return
+		return err
 	}
 	subChan <- sub
-	util.Log("Created submission: ", sub)
-	receiving := true
-	for receiving && err == nil {
-		jobj, err = util.ReadJSON(conn)
+	for {
+		requestInfo, err := util.ReadJSON(conn)
 		if err != nil {
-			EndSession(conn, err)
-			return
+			return err
 		}
-		req, err := util.GetString(jobj, REQ)
+		req, err := util.GetString(requestInfo, REQ)
 		if err != nil {
-			EndSession(conn, err)
-			return
+			return err
 		}
 		if req == SEND {
-			delete(jobj, REQ)
-			err = ProcessFile(sub.Id, jobj, conn, fileChan)
+			err = ProcessFile(sub.Id, requestInfo, conn, fileChan)
+			if err != nil {
+				return err
+			}
 		} else if req == LOGOUT {
-			receiving = false
-		} else {
-			err = fmt.Errorf("Unknown request %q", req)
+			return nil
+		} else{
+			return fmt.Errorf("Unknown request %q", req)
 		}
-	}
-	EndSession(conn, err)
+	} 
 }
 
 //processFile reads file data from connection and stores it in the db.
@@ -156,8 +184,12 @@ func ProcessFile(subId bson.ObjectId, finfo map[string]interface{}, conn net.Con
 }
 
 //Login creates a new submission if the login request is valid.
-func Login(jobj map[string]interface{}, conn net.Conn) (*submission.Submission, error) {
-	sub, err := CreateSubmission(jobj)
+func Login(conn net.Conn) (*submission.Submission, error) {
+	fileInfo, err := util.ReadJSON(conn)
+	if err != nil {
+		return nil, err
+	}
+	sub, err := CreateSubmission(fileInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -184,24 +216,24 @@ func EndSession(conn net.Conn, err error) {
 
 //CreateSubmission validates a login request. 
 //It reads submission values from a json object and checks privilege level and password. 
-func CreateSubmission(jobj map[string]interface{}) (*submission.Submission, error) {
-	username, err := util.GetString(jobj, submission.USER)
+func CreateSubmission(loginInfo map[string]interface{}) (*submission.Submission, error) {
+	username, err := util.GetString(loginInfo, submission.USER)
 	if err != nil {
 		return nil, err
 	}
-	pword, err := util.GetString(jobj, user.PWORD)
+	pword, err := util.GetString(loginInfo, user.PWORD)
 	if err != nil {
 		return nil, err
 	}
-	project, err := util.GetString(jobj, submission.PROJECT)
+	project, err := util.GetString(loginInfo, submission.PROJECT)
 	if err != nil {
 		return nil, err
 	}
-	mode, err := util.GetString(jobj, submission.MODE)
+	mode, err := util.GetString(loginInfo, submission.MODE)
 	if err != nil {
 		return nil, err
 	}
-	lang, err := util.GetString(jobj, submission.LANG)
+	lang, err := util.GetString(loginInfo, submission.LANG)
 	if err != nil {
 		return nil, err
 	}
