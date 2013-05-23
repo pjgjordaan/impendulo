@@ -38,8 +38,13 @@ func Serve(subChan chan *submission.Submission, fileChan chan *submission.File) 
 	for {
 		select {
 		case sub := <-subChan:
-			subs[sub.Id] = make(chan *submission.File)
-			go ProcessSubmission(sub, subs[sub.Id], busy, done)
+			if ch, ok := subs[sub.Id]; ok {
+				close(ch)
+				delete(subs, sub.Id)
+			} else{
+				subs[sub.Id] = make(chan *submission.File)
+				go ProcessSubmission(sub, subs[sub.Id], busy, done)
+			} 
 		case file := <-fileChan:
 			if ch, ok := subs[file.SubId]; ok {
 				ch <- file
@@ -96,9 +101,14 @@ func ProcessStored(subId bson.ObjectId, subChan chan *submission.Submission, fil
 		util.Log(err)
 		return
 	}
+	total, err := db.Count(db.FILES, bson.M{submission.SUBID: subId})
+	if err != nil {
+		util.Log(err)
+		return
+	}
 	subChan <- sub
 	count := 0
-	for{
+	for count < total{
 		matcher := bson.M{submission.SUBID: subId, submission.NUM: count}
 		file, err := db.GetFile(matcher)
 		if err != nil {
@@ -107,7 +117,8 @@ func ProcessStored(subId bson.ObjectId, subChan chan *submission.Submission, fil
 		}
 		fileChan <- file
 		count ++
-	}				
+	}
+	subChan <- sub
 }
 
 //processNew processes a new submission.
@@ -117,7 +128,11 @@ func ProcessSubmission(sub *submission.Submission, fileChan chan *submission.Fil
 	dir := filepath.Join(os.TempDir(), sub.Id.Hex(), SRC)
 	defer os.RemoveAll(dir)
 	test := SetupTests(sub.Project, sub.Lang,  dir)
-	for file := range fileChan {
+	for {
+		file, ok := <- fileChan
+		if !ok{
+			break
+		}
 		err := ProcessFile(file, dir, test)
 		if err != nil {
 			util.Log(err)

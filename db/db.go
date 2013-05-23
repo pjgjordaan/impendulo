@@ -253,3 +253,16 @@ func Update(col string, matcher, change interface{}) error {
 	}
 	return nil
 }
+
+func Count(col string,  matcher interface{}) (int, error){
+	session := getSession()
+	defer session.Close()
+	c := session.DB("").C(col)
+	n, err := c.Find(matcher).Count()
+	if err != nil {
+		return -1, fmt.Errorf("Encountered error %q when counting documents matching %q in db", err, matcher)
+	}
+	return n, nil
+
+
+}

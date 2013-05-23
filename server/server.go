@@ -18,8 +18,8 @@ const (
 	REQ    = "req"
 )
 
-//RunSubmissionReceiver is used to receive submissions from users of the impendulo system.
-//It listens for new connections and creates a new ConnHandler goroutine for each connection.
+//Run is used to listen for new tcp connections and spawn a new goroutine for each connection.
+//Each goroutine launched will handle its connection and its type is determined by HandlerSpawner.
 func Run(port string, spawner HandlerSpawner) {
 	netListen, err := net.Listen("tcp", ":"+port)
 	if err != nil {
@@ -38,10 +38,12 @@ func Run(port string, spawner HandlerSpawner) {
 	}
 }
 
+//HandlerSpawner is an interface used to spawn new ConnHandlers.
 type HandlerSpawner interface{
 	Spawn() ConnHandler
 }
 
+//ConnHandler is an interface with basic methods for handling connections.
 type ConnHandler interface{
 	Start(conn net.Conn)
 	Handle() error
@@ -50,24 +52,27 @@ type ConnHandler interface{
 	End(err error)
 }
 
+//TestSpawner is a basic implementation of HandlerSpawner for TestHandlers.
 type TestSpawner struct{}
 
+//Spawn creates a new ConnHandler of type TestHandler.
 func (this *TestSpawner) Spawn() ConnHandler{
 	return new(TestHandler)
 }
 
+//TestHandler is an implementation of ConnHandler used to receive tests for projects.
 type TestHandler struct{
 	Conn net.Conn
 	Test *submission.Test
 }
 
+//Start sets the connection, launches the Handle method and ends the session when it returns.
 func (this *TestHandler) Start(conn net.Conn){
 	this.Conn = conn
 	this.End(this.Handle())
 }
 
-//ConnHandler manages an incoming connection request.
-//It authenticates the request and processes files sent on the connection.
+//Handle manages a connection by authenticating it and storing its submitted Test.
 func (this *TestHandler) Handle() error {
 	err := this.Login()
 	if err != nil {
@@ -80,7 +85,7 @@ func (this *TestHandler) Handle() error {
 	return db.AddTest(this.Test)
 }
 
-//Login creates a new submission if the login request is valid.
+//Login authenticates a connection by validating user credentials and checking user permissions. 
 func (this *TestHandler) Login() error {
 	loginInfo, err := util.ReadJSON(this.Conn)
 	if err != nil {
@@ -108,6 +113,7 @@ func (this *TestHandler) Login() error {
 	return err
 }
 
+//Read retrieves information about the tests as well as the tests themselves and their data files from the connection.
 func (this *TestHandler) Read() error{
 	testInfo, err := util.ReadJSON(this.Conn)
 	if err != nil {
@@ -149,8 +155,7 @@ func (this *TestHandler) Read() error{
 	return nil
 }
 
-
-//EndSession ends a session and reports any errors to the client. 
+//End ends a session and reports any errors to the user. 
 func (this *TestHandler) End(err error) {
 	defer this.Conn.Close()
 	var msg string
@@ -163,34 +168,41 @@ func (this *TestHandler) End(err error) {
 	this.Conn.Write([]byte(msg))
 }
 
-
+//SubmissionSpawner is an implementation of HandlerSpawner for SubmissionHandlers.
 type SubmissionSpawner struct{
 	SubChan chan *submission.Submission
 	FileChan chan *submission.File
 }
 
+//Spawn creates a new ConnHandler of type SubmissionHandler.
 func (this *SubmissionSpawner) Spawn() ConnHandler{
 	return &SubmissionHandler{SubChan: this.SubChan, FileChan: this.FileChan}
 }
 
+//SubmissionHandler is an implementation of ConnHandler used to receive submissions from users of the impendulo system.
 type SubmissionHandler struct{
 	Conn net.Conn
 	Submission *submission.Submission
+	//Used to send this Submission for processing.
 	SubChan chan *submission.Submission
+	//Used to send Files in this Submission for processing.
 	FileChan chan *submission.File
 }
 
+//Start sets the connection, launches the Handle method and ends the session when it returns.
 func (this *SubmissionHandler) Start(conn net.Conn){
 	this.Conn = conn
 	this.End(this.Handle())
 }
 
+//Handle manages a connection by authenticating it, processing its Submission and reading Files from it.
 func (this *SubmissionHandler) Handle() error {
 	err := this.Login()
 	if err != nil {
 		return err
 	}
 	this.SubChan <- this.Submission
+	defer func(){this.SubChan <- this.Submission}()
 	for err == nil{
 		err = this.Read()
 	} 
@@ -200,6 +212,44 @@ func (this *SubmissionHandler) Handle() error {
 	return err
 }
 
+//Login authenticates this Submission by validating the user's credentials and permissions.
+//This Submission is then stored.
+func (this *SubmissionHandler) Login() error {
+	loginInfo, err := util.ReadJSON(this.Conn)
+	if err != nil {
+		return err
+	}
+	err = this.ReadSubmission(loginInfo)
+	if err != nil {
+		return err
+	}
+	pword, err := util.GetString(loginInfo, user.PWORD)
+	if err != nil {
+		return err
+	}
+	u, err := db.GetUserById(this.Submission.User)
+	if err != nil {
+		return err
+	}
+	if !u.CheckSubmit(this.Submission.Mode) {
+		return fmt.Errorf("User %q has insufficient permissions for %q", this.Submission.User, this.Submission.Mode)
+	}
+	if !util.Validate(u.Password, u.Salt, pword) {
+		return fmt.Errorf("User %q attempted to login with an invalid username or password", this.Submission.User)
+	}
+	err = db.AddSubmission(this.Submission)
+	if err != nil {
+		return err
+	}
+	_, err = this.Conn.Write([]byte(OK))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+
+//Read reads Files from the connection and sends them for processing.
 func (this *SubmissionHandler) Read()error{
 	requestInfo, err := util.ReadJSON(this.Conn)
 	if err != nil {
@@ -236,42 +286,7 @@ func (this *SubmissionHandler) Read()error{
 	return fmt.Errorf("Unknown request %q", req)
 }
 
-//Login creates a new submission if the login request is valid.
-func (this *SubmissionHandler) Login() error {
-	loginInfo, err := util.ReadJSON(this.Conn)
-	if err != nil {
-		return err
-	}
-	err = this.ReadSubmission(loginInfo)
-	if err != nil {
-		return err
-	}
-	pword, err := util.GetString(loginInfo, user.PWORD)
-	if err != nil {
-		return err
-	}
-	u, err := db.GetUserById(this.Submission.User)
-	if err != nil {
-		return err
-	}
-	if !u.CheckSubmit(this.Submission.Mode) {
-		return fmt.Errorf("User %q has insufficient permissions for %q", this.Submission.User, this.Submission.Mode)
-	}
-	if !util.Validate(u.Password, u.Salt, pword) {
-		return fmt.Errorf("User %q attempted to login with an invalid username or password", this.Submission.User)
-	}
-	err = db.AddSubmission(this.Submission)
-	if err != nil {
-		return err
-	}
-	_, err = this.Conn.Write([]byte(OK))
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-//EndSession ends a session and reports any errors to the client. 
+//End ends a session and reports any errors to the user. 
 func (this *SubmissionHandler) End(err error) {
 	defer this.Conn.Close()
 	var msg string
@@ -284,8 +299,7 @@ func (this *SubmissionHandler) End(err error) {
 	this.Conn.Write([]byte(msg))
 }
 
-//CreateSubmission validates a login request. 
-//It reads submission values from a json object and checks privilege level and password. 
+//ReadSubmission reads Submission values from a json object and creates a new Submission from them. 
 func (this *SubmissionHandler) ReadSubmission(loginInfo map[string]interface{}) error {
 	username, err := util.GetString(loginInfo, submission.USER)
 	if err != nil {
