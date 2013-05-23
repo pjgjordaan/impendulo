@@ -56,6 +56,6 @@ func Run() {
 	fileChan := make(chan *submission.File)
 	subChan := make(chan *submission.Submission)
 	go processing.Serve(subChan, fileChan)
-	go server.RunTestReceiver(tport)
-	server.RunFileReceiver(fport, subChan, fileChan)
+	go server.Run(tport, new(server.TestSpawner))
+	server.Run(fport, &server.SubmissionSpawner{subChan, fileChan})
 }
