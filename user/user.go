@@ -1,5 +1,7 @@
 package user
-
+ import(
+"reflect"
+)
 const (
 	NONE    = 0
 	F_SUB   = 1
@@ -54,6 +56,10 @@ func (this *User) CheckSubmit(mode string) bool {
 		return this.HasAccess(U_SUB)
 	}
 	return false
+}
+
+func (this *User) Equals(that *User)bool{
+	return reflect.DeepEqual(this, that)
 }
 
 //NewUser creates a new user with file submission permissions.

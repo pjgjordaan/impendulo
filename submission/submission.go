@@ -133,6 +133,10 @@ type Test struct {
 	Data  []byte  "data"
 }
 
+func (this *Test) Equals(that *Test) bool {
+	return reflect.DeepEqual(this, that)
+}
+
 //NewFile
 func NewTest(project, lang string, names []string, tests, data []byte) *Test {
 	id := bson.NewObjectId()

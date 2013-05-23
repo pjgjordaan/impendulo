@@ -263,6 +263,4 @@ func Count(col string,  matcher interface{}) (int, error){
 		return -1, fmt.Errorf("Encountered error %q when counting documents matching %q in db", err, matcher)
 	}
 	return n, nil
-
-
 }

@@ -3,8 +3,10 @@ package db
 import (
 	"github.com/godfried/cabanga/submission"
 	"github.com/godfried/cabanga/tool"
+	"github.com/godfried/cabanga/user"
 	"labix.org/v2/mgo/bson"
 	"testing"
+	"strconv"
 )
 
 func TestSetup(t *testing.T) {
@@ -102,7 +104,7 @@ func TestGetTool(t *testing.T) {
 	defer DeleteDB(TEST_DB)
 	s := getSession()
 	defer s.Close()
-	fb := &tool.Tool{bson.NewObjectId(), "findbugs", tool.JAVA, "/home/disco/apps/findbugs-2.0.2/lib/findbugs.jar", "warning_count", tool.WARNS, []string{tool.JAVA, "-jar"}, []string{"-textui", "-low"}, bson.M{}, tool.PKG_PATH}
+	fb := &tool.Tool{bson.NewObjectId(), "findbugs", "java", "/home/disco/apps/findbugs-2.0.2/lib/findbugs.jar", "warning_count", "warnings", []string{"java", "-jar"}, []string{"-textui", "-low"}, bson.M{}, tool.PKG_PATH}
 	err := AddTool(fb)
 	if err != nil {
 		t.Error(err)
@@ -122,8 +124,8 @@ func TestGetTools(t *testing.T) {
 	defer DeleteDB(TEST_DB)
 	s := getSession()
 	defer s.Close()
-	fb := &tool.Tool{bson.NewObjectId(), "findbugs", tool.JAVA, "/home/disco/apps/findbugs-2.0.2/lib/findbugs.jar", "warning_count", tool.WARNS, []string{tool.JAVA, "-jar"}, []string{"-textui", "-low"}, bson.M{}, tool.PKG_PATH}
-	javac := &tool.Tool{bson.NewObjectId(), tool.COMPILE, tool.JAVA, tool.JAVAC, tool.WARNS, tool.ERRS, []string{}, []string{"-implicit:class"}, bson.M{tool.CP: ""}, tool.FILE_PATH}
+	fb := &tool.Tool{bson.NewObjectId(), "findbugs", "java", "/home/disco/apps/findbugs-2.0.2/lib/findbugs.jar", "warning_count", "warnings", []string{"java", "-jar"}, []string{"-textui", "-low"}, bson.M{}, tool.PKG_PATH}
+	javac := &tool.Tool{bson.NewObjectId(), "compile", "java", "javac", "warnings", "errors", []string{}, []string{"-implicit:class"}, bson.M{"-cp": ""}, tool.FILE_PATH}
 	tools := []*tool.Tool{fb, javac}
 	err := AddTool(fb)
 	if err != nil {
@@ -133,7 +135,7 @@ func TestGetTools(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	matcher := bson.M{tool.LANG: tool.JAVA}
+	matcher := bson.M{"lang": "java"}
 	dbTools, err := GetTools(matcher)
 	if err != nil {
 		t.Error(err)
@@ -150,6 +152,82 @@ func TestGetTools(t *testing.T) {
 			t.Error("No match found", t0)
 		}
 	}
+}
+
+func TestGetUserById(t *testing.T){
+	Setup(TEST_CONN)
+	defer DeleteDB(TEST_DB)
+	s := getSession()
+	defer s.Close()
+	u := user.NewUser("uname", "pword", "salt")
+	err := AddUser(u)
+	if err != nil{
+		t.Error(err)
+	}
+	found, err := GetUserById("uname")
+	if err != nil{
+		t.Error(err)
+	}
+	if !u.Equals(found){
+		t.Error("Users not equivalent", u, found)
+	}
+}
+
+func TestGetTest(t *testing.T){
+	Setup(TEST_CONN)
+	defer DeleteDB(TEST_DB)
+	s := getSession()
+	defer s.Close()
+	test := submission.NewTest("project", "lang", []string{"name0", "name1", "name2"}, testData, fileData)
+	err := AddTest(test)
+	if err != nil{
+		t.Error(err)
+	}
+	found, err := GetTest(bson.M{"_id": test.Id})
+	if err != nil{
+		t.Error(err)
+	}
+	if !test.Equals(found){
+		t.Error("Tests don't match", test, found)
+	}
+}
+
+func TestCount(t *testing.T){
+	Setup(TEST_CONN)
+	defer DeleteDB(TEST_DB)
+	s := getSession()
+	defer s.Close()
+	num := 100
+	n, err := Count(USERS, bson.M{})
+	if err != nil{
+		t.Error(err)
+	}
+	if n != 0{
+		t.Error("Invalid count, should be 0", n)
+	}
+	for i := 0; i < num; i ++{
+		var s int = i/10
+		err = AddUser(user.NewUser("uname"+strconv.Itoa(i), "pword", "salt"+strconv.Itoa(s)))
+		if err != nil{
+			t.Error(err)
+		}
+	}
+	n, err = Count(USERS, bson.M{})
+	if err != nil{
+		t.Error(err)
+	}
+	if n != 100{
+		t.Error("Invalid count, should be 100", n)
+	}
+	n, err = Count(USERS, bson.M{"salt":"salt0"})
+	if err != nil{
+		t.Error(err)
+	}
+	if n != 10{
+		t.Error("Invalid count, should be 10", n)
+	}
+	
+
 }
 
 var fileData = []byte(`[Faust:] "I, Johannes Faust, do call upon thee, Mephistopheles!"
@@ -256,3 +334,59 @@ The World of Spirits is not barred to thee!
 [Faust:] "Then what of longing? Affection, pain or grief? I can't describe these, yet I know they are in my breast. What are they?""
 [Mephistopheles:] "Without substance, as mist is."
 [Faust:] "In that case man is only air as well!"`)
+
+var testData = []byte(`Szénizotóp, szénizotóp,
+süss fel!
+
+Szénizotópmalom karjai járnak
+új Nanováros fényeinél,
+járnak és járnak és szintetizálnak,
+éljen a Haladás, éljen a Fény!
+
+Hidrogénhíd tör a tiszta jövõbe!
+Elõre, elõre!
+Héjakra, gyûrûkre, mezonmezõre!
+Elõre, elõre!
+Hallgatag szénmedence népe,
+elõre, mind elõre!
+
+De tûnt idõ, te merre bolyongsz az anyagban?
+Visszatérsz-e még a nyüzsgõ szálakon?
+Rétegek, halmazok, iramló pályák,
+ez vagyok én, és ez itt az otthonom.
+
+Róka hasa telelõ, mélyén folyik az idõ,
+alvó libalegelõ, zúgó libalegelõ.
+Kádam vizén a hajó, bentrõl szól egy rádió -
+éjjel anya hallható, nappal apa hogyha jó az adó.
+
+Róka hasa telelõ, felhõn gurul az idõ,
+halkan rezeg a mezõ mélyén valami erõ.
+Este leesik a hó, csend van, kiköt a hajó.
+Lámpás téli kikötõ mélyén molekula nõ idebenn.
+
+Mint ahogy látjuk, apró, molekuláris gépek azok,
+amelyek ezt a mozgást végzik.
+Hangsúlyozom mégegyszer, a molekulák szintjén
+egy sejtben nyolcmilliárd fehérjemolekula fordul elõ
+és ezek a parányi kis gépek végzik összehangoltan a mozgásokat.
+
+Fordul a gép!
+
+A vágtató ló mozgása esetén az izomrostokban fehérjék,
+az aktin- és miozinszálak egymásra csúszása idézi elõ a mozgást tulajdonképpen,
+és akkor is, amikor felemelem a kezemet, az izmaimban, az izomsejtekben
+ezek a fehérjeszálak csúsznak egymásba.
+
+Fordul a gép,
+Folyik el az élet.
+
+És ezek a másodlagos kölcsönhatások szobahõmérsékleten, tehát az élet hõmérsékletén
+örökösen felhasadnak a hõmozgás energiája folytán, de csak egy-egy kötés hasad fel,
+tehát maga a szerkezet fennmarad egységesen, ugyanakkor bizonyos elemei képesek
+elég jelentõs atomi szintû mozgásokra.
+Ennek a következménye az az elõzõ ábrán szemléltetett
+nyüzsgés, mozgás, amit láttunk.
+Tehát a fehérjék térszerkezete örökös nyüzsgésben van
+szobahõmérsékleten, és ez a fajta flexibilitás teszi lehetõvé azt, hogy a fehérjék, mint
+molekuláris gépek, atomi mozgások végrehajtására képesek.`)
