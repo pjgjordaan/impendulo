@@ -12,24 +12,24 @@ import (
 	"runtime"
 )
 
-var fport, tport, ufile, mode string
+//Flag variables for setting ports to listen on, users file to process and the mode to run in.
+var FilePort, TestPort, UsersFile, Mode string
 
-//init is used here to setup flags. 
 func init() {
-	flag.StringVar(&fport, "fp", "9000", "Specify the port to listen on for files.")
-	flag.StringVar(&tport, "tp", "8000", "Specify the port to listen on for tests.")
-	flag.StringVar(&ufile, "u", "", "Specify a file with new users.")
-	flag.StringVar(&mode, "m", "s", "Specify a mode to run in.")
+	flag.StringVar(&FilePort, "fp", "9000", "Specify the port to listen on for files.")
+	flag.StringVar(&TestPort, "tp", "8000", "Specify the port to listen on for tests.")
+	flag.StringVar(&UsersFile, "u", "", "Specify a file with new users.")
+	flag.StringVar(&Mode, "m", "s", "Specify a mode to run in.")
 }
 
 func main() {
 	flag.Parse()
-	if mode == "u" {
+	if Mode == "u" {
 		err := AddUsers()
 		if err != nil {
 			util.Log(err)
 		}
-	} else if mode == "s" {
+	} else if Mode == "s" {
 		Run()
 	} else {
 		log.Fatal(fmt.Errorf("Unknown running mode %q", mode))
@@ -37,7 +37,6 @@ func main() {
 }
 
 //AddUsers adds users from a text file to the database.
-//Any errors encountered are returned.
 func AddUsers() error {
 	users, err := util.ReadUsers(ufile)
 	if err != nil {
@@ -47,8 +46,8 @@ func AddUsers() error {
 	return db.AddUsers(users...)
 }
 
-//RunServer starts an instance of our tcp snapshot server on the given port.
-//A seperate routine is launched which processes the snapshots.
+//Run starts a routine for processing snapshot submissions as well as a routine for receiving project tests.
+//An instance of our tcp snapshot server is then launched. 
 func Run() {
 	util.Log("Starting server on port ", fport)
 	runtime.GOMAXPROCS(runtime.NumCPU())

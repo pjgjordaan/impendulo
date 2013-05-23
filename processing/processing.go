@@ -20,7 +20,7 @@ const (
 
 //Serve spawns new processing routines for each new submission received on subChan.
 //New files are received on fileChan and then sent to the relevant submission process.
-//Incomplete submissions are read from disk and reprocessed using the processStored function.   
+//Incomplete submissions are read from disk and reprocessed using the ProcessStored function.   
 func Serve(subChan chan *submission.Submission, fileChan chan *submission.File) {
 	// Start handlers
 	busy := make(chan bson.ObjectId)
@@ -93,8 +93,8 @@ func StatusListener(busy, done chan bson.ObjectId) {
 	}
 }
 
-//processStored processes an incompletely processed submission. 
-//It retrieves all files in the submission from the db and processes them. 
+//ProcessStored processes an incompletely processed submission. 
+//It retrieves files in the submission from the db and sends them on fileChan to be processed. 
 func ProcessStored(subId bson.ObjectId, subChan chan *submission.Submission, fileChan chan *submission.File) {
 	sub, err := db.GetSubmission(bson.M{submission.SUBID: subId})
 	if err != nil {
@@ -121,7 +121,7 @@ func ProcessStored(subId bson.ObjectId, subChan chan *submission.Submission, fil
 	subChan <- sub
 }
 
-//processNew processes a new submission.
+//ProcessSubmission processes a new submission.
 //It listens for incoming files on fileChan and processes them.
 func ProcessSubmission(sub *submission.Submission, fileChan chan *submission.File, busy, done chan bson.ObjectId) {
 	busy <- sub.Id
@@ -143,8 +143,7 @@ func ProcessSubmission(sub *submission.Submission, fileChan chan *submission.Fil
 }
 
 
-//processFile processes a file according to its type. 
-//If an error occurs, it is returned.
+//ProcessFile processes a file according to its type. 
 func ProcessFile(f *submission.File, dir string, test *TestRunner) error {
 	t := f.Type()
 	if t == submission.ARCHIVE {
@@ -162,7 +161,7 @@ func ProcessFile(f *submission.File, dir string, test *TestRunner) error {
 	return nil
 }
 
-//processArchive extracts files from an archive and processes them.
+//ProcessArchive extracts files from an archive and processes them.
 func ProcessArchive(archive *submission.File, dir string, test *TestRunner) error {
 	files, err := util.UnzipToMap(archive.Data)
 	if err != nil {
@@ -190,7 +189,7 @@ func ProcessArchive(archive *submission.File, dir string, test *TestRunner) erro
 	return nil
 }
 
-//evaluate evaluates a source or compiled file by attempting to run tests and tools on it.
+//Evaluate evaluates a source or compiled file by attempting to run tests and tools on it.
 func Evaluate(f *submission.File, dir string, test *TestRunner, isSource bool) error {
 	target, err := ExtractFile(f, dir)
 	if err != nil {
@@ -220,7 +219,7 @@ func Evaluate(f *submission.File, dir string, test *TestRunner, isSource bool) e
 	return nil
 }
 
-//extractFile saves a file to filesystem.
+//ExtractFile saves a file to filesystem.
 //It returns file info used by tools & tests.
 func ExtractFile(f *submission.File, dir string) (*tool.TargetInfo, error) {
 	matcher := bson.M{submission.ID: f.SubId}
@@ -237,7 +236,7 @@ func ExtractFile(f *submission.File, dir string) (*tool.TargetInfo, error) {
 }
 
 
-//compile compiles a java source file and writes the results thereof to the database.
+//Compile compiles a java source file and saves the results thereof.
 //It returns true if compiled successfully.
 func Compile(fileId bson.ObjectId, ti *tool.TargetInfo, isSource bool) (bool, error) {
 	matcher := bson.M{submission.LANG: submission.LANG, submission.NAME: "compile"}
@@ -279,10 +278,8 @@ func AddResult(res *tool.Result) error {
 	return db.AddResult(res)
 }
 
-
-
-//setup extracts a project's tests from db to filesystem for execution.
-//It returns true if this was successful.
+//SetupTests extracts a project's tests from db to filesystem for execution.
+//It creates and returns a new TestRunner.
 func SetupTests(project, lang, dir string) *TestRunner {
 	testMatcher := bson.M{submission.PROJECT: project, submission.LANG: lang}
 	test, err := db.GetTest(testMatcher)
@@ -304,18 +301,15 @@ func SetupTests(project, lang, dir string) *TestRunner {
 }
 
 
-//TestInfo stores information about test files.
+//TestRunner is used to run tests on files compiled files.
 type TestRunner struct {
 	Project string
-	//File name without extension
 	Names []string
-	//Language file is written in
 	Lang    string
 	Dir     string
 }
 
-//runTests sets up and runs tests on executable file. 
-//If an error is encountered, iteration stops and the error is returned.
+//Execute sets up and runs tests on a compiled file. 
 func (this *TestRunner)  Execute(f *submission.File, target *tool.TargetInfo) error {
 	for _, name := range this.Names {
 		compiled, err := this.Compile(name, f, target)
@@ -333,7 +327,7 @@ func (this *TestRunner)  Execute(f *submission.File, target *tool.TargetInfo) er
 	return nil
 }
 
-//compileTest
+//Compile compiles a test for the current file. 
 func (this *TestRunner) Compile(testName string, f *submission.File, target *tool.TargetInfo) (bool, error) {
 	if _, ok := f.Results[testName+"_compile"]; ok {
 		return true, nil
@@ -350,7 +344,7 @@ func (this *TestRunner) Compile(testName string, f *submission.File, target *too
 	return res.Error == nil, nil
 }
 
-//runTest
+//Run runs a test on the current file.
 func (this *TestRunner) Run(testName string, f *submission.File, target *tool.TargetInfo) error {
 	if _, ok := f.Results[testName+"_run"]; ok {
 		return nil
@@ -364,7 +358,7 @@ func (this *TestRunner) Run(testName string, f *submission.File, target *tool.Ta
 	return AddResult(res)
 }
 
-//runTools runs all available tools on a file, skipping previously run tools.
+//RunTools runs all available tools on a file, skipping previously run tools.
 func RunTools(f *submission.File, ti *tool.TargetInfo) error {
 	all, err := db.GetTools(bson.M{submission.LANG: ti.Lang})
 	if err != nil {
