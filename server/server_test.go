@@ -3,10 +3,10 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-//	"github.com/godfried/cabanga/db"
+	"github.com/godfried/cabanga/db"
 	"github.com/godfried/cabanga/submission"
 	"github.com/godfried/cabanga/user"
-//	"github.com/godfried/cabanga/util"
+	"github.com/godfried/cabanga/util"
 //	"labix.org/v2/mgo/bson"
 	"net"
 	"reflect"
@@ -29,31 +29,13 @@ func checkMessage(conn net.Conn, check string) error {
 	return nil
 }
 
-func clientLogin(conn net.Conn, subChan chan *submission.Submission) error {
-	umap := map[string]interface{}{REQ: LOGIN, submission.USER: "uname", user.PWORD: "pword", submission.PROJECT: "project", submission.MODE: submission.FILE_MODE, submission.LANG: "java"}
+func clientLogin(conn net.Conn, uname, pword string) error {
+	umap := map[string]interface{}{REQ: LOGIN, submission.USER: uname, user.PWORD: pword, submission.PROJECT: "project", submission.MODE: submission.FILE_MODE, submission.LANG: "java"}
 	err := writeJson(conn, umap)
 	if err != nil {
 		return err
 	}
-	err = checkMessage(conn, OK)
-	if err != nil {
-		return err
-	}
-	<-subChan
-	return nil
-}
-
-func clientLogout(conn net.Conn) error {
-	logout := map[string]interface{}{REQ: LOGOUT}
-	err := writeJson(conn, logout)
-	if err != nil {
-		return err
-	}
-	err = checkMessage(conn, OK)
-	if err != nil {
-		return err
-	}
-	return nil
+	return checkMessage(conn, OK)
 }
 
 func sendFile(conn net.Conn, fileChan chan *submission.File) error {
@@ -104,8 +86,8 @@ func writeJson(conn net.Conn, data map[string]interface{}) error{
 	return err
 }
 
-func basicClient(doneChan chan bool)error{
-	conn, err := net.Dial("tcp", "localhost:8100")
+func basicClient(port string, doneChan chan bool)error{
+	conn, err := net.Dial("tcp", "localhost:"+port)
 	if err != nil {
 		return err
 	}
@@ -137,11 +119,12 @@ func basicClient(doneChan chan bool)error{
 func TestRun(t *testing.T){
 	doneChan := make(chan bool)
 	n := 100
-	go Run("8100", new(BasicSpawner))
+	port := "8100"
+	go Run(port, new(BasicSpawner))
 	go func() {
 		for i := 0; i < n; i ++{
 			go func() {
-				err := basicClient(doneChan)
+				err := basicClient(port, doneChan)
 				if err != nil{
 					t.Error(err)
 				}
@@ -157,60 +140,253 @@ func TestRun(t *testing.T){
 	}
 }
 
-
-/*func TestCreateSubmission(t *testing.T) {
-	db.Setup(db.TEST_CONN)
-	defer db.DeleteDB(db.TEST_DB)
-	hash, salt := util.Hash("pword")
-	u := user.NewUser("uname", hash, salt)
+func TestReadSubmission(t *testing.T) {
+	expected := submission.NewSubmission("project", "uname",submission.FILE_MODE, "java")
 	umap := map[string]interface{}{submission.USER: "uname", user.PWORD: "pword", submission.PROJECT: "project", submission.MODE: submission.FILE_MODE, submission.LANG: "java"}
-	_, err := CreateSubmission(umap)
-	if err == nil {
-		t.Error("should get not found error")
-	}
-	err = db.AddUser(u)
+	handler := new(SubmissionHandler)
+	err := handler.ReadSubmission(umap)
 	if err != nil {
 		t.Error(err)
 	}
-	_, err = CreateSubmission(umap)
-	if err != nil {
-		t.Error(err)
-	}
-	_, err = CreateSubmission(map[string]interface{}{})
-	if err == nil {
-		t.Error("error expected")
-	}
-	umap[user.PWORD] = "a"
-	_, err = CreateSubmission(umap)
-	if err == nil {
-		t.Error("error expected")
+	expected.Id = handler.Submission.Id 
+	expected.Time = handler.Submission.Time
+	if !expected.Equals(handler.Submission){
+		t.Error("Submissions don't match", expected, handler.Submission)
 	}
 }
 
-func TestEndSession(t *testing.T) {
+func loginClient(port, uname, pword string) error{
+	conn, err := net.Dial("tcp", "localhost:"+port)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	return clientLogin(conn, uname, pword)
+}
+
+func loginServer(port string) error{
+	ln, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		return err
+	}
+	sconn, err := ln.Accept()
+	if err != nil {
+		return err
+	}
+	defer sconn.Close()
+	handler := &SubmissionHandler{Conn: sconn}
+	return handler.Login()
+}
+
+func TestSubLogin(t *testing.T){
+	db.Setup(db.TEST_CONN)
+	defer db.DeleteDB(db.TEST_DB)
+	uname,pword := "unamel","pwordl"
+	hash, salt := util.Hash(pword)
+	u := user.NewUser(uname, hash, salt)
+	err := db.AddUser(u)
+	if err != nil {
+		t.Error(err)
+	}
+	port := "9000"
 	go func() {
-		conn, err := net.Dial("tcp", "localhost:8000")
-		if err != nil {
+		err = loginClient(port, uname, pword)
+		if err != nil{
 			t.Error(err)
 		}
-		defer conn.Close()
-		err = checkMessage(conn, OK)
+	}()
+	err = loginServer(port)
+	if err != nil{
+			t.Error(err)
+	}
+	go func() {
+		err = loginClient(port, uname, "")
+		if err == nil{
+			t.Error("Expected error")
+		}
+	}()
+	err = loginServer(port)
+	if err == nil{
+		t.Error("Expected error")
+	}
+	go func() {
+		err = loginClient(port, "", pword)
+		if err == nil{
+			t.Error("Expected error")
+		}
+	}()
+	err = loginServer(port)
+	if err == nil{
+		t.Error("Expected error")
+	}
+}
+
+func readClient(port string, fileChan chan *submission.File) error{
+	conn, err := net.Dial("tcp", "localhost:"+port)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	fmap := map[string]interface{}{REQ:SEND}
+	err = writeJson(conn, fmap)
+	if err != nil {
+		return err
+	}
+	err = checkMessage(conn, OK)
+	if err != nil {
+		return err
+	}
+	err = writeData(conn, fileData)
+	if err != nil {
+		return err
+	}
+	err = checkMessage(conn, OK)
+	if err != nil {
+		return err
+	}
+	recv := <-fileChan
+	if !reflect.DeepEqual(fileData, recv.Data) {
+		return fmt.Errorf("Data not the same")
+	}
+	return nil
+}
+
+
+func readServer(port string, fileChan chan *submission.File) error{
+	ln, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		return err
+	}
+	sconn, err := ln.Accept()
+	if err != nil {
+		return err
+	}
+	defer sconn.Close()
+	sub := submission.NewSubmission("","","","")
+	handler := &SubmissionHandler{Conn: sconn, Submission: sub, FileChan: fileChan}
+	return handler.Read()
+}
+
+func TestSubRead(t *testing.T) {
+	db.Setup(db.TEST_CONN)
+	defer db.DeleteDB(db.TEST_DB)
+	fileChan := make(chan *submission.File)
+	port := "7000"
+	go func() {
+		err := readClient(port, fileChan)
+		if err != nil{
+			t.Error(err)
+		}
+	}()
+	err := readServer(port, fileChan)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func endClient(port string) error{
+	conn, err := net.Dial("tcp", "localhost:"+port)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	return checkMessage(conn, OK)
+}
+
+func endServer(port string) error{
+	ln, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		return err
+	}
+	sconn, err := ln.Accept()
+	if err != nil {
+		return err
+	}
+	handler := &BasicHandler{Conn: sconn}
+	handler.End(nil)
+	return nil
+}
+
+func TestEnd(t *testing.T) {
+	port := "2000"
+	go func() {
+		err := endClient(port)
+		if err != nil{
+			t.Error(err)
+		}
+	}()
+	err := endServer(port)
+	if err != nil{
+		t.Error(err)
+	}
+}
+
+func handleClient(port, uname,pword string, subChan chan *submission.Submission, fileChan chan *submission.File) error {
+	conn, err := net.Dial("tcp", "localhost:"+port)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	err = clientLogin(conn, uname, pword)
+	if err != nil {
+		return err
+	}
+	<- subChan
+	for i := 0; i < 10; i++ {
+		err = sendFile(conn, fileChan)
+		if err != nil {
+			return err
+		}
+	}
+	logout := map[string]interface{}{REQ: LOGOUT}
+	err = writeJson(conn, logout)
+	if err != nil {
+		return err
+	}
+	<- subChan
+	return nil
+}
+
+func handleServer(port string, subChan chan *submission.Submission, fileChan chan *submission.File) error {
+	ln, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		return err
+	}
+	sconn, err := ln.Accept()
+	if err != nil {
+		return err
+	}
+	defer sconn.Close()
+	handler := &SubmissionHandler{Conn: sconn, SubChan: subChan, FileChan: fileChan}
+	return handler.Handle()
+}
+
+func TestSubHandle(t *testing.T) {
+	db.Setup(db.TEST_CONN)
+	defer db.DeleteDB(db.TEST_DB)
+	uname, pword := "unameh", "pwordh"
+	hash, salt := util.Hash(pword)
+	u := user.NewUser(uname, hash, salt)
+	err := db.AddUser(u)
+	if err != nil {
+		t.Error(err)
+	}
+	port := "6000"
+	fileChan := make(chan *submission.File)
+	subChan := make(chan *submission.Submission)
+	go func() {
+		err = handleClient(port,uname,pword, subChan, fileChan)
 		if err != nil {
 			t.Error(err)
 		}
 	}()
-	ln, err := net.Listen("tcp", ":8000")
+	err = handleServer(port, subChan, fileChan)
 	if err != nil {
 		t.Error(err)
 	}
-	sconn, err := ln.Accept()
-	if err != nil {
-		t.Error(err)
-	}
-	EndSession(sconn, nil)
-
 }
 
+/*
 func TestLogin(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
@@ -290,50 +466,7 @@ func TestProcessFile(t *testing.T) {
 	}
 
 }
-
-func TestConnHandler(t *testing.T) {
-	db.Setup(db.TEST_CONN)
-	defer db.DeleteDB(db.TEST_DB)
-	fileChan := make(chan *submission.File)
-	subChan := make(chan *submission.Submission)
-	hash, salt := util.Hash("pword")
-	u := user.NewUser("uname", hash, salt)
-	err := db.AddUser(u)
-	if err != nil {
-		t.Error(err)
-	}
-	go func() {
-		conn, err := net.Dial("tcp", "localhost:6000")
-		if err != nil {
-			t.Error(err)
-		}
-		defer conn.Close()
-		err = clientLogin(conn, subChan)
-		if err != nil {
-			t.Error(err)
-		}
-		for i := 0; i < 10; i++ {
-			err = sendFile(conn, fileChan)
-			if err != nil {
-				t.Error(err)
-			}
-		}
-		err = clientLogout(conn)
-		if err != nil {
-			t.Error(err)
-		}
-	}()
-	ln, err := net.Listen("tcp", ":6000")
-	if err != nil {
-		t.Error(err)
-	}
-	sconn, err := ln.Accept()
-	if err != nil {
-		t.Error(err)
-	}
-	defer sconn.Close()
-	ConnHandler(sconn, subChan, fileChan)
-}*/
+*/
 
 var eof = []byte("eof")
 
