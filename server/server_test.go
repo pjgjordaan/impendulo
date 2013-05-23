@@ -3,11 +3,11 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/godfried/cabanga/db"
+//	"github.com/godfried/cabanga/db"
 	"github.com/godfried/cabanga/submission"
 	"github.com/godfried/cabanga/user"
-	"github.com/godfried/cabanga/util"
-	"labix.org/v2/mgo/bson"
+//	"github.com/godfried/cabanga/util"
+//	"labix.org/v2/mgo/bson"
 	"net"
 	"reflect"
 	"testing"
@@ -31,12 +31,10 @@ func checkMessage(conn net.Conn, check string) error {
 
 func clientLogin(conn net.Conn, subChan chan *submission.Submission) error {
 	umap := map[string]interface{}{REQ: LOGIN, submission.USER: "uname", user.PWORD: "pword", submission.PROJECT: "project", submission.MODE: submission.FILE_MODE, submission.LANG: "java"}
-	ubytes, err := json.Marshal(umap)
+	err := writeJson(conn, umap)
 	if err != nil {
 		return err
 	}
-	conn.Write(ubytes)
-	conn.Write(eof)
 	err = checkMessage(conn, OK)
 	if err != nil {
 		return err
@@ -47,12 +45,10 @@ func clientLogin(conn net.Conn, subChan chan *submission.Submission) error {
 
 func clientLogout(conn net.Conn) error {
 	logout := map[string]interface{}{REQ: LOGOUT}
-	lbytes, err := json.Marshal(logout)
+	err := writeJson(conn, logout)
 	if err != nil {
 		return err
 	}
-	conn.Write(lbytes)
-	conn.Write(eof)
 	err = checkMessage(conn, OK)
 	if err != nil {
 		return err
@@ -61,19 +57,18 @@ func clientLogout(conn net.Conn) error {
 }
 
 func sendFile(conn net.Conn, fileChan chan *submission.File) error {
-	fmap := map[string]interface{}{REQ: SEND}
-	fbytes, err := json.Marshal(fmap)
-	if err != nil {
+	err := writeJson(conn, map[string]interface{}{REQ: SEND})
+	if err != nil{
 		return err
 	}
-	conn.Write(fbytes)
-	conn.Write(eof)
 	err = checkMessage(conn, OK)
 	if err != nil {
 		return err
 	}
-	conn.Write(fileData)
-	conn.Write(eof)
+	err = writeData(conn, fileData)
+	if err != nil {
+		return err
+	}
 	err = checkMessage(conn, OK)
 	if err != nil {
 		return err
@@ -85,7 +80,85 @@ func sendFile(conn net.Conn, fileChan chan *submission.File) error {
 	return nil
 }
 
-func TestCreateSubmission(t *testing.T) {
+func writeData(conn net.Conn, data []byte)error{
+	_, err := conn.Write(data)
+	if err != nil {
+		return err
+	}
+	_, err = conn.Write(eof)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func writeJson(conn net.Conn, data map[string]interface{}) error{
+	marshalled, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	err = writeData(conn, marshalled)
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+func basicClient(doneChan chan bool)error{
+	conn, err := net.Dial("tcp", "localhost:8100")
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	err = writeJson(conn, map[string]interface{}{"A": "2", "B": " H"})
+	if err != nil {
+		return err
+	}
+	err = checkMessage(conn, OK)
+	if err != nil {
+		return err
+	}
+	err = writeData(conn, fileData)
+	if err != nil {
+		return err
+	}
+	err = checkMessage(conn, OK)
+	if err != nil {
+		return err
+	}
+	err = checkMessage(conn, OK)
+	if err != nil {
+		return err
+	}
+	doneChan <- true
+	return nil		
+}
+
+func TestRun(t *testing.T){
+	doneChan := make(chan bool)
+	n := 100
+	go Run("8100", new(BasicSpawner))
+	go func() {
+		for i := 0; i < n; i ++{
+			go func() {
+				err := basicClient(doneChan)
+				if err != nil{
+					t.Error(err)
+				}
+			}()
+		}
+	}()
+	count := 0
+	for _ = range doneChan{
+		count ++
+		if count == 100{
+			break
+		}
+	}
+}
+
+
+/*func TestCreateSubmission(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
 	hash, salt := util.Hash("pword")
@@ -260,7 +333,7 @@ func TestConnHandler(t *testing.T) {
 	}
 	defer sconn.Close()
 	ConnHandler(sconn, subChan, fileChan)
-}
+}*/
 
 var eof = []byte("eof")
 
