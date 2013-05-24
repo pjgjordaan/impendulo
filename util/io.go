@@ -200,11 +200,15 @@ func ExtractFile(zf *zip.File, dir string) error {
 	defer frc.Close()
 	path := filepath.Join(dir, zf.Name)
 	if zf.FileInfo().IsDir() {
-		err = os.MkdirAll(path, zf.Mode())
+		err = os.MkdirAll(path, DPERM)
 		if err != nil {
 			return fmt.Errorf("Encountered error %q while creating directory %q", err, path)
 		}
 	} else {
+		err = os.MkdirAll(filepath.Dir(path), DPERM)
+		if err != nil {
+			return fmt.Errorf("Encountered error %q while creating directory %q", err, path)
+		}
 		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, zf.Mode())
 		if err != nil {
 			return fmt.Errorf("Encountered error %q while opening file %q", err, path)

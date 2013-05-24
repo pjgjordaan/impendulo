@@ -7,7 +7,6 @@ import (
 	"github.com/godfried/cabanga/submission"
 	"github.com/godfried/cabanga/user"
 	"github.com/godfried/cabanga/util"
-//	"labix.org/v2/mgo/bson"
 	"net"
 	"reflect"
 	"testing"
@@ -627,7 +626,7 @@ func handleTestServer(port string) error {
 	handler := &TestHandler{Conn: sconn}
 	return handler.Handle()
 }
-
+x
 func TestTestHandle(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
