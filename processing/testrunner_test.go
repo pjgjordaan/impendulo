@@ -56,7 +56,7 @@ func getTest()(*submission.Test, error){
 		return nil, err
 	}
 	util.SaveFile("/home/disco/","t",testZip)
-	dataZip, err := util.Zip(map[string][]byte{"data/0001.etxt":testCase})
+	dataZip, err := util.Zip(map[string][]byte{"0001.etxt":testCase})
 	if err != nil{
 		return nil, err
 	}
@@ -167,10 +167,9 @@ public class EasyTests {
 	public static Test suite() {
 		TestSuite suite = new TestSuite("Test for triangle");
 		String loc = System.getProperty(DATA_LOCATION_PROPERTY);
-		System.out.println(loc);
 		File f = new File(loc);
 		String s[] = f.list();
-		for (int i = 0; i < s.length; i++) {
+                for (int i = 0; i < s.length; i++) {
 			String n = s[i];
 			if (n.endsWith(".etxt")) {
 				suite.addTest(new FileTest(loc + File.separator+ n));
