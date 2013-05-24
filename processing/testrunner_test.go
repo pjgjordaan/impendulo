@@ -10,6 +10,90 @@ import(
 "path/filepath"
 )
 
+func TestSetupTests(t *testing.T){
+	db.Setup(db.TEST_CONN)
+	defer db.DeleteDB(db.TEST_DB)
+	s := getSubmission()
+	err := db.AddSubmission(s)
+	if err != nil{
+		t.Error(err)
+	}	
+	test, err := getTest()
+	if err != nil{
+		t.Error(err)
+	}
+	err = db.AddTest(test)
+	if err != nil{
+		t.Error(err)
+	}
+	dir := filepath.Join(os.TempDir(), s.Id.Hex(), SRC)
+	defer os.RemoveAll(dir)
+	runner := SetupTests(test.Project, test.Lang,  dir)
+	if runner == nil{
+		t.Error("Could not set up tests properly")
+	}
+
+}
+
+func TestCompileTest(t *testing.T){
+	db.Setup(db.TEST_CONN)
+	defer db.DeleteDB(db.TEST_DB)
+	s := getSubmission()
+	err := db.AddSubmission(s)
+	if err != nil{
+		t.Error(err)
+	}
+	f := getFile(s.Id)
+	err = db.AddFile(f)
+	if err != nil{
+		t.Error(err)
+	}
+	test, err := getTest()
+	if err != nil{
+		t.Error(err)
+	}
+	err = db.AddTest(test)
+	if err != nil{
+		t.Error(err)
+	}
+	dir := filepath.Join(os.TempDir(), f.Id.Hex(), SRC)
+	defer os.RemoveAll(dir)
+	runner := SetupTests(test.Project, test.Lang,  dir)
+	if runner == nil{
+		t.Error("Could not set up tests properly")
+	}	
+	ti, err := ExtractFile(f,dir)
+	if err != nil{
+		t.Error(err)
+	}
+	ok, err := runner.Compile(test.Names[0], f, ti)
+	if !ok || err != nil{
+		t.Error(err)
+	}
+	f = getFile(s.Id)
+	f.Data = errSrc
+	err = db.AddFile(f)
+	if err != nil{
+		t.Error(err)
+	}
+	dir = filepath.Join(os.TempDir(), f.Id.Hex(), SRC)
+	defer os.RemoveAll(dir)
+	runner = SetupTests(test.Project, test.Lang,  dir)
+	if runner == nil{
+		t.Error("Could not set up tests properly")
+	}	
+	ti, err = ExtractFile(f,dir)
+	if err != nil{
+		t.Error(err)
+	}
+	ok, err = runner.Compile(test.Names[0], f, ti)
+	if ok && err == nil{
+		t.Error("Expected no compile")
+	}
+
+}
+
+
 func TestExecute(t *testing.T){
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
@@ -32,6 +116,7 @@ func TestExecute(t *testing.T){
 		t.Error(err)
 	}
 	dir := filepath.Join(os.TempDir(), s.Id.Hex(), SRC)
+	defer os.RemoveAll(dir)
 	runner := SetupTests(test.Project, test.Lang,  dir)
 	if runner == nil{
 		t.Error("Could not set up tests properly")
@@ -55,7 +140,6 @@ func getTest()(*submission.Test, error){
 	if err != nil{
 		return nil, err
 	}
-	util.SaveFile("/home/disco/","t",testZip)
 	dataZip, err := util.Zip(map[string][]byte{"0001.etxt":testCase})
 	if err != nil{
 		return nil, err
@@ -63,18 +147,26 @@ func getTest()(*submission.Test, error){
 	return submission.NewTest("Triangle", "java", []string{"EasyTests.java"}, testZip, dataZip), nil
 }
 
-
 func getFile(subId bson.ObjectId)*submission.File{
 	info := bson.M{submission.TIME: 1000, submission.TYPE: submission.SRC, submission.MOD: 'c', submission.NAME: "Triangle.java", submission.FTYPE: "java", submission.PKG: "triangle", submission.NUM: 100}
 	return submission.NewFile(subId, info, srcData)
 }
 
+var errSrc = []byte(`package triangle;
 
 
-
-
-
-
+public class {
+	public int maxpath(int[] tri) {
+		int l = tri.length;
+		for (int i = l - 2; i >= 0; i--){
+			for (int j = 0; j <= i; j++){
+				tri[i][j] += tri[i + 1][j] > tri[i + 1][j + 1] ? tri[i + 1][j]
+						:tri[i + 1][j + 1];
+			}
+		}
+		return tri[0][0];
+	}
+}`)
 
 var srcData = []byte(`package triangle;
 

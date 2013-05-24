@@ -5,8 +5,11 @@ import (
 	"github.com/godfried/cabanga/submission"
 	"github.com/godfried/cabanga/tool"
 	"labix.org/v2/mgo/bson"
-	"reflect"
 	"testing"
+	"os"
+	"path/filepath"
+	"bytes"
+	"reflect"
 )
 
 func TestAddResult(t *testing.T) {
@@ -29,8 +32,54 @@ func TestAddResult(t *testing.T) {
 	}
 	matcher = bson.M{submission.ID: res.Id}
 	dbRes, err := db.GetResult(matcher)
-	if !reflect.DeepEqual(res, dbRes) {
+	if !res.Equals(dbRes) {
 		t.Error("Result not added correctly")
+	}
+}
+
+func TestExtractFile(t *testing.T){
+	db.Setup(db.TEST_CONN)
+	defer db.DeleteDB(db.TEST_DB)
+	s := submission.NewSubmission("Triangle", "user", submission.FILE_MODE, "java")
+	err := db.AddSubmission(s)
+	if err != nil{
+		t.Error(err)
+	}
+	info := bson.M{submission.TIME: 1000, submission.TYPE: submission.SRC, submission.MOD: 'c', submission.NAME: "Triangle.java", submission.FTYPE: "java", submission.PKG: "triangle", submission.NUM: 100}
+	f := submission.NewFile(s.Id, info, fileData)
+	dir := filepath.Join(os.TempDir(), s.Id.Hex(), SRC)
+	defer os.RemoveAll(dir)
+	ti, err := ExtractFile(f, dir)
+	if err != nil{
+		t.Error(err)
+	}
+	expected := tool.NewTarget("Triangle", "Triangle.java", "java", "triangle", dir)
+	if !expected.Equals(ti){
+		t.Error("Targets not equivalent")
+	}
+	file, err := os.Open(filepath.Join(dir, filepath.Join("triangle","Triangle.java")))
+	if err != nil{
+		t.Error(err)
+	}
+	buff := new(bytes.Buffer)
+	_, err = buff.ReadFrom(file)
+	if err != nil{
+		t.Error(err)
+	}
+	if !bytes.Equal(fileData, buff.Bytes()){
+		t.Error("Data not equivalent")
+	}
+}
+
+func TestStore(t *testing.T){
+	orig := map[bson.ObjectId]bool{bson.NewObjectId():true, bson.NewObjectId():false, bson.NewObjectId():false, bson.NewObjectId():true}
+	err := saveActive(orig)
+	if err != nil{
+		t.Error(err)
+	}
+	ret := getStored()
+	if !reflect.DeepEqual(orig, ret){
+		t.Error("Maps not equal")
 	}
 }
 

@@ -67,11 +67,13 @@ func getStored() map[bson.ObjectId]bool {
 }
 
 //saveActive saves active submissions to the filesystem.
-func saveActive(active map[bson.ObjectId]bool) {
+func saveActive(active map[bson.ObjectId]bool)error {
 	err := util.SaveMap(active, INCOMPLETE)
 	if err != nil {
 		util.Log(err)
+		return err
 	}
+	return nil
 }
 
 //StatusListener listens for new submissions and adds them to the map of active processes. 
