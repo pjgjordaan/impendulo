@@ -23,21 +23,14 @@ import (
 const DPERM = 0777
 const FPERM = os.O_WRONLY | os.O_CREATE | os.O_TRUNC
 
-var BASE_DIR = ".intlola"
-var LOG_DIR = "logs"
 var errLogger, infoLogger *SyncLogger
 
 //init sets up the loggers.
 func init() {
-	cur, err := user.Current()
-	if err != nil {
-		panic(err)
-	}
+	logDir := filepath.Join(BaseDir(), "logs")
 	y, m, d := time.Now().Date()
-	BASE_DIR = filepath.Join(cur.HomeDir, BASE_DIR)
-	LOG_DIR = filepath.Join(BASE_DIR, LOG_DIR)
-	dir := filepath.Join(LOG_DIR, strconv.Itoa(y), m.String(), strconv.Itoa(d))
-	err = os.MkdirAll(dir, DPERM)
+	dir := filepath.Join(logDir, strconv.Itoa(y), m.String(), strconv.Itoa(d))
+	err := os.MkdirAll(dir, DPERM)
 	if err != nil {
 		panic(err)
 	}
@@ -49,6 +42,14 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func BaseDir() string{
+	cur, err := user.Current()
+	if err != nil {
+		panic(err)
+	}
+	return filepath.Join(cur.HomeDir, ".intlola")
 }
 
 //SyncLogger allows for concurrent logging.
@@ -288,7 +289,7 @@ func ReadBytes(r io.Reader) []byte {
 
 //LoadMap loads a map stored in a file.
 func LoadMap(fname string) (map[bson.ObjectId]bool, error) {
-	f, err := os.Open(filepath.Join(BASE_DIR, fname))
+	f, err := os.Open(fname)
 	if err != nil {
 		return nil, fmt.Errorf("Encountered error %q while opening file %q", err, fname)
 	}
@@ -303,7 +304,7 @@ func LoadMap(fname string) (map[bson.ObjectId]bool, error) {
 
 //SaveMap saves a map to the filesystem.
 func SaveMap(mp map[bson.ObjectId]bool, fname string) error {
-	f, err := os.Create(filepath.Join(BASE_DIR, fname))
+	f, err := os.Create(fname)
 	if err != nil {
 		return fmt.Errorf("Encountered error %q while creating file %q", err, fname)
 	}

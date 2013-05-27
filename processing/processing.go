@@ -13,12 +13,6 @@ import (
 	"strings"
 )
 
-const (
-	INCOMPLETE = "incomplete.gob"
-	SRC        = "src"
-)
-
-
 //Serve spawns new processing routines for each new submission received on subChan.
 //New files are received on fileChan and then sent to the relevant submission process.
 //Incomplete submissions are read from disk and reprocessed using the ProcessStored function.   
@@ -28,7 +22,7 @@ func Serve(subChan chan *submission.Submission, fileChan chan *submission.File) 
 	done := make(chan bson.ObjectId)
 	go StatusListener(busy, done)
 	go func(){
-		stored := getStored()
+		stored := getStored(INCOMPLETE)
 		for subId, busy :=  range stored{
 			if busy{
 				go ProcessStored(subId, subChan, fileChan)
@@ -57,8 +51,8 @@ func Serve(subChan chan *submission.Submission, fileChan chan *submission.File) 
 }
 
 //getStored retrieves incompletely processed submissions from the filesystem.
-func getStored() map[bson.ObjectId]bool {
-	stored, err := util.LoadMap(INCOMPLETE)
+func getStored(fname string) map[bson.ObjectId]bool {
+	stored, err := util.LoadMap(filepath.Join(util.BaseDir(), fname))
 	if err != nil {
 		util.Log(err)
 		stored = make(map[bson.ObjectId]bool)
@@ -67,8 +61,8 @@ func getStored() map[bson.ObjectId]bool {
 }
 
 //saveActive saves active submissions to the filesystem.
-func saveActive(active map[bson.ObjectId]bool)error {
-	err := util.SaveMap(active, INCOMPLETE)
+func saveActive(fname string, active map[bson.ObjectId]bool)error {
+	err := util.SaveMap(active, filepath.Join(util.BaseDir(), fname))
 	if err != nil {
 		util.Log(err)
 		return err
@@ -76,11 +70,13 @@ func saveActive(active map[bson.ObjectId]bool)error {
 	return nil
 }
 
+const INCOMPLETE = "incomplete.gob"
+
 //StatusListener listens for new submissions and adds them to the map of active processes. 
 //It also listens for completed submissions and removes them from the active process map.
 //Finally it detects Kill and Interrupt signals, saving the active processes if they are detected.
 func StatusListener(busy, done chan bson.ObjectId) {
-	active := getStored()
+	active := getStored(INCOMPLETE)
 	quit := make(chan os.Signal)
 	signal.Notify(quit, os.Kill, os.Interrupt)
 	for {
@@ -90,7 +86,7 @@ func StatusListener(busy, done chan bson.ObjectId) {
 		case id := <-done:
 			delete(active, id)
 		case <-quit:
-			saveActive(active)
+			saveActive(INCOMPLETE, active)
 			os.Exit(0)
 		}
 	}
@@ -128,7 +124,7 @@ func ProcessStored(subId bson.ObjectId, subChan chan *submission.Submission, fil
 //It listens for incoming files on fileChan and processes them.
 func ProcessSubmission(sub *submission.Submission, fileChan chan *submission.File, busy, done chan bson.ObjectId) {
 	busy <- sub.Id
-	dir := filepath.Join(os.TempDir(), sub.Id.Hex(), SRC)
+	dir := filepath.Join(os.TempDir(), sub.Id.Hex())
 	defer os.RemoveAll(dir)
 	test := SetupTests(sub.Project, sub.Lang,  dir)
 	for {

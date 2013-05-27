@@ -26,7 +26,7 @@ func TestSetupTests(t *testing.T){
 	if err != nil{
 		t.Error(err)
 	}
-	dir := filepath.Join(os.TempDir(), s.Id.Hex(), SRC)
+	dir := filepath.Join(os.TempDir(), s.Id.Hex())
 	defer os.RemoveAll(dir)
 	runner := SetupTests(test.Project, test.Lang,  dir)
 	if runner == nil{
@@ -56,7 +56,7 @@ func TestCompileTest(t *testing.T){
 	if err != nil{
 		t.Error(err)
 	}
-	dir := filepath.Join(os.TempDir(), f.Id.Hex(), SRC)
+	dir := filepath.Join(os.TempDir(), f.Id.Hex())
 	defer os.RemoveAll(dir)
 	runner := SetupTests(test.Project, test.Lang,  dir)
 	if runner == nil{
@@ -76,7 +76,7 @@ func TestCompileTest(t *testing.T){
 	if err != nil{
 		t.Error(err)
 	}
-	dir = filepath.Join(os.TempDir(), f.Id.Hex(), SRC)
+	dir = filepath.Join(os.TempDir(), f.Id.Hex())
 	defer os.RemoveAll(dir)
 	runner = SetupTests(test.Project, test.Lang,  dir)
 	if runner == nil{
@@ -115,7 +115,7 @@ func TestExecute(t *testing.T){
 	if err != nil{
 		t.Error(err)
 	}
-	dir := filepath.Join(os.TempDir(), s.Id.Hex(), SRC)
+	dir := filepath.Join(os.TempDir(), s.Id.Hex())
 	defer os.RemoveAll(dir)
 	runner := SetupTests(test.Project, test.Lang,  dir)
 	if runner == nil{

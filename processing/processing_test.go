@@ -4,6 +4,7 @@ import (
 	"github.com/godfried/cabanga/db"
 	"github.com/godfried/cabanga/submission"
 	"github.com/godfried/cabanga/tool"
+	"github.com/godfried/cabanga/util"
 	"labix.org/v2/mgo/bson"
 	"testing"
 	"os"
@@ -47,7 +48,7 @@ func TestExtractFile(t *testing.T){
 	}
 	info := bson.M{submission.TIME: 1000, submission.TYPE: submission.SRC, submission.MOD: 'c', submission.NAME: "Triangle.java", submission.FTYPE: "java", submission.PKG: "triangle", submission.NUM: 100}
 	f := submission.NewFile(s.Id, info, fileData)
-	dir := filepath.Join(os.TempDir(), s.Id.Hex(), SRC)
+	dir := filepath.Join(os.TempDir(), s.Id.Hex())
 	defer os.RemoveAll(dir)
 	ti, err := ExtractFile(f, dir)
 	if err != nil{
@@ -72,12 +73,14 @@ func TestExtractFile(t *testing.T){
 }
 
 func TestStore(t *testing.T){
+	fname := "test.gob"
 	orig := map[bson.ObjectId]bool{bson.NewObjectId():true, bson.NewObjectId():false, bson.NewObjectId():false, bson.NewObjectId():true}
-	err := saveActive(orig)
+	defer os.Remove(filepath.Join(util.BaseDir(), fname))
+	err := saveActive(fname, orig)
 	if err != nil{
 		t.Error(err)
 	}
-	ret := getStored()
+	ret := getStored(fname)
 	if !reflect.DeepEqual(orig, ret){
 		t.Error("Maps not equal")
 	}
