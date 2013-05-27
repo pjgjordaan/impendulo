@@ -58,7 +58,6 @@ func Serve(subChan chan *submission.Submission, fileChan chan *submission.File) 
 func getStored(fname string) map[bson.ObjectId]bool {
 	stored, err := util.LoadMap(filepath.Join(util.BaseDir(), fname))
 	if err != nil {
-		fmt.Println(err)
 		util.Log(err)
 		stored = make(map[bson.ObjectId]bool)
 	}
@@ -99,7 +98,7 @@ func StatusListener(fname string, busy, done chan bson.ObjectId, quit chan os.Si
 //ProcessStored processes an incompletely processed submission. 
 //It retrieves files in the submission from the db and sends them on fileChan to be processed. 
 func ProcessStored(subId bson.ObjectId, subChan chan *submission.Submission, fileChan chan *submission.File) {
-	sub, err := db.GetSubmission(bson.M{submission.SUBID: subId})
+	sub, err := db.GetSubmission(bson.M{submission.ID: subId})
 	if err != nil {
 		util.Log(err)
 		return
@@ -112,7 +111,7 @@ func ProcessStored(subId bson.ObjectId, subChan chan *submission.Submission, fil
 	subChan <- sub
 	count := 0
 	for count < total{
-		matcher := bson.M{submission.SUBID: subId, submission.NUM: count}
+		matcher := bson.M{submission.SUBID: subId, submission.INFO+"."+submission.NUM: count}
 		file, err := db.GetFile(matcher)
 		if err != nil {
 			util.Log(err)

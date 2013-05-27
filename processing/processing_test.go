@@ -13,7 +13,7 @@ import (
 	"reflect"
 	"time"
 	"math/rand"
-	//"fmt"
+	"fmt"
 )
 
 func TestAddResult(t *testing.T) {
@@ -77,7 +77,7 @@ func TestExtractFile(t *testing.T){
 
 func TestStore(t *testing.T){
 	fname := "test0.gob"
-	orig := getMap()
+	orig := genMap()
 	defer os.Remove(filepath.Join(util.BaseDir(), fname))
 	err := saveActive(fname, orig)
 	if err != nil{
@@ -96,7 +96,7 @@ func TestStatusListener(t *testing.T){
 	done := make(chan bson.ObjectId)
 	quit := make(chan os.Signal)
 	completed := make(chan bool)
-	subMap := getMap()
+	subMap := genMap()
 	defer os.Remove(filepath.Join(util.BaseDir(), fname))
 	go StatusListener(fname, busy, done, quit)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -126,13 +126,65 @@ func TestStatusListener(t *testing.T){
 	}
 }
 
-func getMap()map[bson.ObjectId]bool{
+func genMap()map[bson.ObjectId]bool{
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	idMap := make(map[bson.ObjectId]bool)
-	for i := 0; i < 10; i++{
+	for i := 0; i < 100; i++{
 		idMap[bson.NewObjectId()] = r.Float64() > 0.5
 	}
 	return idMap
+}
+
+func TestProcessStored(t *testing.T){
+	db.Setup(db.TEST_CONN)
+	defer db.DeleteDB(db.TEST_DB)
+	sub := submission.NewSubmission("Triangle", "user", submission.FILE_MODE, "java")
+	err := db.AddSubmission(sub)
+	if err != nil{
+		t.Error(err)
+	}
+	ids := make(map[bson.ObjectId]bool)
+	for i := 0; i < 5; i ++{
+		info := bson.M{submission.TIME: 1000+i, submission.TYPE: submission.SRC, submission.MOD: 'c', submission.NAME: "Triangle.java", submission.FTYPE: "java", submission.PKG: "triangle", submission.NUM: i}
+		f := submission.NewFile(sub.Id, info, fileData)
+		err := db.AddFile(f)
+		if err != nil{
+			t.Error(err)
+		}
+		ids[f.Id] = true
+	}
+	subChan := make(chan *submission.Submission)
+	fileChan := make(chan *submission.File)
+	go ProcessStored(sub.Id, subChan, fileChan)
+	gotSub := false
+loop : for{
+		select{
+		case s := <-subChan:
+			if !sub.Equals(s){
+				t.Error("Submissions not equal", sub, s)
+			}
+			if gotSub{
+				break loop
+			}
+			gotSub = true
+		case file := <- fileChan:
+			if !ids[file.Id]{
+				t.Error("Unknown id", file.Id)
+			} else {
+				f, err := db.GetFile(bson.M{submission.ID: file.Id})
+				if err != nil{
+					t.Error(err)
+				}
+				if !f.Equals(file){
+					t.Error("Files not equal")
+				}
+			}
+			delete(ids, file.Id)
+		}
+	}
+	if len(ids) > 0{
+		t.Error("All files not received", ids)
+	}
 }
 
 var fileData = []byte(`Ahm Knêma
