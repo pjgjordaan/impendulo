@@ -11,6 +11,9 @@ import (
 	"path/filepath"
 	"bytes"
 	"reflect"
+	"time"
+	"math/rand"
+	//"fmt"
 )
 
 func TestAddResult(t *testing.T) {
@@ -73,8 +76,8 @@ func TestExtractFile(t *testing.T){
 }
 
 func TestStore(t *testing.T){
-	fname := "test.gob"
-	orig := map[bson.ObjectId]bool{bson.NewObjectId():true, bson.NewObjectId():false, bson.NewObjectId():false, bson.NewObjectId():true}
+	fname := "test0.gob"
+	orig := getMap()
 	defer os.Remove(filepath.Join(util.BaseDir(), fname))
 	err := saveActive(fname, orig)
 	if err != nil{
@@ -84,6 +87,52 @@ func TestStore(t *testing.T){
 	if !reflect.DeepEqual(orig, ret){
 		t.Error("Maps not equal")
 	}
+}
+
+
+func TestStatusListener(t *testing.T){
+	fname := "test1.gob"
+	busy := make(chan bson.ObjectId)
+	done := make(chan bson.ObjectId)
+	quit := make(chan os.Signal)
+	completed := make(chan bool)
+	subMap := getMap()
+	defer os.Remove(filepath.Join(util.BaseDir(), fname))
+	go StatusListener(fname, busy, done, quit)
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	count := 0
+	for k, v := range subMap{
+		busy <- k
+		if !v {
+			count ++
+			go func(id bson.ObjectId){
+				time.Sleep(time.Millisecond*time.Duration(r.Intn(100)))
+				done <- id
+				completed <- true
+			}(k)
+		}
+	}
+	for i := 0; i < count; i ++{
+		<-completed
+	}
+	quit <- os.Interrupt
+	//Have to wait for file to be 
+	time.Sleep(time.Second)	
+	retrieved := getStored(fname)
+	for k,v := range subMap{
+		if v != retrieved[k]{
+			t.Error("Map values did not match for submission:", k, v, retrieved[k])
+		}
+	}
+}
+
+func getMap()map[bson.ObjectId]bool{
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	idMap := make(map[bson.ObjectId]bool)
+	for i := 0; i < 10; i++{
+		idMap[bson.NewObjectId()] = r.Float64() > 0.5
+	}
+	return idMap
 }
 
 var fileData = []byte(`Ahm Knêma

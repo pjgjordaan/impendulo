@@ -13,6 +13,8 @@ import (
 	"strings"
 )
 
+const INCOMPLETE = "incomplete.gob"
+
 //Serve spawns new processing routines for each new submission received on subChan.
 //New files are received on fileChan and then sent to the relevant submission process.
 //Incomplete submissions are read from disk and reprocessed using the ProcessStored function.   
@@ -20,7 +22,9 @@ func Serve(subChan chan *submission.Submission, fileChan chan *submission.File) 
 	// Start handlers
 	busy := make(chan bson.ObjectId)
 	done := make(chan bson.ObjectId)
-	go StatusListener(busy, done)
+	quit := make(chan os.Signal)
+	signal.Notify(quit, os.Kill, os.Interrupt)
+	go StatusListener(INCOMPLETE, busy, done, quit)
 	go func(){
 		stored := getStored(INCOMPLETE)
 		for subId, busy :=  range stored{
@@ -54,6 +58,7 @@ func Serve(subChan chan *submission.Submission, fileChan chan *submission.File) 
 func getStored(fname string) map[bson.ObjectId]bool {
 	stored, err := util.LoadMap(filepath.Join(util.BaseDir(), fname))
 	if err != nil {
+		fmt.Println(err)
 		util.Log(err)
 		stored = make(map[bson.ObjectId]bool)
 	}
@@ -64,21 +69,16 @@ func getStored(fname string) map[bson.ObjectId]bool {
 func saveActive(fname string, active map[bson.ObjectId]bool)error {
 	err := util.SaveMap(active, filepath.Join(util.BaseDir(), fname))
 	if err != nil {
-		util.Log(err)
 		return err
 	}
 	return nil
 }
 
-const INCOMPLETE = "incomplete.gob"
-
 //StatusListener listens for new submissions and adds them to the map of active processes. 
 //It also listens for completed submissions and removes them from the active process map.
 //Finally it detects Kill and Interrupt signals, saving the active processes if they are detected.
-func StatusListener(busy, done chan bson.ObjectId) {
-	active := getStored(INCOMPLETE)
-	quit := make(chan os.Signal)
-	signal.Notify(quit, os.Kill, os.Interrupt)
+func StatusListener(fname string, busy, done chan bson.ObjectId, quit chan os.Signal) {
+	active := getStored(fname)
 	for {
 		select {
 		case id := <-busy:
@@ -86,8 +86,12 @@ func StatusListener(busy, done chan bson.ObjectId) {
 		case id := <-done:
 			delete(active, id)
 		case <-quit:
-			saveActive(INCOMPLETE, active)
-			os.Exit(0)
+			err := saveActive(fname, active)
+			if err != nil{
+				util.Log(err)
+			}
+			//os.Exit(0)
+			return
 		}
 	}
 }
