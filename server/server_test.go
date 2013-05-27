@@ -254,7 +254,7 @@ func TestSubLogin(t *testing.T){
 	if err != nil {
 		t.Error(err)
 	}
-	port := "9000"
+	port := "9002"
 	go func() {
 		err = loginClient(port, uname, pword)
 		if err != nil{
@@ -518,7 +518,7 @@ func TestTestLogin(t *testing.T){
 	if err != nil {
 		t.Error(err)
 	}
-	port := "9001"
+	port := "9003"
 	go func() {
 		err = loginClient(port, uname, pword)
 		if err != nil{
