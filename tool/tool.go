@@ -1,104 +1,13 @@
 package tool
+
 import(
 	"labix.org/v2/mgo/bson"
 "reflect"
-"time"
 "strings"
-"path/filepath"
 "os/exec"
 "fmt"
 "bytes"
 )
-
-//Result describes a tool or test's results for a given file.
-type Result struct {
-	Id      bson.ObjectId "_id"
-	FileId  bson.ObjectId "fileid"
-	ToolId  bson.ObjectId "toolId"
-	Name    string        "name"
-	OutName string        "outname"
-	ErrName string        "errname"
-	OutData []byte        "outdata"
-	ErrData []byte        "errdata"
-	Error   error         "error"
-	Time    int64         "time"
-}
-
-func (this *Result) Equals(that *Result) bool {
-	return reflect.DeepEqual(this, that)
-}
-
-//NewResult
-func ToolResult(fileId bson.ObjectId, tool *Tool, outdata, errdata []byte, err error) *Result {
-	return &Result{bson.NewObjectId(), fileId, tool.Id, tool.Name, tool.OutName, tool.ErrName, outdata, errdata, err, time.Now().UnixNano()}
-}
-
-
-//NewResult
-func NewResult(fileId, toolId bson.ObjectId, name, outname, errname string, outdata, errdata []byte, err error) *Result {
-	return &Result{bson.NewObjectId(), fileId, toolId, name, outname, errname, outdata, errdata, err, time.Now().UnixNano()}
-}
-
-//TargetInfo stores information about the target file.
-type TargetInfo struct {
-	Project string
-	//File name without extension
-	Name string
-	//Language file is written in
-	Lang    string
-	Package string
-	Ext     string
-	Dir     string
-}
-
-//FilePath
-func (ti *TargetInfo) FilePath() string {
-	return filepath.Join(ti.Dir, ti.Package, ti.FullName())
-}
-
-//PkgPath
-func (ti *TargetInfo) PkgPath() string {
-	return filepath.Join(ti.Dir, ti.Package)
-}
-
-//FullName
-func (ti *TargetInfo) FullName() string {
-	return ti.Name + "." + ti.Ext
-}
-
-//Executable retrieves the path to the compiled executable with its package. 
-func (ti *TargetInfo) Executable() string {
-	return ti.Package + "." + ti.Name
-}
-
-func (this *TargetInfo) Equals(that *TargetInfo) bool {
-	return reflect.DeepEqual(this, that)
-}
-
-const (
-	DIR_PATH = iota
-	PKG_PATH
-	FILE_PATH
-)
-
-//GetTarget retrieves the target path based on the type required. 
-func (ti *TargetInfo) GetTarget(id int) string {
-	switch id {
-	case DIR_PATH:
-		return ti.Dir
-	case PKG_PATH:
-		return ti.PkgPath()
-	case FILE_PATH:
-		return ti.FilePath()
-	}
-	return ""
-}
-
-//NewTarget
-func NewTarget(project, name, lang, pkg, dir string) *TargetInfo {
-	split := strings.Split(name, ".")
-	return &TargetInfo{project, split[0], lang, pkg, split[1], dir}
-}
 
 //Tool is a generic tool specification.
 type Tool struct{

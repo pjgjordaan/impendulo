@@ -32,13 +32,13 @@ func main() {
 	} else if Mode == "s" {
 		Run()
 	} else {
-		log.Fatal(fmt.Errorf("Unknown running mode %q", mode))
+		log.Fatal(fmt.Errorf("Unknown running mode %q", Mode))
 	}
 }
 
 //AddUsers adds users from a text file to the database.
 func AddUsers() error {
-	users, err := util.ReadUsers(ufile)
+	users, err := util.ReadUsers(UsersFile)
 	if err != nil {
 		return err
 	}
@@ -49,12 +49,11 @@ func AddUsers() error {
 //Run starts a routine for processing snapshot submissions as well as a routine for receiving project tests.
 //An instance of our tcp snapshot server is then launched. 
 func Run() {
-	util.Log("Starting server on port ", fport)
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	db.Setup(db.DEFAULT_CONN)
 	fileChan := make(chan *submission.File)
 	subChan := make(chan *submission.Submission)
 	go processing.Serve(subChan, fileChan)
-	go server.Run(tport, new(server.TestSpawner))
-	server.Run(fport, &server.SubmissionSpawner{subChan, fileChan})
+	go server.Run(TestPort, new(server.TestSpawner))
+	server.Run(FilePort, &server.SubmissionSpawner{subChan, fileChan})
 }

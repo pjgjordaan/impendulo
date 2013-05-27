@@ -626,7 +626,7 @@ func handleTestServer(port string) error {
 	handler := &TestHandler{Conn: sconn}
 	return handler.Handle()
 }
-x
+
 func TestTestHandle(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
