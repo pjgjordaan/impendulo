@@ -13,7 +13,6 @@ import (
 	"reflect"
 	"time"
 	"math/rand"
-	"fmt"
 )
 
 func TestAddResult(t *testing.T) {
@@ -90,7 +89,7 @@ func TestStore(t *testing.T){
 }
 
 
-func TestStatusListener(t *testing.T){
+func TestMonitor(t *testing.T){
 	fname := "test1.gob"
 	busy := make(chan bson.ObjectId)
 	done := make(chan bson.ObjectId)
@@ -98,7 +97,7 @@ func TestStatusListener(t *testing.T){
 	completed := make(chan bool)
 	subMap := genMap()
 	defer os.Remove(filepath.Join(util.BaseDir(), fname))
-	go StatusListener(fname, busy, done, quit)
+	go Monitor(fname, busy, done, quit)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	count := 0
 	for k, v := range subMap{

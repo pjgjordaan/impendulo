@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 )
 
 const INCOMPLETE = "incomplete.gob"
@@ -24,7 +23,7 @@ func Serve(subChan chan *submission.Submission, fileChan chan *submission.File) 
 	done := make(chan bson.ObjectId)
 	quit := make(chan os.Signal)
 	signal.Notify(quit, os.Kill, os.Interrupt)
-	go StatusListener(INCOMPLETE, busy, done, quit)
+	go Monitor(INCOMPLETE, busy, done, quit)
 	go func(){
 		stored := getStored(INCOMPLETE)
 		for subId, busy :=  range stored{
@@ -50,47 +49,6 @@ func Serve(subChan chan *submission.Submission, fileChan chan *submission.File) 
 			} else {
 				util.Log(fmt.Errorf("No channel found for submission: %q", file.SubId))
 			}
-		}
-	}
-}
-
-//getStored retrieves incompletely processed submissions from the filesystem.
-func getStored(fname string) map[bson.ObjectId]bool {
-	stored, err := util.LoadMap(filepath.Join(util.BaseDir(), fname))
-	if err != nil {
-		util.Log(err)
-		stored = make(map[bson.ObjectId]bool)
-	}
-	return stored
-}
-
-//saveActive saves active submissions to the filesystem.
-func saveActive(fname string, active map[bson.ObjectId]bool)error {
-	err := util.SaveMap(active, filepath.Join(util.BaseDir(), fname))
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-//StatusListener listens for new submissions and adds them to the map of active processes. 
-//It also listens for completed submissions and removes them from the active process map.
-//Finally it detects Kill and Interrupt signals, saving the active processes if they are detected.
-func StatusListener(fname string, busy, done chan bson.ObjectId, quit chan os.Signal) {
-	active := getStored(fname)
-	for {
-		select {
-		case id := <-busy:
-			active[id] = true
-		case id := <-done:
-			delete(active, id)
-		case <-quit:
-			err := saveActive(fname, active)
-			if err != nil{
-				util.Log(err)
-			}
-			//os.Exit(0)
-			return
 		}
 	}
 }
@@ -280,93 +238,7 @@ func AddResult(res *tool.Result) error {
 	return db.AddResult(res)
 }
 
-//SetupTests extracts a project's tests from db to filesystem for execution.
-//It creates and returns a new TestRunner.
-func SetupTests(project, lang, dir string) *TestRunner {
-	testMatcher := bson.M{submission.PROJECT: project, submission.LANG: lang}
-	test, err := db.GetTest(testMatcher)
-	if err != nil {
-		util.Log(err)
-		return nil
-	}
-	err = util.Unzip(dir, test.Tests)
-	if err != nil {
-		util.Log(err)
-		return nil
-	}
-	err = util.Unzip(dir, test.Data)
-	if err != nil {
-		util.Log(err)
-		return nil
-	}
-	return &TestRunner{test.Project, test.Names, test.Lang, dir}
-}
 
-
-//TestRunner is used to run tests on files compiled files.
-type TestRunner struct {
-	Project string
-	Names []string
-	Lang    string
-	Dir     string
-}
-
-//Execute sets up and runs tests on a compiled file. 
-func (this *TestRunner)  Execute(f *submission.File, target *tool.TargetInfo) error {
-	for _, name := range this.Names {
-		compiled, err := this.Compile(name, f, target)
-		if err != nil {
-			return err
-		}
-		if !compiled {
-			continue
-		}
-		err = this.Run(name, f, target)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-const(
-	JUNIT_EXEC = "org.junit.runner.JUnitCore"
-	JUNIT_JAR = "/usr/share/java/junit4.jar"
-)
-
-//Compile compiles a test for the current file. 
-func (this *TestRunner) Compile(testName string, f *submission.File, target *tool.TargetInfo) (bool, error) {
-	if _, ok := f.Results[testName+"_compile"]; ok {
-		return true, nil
-	}
-	cp := this.Dir+":"+JUNIT_JAR
-	stderr, stdout, ok, err := tool.RunCommand("javac", "-cp", cp, "-implicit:class", filepath.Join(this.Dir,"testing",testName))
-	if !ok{
-		return false, err
-	}
-	res := tool.NewResult(f.Id, f.Id, testName+"_compile", "warnings", "errors", stdout, stderr, err)
-	err = AddResult(res)
-	if err != nil {
-		return false, err
-	}
-	return res.Error == nil, nil
-}
-
-//Run runs a test on the current file.
-func (this *TestRunner) Run(testName string, f *submission.File, target *tool.TargetInfo) error {
-	if _, ok := f.Results[testName+"_run"]; ok {
-		return nil
-	}
-	cp := this.Dir+":"+JUNIT_JAR
-	env := "-Ddata.location="+this.Dir
-	exec := strings.Split(testName, ".")[0]
-	stderr, stdout, ok, err := tool.RunCommand("java", "-cp", cp, env, JUNIT_EXEC, "testing."+exec)
-	if !ok {
-		return err
-	}
-	res := tool.NewResult(f.Id, f.Id, testName+"_run", "warnings", "errors", stdout, stderr, err)
-	return AddResult(res)
-}
 
 //RunTools runs all available tools on a file, skipping previously run tools.
 func RunTools(f *submission.File, ti *tool.TargetInfo) error {
@@ -389,22 +261,3 @@ func RunTools(f *submission.File, ti *tool.TargetInfo) error {
 	}
 	return nil
 }
-
-
-
-/*
-//init sets up tool configuration for testing
-func init() {
-	db.Setup(db.DEFAULT_CONN)
-	_, err := db.GetTool(bson.M{tool.NAME: "findbugs"})
-	if err != nil {
-		fb := &tool.Tool{bson.NewObjectId(), "findbugs", tool.JAVA, "/home/disco/apps/findbugs-2.0.2/lib/findbugs.jar", "warning_count", tool.WARNS, []string{tool.JAVA, "-jar"}, []string{"-textui", "-low"}, bson.M{}, tool.PKG_PATH}
-		db.AddTool(fb)
-	}
-	_, err = db.GetTool(bson.M{tool.NAME: tool.COMPILE})
-	if err != nil {
-		javac := &tool.Tool{bson.NewObjectId(), tool.COMPILE, tool.JAVA, tool.JAVAC, tool.WARNS, tool.ERRS, []string{}, []string{"-implicit:class"}, bson.M{tool.CP: ""}, tool.FILE_PATH}
-		db.AddTool(javac)
-	}
-}
-*/
