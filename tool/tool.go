@@ -9,22 +9,26 @@ import(
 "bytes"
 )
 
+type Tool interface{
+	func GetLang()string
+	func Run(fileId bson.ObjectId, target *TargetInfo)(*Result, error)
+}
+
 //Tool is a generic tool specification.
-type Tool struct{
-	Id   bson.ObjectId "_id"
-	Name string        "name"
-	Lang string        "lang"
-	Exec    string "exec"
-	OutName string "out"
-	ErrName string "err"
-	Preamble []string "pre"
-	Flags []string "flags"
-	ArgFlags bson.M "argflags"
-	Target int "target"
+type BasicTool struct{
+	name string
+	lang string
+	exec string 
+	outname string 
+	errname string 
+	preamble []string 
+	flags []string 
+	args bson.M 
+	Target int 
 }
 
 //GetArgs sets up tool arguments for execution.
-func (this *Tool) GetArgs(target string) (args []string) {
+func (this *BasicTool) GetArgs(target string) (args []string) {
 	args = make([]string, len(this.Preamble)+len(this.Flags)+(len(this.ArgFlags)*2)+2)
 	for i, p := range this.Preamble {
 		args[i] = p
@@ -47,27 +51,15 @@ func (this *Tool) GetArgs(target string) (args []string) {
 	return args
 }
 
-func (this *Tool) setArgFlags(args map[string]string) {
-	if args != nil{
-		for k, arg := range args {
-			if _, ok := this.ArgFlags[k]; ok {
-				this.ArgFlags[k] = arg
-			}
-		}
-	}
-	for flag, val := range this.ArgFlags {
-		if strings.TrimSpace(val.(string)) == "" {
-			delete(this.ArgFlags, flag)
-		}
-	}
+func (this *BasicTool) addArgs(args map[string]string) {
+	this.ArgFlags = args
 }
 
-func (this *Tool) Equals(that *Tool) bool {
+func (this *BasicTool) Equals(that Tool) bool {
 	return reflect.DeepEqual(this, that)
 }
 
-func (this *Tool) Run(fileId bson.ObjectId, ti *TargetInfo, fArgs map[string]string)(*Result, error){
-	this.setArgFlags(fArgs)
+func (this *BasicTool) Run(fileId bson.ObjectId, ti *TargetInfo)(*Result, error){
 	target := ti.GetTarget(this.Target)
 	args := this.GetArgs(target)
 	stderr, stdout, ok, err := RunCommand(args...)
@@ -76,6 +68,36 @@ func (this *Tool) Run(fileId bson.ObjectId, ti *TargetInfo, fArgs map[string]str
 	}
 	return ToolResult(fileId, this, stdout, stderr, err), nil
 }
+
+
+type Javac struct{
+	cmd string
+	cp []string
+}
+
+func NewJavac(cmd string, cp []string) *Javac{
+	return &Javac{cmd, cp}	
+}
+
+func (this *Javac) GetLang() string{
+	return "java"
+}
+
+func (this *Javac) GetArgs(target string)[]string{
+	return []string{this.cmd, "-cp", this.cp, "-implicit:class", target}
+}
+
+func Run(fileId bson.ObjectId, ti *TargetInfo)(*Result, error){
+	target := ti.GetTarget(FILE_PATH)
+	args := this.GetArgs(target)
+	stderr, stdout, ok, err := RunCommand(args...)
+	if !ok {
+		return nil, err
+	}
+	return ToolResult(fileId, this, stdout, stderr, err), nil
+}
+
+type JUnit
 
 
 //RunCommand executes a given external command.

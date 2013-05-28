@@ -16,8 +16,8 @@ import (
 	var FilePort, TestPort, UsersFile, ConfigFile string
 
 func init() {
-	flag.StringVar(&FilePort, "fp", "9000", "Specify the port to listen on for files.")
-	flag.StringVar(&TestPort, "tp", "8000", "Specify the port to listen on for tests.")
+	flag.StringVar(&FilePort, "fp", "8010", "Specify the port to listen on for files.")
+	flag.StringVar(&TestPort, "tp", "8011", "Specify the port to listen on for tests.")
 	flag.StringVar(&UsersFile, "u", "", "Specify a file with new users.")
 	flag.StringVar(&ConfigFile, "c", "config.txt", "Specify a configuration file.")
 }

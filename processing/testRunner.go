@@ -1,6 +1,7 @@
 package processing
 
 import (
+	"github.com/godfried/cabanga/config"
 	"github.com/godfried/cabanga/db"
 	"github.com/godfried/cabanga/tool"
 	"github.com/godfried/cabanga/submission"
@@ -59,18 +60,13 @@ func (this *TestRunner)  Execute(f *submission.File, target *tool.TargetInfo) er
 	return nil
 }
 
-const(
-	JUNIT_EXEC = "org.junit.runner.JUnitCore"
-	JUNIT_JAR = "/usr/share/java/junit4.jar"
-)
-
 //Compile compiles a test for the current file. 
 func (this *TestRunner) Compile(testName string, f *submission.File, target *tool.TargetInfo) (bool, error) {
 	if _, ok := f.Results[testName+"_compile"]; ok {
 		return true, nil
 	}
-	cp := this.Dir+":"+JUNIT_JAR
-	stderr, stdout, ok, err := tool.RunCommand("javac", "-cp", cp, "-implicit:class", filepath.Join(this.Dir,"testing",testName))
+	cp := this.Dir+":"+config.GetConfig(config.JUNIT_JAR)
+	stderr, stdout, ok, err := tool.RunCommand(config.GetConfig(config.JAVAC), "-cp", cp, "-implicit:class", filepath.Join(this.Dir,"testing",testName))
 	if !ok{
 		return false, err
 	}
@@ -87,10 +83,10 @@ func (this *TestRunner) Run(testName string, f *submission.File, target *tool.Ta
 	if _, ok := f.Results[testName+"_run"]; ok {
 		return nil
 	}
-	cp := this.Dir+":"+JUNIT_JAR
+	cp := this.Dir+":"+config.GetConfig(config.JUNIT_JAR)
 	env := "-Ddata.location="+this.Dir
 	exec := strings.Split(testName, ".")[0]
-	stderr, stdout, ok, err := tool.RunCommand("java", "-cp", cp, env, JUNIT_EXEC, "testing."+exec)
+	stderr, stdout, ok, err := tool.RunCommand(config.GetConfig(config.JAVA), "-cp", cp, env, config.GetConfig(config.JUNIT_EXEC), "testing."+exec)
 	if !ok {
 		return err
 	}
