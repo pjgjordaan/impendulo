@@ -3,13 +3,10 @@ package util
 import (
 	"bytes"
 	"fmt"
-	myuser "github.com/godfried/cabanga/user"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"path/filepath"
-	"strings"
 )
 
 const DPERM = 0777
@@ -21,40 +18,6 @@ func BaseDir() string{
 		panic(err)
 	}
 	return filepath.Join(cur.HomeDir, ".intlola")
-}
-
-//ReadUsers reads user configurations from a file.
-//It also sets up their passwords.
-func ReadUsers(fname string) ([]*myuser.User, error) {
-	data, err := ioutil.ReadFile(fname)
-	if err != nil {
-		return nil, fmt.Errorf("Encountered error %q when attempting to read file %q", err, fname)
-	}
-	buff := bytes.NewBuffer(data)
-	line, err := buff.ReadString(byte('\n'))
-	users := make([]*myuser.User, 100, 1000)
-	i := 0
-	for err == nil {
-		vals := strings.Split(line, ":")
-		uname := strings.TrimSpace(vals[0])
-		pword := strings.TrimSpace(vals[1])
-		hash, salt := Hash(pword)
-		data := &myuser.User{uname, hash, salt, myuser.ALL_SUB}
-		if i == len(users) {
-			users = append(users, data)
-		} else {
-			users[i] = data
-		}
-		i++
-		line, err = buff.ReadString(byte('\n'))
-	}
-	if err == io.EOF {
-		err = nil
-		if i < len(users) {
-			users = users[:i]
-		}
-	}
-	return users, err
 }
 
 //ReadData reads data from a reader until io.EOF or []byte("eof") is encountered. 

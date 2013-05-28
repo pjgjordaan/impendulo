@@ -1,6 +1,11 @@
 package user
  import(
 "reflect"
+"os"
+"bufio"
+"fmt"
+"strings"
+"github.com/godfried/cabanga/util"
 )
 const (
 	NONE    = 0
@@ -75,4 +80,41 @@ func EqualsOne(test interface{}, args ...interface{}) bool {
 		}
 	}
 	return false
+}
+
+
+//ReadUsers reads user configurations from a file.
+//It also sets up their passwords.
+func ReadUsers(fname string) ([]*User, error) {
+	f, err := os.Open(fname)
+	if err != nil{
+		return nil, err
+	}
+	scanner := bufio.NewScanner(f)
+	users := make([]*User, 100, 1000)
+	i := 0
+	for scanner.Scan(){
+		vals := strings.Split(scanner.Text(), ":")
+		if len(vals) != 2{
+			return nil, fmt.Errorf("Config file not formatted correctly.")
+		}
+		uname := strings.TrimSpace(vals[0])
+		pword := strings.TrimSpace(vals[1])
+		hash, salt := util.Hash(pword)
+		data := &User{uname, hash, salt, ALL_SUB}
+		if i == len(users) {
+			users = append(users, data)
+		} else {
+			users[i] = data
+		}
+		i++
+	}
+	if err = scanner.Err(); err != nil{
+		return nil, err
+	}
+	if i < len(users) {
+		users = users[:i]
+	}
+	return users, nil
+	
 }

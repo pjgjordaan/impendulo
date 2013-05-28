@@ -75,7 +75,7 @@ javac := &Tool{bson.NewObjectId(), "compile", "java", "javac", "warnings", "erro
 	
 
 func setupTarget() (*TargetInfo, error){
-	var fileData = []byte(`package bermuda;
+	fileData := []byte(`package bermuda;
 
 public class Triangle {
         public int maxpath(int[][] tri) {

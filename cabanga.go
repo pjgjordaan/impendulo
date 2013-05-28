@@ -2,43 +2,44 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"github.com/godfried/cabanga/db"
 	"github.com/godfried/cabanga/processing"
 	"github.com/godfried/cabanga/server"
 	"github.com/godfried/cabanga/submission"
+	"github.com/godfried/cabanga/user"
 	"github.com/godfried/cabanga/util"
-	"log"
+	"github.com/godfried/cabanga/config"
 	"runtime"
 )
 
 //Flag variables for setting ports to listen on, users file to process and the mode to run in.
-var FilePort, TestPort, UsersFile, Mode string
+	var FilePort, TestPort, UsersFile, ConfigFile string
 
 func init() {
 	flag.StringVar(&FilePort, "fp", "9000", "Specify the port to listen on for files.")
 	flag.StringVar(&TestPort, "tp", "8000", "Specify the port to listen on for tests.")
 	flag.StringVar(&UsersFile, "u", "", "Specify a file with new users.")
-	flag.StringVar(&Mode, "m", "s", "Specify a mode to run in.")
+	flag.StringVar(&ConfigFile, "c", "config.txt", "Specify a configuration file.")
 }
 
 func main() {
 	flag.Parse()
-	if Mode == "u" {
+	err := config.LoadConfigs(ConfigFile)
+	if err != nil{
+		panic(err)
+	}
+	if UsersFile != "" {
 		err := AddUsers()
 		if err != nil {
 			util.Log(err)
 		}
-	} else if Mode == "s" {
-		Run()
-	} else {
-		log.Fatal(fmt.Errorf("Unknown running mode %q", Mode))
 	}
+	Run()
 }
 
 //AddUsers adds users from a text file to the database.
 func AddUsers() error {
-	users, err := util.ReadUsers(UsersFile)
+	users, err := user.ReadUsers(UsersFile)
 	if err != nil {
 		return err
 	}
