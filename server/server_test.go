@@ -74,7 +74,7 @@ func sendFile(conn net.Conn, fileChan chan *submission.File) error {
 
 
 func sendTest(conn net.Conn) error {
-	fmap := map[string]interface{}{REQ:SEND, submission.PROJECT:"project", submission.LANG: "lang", submission.NAMES: []string{"test0","test1","test2"}}
+	fmap := map[string]interface{}{REQ:SEND, submission.PROJECT:"project", submission.PKG:"package", submission.LANG: "lang", submission.NAMES: []string{"test0","test1","test2"}}
 	err := writeJson(conn, fmap)
 	if err != nil {
 		return err
@@ -576,7 +576,7 @@ func readTestServer(port string) error{
 	if err != nil {
 		return err
 	}
-	expected := submission.NewTest("project", "lang",[]string{"test0","test1","test2"}, testData, fileData)
+	expected := submission.NewTest("project", "package", "lang", []string{"test0","test1","test2"}, testData, fileData)
 	expected.Id = handler.Test.Id
 	if !expected.Equals(handler.Test){
 		return fmt.Errorf("Tests not equivalent")
