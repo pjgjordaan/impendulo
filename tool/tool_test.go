@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 )
 
-func TestGetArgs(t *testing.T) {
-	fb := &Tool{bson.NewObjectId(), "findbugs", "java", "/home/disco/apps/findbugs-2.0.2/lib/findbugs.jar", "warning_count", "warnings", []string{"java", "-jar"}, []string{"-textui", "-low"}, bson.M{}, PKG_PATH}
-	javac := &Tool{bson.NewObjectId(), "compile", "java", "javac", "warnings", "errors", []string{}, []string{"-implicit:class"}, bson.M{"-cp": ""}, FILE_PATH}
+func TestGenericGetArgs(t *testing.T) {
+	fb := &GenericTool{"findbugs", "java", "/home/disco/apps/findbugs-2.0.2/lib/findbugs.jar", []string{"java", "-jar"}, []string{"-textui", "-low"}, map[string]string{}, PKG_PATH}
+	javac := &GenericTool{"javac", "java", "javac", []string{}, []string{"-implicit:class"}, map[string]string{"-cp": ""}, FILE_PATH}
 	fbExp := []string{"java", "-jar", "/home/disco/apps/findbugs-2.0.2/lib/findbugs.jar", "-textui", "-low", "here"}
 	res := fb.GetArgs("here")
 	if !reflect.DeepEqual(fbExp, res) {
@@ -22,20 +22,19 @@ func TestGetArgs(t *testing.T) {
 	if reflect.DeepEqual(compExp, res) {
 		t.Error("Arguments not computed correctly", res)
 	}
-	javac.setArgFlags(map[string]string{"-cp": "there"})
+	javac.AddArgs(map[string]string{"-cp": "there"})
 	res = javac.GetArgs("here")
 	if !reflect.DeepEqual(compExp, res) {
 		t.Error("Arguments not computed correctly", res)
 	}
-
 }
 
-func TestSetFlagArgs(t *testing.T){
-	javac := &Tool{bson.NewObjectId(), "compile", "java", "javac", "warnings", "errors", []string{}, []string{"-implicit:class"}, bson.M{"-cp": ""}, FILE_PATH}
-	expected := bson.M{"-cp":"there"}
-	javac.setArgFlags(map[string]string{"-cp":"there"})
-	if !reflect.DeepEqual(expected, javac.ArgFlags){
-		t.Error("Flags not set properly", expected, javac.ArgFlags)
+func TestAddArgs(t *testing.T){
+	javac := &GenericTool{"javac", "java", "javac", []string{}, []string{"-implicit:class"}, nil, FILE_PATH}
+	expected := map[string]string{"-cp":"there"}
+	javac.AddArgs(expected)
+	if !reflect.DeepEqual(expected, javac.args){
+		t.Error("Flags not set properly", expected, javac.args)
 	}
 }
 
@@ -58,14 +57,15 @@ func TestRunCommand(t *testing.T){
 }
 
 
-func TestRun(t *testing.T){
+func TestGenericRun(t *testing.T){
 	fileId := bson.NewObjectId()
-javac := &Tool{bson.NewObjectId(), "compile", "java", "javac", "warnings", "errors", []string{}, []string{"-implicit:class"}, bson.M{"-cp": ""}, FILE_PATH}
+	javac := &GenericTool{"javac", "java", "javac", []string{}, []string{"-implicit:class"}, nil,  FILE_PATH}
 	ti, err := setupTarget()
 	if err != nil{
 		t.Error(err)
 	}
-	_, err = javac.Run(fileId, ti, map[string]string{"-cp":ti.Dir})
+	javac.AddArgs(map[string]string{"-cp":ti.Dir})
+	_, err = javac.Run(fileId, ti)
 	if err != nil{
 		t.Error(err)
 	}

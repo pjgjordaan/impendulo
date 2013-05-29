@@ -50,7 +50,7 @@ func (this *GenericTool) GetArgs(target string) (args []string) {
 	return args
 }
 
-func (this *GenericTool) addArgs(args map[string]string) {
+func (this *GenericTool) AddArgs(args map[string]string) {
 	this.args = args
 }
 
