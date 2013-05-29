@@ -10,10 +10,7 @@ import(
 type Result struct {
 	Id      bson.ObjectId "_id"
 	FileId  bson.ObjectId "fileid"
-	ToolId  bson.ObjectId "toolId"
 	Name    string        "name"
-	OutName string        "outname"
-	ErrName string        "errname"
 	OutData []byte        "outdata"
 	ErrData []byte        "errdata"
 	Error   error         "error"
@@ -25,12 +22,6 @@ func (this *Result) Equals(that *Result) bool {
 }
 
 //NewResult
-func ToolResult(fileId bson.ObjectId, tool *Tool, outdata, errdata []byte, err error) *Result {
-	return &Result{bson.NewObjectId(), fileId, tool.Id, tool.Name, tool.OutName, tool.ErrName, outdata, errdata, err, time.Now().UnixNano()}
-}
-
-
-//NewResult
-func NewResult(fileId, toolId bson.ObjectId, name, outname, errname string, outdata, errdata []byte, err error) *Result {
-	return &Result{bson.NewObjectId(), fileId, toolId, name, outname, errname, outdata, errdata, err, time.Now().UnixNano()}
+func NewResult(fileId bson.ObjectId, tool Tool, outdata, errdata []byte, err error) *Result {
+	return &Result{bson.NewObjectId(), fileId, tool.GetName(), outdata, errdata, err, time.Now().UnixNano()}
 }

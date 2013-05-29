@@ -80,6 +80,10 @@ func (this *TestHandler) Read() error{
 	if err != nil {
 		return err
 	}
+	pkg, err := util.GetString(testInfo, submission.PKG)
+	if err != nil {
+		return err
+	}
 	lang, err := util.GetString(testInfo, submission.LANG)
 	if err != nil {
 		return err
@@ -108,7 +112,7 @@ func (this *TestHandler) Read() error{
 	if err != nil {
 		return err
 	}
-	this.Test = submission.NewTest(project, lang, names, testFiles, dataFiles) 
+	this.Test = submission.NewTest(project, pkg, lang, names, testFiles, dataFiles) 
 	return nil
 }
 

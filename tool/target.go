@@ -42,21 +42,26 @@ func (this *TargetInfo) Equals(that *TargetInfo) bool {
 	return reflect.DeepEqual(this, that)
 }
 
+type TargetSpec int
+
 const (
-	DIR_PATH = iota
+	DIR_PATH TargetSpec = iota
 	PKG_PATH
 	FILE_PATH
+	EXEC_PATH
 )
 
 //GetTarget retrieves the target path based on the type required. 
-func (ti *TargetInfo) GetTarget(id int) string {
-	switch id {
+func (ti *TargetInfo) GetTarget(spec TargetSpec) string {
+	switch spec {
 	case DIR_PATH:
 		return ti.Dir
 	case PKG_PATH:
 		return ti.PkgPath()
 	case FILE_PATH:
 		return ti.FilePath()
+	case EXEC_PATH:
+		return ti.Executable()
 	}
 	return ""
 }

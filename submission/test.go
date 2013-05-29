@@ -9,6 +9,7 @@ import (
 type Test struct {
 	Id      bson.ObjectId "_id"
 	Project string "project"
+	Package string "pkg"
 	Lang string "lang"
 	Names []string "names"
 	Tests    []byte        "tests"
@@ -20,7 +21,7 @@ func (this *Test) Equals(that *Test) bool {
 }
 
 //NewFile
-func NewTest(project, lang string, names []string, tests, data []byte) *Test {
+func NewTest(project, pkg, lang string, names []string, tests, data []byte) *Test {
 	id := bson.NewObjectId()
-	return &Test{id, project, lang, names, tests, data}
+	return &Test{id, project, pkg, lang, names, tests, data}
 }

@@ -9,7 +9,6 @@ const (
 	USERS        = "users"
 	SUBMISSIONS  = "submissions"
 	FILES        = "files"
-	TOOLS        = "tools"
 	RESULTS      = "results"
 	TESTS = "tests"
 	SET          = "$set"

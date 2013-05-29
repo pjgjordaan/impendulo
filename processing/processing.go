@@ -167,7 +167,7 @@ func Evaluate(f *submission.File, dir string, test *TestRunner, isSource bool) e
 		return err
 	}
 	if test != nil {
-		err = test.Execute(f, target)
+		err = test.Execute(f, target.Dir)
 		if err != nil {
 			return err
 		}
@@ -199,23 +199,16 @@ func ExtractFile(f *submission.File, dir string) (*tool.TargetInfo, error) {
 //Compile compiles a java source file and saves the results thereof.
 //It returns true if compiled successfully.
 func Compile(fileId bson.ObjectId, ti *tool.TargetInfo, isSource bool) (bool, error) {
-	matcher := bson.M{submission.LANG: submission.LANG, submission.NAME: "compile"}
-	compiler, err := db.GetTool(matcher)
-	if err != nil {
-		return false, err
-	}
 	var res *tool.Result
+	var err error
+	javac := tool.NewJavac(ti.Dir)
 	if isSource{
-		res, err := compiler.Run(fileId, ti, map[string]string{"-cp": ti.Dir}) 
+		res, err = javac.Run(fileId, ti) 
 		if err != nil {
 			return false, err
 		}
-		err = AddResult(res)
-		if err != nil {
-			return false, err
-		}
-	}else{
-		res = tool.ToolResult(fileId, compiler, []byte(""), []byte(""), nil)
+	} else{
+		res = tool.NewResult(fileId, javac, []byte(""), []byte(""), nil)
 	} 
 	err = AddResult(res)
 	if err != nil {
@@ -242,7 +235,7 @@ func AddResult(res *tool.Result) error {
 
 //RunTools runs all available tools on a file, skipping previously run tools.
 func RunTools(f *submission.File, ti *tool.TargetInfo) error {
-	all, err := db.GetTools(bson.M{submission.LANG: ti.Lang})
+/*	all, err := db.GetTools(bson.M{submission.LANG: ti.Lang})
 	if err != nil {
 		return err
 	}
@@ -258,6 +251,6 @@ func RunTools(f *submission.File, ti *tool.TargetInfo) error {
 		if err != nil {
 			return err
 		}
-	}
+	}*/
 	return nil
 }

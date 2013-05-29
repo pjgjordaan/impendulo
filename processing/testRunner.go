@@ -7,8 +7,6 @@ import (
 	"github.com/godfried/cabanga/submission"
 	"github.com/godfried/cabanga/util"
 	"labix.org/v2/mgo/bson"
-	"path/filepath"
-	"strings"
 )
 
 //SetupTests extracts a project's tests from db to filesystem for execution.
@@ -30,29 +28,31 @@ func SetupTests(project, lang, dir string) *TestRunner {
 		util.Log(err)
 		return nil
 	}
-	return &TestRunner{test.Project, test.Names, test.Lang, dir}
+	return &TestRunner{test.Project, test.Package, test.Names, test.Lang, dir}
 }
 
 
 //TestRunner is used to run tests on files compiled files.
 type TestRunner struct {
 	Project string
+	Package string
 	Names []string
 	Lang    string
 	Dir     string
 }
 
 //Execute sets up and runs tests on a compiled file. 
-func (this *TestRunner)  Execute(f *submission.File, target *tool.TargetInfo) error {
+func (this *TestRunner)  Execute(f *submission.File, dir string) error {
 	for _, name := range this.Names {
-		compiled, err := this.Compile(name, f, target)
+		target := tool.NewTarget(this.Project, name, this.Lang, this.Package, this.Dir)
+		compiled, err := this.Compile(target, f, dir)
 		if err != nil {
 			return err
 		}
 		if !compiled {
 			continue
 		}
-		err = this.Run(name, f, target)
+		err = this.Run(target, f, dir)
 		if err != nil {
 			return err
 		}
@@ -61,16 +61,16 @@ func (this *TestRunner)  Execute(f *submission.File, target *tool.TargetInfo) er
 }
 
 //Compile compiles a test for the current file. 
-func (this *TestRunner) Compile(testName string, f *submission.File, target *tool.TargetInfo) (bool, error) {
-	if _, ok := f.Results[testName+"_compile"]; ok {
+func (this *TestRunner) Compile(target *tool.TargetInfo, f *submission.File, dir string) (bool, error) {
+	if _, ok := f.Results[target.Name+"_compile"]; ok {
 		return true, nil
 	}
-	cp := this.Dir+":"+config.GetConfig(config.JUNIT_JAR)
-	stderr, stdout, ok, err := tool.RunCommand(config.GetConfig(config.JAVAC), "-cp", cp, "-implicit:class", filepath.Join(this.Dir,"testing",testName))
-	if !ok{
+	cp := dir+":"+this.Dir+":"+config.GetConfig(config.JUNIT_JAR)
+	javac := tool.NewJavac(cp)
+	res, err := javac.Run(f.Id, target)
+	if err != nil{
 		return false, err
 	}
-	res := tool.NewResult(f.Id, f.Id, testName+"_compile", "warnings", "errors", stdout, stderr, err)
 	err = AddResult(res)
 	if err != nil {
 		return false, err
@@ -78,18 +78,18 @@ func (this *TestRunner) Compile(testName string, f *submission.File, target *too
 	return res.Error == nil, nil
 }
 
+
+
+
 //Run runs a test on the current file.
-func (this *TestRunner) Run(testName string, f *submission.File, target *tool.TargetInfo) error {
-	if _, ok := f.Results[testName+"_run"]; ok {
+func (this *TestRunner) Run(target *tool.TargetInfo, f *submission.File, dir string) error {
+	if _, ok := f.Results[target.Name+"_run"]; ok {
 		return nil
 	}
-	cp := this.Dir+":"+config.GetConfig(config.JUNIT_JAR)
-	env := "-Ddata.location="+this.Dir
-	exec := strings.Split(testName, ".")[0]
-	stderr, stdout, ok, err := tool.RunCommand(config.GetConfig(config.JAVA), "-cp", cp, env, config.GetConfig(config.JUNIT_EXEC), "testing."+exec)
-	if !ok {
+	junit := tool.NewJUnit(dir+":"+this.Dir, this.Dir)
+	res, err := junit.Run(f.Id, target)
+	if err != nil {
 		return err
 	}
-	res := tool.NewResult(f.Id, f.Id, testName+"_run", "warnings", "errors", stdout, stderr, err)
 	return AddResult(res)
 }
