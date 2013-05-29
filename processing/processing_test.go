@@ -23,14 +23,14 @@ func TestAddResult(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	res := tool.NewResult(file.Id, bson.NewObjectId(), "dummy", "dummy_w", "dummy_e", fileData, fileData, nil)
+	res := tool.NewResult(file.Id, tool.NewJavac("this"), fileData, fileData, nil)
 	err = AddResult(res)
 	if err != nil {
 		t.Error(err)
 	}
 	matcher := bson.M{submission.ID: file.Id}
 	dbFile, err := db.GetFile(matcher)
-	if dbFile.Results["dummy"] != res.Id {
+	if dbFile.Results["javac"] != res.Id {
 		t.Error("File not updated")
 	}
 	matcher = bson.M{submission.ID: res.Id}

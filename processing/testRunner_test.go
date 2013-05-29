@@ -2,6 +2,8 @@ package processing
 
 import(
 	"testing"
+	"github.com/godfried/cabanga/config"
+	"github.com/godfried/cabanga/tool"
 	"github.com/godfried/cabanga/submission"
 	"github.com/godfried/cabanga/db"
 	"github.com/godfried/cabanga/util"
@@ -36,10 +38,14 @@ func TestSetupTests(t *testing.T){
 }
 
 func TestCompileTest(t *testing.T){
+	err := config.LoadConfigs("../config.txt")
+	if err != nil{
+		panic(err)
+	}
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
 	s := getSubmission()
-	err := db.AddSubmission(s)
+	err = db.AddSubmission(s)
 	if err != nil{
 		t.Error(err)
 	}
@@ -66,7 +72,8 @@ func TestCompileTest(t *testing.T){
 	if err != nil{
 		t.Error(err)
 	}
-	ok, err := runner.Compile(test.Names[0], f, ti)
+	target := tool.NewTarget(runner.Project, test.Names[0], runner.Lang, runner.Package, runner.Dir)
+	ok, err := runner.Compile(target, f, ti.Dir)
 	if !ok || err != nil{
 		t.Error(err)
 	}
@@ -86,7 +93,8 @@ func TestCompileTest(t *testing.T){
 	if err != nil{
 		t.Error(err)
 	}
-	ok, err = runner.Compile(test.Names[0], f, ti)
+	target = tool.NewTarget(runner.Project, test.Names[0], runner.Lang, runner.Package, runner.Dir)
+	ok, err = runner.Compile(target, f, ti.Dir)
 	if ok && err == nil{
 		t.Error("Expected no compile")
 	}
@@ -125,7 +133,7 @@ func TestExecute(t *testing.T){
 	if err != nil{
 		t.Error(err)
 	}
-	err = runner.Execute(f, ti)
+	err = runner.Execute(f, ti.Dir)
 	if err != nil{
 		t.Error(err)
 	}
@@ -144,7 +152,7 @@ func getTest()(*submission.Test, error){
 	if err != nil{
 		return nil, err
 	}
-	return submission.NewTest("Triangle", "java", []string{"EasyTests.java"}, testZip, dataZip), nil
+	return submission.NewTest("Triangle", "testing", "java", []string{"EasyTests.java"}, testZip, dataZip), nil
 }
 
 func getFile(subId bson.ObjectId)*submission.File{

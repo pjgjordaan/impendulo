@@ -109,6 +109,7 @@ func (this *Javac) Run(fileId bson.ObjectId, ti *TargetInfo)(*Result, error){
 }
 
 type JUnit struct{
+	java string
 	jar string
 	exec string
 	cp string
@@ -116,7 +117,7 @@ type JUnit struct{
 }
 
 func NewJUnit(cp, datalocation string) *JUnit{
-	return &JUnit{config.GetConfig(config.JUNIT_JAR), config.GetConfig(config.JUNIT_EXEC), cp, datalocation}	
+	return &JUnit{config.GetConfig(config.JAVA), config.GetConfig(config.JUNIT_JAR), config.GetConfig(config.JUNIT_EXEC), cp, datalocation}	
 }
 
 func (this *JUnit) GetLang() string{
@@ -129,7 +130,7 @@ func (this *JUnit) GetName()string{
 }
 
 func (this *JUnit) GetArgs(target string)[]string{
-	return []string{this.jar, "-cp", this.cp, "-Ddata.location="+this.datalocation, this.exec, target}
+	return []string{this.java, "-jar", this.jar, "-cp", this.cp, "-Ddata.location="+this.datalocation, this.exec, target}
 }
 
 func (this *JUnit) Run(fileId bson.ObjectId, ti *TargetInfo)(*Result, error){
