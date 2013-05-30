@@ -6,8 +6,6 @@ import(
 "os/exec"
 "fmt"
 "bytes"
-	"github.com/godfried/cabanga/config"
-
 )
 
 type Tool interface{
@@ -76,73 +74,6 @@ func (this *GenericTool) GetName()string{
 func (this *GenericTool) GetLang()string{
 	return this.lang
 }
-
-type Javac struct{
-	cmd string
-	cp string
-}
-
-func NewJavac(cp string) *Javac{
-	return &Javac{config.GetConfig(config.JAVAC), cp}	
-}
-
-func (this *Javac) GetLang() string{
-	return "java"
-}
-
-func (this *Javac) GetName()string{
-	return "javac"
-}
-
-func (this *Javac) GetArgs(target string)[]string{
-	return []string{this.cmd, "-cp", this.cp, "-implicit:class", target}
-}
-
-func (this *Javac) Run(fileId bson.ObjectId, ti *TargetInfo)(*Result, error){
-	target := ti.GetTarget(FILE_PATH)
-	args := this.GetArgs(target)
-	stderr, stdout, ok, err := RunCommand(args...)
-	if !ok {
-		return nil, err
-	}
-	return NewResult(fileId, this, stdout, stderr, err), nil
-}
-
-type JUnit struct{
-	java string
-	jar string
-	exec string
-	cp string
-	datalocation string
-}
-
-func NewJUnit(cp, datalocation string) *JUnit{
-	return &JUnit{config.GetConfig(config.JAVA), config.GetConfig(config.JUNIT_JAR), config.GetConfig(config.JUNIT_EXEC), cp, datalocation}	
-}
-
-func (this *JUnit) GetLang() string{
-	return "java"
-}
-
-
-func (this *JUnit) GetName()string{
-	return "junit"
-}
-
-func (this *JUnit) GetArgs(target string)[]string{
-	return []string{this.java, "-jar", this.jar, "-cp", this.cp, "-Ddata.location="+this.datalocation, this.exec, target}
-}
-
-func (this *JUnit) Run(fileId bson.ObjectId, ti *TargetInfo)(*Result, error){
-	target := ti.GetTarget(EXEC_PATH)
-	args := this.GetArgs(target)
-	stderr, stdout, ok, err := RunCommand(args...)
-	if !ok {
-		return nil, err
-	}
-	return NewResult(fileId, this, stdout, stderr, err), nil
-}
-
 
 //RunCommand executes a given external command.
 func RunCommand(args ...string) ([]byte, []byte, bool, error) {
