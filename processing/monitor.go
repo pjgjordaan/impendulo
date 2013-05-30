@@ -43,7 +43,7 @@ func Monitor(fname string, busy, done chan bson.ObjectId, quit chan os.Signal) {
 			if err != nil{
 				util.Log(err)
 			}
-			//os.Exit(0)
+			os.Exit(0)
 			return
 		}
 	}
