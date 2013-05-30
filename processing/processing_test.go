@@ -4,6 +4,7 @@ import (
 	"github.com/godfried/cabanga/db"
 	"github.com/godfried/cabanga/submission"
 	"github.com/godfried/cabanga/tool"
+	"github.com/godfried/cabanga/tool/java"
 	"github.com/godfried/cabanga/util"
 	"labix.org/v2/mgo/bson"
 	"testing"
@@ -23,7 +24,7 @@ func TestAddResult(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	res := tool.NewResult(file.Id, tool.NewJavac("this"), fileData, fileData, nil)
+	res := tool.NewResult(file.Id, java.NewJavac("this"), fileData, fileData, nil)
 	err = AddResult(res)
 	if err != nil {
 		t.Error(err)

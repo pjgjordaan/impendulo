@@ -4,8 +4,10 @@ import (
 	"github.com/godfried/cabanga/config"
 	"github.com/godfried/cabanga/db"
 	"github.com/godfried/cabanga/tool"
+	"github.com/godfried/cabanga/tool/java"
 	"github.com/godfried/cabanga/submission"
 	"github.com/godfried/cabanga/util"
+	"github.com/godfried/cabanga/tool/junit"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -62,15 +64,16 @@ func (this *TestRunner)  Execute(f *submission.File, dir string) error {
 
 //Compile compiles a test for the current file. 
 func (this *TestRunner) Compile(target *tool.TargetInfo, f *submission.File, dir string) (bool, error) {
-	if _, ok := f.Results[target.Name+"_compile"]; ok {
+	cp := dir+":"+this.Dir+":"+config.GetConfig(config.JUNIT_JAR)
+	javac := java.NewJavac(cp)
+	if _, ok := f.Results[target.Name+"_"+javac.GetName()]; ok {
 		return true, nil
 	}
-	cp := dir+":"+this.Dir+":"+config.GetConfig(config.JUNIT_JAR)
-	javac := tool.NewJavac(cp)
 	res, err := javac.Run(f.Id, target)
 	if err != nil{
 		return false, err
 	}
+	res.Name = target.Name+"_"+javac.GetName()
 	err = AddResult(res)
 	if err != nil {
 		return false, err
@@ -83,13 +86,14 @@ func (this *TestRunner) Compile(target *tool.TargetInfo, f *submission.File, dir
 
 //Run runs a test on the current file.
 func (this *TestRunner) Run(target *tool.TargetInfo, f *submission.File, dir string) error {
-	if _, ok := f.Results[target.Name+"_run"]; ok {
+	ju := junit.NewJUnit(dir+":"+this.Dir, this.Dir)
+	if _, ok := f.Results[target.Name+"_"+ju.GetName()]; ok {
 		return nil
 	}
-	junit := tool.NewJUnit(dir+":"+this.Dir, this.Dir)
-	res, err := junit.Run(f.Id, target)
+	res, err := ju.Run(f.Id, target)
 	if err != nil {
 		return err
 	}
+	res.Name = target.Name+"_"+ju.GetName()
 	return AddResult(res)
 }

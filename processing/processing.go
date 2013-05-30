@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/godfried/cabanga/db"
 	"github.com/godfried/cabanga/tool"
+	"github.com/godfried/cabanga/tool/java"
+	"github.com/godfried/cabanga/tool/findbugs"
 	"github.com/godfried/cabanga/submission"
 	"github.com/godfried/cabanga/util"
 	"labix.org/v2/mgo/bson"
@@ -201,7 +203,7 @@ func ExtractFile(f *submission.File, dir string) (*tool.TargetInfo, error) {
 func Compile(fileId bson.ObjectId, ti *tool.TargetInfo, isSource bool) (bool, error) {
 	var res *tool.Result
 	var err error
-	javac := tool.NewJavac(ti.Dir)
+	javac := java.NewJavac(ti.Dir)
 	if isSource{
 		res, err = javac.Run(fileId, ti) 
 		if err != nil {
@@ -231,26 +233,15 @@ func AddResult(res *tool.Result) error {
 	return db.AddResult(res)
 }
 
-
-
 //RunTools runs all available tools on a file, skipping previously run tools.
 func RunTools(f *submission.File, ti *tool.TargetInfo) error {
-/*	all, err := db.GetTools(bson.M{submission.LANG: ti.Lang})
-	if err != nil {
+	fb := findbugs.NewFindBugs()
+	if _, ok := f.Results[fb.GetName()]; ok {
+		return nil
+	}
+	res, err := fb.Run(f.Id, ti)
+	if err != nil{
 		return err
 	}
-	for _, t := range all {
-		if _, ok := f.Results[t.Name]; ok {
-			continue
-		}
-		res, err := t.Run(f.Id, ti, nil)
-		if err != nil {
-			return err
-		}
-		err = AddResult(res)
-		if err != nil {
-			return err
-		}
-	}*/
-	return nil
+	return AddResult(res)
 }
