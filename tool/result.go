@@ -21,6 +21,14 @@ func (this *Result) Equals(that *Result) bool {
 	return reflect.DeepEqual(this, that)
 }
 
+func (this *Result) String()string{
+	errString := "None"
+	if this.Error != nil{
+		errString = this.Error.Error()
+	}
+	return "File: "+this.FileId.String()+"; Name: "+this.Name+"; OutData:"+string(this.OutData)+"; ErrData:"+string(this.ErrData)+"; Error: "+errString
+}
+
 //NewResult
 func NewResult(fileId bson.ObjectId, tool Tool, outdata, errdata []byte, err error) *Result {
 	return &Result{bson.NewObjectId(), fileId, tool.GetName(), outdata, errdata, err, time.Now().UnixNano()}

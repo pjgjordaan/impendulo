@@ -73,6 +73,7 @@ func (this *TestRunner) Compile(target *tool.TargetInfo, f *submission.File, dir
 	if err != nil{
 		return false, err
 	}
+	util.Log("Test compile result", res)
 	res.Name = target.Name+"_"+javac.GetName()
 	err = AddResult(res)
 	if err != nil {
@@ -91,6 +92,7 @@ func (this *TestRunner) Run(target *tool.TargetInfo, f *submission.File, dir str
 		return nil
 	}
 	res, err := ju.Run(f.Id, target)
+	util.Log("Test run result", res)		
 	if err != nil {
 		return err
 	}

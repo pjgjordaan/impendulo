@@ -22,7 +22,7 @@ func (this *FindBugs) GetName()string{
 }
 
 func (this *FindBugs) GetArgs(target string)[]string{
-	return []string{this.cmd, "-textui", "-low", target}
+	return []string{config.GetConfig(config.JAVA), "-jar", this.cmd, "-textui", "-low", target}
 }
 
 func (this *FindBugs) Run(fileId bson.ObjectId, ti *tool.TargetInfo)(*tool.Result, error){

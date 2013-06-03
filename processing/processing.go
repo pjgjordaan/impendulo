@@ -87,8 +87,9 @@ func ProcessStored(subId bson.ObjectId, subChan chan *submission.Submission, fil
 //It listens for incoming files on fileChan and processes them.
 func ProcessSubmission(sub *submission.Submission, fileChan chan *submission.File, busy, done chan bson.ObjectId) {
 	busy <- sub.Id
+	util.Log("Processing submission", sub)
 	dir := filepath.Join(os.TempDir(), sub.Id.Hex())
-	defer os.RemoveAll(dir)
+	//defer os.RemoveAll(dir)
 	test := SetupTests(sub.Project, sub.Lang,  dir)
 	for {
 		file, ok := <- fileChan
@@ -101,12 +102,14 @@ func ProcessSubmission(sub *submission.Submission, fileChan chan *submission.Fil
 			return
 		}
 	}
+	util.Log("Processed submission", sub)
 	done <- sub.Id
 }
 
 
 //ProcessFile processes a file according to its type. 
 func ProcessFile(f *submission.File, dir string, test *TestRunner) error {
+	util.Log("Processing file", f.Id)
 	t := f.Type()
 	if t == submission.ARCHIVE {
 		err := ProcessArchive(f, dir, test)
@@ -120,6 +123,7 @@ func ProcessFile(f *submission.File, dir string, test *TestRunner) error {
 			return err
 		}
 	}
+	util.Log("Processed file", f.Id)
 	return nil
 }
 
@@ -212,6 +216,7 @@ func Compile(fileId bson.ObjectId, ti *tool.TargetInfo, isSource bool) (bool, er
 	} else{
 		res = tool.NewResult(fileId, javac, []byte(""), []byte(""), nil)
 	} 
+	util.Log("Compile result", res)
 	err = AddResult(res)
 	if err != nil {
 		return false, err
@@ -240,6 +245,7 @@ func RunTools(f *submission.File, ti *tool.TargetInfo) error {
 		return nil
 	}
 	res, err := fb.Run(f.Id, ti)
+	util.Log("Tool result", res)
 	if err != nil{
 		return err
 	}
