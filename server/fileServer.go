@@ -3,18 +3,19 @@ package server
 import (
 	"fmt"
 	"github.com/godfried/cabanga/db"
-	"github.com/godfried/cabanga/submission"
+	"github.com/godfried/cabanga/project"
 	"github.com/godfried/cabanga/user"
 	"github.com/godfried/cabanga/util"
 	"net"
 	"io"
+	"labix.org/v2/mgo/bson"
 )
 
 
 //SubmissionSpawner is an implementation of HandlerSpawner for SubmissionHandlers.
 type SubmissionSpawner struct{
-	SubChan chan *submission.Submission
-	FileChan chan *submission.File
+	SubChan chan *project.Submission
+	FileChan chan *project.File
 }
 
 //Spawn creates a new ConnHandler of type SubmissionHandler.
@@ -25,22 +26,27 @@ func (this *SubmissionSpawner) Spawn() ConnHandler{
 //SubmissionHandler is an implementation of ConnHandler used to receive submissions from users of the impendulo system.
 type SubmissionHandler struct{
 	Conn net.Conn
-	Submission *submission.Submission
+	Submission *project.Submission
 	//Used to send this Submission for processing.
-	SubChan chan *submission.Submission
+	SubChan chan *project.Submission
 	//Used to send Files in this Submission for processing.
-	FileChan chan *submission.File
+	FileChan chan *project.File
 }
 
 //Start sets the connection, launches the Handle method and ends the session when it returns.
 func (this *SubmissionHandler) Start(conn net.Conn){
 	this.Conn = conn
+	this.Submission = new(project.Submission)
 	this.End(this.Handle())
 }
 
 //Handle manages a connection by authenticating it, processing its Submission and reading Files from it.
 func (this *SubmissionHandler) Handle() error {
 	err := this.Login()
+	if err != nil {
+		return err
+	}
+	err = this.LoadInfo()
 	if err != nil {
 		return err
 	}
@@ -62,7 +68,7 @@ func (this *SubmissionHandler) Login() error {
 	if err != nil {
 		return err
 	}
-	err = this.ReadSubmission(loginInfo)
+	this.Submission.User, err = util.GetString(loginInfo, project.USER)
 	if err != nil {
 		return err
 	}
@@ -80,15 +86,40 @@ func (this *SubmissionHandler) Login() error {
 	if !util.Validate(u.Password, u.Salt, pword) {
 		return fmt.Errorf("User %q attempted to login with an invalid username or password", this.Submission.User)
 	}
-	err = db.AddSubmission(this.Submission)
-	if err != nil {
-		return err
-	}
 	_, err = this.Conn.Write([]byte(OK))
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (this *SubmissionHandler) LoadInfo() error{
+	projects, err := db.GetProjects(bson.M{})
+	if err != nil {
+		return err
+	}
+	err = util.WriteJson(this.Conn, map[string]interface{}{"projects":projects})
+	if err != nil {
+		return err
+	}
+	info, err := util.ReadJSON(this.Conn)
+	if err != nil {
+		return err
+	}
+	this.Submission.ProjectId, err = util.GetID(info, project.PROJECT_ID)
+	if err != nil {
+		return err
+	}
+	this.Submission.Mode, err = util.GetString(info, project.MODE)
+	if err != nil {
+		return err
+	}
+	err = db.AddSubmission(this.Submission)
+	if err != nil {
+		return err
+	}
+	_, err = this.Conn.Write([]byte(OK))
+	return err
 }
 
 
@@ -116,7 +147,7 @@ func (this *SubmissionHandler) Read()error{
 			return err
 		}
 		delete(requestInfo, REQ)
-		f := submission.NewFile(this.Submission.Id, requestInfo, buffer)
+		f := project.NewFile(this.Submission.Id, requestInfo, buffer)
 		err = db.AddFile(f)
 		if err != nil {
 			return err
@@ -142,24 +173,3 @@ func (this *SubmissionHandler) End(err error) {
 	this.Conn.Write([]byte(msg))
 }
 
-//ReadSubmission reads Submission values from a json object and creates a new Submission from them. 
-func (this *SubmissionHandler) ReadSubmission(loginInfo map[string]interface{}) error {
-	username, err := util.GetString(loginInfo, submission.USER)
-	if err != nil {
-		return err
-	}
-	project, err := util.GetString(loginInfo, submission.PROJECT)
-	if err != nil {
-		return err
-	}
-	mode, err := util.GetString(loginInfo, submission.MODE)
-	if err != nil {
-		return err
-	}
-	lang, err := util.GetString(loginInfo, submission.LANG)
-	if err != nil {
-		return err
-	}
-	this.Submission = submission.NewSubmission(project, username, mode, lang)
-	return nil
-}

@@ -3,10 +3,11 @@ package server
 import (
 	"fmt"
 	"github.com/godfried/cabanga/db"
-	"github.com/godfried/cabanga/submission"
+	"github.com/godfried/cabanga/project"
 	"github.com/godfried/cabanga/user"
 	"github.com/godfried/cabanga/util"
 	"net"
+	"labix.org/v2/mgo/bson"
 )
 
 //TestSpawner is a basic implementation of HandlerSpawner for TestHandlers.
@@ -20,18 +21,23 @@ func (this *TestSpawner) Spawn() ConnHandler{
 //TestHandler is an implementation of ConnHandler used to receive tests for projects.
 type TestHandler struct{
 	Conn net.Conn
-	Test *submission.Test
+	Test *project.Test
 }
 
 //Start sets the connection, launches the Handle method and ends the session when it returns.
 func (this *TestHandler) Start(conn net.Conn){
 	this.Conn = conn
+	this.Test = new(project.Test)
 	this.End(this.Handle())
 }
 
 //Handle manages a connection by authenticating it and storing its submitted Test.
 func (this *TestHandler) Handle() error {
 	err := this.Login()
+	if err != nil {
+		return err
+	}
+	err = this.LoadInfo()
 	if err != nil {
 		return err
 	}
@@ -48,7 +54,7 @@ func (this *TestHandler) Login() error {
 	if err != nil {
 		return err
 	}
-	username, err := util.GetString(loginInfo, submission.USER)
+	this.Test.User, err = util.GetString(loginInfo, project.USER)
 	if err != nil {
 		return err
 	}
@@ -56,15 +62,45 @@ func (this *TestHandler) Login() error {
 	if err != nil {
 		return err
 	}
-	u, err := db.GetUserById(username)
+	u, err := db.GetUserById(this.Test.User)
 	if err != nil {
 		return err
 	}
-	if !u.CheckSubmit(submission.TEST_MODE) {
-		return fmt.Errorf("User %q has insufficient permissions for %q", username, submission.TEST_MODE)
+	if !u.CheckSubmit(project.TEST_MODE) {
+		return fmt.Errorf("User %q has insufficient permissions for %q", this.Test.User, project.TEST_MODE)
 	}
 	if !util.Validate(u.Password, u.Salt, pword) {
-		return fmt.Errorf("User %q attempted to login with an invalid username or password", username)
+		return fmt.Errorf("User %q attempted to login with an invalid username or password", this.Test.User)
+	}
+	_, err = this.Conn.Write([]byte(OK))
+	return err
+}
+
+
+func (this *TestHandler) LoadInfo() error{
+	projects, err := db.GetProjects(bson.M{})
+	if err != nil {
+		return err
+	}
+	err = util.WriteJson(this.Conn, map[string]interface{}{"projects":projects})
+	if err != nil {
+		return err
+	}
+	info, err := util.ReadJSON(this.Conn)
+	if err != nil {
+		return err
+	}
+	this.Test.ProjectId, err = util.GetID(info, project.PROJECT_ID)
+	if err != nil {
+		return err
+	}
+	this.Test.Package, err = util.GetString(info, project.PKG)
+	if err != nil {
+		return err
+	}
+	this.Test.Name, err = util.GetString(info, project.NAME)
+	if err != nil {
+		return err
 	}
 	_, err = this.Conn.Write([]byte(OK))
 	return err
@@ -72,23 +108,8 @@ func (this *TestHandler) Login() error {
 
 //Read retrieves information about the tests as well as the tests themselves and their data files from the connection.
 func (this *TestHandler) Read() error{
-	testInfo, err := util.ReadJSON(this.Conn)
-	if err != nil {
-		return err
-	}
-	project, err := util.GetString(testInfo, submission.PROJECT)
-	if err != nil {
-		return err
-	}
-	pkg, err := util.GetString(testInfo, submission.PKG)
-	if err != nil {
-		return err
-	}
-	lang, err := util.GetString(testInfo, submission.LANG)
-	if err != nil {
-		return err
-	}
-	names, err := util.GetStrings(testInfo, submission.NAMES)
+	var err error
+	this.Test.Test, err = util.ReadData(this.Conn)
 	if err != nil {
 		return err
 	}
@@ -96,7 +117,7 @@ func (this *TestHandler) Read() error{
 	if err != nil {
 		return err
 	}
-	testFiles, err := util.ReadData(this.Conn)
+	this.Test.Data, err = util.ReadData(this.Conn)
 	if err != nil {
 		return err
 	}
@@ -104,15 +125,6 @@ func (this *TestHandler) Read() error{
 	if err != nil {
 		return err
 	}
-	dataFiles, err := util.ReadData(this.Conn)
-	if err != nil {
-		return err
-	}
-	_, err = this.Conn.Write([]byte(OK))
-	if err != nil {
-		return err
-	}
-	this.Test = submission.NewTest(project, pkg, lang, names, testFiles, dataFiles) 
 	return nil
 }
 

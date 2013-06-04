@@ -5,7 +5,7 @@ import (
 	"github.com/godfried/cabanga/db"
 	"github.com/godfried/cabanga/processing"
 	"github.com/godfried/cabanga/server"
-	"github.com/godfried/cabanga/submission"
+	"github.com/godfried/cabanga/project"
 	"github.com/godfried/cabanga/user"
 	"github.com/godfried/cabanga/util"
 	"github.com/godfried/cabanga/config"
@@ -52,8 +52,8 @@ func AddUsers() error {
 func Run() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	db.Setup(db.DEFAULT_CONN)
-	fileChan := make(chan *submission.File)
-	subChan := make(chan *submission.Submission)
+	fileChan := make(chan *project.File)
+	subChan := make(chan *project.Submission)
 	go processing.Serve(subChan, fileChan)
 	go server.Run(TestPort, new(server.TestSpawner))
 	server.Run(FilePort, &server.SubmissionSpawner{subChan, fileChan})

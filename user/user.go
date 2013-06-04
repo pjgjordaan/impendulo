@@ -68,8 +68,9 @@ func (this *User) Equals(that *User)bool{
 }
 
 //NewUser creates a new user with file submission permissions.
-func NewUser(uname, pword, salt string) *User {
-	return &User{uname, pword, salt, F_SUB}
+func NewUser(uname, pword string) *User {
+	hash, salt := util.Hash(pword)
+	return &User{uname, hash, salt, F_SUB}
 }
 
 //EqualsOne returns true if test is equal to any of the members of args. 

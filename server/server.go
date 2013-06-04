@@ -44,6 +44,7 @@ type ConnHandler interface{
 	Start(conn net.Conn)
 	Handle() error
 	Login() error
+	LoadInfo() error
 	Read() error
 	End(err error)
 }
@@ -73,6 +74,18 @@ func (this *BasicHandler) Handle() error {
 }
 
 func (this *BasicHandler) Login() error{
+	_, err := util.ReadJSON(this.Conn)
+	if err != nil {
+		return err
+	}
+	_, err = this.Conn.Write([]byte(OK))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (this *BasicHandler) LoadInfo() error{
 	_, err := util.ReadJSON(this.Conn)
 	if err != nil {
 		return err

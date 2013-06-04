@@ -11,6 +11,7 @@ const (
 	FILES        = "files"
 	RESULTS      = "results"
 	TESTS = "tests"
+	PROJECTS = "projects"
 	SET          = "$set"
 	DEFAULT_CONN = "mongodb://localhost/impendulo"
 	TEST_CONN    = "mongodb://localhost/impendulo_test"
@@ -35,6 +36,12 @@ func getSession() (s *mgo.Session) {
 		panic(fmt.Errorf("Could not retrieve session."))
 	}
 	return activeSession.Clone()
+}
+
+func Close(){
+	if activeSession != nil{
+		activeSession.Close()
+	}
 }
 
 func DeleteDB(db string) error {

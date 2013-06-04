@@ -1,4 +1,4 @@
-package submission
+package project
 
 import (
 	"reflect"

@@ -1,17 +1,17 @@
 package db
 
 import(
-	"github.com/godfried/cabanga/submission"
+	"github.com/godfried/cabanga/project"
 "fmt"
 	"labix.org/v2/mgo/bson"
 )
 
 //GetFile retrieves a file matching the given interface from the active database. 
-func GetFile(matcher interface{}) (*submission.File, error) {
+func GetFile(matcher interface{}) (*project.File, error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(FILES)
-	var ret *submission.File
+	var ret *project.File
 	err := c.Find(matcher).One(&ret)
 	if err != nil {
 		return nil, fmt.Errorf("Encountered error %q when retrieving file matching %q from db", err, matcher)
@@ -20,11 +20,11 @@ func GetFile(matcher interface{}) (*submission.File, error) {
 }
 
 //GetSubmission retrieves a submission matching the given interface from the active database.
-func GetSubmission(matcher interface{}) (*submission.Submission, error) {
+func GetSubmission(matcher interface{}) (*project.Submission, error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(SUBMISSIONS)
-	var ret *submission.Submission
+	var ret *project.Submission
 	err := c.Find(matcher).One(&ret)
 	if err != nil {
 		return nil, fmt.Errorf("Encountered error %q when retrieving submission matching %q from db", err, matcher)
@@ -34,11 +34,11 @@ func GetSubmission(matcher interface{}) (*submission.Submission, error) {
 
 
 //GetTest retrieves a test matching the given interface from the active database.
-func GetTest(matcher interface{}) (*submission.Test, error) {
+func GetTest(matcher interface{}) (*project.Test, error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(TESTS)
-	var ret *submission.Test
+	var ret *project.Test
 	err := c.Find(matcher).One(&ret)
 	if err != nil {
 		return nil, fmt.Errorf("Encountered error %q when retrieving test matching %q from db", err, matcher)
@@ -47,8 +47,49 @@ func GetTest(matcher interface{}) (*submission.Test, error) {
 }
 
 
+//GetTest retrieves a test matching the given interface from the active database.
+func GetTests(matcher interface{}) ([]*project.Test, error) {
+	session := getSession()
+	defer session.Close()
+	c := session.DB("").C(TESTS)
+	var ret []*project.Test
+	err := c.Find(matcher).All(&ret)
+	if err != nil {
+		return nil, fmt.Errorf("Encountered error %q when retrieving test matching %q from db", err, matcher)
+	}
+	return ret, nil
+}
+
+
+//GetTest retrieves a test matching the given interface from the active database.
+func GetProject(matcher interface{}) (*project.Project, error) {
+	session := getSession()
+	defer session.Close()
+	c := session.DB("").C(PROJECTS)
+	var ret *project.Project
+	err := c.Find(matcher).One(&ret)
+	if err != nil {
+		return nil, fmt.Errorf("Encountered error %q when retrieving project matching %q from db", err, matcher)
+	}
+	return ret, nil
+}
+
+//GetTest retrieves a test matching the given interface from the active database.
+func GetProjects(matcher interface{}) ([]*project.Project, error) {
+	session := getSession()
+	defer session.Close()
+	c := session.DB("").C(PROJECTS)
+	var ret []*project.Project
+	err := c.Find(matcher).All(&ret)
+	if err != nil {
+		return nil, fmt.Errorf("Encountered error %q when retrieving projects matching %q from db", err, matcher)
+	}
+	return ret, nil
+}
+
+
 //AddFile adds a new file to the active database.
-func AddFile(f *submission.File) error {
+func AddFile(f *project.File) error {
 	session := getSession()
 	defer session.Close()
 	col := session.DB("").C(FILES)
@@ -60,11 +101,11 @@ func AddFile(f *submission.File) error {
 }
 
 //AddFile adds a new file to the active database.
-func AddTest(t *submission.Test) error {
+func AddTest(t *project.Test) error {
 	session := getSession()
 	defer session.Close()
 	col := session.DB("").C(TESTS)
-	matcher := bson.M{submission.PROJECT: t.Project}
+	matcher := bson.M{project.PROJECT_ID: t.ProjectId}
 	_, err := col.RemoveAll(matcher)
 	if err != nil {
 		return fmt.Errorf("Encountered error %q when removing tests matching %q to db", err, matcher)
@@ -78,7 +119,7 @@ func AddTest(t *submission.Test) error {
 
 
 //AddSubmission adds a new submission to the active database.
-func AddSubmission(s *submission.Submission) error {
+func AddSubmission(s *project.Submission) error {
 	session := getSession()
 	defer session.Close()
 	col := session.DB("").C(SUBMISSIONS)

@@ -6,7 +6,7 @@ import (
 	"github.com/godfried/cabanga/tool"
 	"github.com/godfried/cabanga/tool/java"
 	"github.com/godfried/cabanga/tool/findbugs"
-	"github.com/godfried/cabanga/submission"
+	"github.com/godfried/cabanga/project"
 	"github.com/godfried/cabanga/util"
 	"labix.org/v2/mgo/bson"
 	"os"
@@ -19,7 +19,7 @@ const INCOMPLETE = "incomplete.gob"
 //Serve spawns new processing routines for each new submission received on subChan.
 //New files are received on fileChan and then sent to the relevant submission process.
 //Incomplete submissions are read from disk and reprocessed using the ProcessStored function.   
-func Serve(subChan chan *submission.Submission, fileChan chan *submission.File) {
+func Serve(subChan chan *project.Submission, fileChan chan *project.File) {
 	// Start handlers
 	busy := make(chan bson.ObjectId)
 	done := make(chan bson.ObjectId)
@@ -34,7 +34,7 @@ func Serve(subChan chan *submission.Submission, fileChan chan *submission.File) 
 			}
 		}
 	}()
-	subs := make(map[bson.ObjectId]chan *submission.File)
+	subs := make(map[bson.ObjectId]chan *project.File)
 	for {
 		select {
 		case sub := <-subChan:
@@ -42,7 +42,7 @@ func Serve(subChan chan *submission.Submission, fileChan chan *submission.File) 
 				close(ch)
 				delete(subs, sub.Id)
 			} else{
-				subs[sub.Id] = make(chan *submission.File)
+				subs[sub.Id] = make(chan *project.File)
 				go ProcessSubmission(sub, subs[sub.Id], busy, done)
 			} 
 		case file := <-fileChan:
@@ -57,13 +57,13 @@ func Serve(subChan chan *submission.Submission, fileChan chan *submission.File) 
 
 //ProcessStored processes an incompletely processed submission. 
 //It retrieves files in the submission from the db and sends them on fileChan to be processed. 
-func ProcessStored(subId bson.ObjectId, subChan chan *submission.Submission, fileChan chan *submission.File) {
-	sub, err := db.GetSubmission(bson.M{submission.ID: subId})
+func ProcessStored(subId bson.ObjectId, subChan chan *project.Submission, fileChan chan *project.File) {
+	sub, err := db.GetSubmission(bson.M{project.ID: subId})
 	if err != nil {
 		util.Log(err)
 		return
 	}
-	total, err := db.Count(db.FILES, bson.M{submission.SUBID: subId})
+	total, err := db.Count(db.FILES, bson.M{project.SUBID: subId})
 	if err != nil {
 		util.Log(err)
 		return
@@ -71,7 +71,7 @@ func ProcessStored(subId bson.ObjectId, subChan chan *submission.Submission, fil
 	subChan <- sub
 	count := 0
 	for count < total{
-		matcher := bson.M{submission.SUBID: subId, submission.INFO+"."+submission.NUM: count}
+		matcher := bson.M{project.SUBID: subId, project.INFO+"."+project.NUM: count}
 		file, err := db.GetFile(matcher)
 		if err != nil {
 			util.Log(err)
@@ -85,18 +85,22 @@ func ProcessStored(subId bson.ObjectId, subChan chan *submission.Submission, fil
 
 //ProcessSubmission processes a new submission.
 //It listens for incoming files on fileChan and processes them.
-func ProcessSubmission(sub *submission.Submission, fileChan chan *submission.File, busy, done chan bson.ObjectId) {
+func ProcessSubmission(sub *project.Submission, fileChan chan *project.File, busy, done chan bson.ObjectId) {
 	busy <- sub.Id
 	util.Log("Processing submission", sub)
 	dir := filepath.Join(os.TempDir(), sub.Id.Hex())
 	//defer os.RemoveAll(dir)
-	test := SetupTests(sub.Project, sub.Lang,  dir)
+	tests, err := SetupTests(sub.ProjectId, dir)
+	if err != nil{
+		util.Log(err)
+		return
+	}
 	for {
 		file, ok := <- fileChan
 		if !ok{
 			break
 		}
-		err := ProcessFile(file, dir, test)
+		err := ProcessFile(file, dir, tests)
 		if err != nil {
 			util.Log(err)
 			return
@@ -108,17 +112,17 @@ func ProcessSubmission(sub *submission.Submission, fileChan chan *submission.Fil
 
 
 //ProcessFile processes a file according to its type. 
-func ProcessFile(f *submission.File, dir string, test *TestRunner) error {
+func ProcessFile(f *project.File, dir string, tests []*TestRunner) error {
 	util.Log("Processing file", f.Id)
 	t := f.Type()
-	if t == submission.ARCHIVE {
-		err := ProcessArchive(f, dir, test)
+	if t == project.ARCHIVE {
+		err := ProcessArchive(f, dir, tests)
 		if err != nil {
 			return err
 		}
 		db.RemoveFileByID(f.Id)
-	} else if t == submission.SRC || t == submission.EXEC {
-		err := Evaluate(f, dir, test, t == submission.SRC)
+	} else if t == project.SRC || t == project.EXEC {
+		err := Evaluate(f, dir, tests, t == project.SRC)
 		if err != nil {
 			return err
 		}
@@ -128,26 +132,26 @@ func ProcessFile(f *submission.File, dir string, test *TestRunner) error {
 }
 
 //ProcessArchive extracts files from an archive and processes them.
-func ProcessArchive(archive *submission.File, dir string, test *TestRunner) error {
+func ProcessArchive(archive *project.File, dir string, tests []*TestRunner) error {
 	files, err := util.UnzipToMap(archive.Data)
 	if err != nil {
 		return err
 	}
 	for name, data := range files {
-		info, err := submission.ParseName(name)
+		info, err := project.ParseName(name)
 		if err != nil {
 			return err
 		}
-		matcher := bson.M{submission.INFO: info}
+		matcher := bson.M{project.INFO: info}
 		f, err := db.GetFile(matcher)
 		if err != nil {
-			f = submission.NewFile(archive.SubId, info, data)
+			f = project.NewFile(archive.SubId, info, data)
 			err = db.AddFile(f)
 			if err != nil {
 				return err
 			}
 		}
-		err = ProcessFile(f, dir, test)
+		err = ProcessFile(f, dir, tests)
 		if err != nil {
 			return err
 		}
@@ -156,7 +160,7 @@ func ProcessArchive(archive *submission.File, dir string, test *TestRunner) erro
 }
 
 //Evaluate evaluates a source or compiled file by attempting to run tests and tools on it.
-func Evaluate(f *submission.File, dir string, test *TestRunner, isSource bool) error {
+func Evaluate(f *project.File, dir string, tests []*TestRunner, isSource bool) error {
 	target, err := ExtractFile(f, dir)
 	if err != nil {
 		return err
@@ -168,11 +172,11 @@ func Evaluate(f *submission.File, dir string, test *TestRunner, isSource bool) e
 	if !compiled {
 		return nil
 	}
-	f, err = db.GetFile(bson.M{submission.ID: f.Id})
+	f, err = db.GetFile(bson.M{project.ID: f.Id})
 	if err != nil {
 		return err
 	}
-	if test != nil {
+	for _, test := range tests {
 		err = test.Execute(f, target.Dir)
 		if err != nil {
 			return err
@@ -187,13 +191,18 @@ func Evaluate(f *submission.File, dir string, test *TestRunner, isSource bool) e
 
 //ExtractFile saves a file to filesystem.
 //It returns file info used by tools & tests.
-func ExtractFile(f *submission.File, dir string) (*tool.TargetInfo, error) {
-	matcher := bson.M{submission.ID: f.SubId}
+func ExtractFile(f *project.File, dir string) (*tool.TargetInfo, error) {
+	matcher := bson.M{project.ID: f.SubId}
 	s, err := db.GetSubmission(matcher)
 	if err != nil {
 		return nil, err
 	}
-	ti := tool.NewTarget(s.Project, f.InfoStr(submission.NAME), s.Lang, f.InfoStr(submission.PKG), dir)
+	matcher = bson.M{project.ID: s.ProjectId}
+	p, err := db.GetProject(matcher)
+	if err != nil {
+		return nil, err
+	}
+	ti := tool.NewTarget(f.InfoStr(project.NAME), p.Lang, f.InfoStr(project.PKG), dir)
 	err = util.SaveFile(filepath.Join(dir, ti.Package), ti.FullName(), f.Data)
 	if err != nil {
 		return nil, err
@@ -229,8 +238,8 @@ func Compile(fileId bson.ObjectId, ti *tool.TargetInfo, isSource bool) (bool, er
 //AddResult adds a tool result to the db.
 //It updates the associated file's list of results to point to this new result.
 func AddResult(res *tool.Result) error {
-	matcher := bson.M{submission.ID: res.FileId}
-	change := bson.M{db.SET: bson.M{submission.RES + "." + res.Name: res.Id}}
+	matcher := bson.M{project.ID: res.FileId}
+	change := bson.M{db.SET: bson.M{project.RES + "." + res.Name: res.Id}}
 	err := db.Update(db.FILES, matcher, change)
 	if err != nil {
 		return err
@@ -239,7 +248,7 @@ func AddResult(res *tool.Result) error {
 }
 
 //RunTools runs all available tools on a file, skipping previously run tools.
-func RunTools(f *submission.File, ti *tool.TargetInfo) error {
+func RunTools(f *project.File, ti *tool.TargetInfo) error {
 	fb := findbugs.NewFindBugs()
 	if _, ok := f.Results[fb.GetName()]; ok {
 		return nil

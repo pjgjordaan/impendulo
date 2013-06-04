@@ -1,8 +1,9 @@
-package submission
+package project
 
 //Constants used client and server-side to for submission data.
 const (
 	ID           = "_id"
+	PROJECT_ID   = "projectid"
 	PROJECT      = "project"
 	USER         = "user"
 	TIME         = "time"

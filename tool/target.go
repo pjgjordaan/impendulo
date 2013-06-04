@@ -8,7 +8,7 @@ import(
 
 //TargetInfo stores information about the target file.
 type TargetInfo struct {
-	Project string
+//	Project string
 	//File name without extension
 	Name string
 	//Language file is written in
@@ -67,7 +67,7 @@ func (ti *TargetInfo) GetTarget(spec TargetSpec) string {
 }
 
 //NewTarget
-func NewTarget(project, name, lang, pkg, dir string) *TargetInfo {
+func NewTarget(name, lang, pkg, dir string) *TargetInfo {
 	split := strings.Split(name, ".")
-	return &TargetInfo{project, split[0], lang, pkg, split[1], dir}
+	return &TargetInfo{split[0], lang, pkg, split[1], dir}
 }

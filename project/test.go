@@ -1,4 +1,4 @@
-package submission
+package project
 
 import (
 	"labix.org/v2/mgo/bson"
@@ -8,11 +8,11 @@ import (
 //File stores a single file's data from a submission. 
 type Test struct {
 	Id      bson.ObjectId "_id"
-	Project string "project"
+	ProjectId bson.ObjectId "projectid"
+	Name string "name"
+	User    string        "user"
 	Package string "pkg"
-	Lang string "lang"
-	Names []string "names"
-	Tests    []byte        "tests"
+	Test    []byte        "test"
 	Data  []byte  "data"
 }
 
@@ -21,7 +21,7 @@ func (this *Test) Equals(that *Test) bool {
 }
 
 //NewFile
-func NewTest(project, pkg, lang string, names []string, tests, data []byte) *Test {
+func NewTest(projectId bson.ObjectId, name, user, pkg string, test, data []byte) *Test {
 	id := bson.NewObjectId()
-	return &Test{id, project, pkg, lang, names, tests, data}
+	return &Test{id, projectId, name, user, pkg, test, data}
 }
