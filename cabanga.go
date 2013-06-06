@@ -17,7 +17,7 @@ import (
 
 func init() {
 	flag.StringVar(&FilePort, "fp", "8010", "Specify the port to listen on for files.")
-	flag.StringVar(&TestPort, "tp", "8011", "Specify the port to listen on for tests.")
+//	flag.StringVar(&TestPort, "tp", "8011", "Specify the port to listen on for tests.")
 	flag.StringVar(&UsersFile, "u", "", "Specify a file with new users.")
 	flag.StringVar(&ConfigFile, "c", "config.txt", "Specify a configuration file.")
 }
@@ -55,6 +55,6 @@ func Run() {
 	fileChan := make(chan *project.File)
 	subChan := make(chan *project.Submission)
 	go processing.Serve(subChan, fileChan)
-	go server.Run(TestPort, new(server.TestSpawner))
+	//go server.Run(TestPort, new(server.TestSpawner))
 	server.Run(FilePort, &server.SubmissionSpawner{subChan, fileChan})
 }

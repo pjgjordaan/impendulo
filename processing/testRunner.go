@@ -26,7 +26,8 @@ func SetupTests(projectId bson.ObjectId, dir string)([]*TestRunner, error) {
 	ret := make([]*TestRunner, len(tests))
 	for i, test := range tests{
 		testDir := filepath.Join(dir, test.Id.String())
-		err = util.Unzip(testDir, test.Test)
+		ret[i] = &TestRunner{tool.NewTarget(test.Name, proj.Lang, test.Package, testDir)}
+		err = util.SaveFile(filepath.Join(ret[i].Info.Dir, ret[i].Info.Package), ret[i].Info.FullName(), test.Test)
 		if err != nil {
 			return nil, err
 		}
@@ -34,7 +35,6 @@ func SetupTests(projectId bson.ObjectId, dir string)([]*TestRunner, error) {
 		if err != nil {
 			return nil, err
 		}
-		ret[i] = &TestRunner{test.Package, test.Name, proj.Lang, testDir}
 	}
 	return ret, nil
 }
@@ -42,38 +42,34 @@ func SetupTests(projectId bson.ObjectId, dir string)([]*TestRunner, error) {
 
 //TestRunner is used to run tests on files compiled files.
 type TestRunner struct {
-	Package string
-	Name string
-	Lang    string
-	Dir     string
+	Info *tool.TargetInfo
 }
 
 //Execute sets up and runs tests on a compiled file. 
 func (this *TestRunner)  Execute(f *project.File, dir string) error {
-	target := tool.NewTarget(this.Name, this.Lang, this.Package, this.Dir)
-	compiled, err := this.Compile(target, f, dir)
+	compiled, err := this.Compile(f, dir)
 	if err != nil {
 		return err
 	}
 	if !compiled {
 		return nil
 	}
-	return this.Run(target, f, dir)
+	return this.Run(f, dir)
 }
 
 //Compile compiles a test for the current file. 
-func (this *TestRunner) Compile(target *tool.TargetInfo, f *project.File, dir string) (bool, error) {
-	cp := dir+":"+this.Dir+":"+config.GetConfig(config.JUNIT_JAR)
+func (this *TestRunner) Compile(f *project.File, dir string) (bool, error) {
+	cp := dir+":"+this.Info.Dir+":"+config.GetConfig(config.JUNIT_JAR)
 	javac := java.NewJavac(cp)
-	if _, ok := f.Results[target.Name+"_"+javac.GetName()]; ok {
+	if _, ok := f.Results[this.Info.Name+"_"+javac.GetName()]; ok {
 		return true, nil
 	}
-	res, err := javac.Run(f.Id, target)
+	res, err := javac.Run(f.Id, this.Info)
 	if err != nil{
 		return false, err
 	}
 	util.Log("Test compile result", res)
-	res.Name = target.Name+"_"+javac.GetName()
+	res.Name = this.Info.Name+"_"+javac.GetName()
 	err = AddResult(res)
 	if err != nil {
 		return false, err
@@ -85,16 +81,16 @@ func (this *TestRunner) Compile(target *tool.TargetInfo, f *project.File, dir st
 
 
 //Run runs a test on the current file.
-func (this *TestRunner) Run(target *tool.TargetInfo, f *project.File, dir string) error {
-	ju := junit.NewJUnit(dir+":"+this.Dir, this.Dir)
-	if _, ok := f.Results[target.Name+"_"+ju.GetName()]; ok {
+func (this *TestRunner) Run(f *project.File, dir string) error {
+	ju := junit.NewJUnit(dir+":"+this.Info.Dir, this.Info.Dir)
+	if _, ok := f.Results[this.Info.Name+"_"+ju.GetName()]; ok {
 		return nil
 	}
-	res, err := ju.Run(f.Id, target)
+	res, err := ju.Run(f.Id, this.Info)
 	util.Log("Test run result", res)		
 	if err != nil {
 		return err
 	}
-	res.Name = target.Name+"_"+ju.GetName()
+	res.Name = this.Info.Name+"_"+ju.GetName()
 	return AddResult(res)
 }
