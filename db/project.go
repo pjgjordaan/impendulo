@@ -131,6 +131,19 @@ func AddSubmission(s *project.Submission) error {
 }
 
 
+//AddSubmission adds a new submission to the active database.
+func AddProject(p *project.Project) error {
+	session := getSession()
+	defer session.Close()
+	col := session.DB("").C(PROJECTS)
+	err := col.Insert(p)
+	if err != nil {
+		return fmt.Errorf("Encountered error %q when adding project %q to db", err, p)
+	}
+	return nil
+}
+
+
 //RemoveFileById removes a file matching the given id from the active database.
 func RemoveFileByID(id interface{}) error {
 	session := getSession()
