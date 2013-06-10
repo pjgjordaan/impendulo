@@ -18,6 +18,11 @@ func (this *Project) String() string {
 	return "Name: " + this.Name + "; User: " + this.User + "; Time: " + time.Unix(0, this.Time).String()
 }
 
+
+func (this *Project) Date() string {
+	return time.Unix(0, this.Time).String()
+}
+
 func (this *Project) Equals(that *Project) bool {
 	return reflect.DeepEqual(this, that)
 }

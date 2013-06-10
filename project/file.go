@@ -29,10 +29,32 @@ func (f *File) Type() string {
 	return f.InfoStr(TYPE)
 }
 
+//Type
+func (f *File) Mod() string {
+	mod := f.InfoStr(MOD)
+	switch mod{
+	case "c":return "Saved"
+	case "r":return "Removed"
+	case "l":return "Launched"
+	case "f":return "From"
+	case "t":return "To"
+	case "a":return "Added"
+	default :return "Unknown"
+	}
+}
+
+
 //InfoStr retrieves file metadata.
-func (f *File) InfoStr(key string) (val string) {
-	val, _ = f.Info[key].(string)
+func (f *File) InfoStr(key string) string {
+	val, _ := f.Info[key].(string)
 	return val
+}
+
+
+//InfoStr retrieves file metadata.
+func (f *File) Num() string {
+	val, _ := f.Info[NUM].(float64)
+	return strconv.Itoa(int(val))
 }
 
 func (this *File) Equals(that *File) bool {

@@ -37,6 +37,7 @@ type SubmissionHandler struct{
 func (this *SubmissionHandler) Start(conn net.Conn){
 	this.Conn = conn
 	this.Submission = new(project.Submission)
+	this.Submission.Id = bson.NewObjectId()
 	this.End(this.Handle())
 }
 
@@ -68,11 +69,21 @@ func (this *SubmissionHandler) Login() error {
 	if err != nil {
 		return err
 	}
+	req, err := util.GetString(loginInfo, REQ)
+	if err != nil {
+		return err
+	} else if req != LOGIN{
+		return fmt.Errorf("Invalid request %q, expected %q", req, LOGIN)
+	}
 	this.Submission.User, err = util.GetString(loginInfo, project.USER)
 	if err != nil {
 		return err
 	}
 	pword, err := util.GetString(loginInfo, user.PWORD)
+	if err != nil {
+		return err
+	}
+	this.Submission.Mode, err = util.GetString(loginInfo, project.MODE)
 	if err != nil {
 		return err
 	}
@@ -94,26 +105,41 @@ func (this *SubmissionHandler) Login() error {
 }
 
 func (this *SubmissionHandler) LoadInfo() error{
+	reqInfo, err := util.ReadJSON(this.Conn)
+	if err != nil {
+		return err
+	}
+	req, err := util.GetString(reqInfo, REQ)
+	if err != nil {
+		return err
+	}else if req != PROJECTS{
+		return fmt.Errorf("Invalid request %q, expected %q", req, PROJECTS)
+	}
 	projects, err := db.GetProjects(bson.M{})
 	if err != nil {
 		return err
 	}
-	err = util.WriteJson(this.Conn, map[string]interface{}{"projects":projects})
+	err = util.WriteJson(this.Conn, projects)
 	if err != nil {
 		return err
 	}
-	info, err := util.ReadJSON(this.Conn)
+	subInfo, err := util.ReadJSON(this.Conn)
 	if err != nil {
 		return err
 	}
-	this.Submission.ProjectId, err = util.GetID(info, project.PROJECT_ID)
+	req, err = util.GetString(subInfo, REQ)
 	if err != nil {
 		return err
+	}else if req != SUBMISSION{
+		return fmt.Errorf("Invalid request %q, expected %q", req, SUBMISSION)
 	}
-	this.Submission.Mode, err = util.GetString(info, project.MODE)
+	idStr, err := util.GetString(subInfo, project.PROJECT_ID)
 	if err != nil {
 		return err
+	} else if !bson.IsObjectIdHex(idStr){
+		return fmt.Errorf("Invalid id hex %q", idStr)
 	}
+	this.Submission.ProjectId = bson.ObjectIdHex(idStr)
 	err = db.AddSubmission(this.Submission)
 	if err != nil {
 		return err

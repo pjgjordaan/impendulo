@@ -19,6 +19,20 @@ func GetFile(matcher interface{}) (*project.File, error) {
 	return ret, nil
 }
 
+//GetFiles retrieves files matching the given interface from the active database. 
+func GetFiles(matcher interface{}) ([]*project.File, error) {
+	session := getSession()
+	defer session.Close()
+	c := session.DB("").C(FILES)
+	var ret []*project.File
+	err := c.Find(matcher).All(&ret)
+	if err != nil {
+		return nil, fmt.Errorf("Encountered error %q when retrieving files matching %q from db", err, matcher)
+	}
+	return ret, nil
+}
+
+
 //GetSubmission retrieves a submission matching the given interface from the active database.
 func GetSubmission(matcher interface{}) (*project.Submission, error) {
 	session := getSession()
@@ -28,6 +42,19 @@ func GetSubmission(matcher interface{}) (*project.Submission, error) {
 	err := c.Find(matcher).One(&ret)
 	if err != nil {
 		return nil, fmt.Errorf("Encountered error %q when retrieving submission matching %q from db", err, matcher)
+	}
+	return ret, nil
+}
+
+//GetSubmission retrieves submissions matching the given interface from the active database.
+func GetSubmissions(matcher interface{}) ([] *project.Submission, error) {
+	session := getSession()
+	defer session.Close()
+	c := session.DB("").C(SUBMISSIONS)
+	var ret []*project.Submission
+	err := c.Find(matcher).All(&ret)
+	if err != nil {
+		return nil, fmt.Errorf("Encountered error %q when retrieving submissions matching %q from db", err, matcher)
 	}
 	return ret, nil
 }

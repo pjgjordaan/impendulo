@@ -57,7 +57,7 @@ func SaveMap(mp map[bson.ObjectId]bool, fname string) error {
 	return nil
 }
 
-func WriteJson(w io.Writer, data map[string]interface{})error{
+func WriteJson(w io.Writer, data interface{})error{
 	marshalled, err := json.Marshal(data)
 	if err != nil {
 		return err

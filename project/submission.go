@@ -25,6 +25,10 @@ func (this *Submission) String() string {
 
 }
 
+func (this *Submission) Date() string {
+	return time.Unix(0, this.Time).String()
+}
+
 func (this *Submission) Equals(that *Submission) bool {
 	return reflect.DeepEqual(this, that)
 }
