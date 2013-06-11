@@ -25,7 +25,7 @@ func (this *JUnit) GetLang() string{
 
 
 func (this *JUnit) GetName()string{
-	return "junit"
+	return tool.JUNIT
 }
 
 func (this *JUnit) GetArgs(target string)[]string{

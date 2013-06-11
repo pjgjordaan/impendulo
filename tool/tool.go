@@ -8,7 +8,14 @@ import(
 "bytes"
 )
 
+const(
+	JUNIT = "junit"
+	JAVAC = "javac"
+	FINDBUGS = "findbugs"
+LINT4J = "lint4j"
+)
 type Tool interface{
+	IsHTML() bool
 	GetName() string
 	GetLang()string
 	Run(fileId bson.ObjectId, target *TargetInfo)(*Result, error)

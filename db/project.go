@@ -7,12 +7,12 @@ import(
 )
 
 //GetFile retrieves a file matching the given interface from the active database. 
-func GetFile(matcher interface{}) (*project.File, error) {
+func GetFile(matcher, selector interface{}) (*project.File, error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(FILES)
 	var ret *project.File
-	err := c.Find(matcher).One(&ret)
+	err := c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		return nil, fmt.Errorf("Encountered error %q when retrieving file matching %q from db", err, matcher)
 	}
@@ -20,12 +20,12 @@ func GetFile(matcher interface{}) (*project.File, error) {
 }
 
 //GetFiles retrieves files matching the given interface from the active database. 
-func GetFiles(matcher interface{}) ([]*project.File, error) {
+func GetFiles(matcher, selector interface{}) ([]*project.File, error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(FILES)
 	var ret []*project.File
-	err := c.Find(matcher).All(&ret)
+	err := c.Find(matcher).Select(selector).All(&ret)
 	if err != nil {
 		return nil, fmt.Errorf("Encountered error %q when retrieving files matching %q from db", err, matcher)
 	}
@@ -34,12 +34,12 @@ func GetFiles(matcher interface{}) ([]*project.File, error) {
 
 
 //GetSubmission retrieves a submission matching the given interface from the active database.
-func GetSubmission(matcher interface{}) (*project.Submission, error) {
+func GetSubmission(matcher, selector interface{}) (*project.Submission, error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(SUBMISSIONS)
 	var ret *project.Submission
-	err := c.Find(matcher).One(&ret)
+	err := c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		return nil, fmt.Errorf("Encountered error %q when retrieving submission matching %q from db", err, matcher)
 	}
@@ -47,12 +47,12 @@ func GetSubmission(matcher interface{}) (*project.Submission, error) {
 }
 
 //GetSubmission retrieves submissions matching the given interface from the active database.
-func GetSubmissions(matcher interface{}) ([] *project.Submission, error) {
+func GetSubmissions(matcher, selector interface{}) ([] *project.Submission, error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(SUBMISSIONS)
 	var ret []*project.Submission
-	err := c.Find(matcher).All(&ret)
+	err := c.Find(matcher).Select(selector).All(&ret)
 	if err != nil {
 		return nil, fmt.Errorf("Encountered error %q when retrieving submissions matching %q from db", err, matcher)
 	}
@@ -61,12 +61,12 @@ func GetSubmissions(matcher interface{}) ([] *project.Submission, error) {
 
 
 //GetTest retrieves a test matching the given interface from the active database.
-func GetTest(matcher interface{}) (*project.Test, error) {
+func GetTest(matcher, selector interface{}) (*project.Test, error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(TESTS)
 	var ret *project.Test
-	err := c.Find(matcher).One(&ret)
+	err := c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		return nil, fmt.Errorf("Encountered error %q when retrieving test matching %q from db", err, matcher)
 	}
@@ -75,12 +75,12 @@ func GetTest(matcher interface{}) (*project.Test, error) {
 
 
 //GetTest retrieves a test matching the given interface from the active database.
-func GetTests(matcher interface{}) ([]*project.Test, error) {
+func GetTests(matcher, selector interface{}) ([]*project.Test, error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(TESTS)
 	var ret []*project.Test
-	err := c.Find(matcher).All(&ret)
+	err := c.Find(matcher).Select(selector).All(&ret)
 	if err != nil {
 		return nil, fmt.Errorf("Encountered error %q when retrieving test matching %q from db", err, matcher)
 	}
@@ -89,12 +89,12 @@ func GetTests(matcher interface{}) ([]*project.Test, error) {
 
 
 //GetTest retrieves a test matching the given interface from the active database.
-func GetProject(matcher interface{}) (*project.Project, error) {
+func GetProject(matcher, selector interface{}) (*project.Project, error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(PROJECTS)
 	var ret *project.Project
-	err := c.Find(matcher).One(&ret)
+	err := c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		return nil, fmt.Errorf("Encountered error %q when retrieving project matching %q from db", err, matcher)
 	}
@@ -102,7 +102,7 @@ func GetProject(matcher interface{}) (*project.Project, error) {
 }
 
 //GetTest retrieves a test matching the given interface from the active database.
-func GetProjects(matcher interface{}) ([]*project.Project, error) {
+func GetProjects(matcher, selector interface{}) ([]*project.Project, error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(PROJECTS)

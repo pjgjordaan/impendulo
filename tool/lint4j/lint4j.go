@@ -18,7 +18,7 @@ func (this *Lint4j) GetLang() string{
 }
 
 func (this *Lint4j) GetName()string{
-	return "lint4j"
+	return tool.LINT4J
 }
 
 func (this *Lint4j) GetArgs(target string)[]string{

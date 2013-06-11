@@ -78,7 +78,7 @@ func (this *TestHandler) Login() error {
 
 
 func (this *TestHandler) LoadInfo() error{
-	projects, err := db.GetProjects(bson.M{})
+	projects, err := db.GetProjects(bson.M{}, nil)
 	if err != nil {
 		return err
 	}

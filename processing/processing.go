@@ -58,7 +58,7 @@ func Serve(subChan chan *project.Submission, fileChan chan *project.File) {
 //ProcessStored processes an incompletely processed submission. 
 //It retrieves files in the submission from the db and sends them on fileChan to be processed. 
 func ProcessStored(subId bson.ObjectId, subChan chan *project.Submission, fileChan chan *project.File) {
-	sub, err := db.GetSubmission(bson.M{project.ID: subId})
+	sub, err := db.GetSubmission(bson.M{project.ID: subId}, nil)
 	if err != nil {
 		util.Log(err)
 		return
@@ -72,7 +72,7 @@ func ProcessStored(subId bson.ObjectId, subChan chan *project.Submission, fileCh
 	count := 0
 	for count < total{
 		matcher := bson.M{project.SUBID: subId, project.INFO+"."+project.NUM: count}
-		file, err := db.GetFile(matcher)
+		file, err := db.GetFile(matcher, nil)
 		if err != nil {
 			util.Log(err)
 			return
@@ -143,7 +143,7 @@ func ProcessArchive(archive *project.File, dir string, tests []*TestRunner) erro
 			return err
 		}
 		matcher := bson.M{project.INFO: info}
-		f, err := db.GetFile(matcher)
+		f, err := db.GetFile(matcher, nil)
 		if err != nil {
 			f = project.NewFile(archive.SubId, info, data)
 			err = db.AddFile(f)
@@ -172,7 +172,7 @@ func Evaluate(f *project.File, dir string, tests []*TestRunner, isSource bool) e
 	if !compiled {
 		return nil
 	}
-	f, err = db.GetFile(bson.M{project.ID: f.Id})
+	f, err = db.GetFile(bson.M{project.ID: f.Id}, nil)
 	if err != nil {
 		return err
 	}
@@ -193,12 +193,12 @@ func Evaluate(f *project.File, dir string, tests []*TestRunner, isSource bool) e
 //It returns file info used by tools & tests.
 func ExtractFile(f *project.File, dir string) (*tool.TargetInfo, error) {
 	matcher := bson.M{project.ID: f.SubId}
-	s, err := db.GetSubmission(matcher)
+	s, err := db.GetSubmission(matcher, nil)
 	if err != nil {
 		return nil, err
 	}
 	matcher = bson.M{project.ID: s.ProjectId}
-	p, err := db.GetProject(matcher)
+	p, err := db.GetProject(matcher, nil)
 	if err != nil {
 		return nil, err
 	}

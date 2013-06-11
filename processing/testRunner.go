@@ -15,11 +15,11 @@ import (
 //SetupTests extracts a project's tests from db to filesystem for execution.
 //It creates and returns a new TestRunner.
 func SetupTests(projectId bson.ObjectId, dir string)([]*TestRunner, error) {
-	proj, err := db.GetProject(bson.M{project.ID: projectId})
+	proj, err := db.GetProject(bson.M{project.ID: projectId}, nil)
 	if err != nil {
 		return nil, err
 	}
-	tests, err := db.GetTests(bson.M{project.PROJECT_ID: projectId})
+	tests, err := db.GetTests(bson.M{project.PROJECT_ID: projectId}, nil)
 	if err != nil {
 		return nil, err
 	}

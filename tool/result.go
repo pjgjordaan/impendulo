@@ -29,6 +29,14 @@ func (this *Result) String()string{
 	return "File: "+this.FileId.String()+"; Name: "+this.Name+"; OutData:"+string(this.OutData)+"; ErrData:"+string(this.ErrData)+"; Error: "+errString
 }
 
+func (this *Result) Output()string{
+	return string(this.OutData)
+}
+
+func (this *Result) Errors()string{
+	return string(this.ErrData)
+}
+
 //NewResult
 func NewResult(fileId bson.ObjectId, tool Tool, outdata, errdata []byte, err error) *Result {
 	return &Result{bson.NewObjectId(), fileId, tool.GetName(), outdata, errdata, err, time.Now().UnixNano()}

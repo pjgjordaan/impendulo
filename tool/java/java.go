@@ -19,7 +19,7 @@ func (this *Javac) GetLang() string{
 }
 
 func (this *Javac) GetName()string{
-	return "javac"
+	return tool.JAVAC
 }
 
 func (this *Javac) GetArgs(target string)[]string{

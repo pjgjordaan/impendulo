@@ -18,17 +18,17 @@ func (this *FindBugs) GetLang() string{
 }
 
 func (this *FindBugs) GetName()string{
-	return "findbugs"
+	return tool.FINDBUGS
 }
 
 func (this *FindBugs) GetArgs(target string)[]string{
-	return []string{config.GetConfig(config.JAVA), "-jar", this.cmd, "-textui", "-low", target}
+	return []string{config.GetConfig(config.JAVA), "-jar", this.cmd, "-textui", "-low", "-html:fancy-hist.xsl", target}
 }
 
 func (this *FindBugs) Run(fileId bson.ObjectId, ti *tool.TargetInfo)(*tool.Result, error){
 	target := ti.GetTarget(tool.PKG_PATH)
 	args := this.GetArgs(target)
-	stderr, stdout, ok, err := tool.RunCommand(args...)
+	stdout, stderr, ok, err := tool.RunCommand(args...)
 	if !ok {
 		return nil, err
 	}

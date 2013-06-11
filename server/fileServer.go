@@ -115,7 +115,7 @@ func (this *SubmissionHandler) LoadInfo() error{
 	}else if req != PROJECTS{
 		return fmt.Errorf("Invalid request %q, expected %q", req, PROJECTS)
 	}
-	projects, err := db.GetProjects(bson.M{})
+	projects, err := db.GetProjects(bson.M{}, nil)
 	if err != nil {
 		return err
 	}

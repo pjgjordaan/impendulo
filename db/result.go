@@ -6,12 +6,12 @@ import(
 )
 
 //GetResult retrieves a result matching the given interface from the active database.
-func GetResult(matcher interface{}) (*tool.Result, error) {
+func GetResult(matcher, selector interface{}) (*tool.Result, error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(RESULTS)
 	var ret *tool.Result
-	err := c.Find(matcher).One(&ret)
+	err := c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		return nil, fmt.Errorf("Encountered error %q when retrieving result matching %q from db", err, matcher)
 	}
