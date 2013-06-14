@@ -223,14 +223,14 @@ func Compile(fileId bson.ObjectId, ti *tool.TargetInfo, isSource bool) (bool, er
 			return false, err
 		}
 	} else{
-		res = tool.NewResult(fileId, javac, []byte(""), []byte(""), nil)
+		res = tool.NewResult(fileId, javac, []byte(""))
 	} 
 	util.Log("Compile result", res)
 	err = AddResult(res)
 	if err != nil {
 		return false, err
 	}
-	return res.Error == nil, nil
+	return true, nil
 }
 
 

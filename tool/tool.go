@@ -15,7 +15,7 @@ const(
 LINT4J = "lint4j"
 )
 type Tool interface{
-	IsHTML() bool
+	GenHTML() bool
 	GetName() string
 	GetLang()string
 	Run(fileId bson.ObjectId, target *TargetInfo)(*Result, error)
@@ -59,6 +59,10 @@ func (this *GenericTool) AddArgs(args map[string]string) {
 	this.args = args
 }
 
+func (this *GenericTool) GenHTML() bool {
+	return false
+}
+
 func (this *GenericTool) Equals(that Tool) bool {
 	return reflect.DeepEqual(this, that)
 }
@@ -70,7 +74,10 @@ func (this *GenericTool) Run(fileId bson.ObjectId, ti *TargetInfo)(*Result, erro
 	if !ok {
 		return nil, err
 	}
-	return NewResult(fileId, this, stdout, stderr, err), nil
+	if stderr != nil && len(stderr) > 0{
+		return NewResult(fileId, this, stderr), nil
+	}
+	return NewResult(fileId, this, stdout), nil
 }
 
 func (this *GenericTool) GetName()string{

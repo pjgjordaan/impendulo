@@ -11,10 +11,9 @@ type Result struct {
 	Id      bson.ObjectId "_id"
 	FileId  bson.ObjectId "fileid"
 	Name    string        "name"
-	OutData []byte        "outdata"
-	ErrData []byte        "errdata"
-	Error   error         "error"
+	Data []byte        "data"
 	Time    int64         "time"
+	HTML bool "html"
 }
 
 func (this *Result) Equals(that *Result) bool {
@@ -22,22 +21,14 @@ func (this *Result) Equals(that *Result) bool {
 }
 
 func (this *Result) String()string{
-	errString := "None"
-	if this.Error != nil{
-		errString = this.Error.Error()
-	}
-	return "File: "+this.FileId.String()+"; Name: "+this.Name+"; OutData:"+string(this.OutData)+"; ErrData:"+string(this.ErrData)+"; Error: "+errString
+	return "File: "+this.FileId.String()+"; Name: "+this.Name+"; Output:"+this.Output()
 }
 
 func (this *Result) Output()string{
-	return string(this.OutData)
-}
-
-func (this *Result) Errors()string{
-	return string(this.ErrData)
+	return string(this.Data)
 }
 
 //NewResult
-func NewResult(fileId bson.ObjectId, tool Tool, outdata, errdata []byte, err error) *Result {
-	return &Result{bson.NewObjectId(), fileId, tool.GetName(), outdata, errdata, err, time.Now().UnixNano()}
+func NewResult(fileId bson.ObjectId, tool Tool, data []byte) *Result {
+	return &Result{bson.NewObjectId(), fileId, tool.GetName(), data, time.Now().UnixNano(), tool.GenHTML()}
 }

@@ -32,6 +32,14 @@ func (this *Javac) Run(fileId bson.ObjectId, ti *tool.TargetInfo)(*tool.Result, 
 	stderr, stdout, ok, err := tool.RunCommand(args...)
 	if !ok {
 		return nil, err
+	}	
+	if stderr != nil && len(stderr) > 0{
+		return tool.NewResult(fileId, this, stderr), nil
 	}
-	return tool.NewResult(fileId, this, stdout, stderr, err), nil
+	return tool.NewResult(fileId, this, stdout), nil
+}
+
+
+func (this *Javac) GenHTML() bool {
+	return false
 }

@@ -32,5 +32,12 @@ func (this *FindBugs) Run(fileId bson.ObjectId, ti *tool.TargetInfo)(*tool.Resul
 	if !ok {
 		return nil, err
 	}
-	return tool.NewResult(fileId, this, stdout, stderr, err), nil
+	if stderr != nil && len(stderr) > 0{
+		return tool.NewResult(fileId, this, stderr), nil
+	}
+	return tool.NewResult(fileId, this, stdout), nil
+}
+
+func (this *FindBugs) GenHTML() bool {
+	return false
 }

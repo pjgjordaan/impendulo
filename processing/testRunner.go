@@ -74,7 +74,7 @@ func (this *TestRunner) Compile(f *project.File, dir string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return res.Error == nil, nil
+	return true, nil
 }
 
 
