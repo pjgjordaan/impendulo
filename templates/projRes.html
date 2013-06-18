@@ -1,0 +1,16 @@
+{{define "result"}}
+  <table class="table table-hover">
+    <thead><tr>
+	<th>Name</th>
+	<th>Created</th>
+	<th>Language</th>
+    </tr></thead>
+    <tbody data-provides="rowlink" >
+      {{ range .ctx.Projects}}
+      <tr><td><a class="rowlink" href="getsubmissions?id={{.Id.Hex}}&type=project" >{{.Name}}</a></td>
+	<td><a class="rowlink" href="getsubmissions?id={{.Id.Hex}}&type=project" >{{.Date}}</a></td>
+	<td><a class="rowlink" href="getsubmissions?id={{.Id.Hex}}&type=project" >{{.Lang}}</a></td></tr>
+      {{end}}
+    </tbody>
+  </table>
+{{end}}

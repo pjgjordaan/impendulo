@@ -1,0 +1,7 @@
+{{define "result"}}
+<ul>
+  {{ range .ctx.Users}}
+  <li><a href="getsubmissions?id={{.Name}}&type=user">{{.Name}}</a></li>
+  {{end}}
+</ul>
+{{end}}

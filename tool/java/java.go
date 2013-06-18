@@ -4,7 +4,9 @@ import(
 	"labix.org/v2/mgo/bson"
 	"github.com/godfried/cabanga/config"
 	"github.com/godfried/cabanga/tool"
+"strings"
 )
+
 type Javac struct{
 	cmd string
 	cp string
@@ -35,6 +37,9 @@ func (this *Javac) Run(fileId bson.ObjectId, ti *tool.TargetInfo)(*tool.Result, 
 	}	
 	if stderr != nil && len(stderr) > 0{
 		return tool.NewResult(fileId, this, stderr), nil
+	}
+	if stdout == nil || len(stdout) == 0 || len(strings.TrimSpace(string(stdout))) == 0{
+		stdout = []byte("Compiled successfully")
 	}
 	return tool.NewResult(fileId, this, stdout), nil
 }

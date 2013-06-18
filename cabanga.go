@@ -13,11 +13,10 @@ import (
 )
 
 //Flag variables for setting ports to listen on, users file to process and the mode to run in.
-	var FilePort, TestPort, UsersFile, ConfigFile string
+var FilePort, TestPort, UsersFile, ConfigFile string
 
 func init() {
 	flag.StringVar(&FilePort, "fp", "8010", "Specify the port to listen on for files.")
-//	flag.StringVar(&TestPort, "tp", "8011", "Specify the port to listen on for tests.")
 	flag.StringVar(&UsersFile, "u", "", "Specify a file with new users.")
 	flag.StringVar(&ConfigFile, "c", "config.txt", "Specify a configuration file.")
 }
@@ -55,6 +54,5 @@ func Run() {
 	fileChan := make(chan *project.File)
 	subChan := make(chan *project.Submission)
 	go processing.Serve(subChan, fileChan)
-	//go server.Run(TestPort, new(server.TestSpawner))
 	server.Run(FilePort, &server.SubmissionSpawner{subChan, fileChan})
 }

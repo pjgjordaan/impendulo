@@ -1,0 +1,8 @@
+{{ define "tabs" }}
+<ul class="nav">
+  <li {{ if .h }} class="active" {{ end }}><a href="homeview">Home</a></li>
+  <li {{ if .p }} class="active" {{ end }}><a href="projectview">Add Projects</a></li>
+  <li {{ if .t }} class="active" {{ end }}><a href="testview">Add Tests</a></li>
+  <li {{ if .a }} class="active" {{ end }}><a href="archiveview">Submit Archive</a></li>
+ </ul>
+{{ end }}

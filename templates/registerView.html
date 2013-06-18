@@ -1,0 +1,21 @@
+{{ define "view" }}
+  <form class="form-horizontal" action="register" method="POST">
+    <div class="control-group">
+      <label class="control-label" for="username">Username</label>
+      <div class="controls">
+	<input name="username" type="text" id="username" placeholder="Username">
+      </div>
+    </div>
+    <div class="control-group">
+      <label class="control-label" for="password">Password</label>
+      <div class="controls">
+	<input type="password" id="password" name="password" placeholder="Password">
+      </div>
+    </div>
+    <div class="control-group">
+      <div class="controls">
+	<button type="submit" class="btn btn-inverse">Register</button>
+      </div>
+    </div>
+  </form>
+{{ end }}

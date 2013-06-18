@@ -77,9 +77,6 @@ func (this *TestRunner) Compile(f *project.File, dir string) (bool, error) {
 	return true, nil
 }
 
-
-
-
 //Run runs a test on the current file.
 func (this *TestRunner) Run(f *project.File, dir string) error {
 	ju := junit.NewJUnit(dir+":"+this.Info.Dir, this.Info.Dir)

@@ -233,8 +233,6 @@ func Compile(fileId bson.ObjectId, ti *tool.TargetInfo, isSource bool) (bool, er
 	return true, nil
 }
 
-
-
 //AddResult adds a tool result to the db.
 //It updates the associated file's list of results to point to this new result.
 func AddResult(res *tool.Result) error {

@@ -1,0 +1,39 @@
+{{ define "title" }}Impendulo{{ end }}
+{{ define "content" }}
+<div class="row-fluid">
+  <div class="span12">
+    <div id="navbar" class="row-fluid">
+      <div class="span2"></div>
+      <div class="span8">
+	{{ template "navbar" . }}
+      </div>
+      <div class="span2"></div>
+    </div>
+    <div id="view" class="row-fluid">
+      <div class="span2">
+	{{ template "sidebar" .}}
+      </div>
+      <div class="span8">
+	<div id="view" class="row-fluid">
+	  {{ template "messages" .}}
+	</div>
+	<div id="view" class="row-fluid">
+	{{ template "view" .}}
+	</div>
+      </div>
+      <div class="span2"></div>
+    </div>
+  </div>
+</div>
+<script language="javascript" src="/static/js/jquery-2.0.2.min.js"></script>
+<script language="javascript" src="/static/js/bootstrap-rowlink.min.js"></script>
+<script language="javascript" src="/static/js/bootstrap.min.js"></script>
+<script language="javascript" src="/static/js/shCore.js"></script>
+<script language="javascript" src="/static/js/shBrushJava.js"></script>
+<script language="javascript">
+  window.onload = function () {
+  dp.SyntaxHighlighter.ClipboardSwf = 'static/flash/clipboard.swf';
+  dp.SyntaxHighlighter.HighlightAll('code');
+  }
+</script>
+{{ end }}

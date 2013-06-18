@@ -1,0 +1,16 @@
+{{ define "messages" }}
+{{range .ctx.Errors}}
+<div class="alert alert-error">
+  <button type="button" class="close" data-dismiss="alert">&times;</button>
+  <strong>{{.}}</strong>
+</div>
+{{end}}
+{{range .ctx.Successes}}
+<div class="alert alert-success">
+  <button type="button" class="close" data-dismiss="alert">&times;</button>
+  {{.}}
+</div>
+{{end}}
+{{end}}
+
+

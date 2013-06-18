@@ -1,0 +1,13 @@
+{{ define "view" }}
+  <div class="btn-group">
+    <a class="btn dropdown-toggle btn-inverse" data-toggle="dropdown" href="#">
+      Browse
+    <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu">
+    <li><a href="getprojects">Projects</a></li>
+    <li><a href="getusers">Users</a></li>
+    </ul>
+    </div>
+  {{ template "result" . }}
+{{ end }}

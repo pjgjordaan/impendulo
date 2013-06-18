@@ -1,0 +1,20 @@
+{{define "result"}}
+<table class="table table-hover">
+  <thead><tr>
+      <th>Name</th>
+      <th>Package</th>
+      <th>Type</th>
+      <th>Number</th>
+      <th>Change</th>
+  </tr></thead>
+  <tbody data-provides="rowlink" >
+    {{ range .fileRes}}
+    <tr><td><a class="rowlink" href="getresults?fileid={{.Id.Hex}}" >{{.InfoStr "name"}}</a></td>
+      <td><a class="rowlink" href="getresults?fileid={{.Id.Hex}}" >{{.InfoStr "pkg"}}</a></td>
+      <td><a class="rowlink" href="getresults?fileid={{.Id.Hex}}" >{{.InfoStr "type"}}</a></td>
+      <td><a class="rowlink" href="getresults?fileid={{.Id.Hex}}" >{{.Num}}</a></td>
+      <td><a class="rowlink" href="getresults?fileid={{.Id.Hex}}" >{{.Mod}}</a></td></tr>
+    {{end}}
+  </tbody>
+</table>
+{{end}}

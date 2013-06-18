@@ -1,0 +1,14 @@
+{{define "result"}}
+<table class="table table-hover">
+  <thead><tr>
+      <th>User</th>
+      <th>Created</th>
+  </tr></thead>
+  <tbody data-provides="rowlink" >
+    {{ range .subRes}}
+    <tr><td><a class="rowlink" href="getfiles?subid={{.Id.Hex}}" >{{.User}}</a></td>
+      <td><a class="rowlink" href="getfiles?subid={{.Id.Hex}}" >{{.Date}}</a></td></tr>
+    {{end}}
+  </tbody>
+</table>
+{{end}}

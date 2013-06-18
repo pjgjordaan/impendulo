@@ -1,0 +1,8 @@
+{{ define "sidebar" }}
+<h3>Projects</h3>
+<ul class="nav nav-tabs nav-stacked">
+  {{ range .ctx.Projects}}
+  <li><a class="rowlink" href="getsubmissions?id={{.Id.Hex}}&type=project" >{{.Name}}</a></li>
+  {{end}}
+</ul>
+{{end}}  
