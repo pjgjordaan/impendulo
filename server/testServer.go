@@ -2,10 +2,10 @@ package server
 
 import (
 	"fmt"
-	"github.com/godfried/cabanga/db"
-	"github.com/godfried/cabanga/project"
-	"github.com/godfried/cabanga/user"
-	"github.com/godfried/cabanga/util"
+	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/user"
+	"github.com/godfried/impendulo/util"
 	"net"
 	"labix.org/v2/mgo/bson"
 )

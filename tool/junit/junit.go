@@ -2,8 +2,8 @@ package junit
 
 import(
 	"labix.org/v2/mgo/bson"
-	"github.com/godfried/cabanga/config"
-	"github.com/godfried/cabanga/tool"
+	"github.com/godfried/impendulo/config"
+	"github.com/godfried/impendulo/tool"
 )
 
 

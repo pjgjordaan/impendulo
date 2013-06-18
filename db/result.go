@@ -1,7 +1,7 @@
 package db 
 
 import(
-	"github.com/godfried/cabanga/tool"
+	"github.com/godfried/impendulo/tool"
 "fmt"
 )
 

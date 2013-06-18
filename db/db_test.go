@@ -1,9 +1,9 @@
 package db
 
 import (
-	"github.com/godfried/cabanga/submission"
-	"github.com/godfried/cabanga/tool"
-	"github.com/godfried/cabanga/user"
+	"github.com/godfried/impendulo/submission"
+	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/user"
 	"labix.org/v2/mgo/bson"
 	"testing"
 	"strconv"

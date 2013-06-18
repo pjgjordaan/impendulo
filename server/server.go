@@ -2,7 +2,7 @@ package server
 
 import (
 	"fmt"
-	"github.com/godfried/cabanga/util"
+	"github.com/godfried/impendulo/util"
 	"net"
 )
 

@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 	"os"
-	"github.com/godfried/cabanga/util"
+	"github.com/godfried/impendulo/util"
 	"path/filepath"
 )
 

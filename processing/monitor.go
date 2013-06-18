@@ -1,7 +1,7 @@
 package processing
 
 import (
-	"github.com/godfried/cabanga/util"
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"os"
 	"path/filepath"

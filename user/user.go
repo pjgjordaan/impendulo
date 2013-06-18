@@ -5,7 +5,7 @@ package user
 "bufio"
 "fmt"
 "strings"
-"github.com/godfried/cabanga/util"
+"github.com/godfried/impendulo/util"
 )
 const (
 	NONE    = 0

@@ -1,13 +1,13 @@
 package processing
 
 import (
-	"github.com/godfried/cabanga/config"
-	"github.com/godfried/cabanga/db"
-	"github.com/godfried/cabanga/tool"
-	"github.com/godfried/cabanga/tool/java"
-	"github.com/godfried/cabanga/project"
-	"github.com/godfried/cabanga/util"
-	"github.com/godfried/cabanga/tool/junit"
+	"github.com/godfried/impendulo/config"
+	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/java"
+	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/tool/junit"
 	"labix.org/v2/mgo/bson"
 	"path/filepath"
 )

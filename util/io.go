@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"bufio"
+	"strings"
 )
 
 const DPERM = 0777
@@ -17,7 +19,7 @@ func BaseDir() string{
 	if err != nil {
 		panic(err)
 	}
-	return filepath.Join(cur.HomeDir, ".intlola")
+	return filepath.Join(cur.HomeDir, ".impendulo")
 }
 
 //ReadData reads data from a reader until io.EOF or []byte("eof") is encountered. 
@@ -68,4 +70,33 @@ func ReadBytes(r io.Reader) []byte {
 		return make([]byte, 0)
 	}
 	return buffer.Bytes()
+}
+
+func GetPackage(r io.Reader)string{
+	scanner := bufio.NewScanner(r)
+	scanner.Split(bufio.ScanWords)
+	for scanner.Scan() {
+		if scanner.Text() == "package"{
+			scanner.Scan()
+			return strings.Split(scanner.Text(), ";")[0]
+		}
+	}
+	return ""
+}
+
+func GenHTML(dir, name string, data []byte)(string, error){
+	err := os.MkdirAll(dir, 0777)
+	if err != nil {
+		return "", fmt.Errorf("Encountered error %q while creating directory %q", err, dir)
+	}
+	name = filepath.Join(dir, name+".html")
+	f, err := os.Create(name)
+	if err != nil {
+		return "", fmt.Errorf("Encountered error %q while creating file %q", err, name)
+	}
+	_, err = f.Write(data)
+	if err != nil {
+		return "", fmt.Errorf("Encountered error %q while writing data to %q", err, f)
+	}
+	return "/"+name, nil
 }

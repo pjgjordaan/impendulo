@@ -2,13 +2,14 @@ package main
 
 import (
 	"flag"
-	"github.com/godfried/cabanga/db"
-	"github.com/godfried/cabanga/processing"
-	"github.com/godfried/cabanga/server"
-	"github.com/godfried/cabanga/project"
-	"github.com/godfried/cabanga/user"
-	"github.com/godfried/cabanga/util"
-	"github.com/godfried/cabanga/config"
+	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/processing"
+	"github.com/godfried/impendulo/server/web"	
+	"github.com/godfried/impendulo/server"
+	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/user"
+	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/config"
 	"runtime"
 )
 
@@ -53,6 +54,8 @@ func Run() {
 	db.Setup(db.DEFAULT_CONN)
 	fileChan := make(chan *project.File)
 	subChan := make(chan *project.Submission)
-	go processing.Serve(subChan, fileChan)
-	server.Run(FilePort, &server.SubmissionSpawner{subChan, fileChan})
+	go server.Run(FilePort, &server.SubmissionSpawner{subChan, fileChan})
+	go web.Run(subChan, fileChan)
+	processing.Serve(subChan, fileChan)
+	
 }

@@ -2,11 +2,11 @@ package processing
 
 import(
 	"testing"
-	"github.com/godfried/cabanga/config"
-	"github.com/godfried/cabanga/tool"
-	"github.com/godfried/cabanga/submission"
-	"github.com/godfried/cabanga/db"
-	"github.com/godfried/cabanga/util"
+	"github.com/godfried/impendulo/config"
+	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/submission"
+	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 "os"
 "path/filepath"

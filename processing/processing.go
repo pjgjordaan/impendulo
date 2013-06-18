@@ -2,12 +2,12 @@ package processing
 
 import (
 	"fmt"
-	"github.com/godfried/cabanga/db"
-	"github.com/godfried/cabanga/tool"
-	"github.com/godfried/cabanga/tool/java"
-	"github.com/godfried/cabanga/tool/findbugs"
-	"github.com/godfried/cabanga/project"
-	"github.com/godfried/cabanga/util"
+	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/java"
+	"github.com/godfried/impendulo/tool/findbugs"
+	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"os"
 	"os/signal"

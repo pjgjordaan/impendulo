@@ -1,7 +1,7 @@
 package db
 
 import(
-	"github.com/godfried/cabanga/user"
+	"github.com/godfried/impendulo/user"
 "fmt"
 	"labix.org/v2/mgo/bson"
 )

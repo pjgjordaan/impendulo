@@ -3,9 +3,9 @@ package context
 import (
 	"code.google.com/p/gorilla/sessions"
 	"net/http"
-	"github.com/godfried/cabanga/db"
-	"github.com/godfried/cabanga/project"
-	"github.com/godfried/cabanga/user"
+	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/user"
 	"labix.org/v2/mgo/bson"
 	"fmt"
 )
