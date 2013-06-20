@@ -7,6 +7,12 @@
     </div>
   </div>
   <div class="control-group">
+    <label class="control-label" for="data-check">Data files required</label>
+    <div class="controls">
+      <input type="checkbox" value="true" onclick="unhide('data-files-group', this)" id="data-check" name="data-check">
+    </div>
+  </div>
+  <div class="control-group" id="data-files-group" style="display:none">
     <label class="control-label" for="data">Data Files</label>
     <div class="controls">
       <input name="data" type="file" id="data">

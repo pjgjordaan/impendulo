@@ -6,6 +6,7 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/processing"
 	"net"
 	"io"
 	"labix.org/v2/mgo/bson"
@@ -14,23 +15,17 @@ import (
 
 //SubmissionSpawner is an implementation of HandlerSpawner for SubmissionHandlers.
 type SubmissionSpawner struct{
-	SubChan chan *project.Submission
-	FileChan chan *project.File
 }
 
 //Spawn creates a new ConnHandler of type SubmissionHandler.
 func (this *SubmissionSpawner) Spawn() ConnHandler{
-	return &SubmissionHandler{SubChan: this.SubChan, FileChan: this.FileChan}
+	return &SubmissionHandler{}
 }
 
 //SubmissionHandler is an implementation of ConnHandler used to receive submissions from users of the impendulo system.
 type SubmissionHandler struct{
 	Conn net.Conn
 	Submission *project.Submission
-	//Used to send this Submission for processing.
-	SubChan chan *project.Submission
-	//Used to send Files in this Submission for processing.
-	FileChan chan *project.File
 }
 
 //Start sets the connection, launches the Handle method and ends the session when it returns.
@@ -51,8 +46,8 @@ func (this *SubmissionHandler) Handle() error {
 	if err != nil {
 		return err
 	}
-	this.SubChan <- this.Submission
-	defer func(){this.SubChan <- this.Submission}()
+	processing.StartSubmission(this.Submission)	
+	defer func(){processing.EndSubmission(this.Submission)}()
 	for err == nil{
 		err = this.Read()
 	} 
@@ -178,7 +173,7 @@ func (this *SubmissionHandler) Read()error{
 		if err != nil {
 			return err
 		}
-		this.FileChan <- f
+		processing.AddFile(f)
 		return nil
 	} else if req == LOGOUT {
 		return io.EOF

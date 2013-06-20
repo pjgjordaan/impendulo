@@ -31,6 +31,9 @@ func SetupTests(projectId bson.ObjectId, dir string)([]*TestRunner, error) {
 		if err != nil {
 			return nil, err
 		}
+		if len(test.Data) == 0{
+			continue
+		}
 		err = util.Unzip(testDir, test.Data)
 		if err != nil {
 			return nil, err

@@ -8,29 +8,44 @@ import (
 	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/processing/monitor"
 	"labix.org/v2/mgo/bson"
 	"os"
-	"os/signal"
 	"path/filepath"
 )
 
-const INCOMPLETE = "incomplete.gob"
+var fileChan chan *project.File
+var subChan chan *project.Submission
+
+func init(){
+	fileChan = make(chan *project.File)
+	subChan = make(chan *project.Submission)	
+}
+
+func AddFile(file *project.File){
+	fileChan <- file
+}
+
+
+func StartSubmission(sub *project.Submission){
+	subChan <- sub
+}
+
+func EndSubmission(sub *project.Submission){
+	subChan <- sub
+}
 
 //Serve spawns new processing routines for each new submission received on subChan.
 //New files are received on fileChan and then sent to the relevant submission process.
 //Incomplete submissions are read from disk and reprocessed using the ProcessStored function.   
-func Serve(subChan chan *project.Submission, fileChan chan *project.File) {
+func Serve() {
 	// Start handlers
-	busy := make(chan bson.ObjectId)
-	done := make(chan bson.ObjectId)
-	quit := make(chan os.Signal)
-	signal.Notify(quit, os.Kill, os.Interrupt)
-	go Monitor(INCOMPLETE, busy, done, quit)
+	go monitor.Listen()
 	go func(){
-		stored := getStored(INCOMPLETE)
+		stored := monitor.GetStored()
 		for subId, busy :=  range stored{
 			if busy{
-				go ProcessStored(subId, subChan, fileChan)
+				go ProcessStored(subId)
 			}
 		}
 	}()
@@ -43,7 +58,7 @@ func Serve(subChan chan *project.Submission, fileChan chan *project.File) {
 				delete(subs, sub.Id)
 			} else{
 				subs[sub.Id] = make(chan *project.File)
-				go ProcessSubmission(sub, subs[sub.Id], busy, done)
+				go ProcessSubmission(sub, subs[sub.Id])
 			} 
 		case file := <-fileChan:
 			if ch, ok := subs[file.SubId]; ok {
@@ -57,7 +72,7 @@ func Serve(subChan chan *project.Submission, fileChan chan *project.File) {
 
 //ProcessStored processes an incompletely processed submission. 
 //It retrieves files in the submission from the db and sends them on fileChan to be processed. 
-func ProcessStored(subId bson.ObjectId, subChan chan *project.Submission, fileChan chan *project.File) {
+func ProcessStored(subId bson.ObjectId) {
 	sub, err := db.GetSubmission(bson.M{project.ID: subId}, nil)
 	if err != nil {
 		util.Log(err)
@@ -68,7 +83,7 @@ func ProcessStored(subId bson.ObjectId, subChan chan *project.Submission, fileCh
 		util.Log(err)
 		return
 	}
-	subChan <- sub
+	StartSubmission(sub)
 	count := 0
 	for count < total{
 		matcher := bson.M{project.SUBID: subId, project.INFO+"."+project.NUM: count}
@@ -77,16 +92,16 @@ func ProcessStored(subId bson.ObjectId, subChan chan *project.Submission, fileCh
 			util.Log(err)
 			return
 		}
-		fileChan <- file
+		AddFile(file)
 		count ++
 	}
-	subChan <- sub
+	EndSubmission(sub)
 }
 
 //ProcessSubmission processes a new submission.
 //It listens for incoming files on fileChan and processes them.
-func ProcessSubmission(sub *project.Submission, fileChan chan *project.File, busy, done chan bson.ObjectId) {
-	busy <- sub.Id
+func ProcessSubmission(sub *project.Submission, rcvFile chan *project.File) {
+	monitor.Busy(sub.Id)
 	util.Log("Processing submission", sub)
 	dir := filepath.Join(os.TempDir(), sub.Id.Hex())
 	//defer os.RemoveAll(dir)
@@ -96,7 +111,7 @@ func ProcessSubmission(sub *project.Submission, fileChan chan *project.File, bus
 		return
 	}
 	for {
-		file, ok := <- fileChan
+		file, ok := <- rcvFile
 		if !ok{
 			break
 		}
@@ -107,7 +122,7 @@ func ProcessSubmission(sub *project.Submission, fileChan chan *project.File, bus
 		}
 	}
 	util.Log("Processed submission", sub)
-	done <- sub.Id
+	monitor.Done(sub.Id)
 }
 
 

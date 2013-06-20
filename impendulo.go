@@ -6,7 +6,6 @@ import (
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/server/web"	
 	"github.com/godfried/impendulo/server"
-	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/config"
@@ -52,10 +51,8 @@ func AddUsers() error {
 func Run() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	db.Setup(db.DEFAULT_CONN)
-	fileChan := make(chan *project.File)
-	subChan := make(chan *project.Submission)
-	go server.Run(FilePort, &server.SubmissionSpawner{subChan, fileChan})
-	go web.Run(subChan, fileChan)
-	processing.Serve(subChan, fileChan)
+	go server.Run(FilePort, &server.SubmissionSpawner{})
+	go web.Run()
+	processing.Serve()
 	
 }

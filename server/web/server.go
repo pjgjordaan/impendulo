@@ -3,7 +3,6 @@ package web
 import (
 	"net/http"
 	"code.google.com/p/gorilla/pat"
-	"github.com/godfried/impendulo/project"
 	"fmt"
 )
 
@@ -46,7 +45,7 @@ func reverse(name string, things ...interface{}) string {
 	return u.Path
 }
 
-func Run(subChan chan *project.Submission, fileChan chan *project.File) {
+func Run() {
 	if err := http.ListenAndServe(":"+"8080", router); err != nil {
 		panic(err)
 	}

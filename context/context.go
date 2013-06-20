@@ -2,92 +2,19 @@ package context
 
 import (
 	"code.google.com/p/gorilla/sessions"
-	"net/http"
-	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/user"
-	"labix.org/v2/mgo/bson"
+	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/db"
 	"fmt"
 )
 
 type Context struct {
 	Session  *sessions.Session
-	Projects []*project.Project
-	Users []*user.User
-	ProjectSubs map[bson.ObjectId][]*project.Submission
-	UserSubs map[string][]*project.Submission
-	Files map[bson.ObjectId][]*project.File
+	projects []*project.Project
+	users []*user.User
 }
 
-func (c *Context) Close() { 
-	db.Close() 
-}
-
-func (ctx *Context) LoadProjects() error {
-	var err error
-	ctx.Projects, err = db.GetProjects(nil, nil)
-	return err
-}
-
-
-func (ctx *Context) LoadUsers() error {
-	var err error
-	ctx.Users, err = db.GetUsers(nil)
-	return err
-}
-
-func (ctx *Context) Subs(tipe, idStr string)([]*project.Submission, error){
-	if tipe == "project"{
-		return ctx.loadProjectSubs(idStr)
-	} else if tipe == "user"{
-		return ctx.loadUserSubs(idStr)
-	}
-	return nil, fmt.Errorf("Unknown request type %q", tipe)
-}
-
-func (ctx *Context) loadUserSubs(user string)([]*project.Submission, error){
-	if ctx.UserSubs[user] == nil{
-		var err error
-		ctx.UserSubs[user], err = db.GetSubmissions(bson.M{project.USER:user}, nil)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return ctx.UserSubs[user], nil
-}
-
-
-func (ctx *Context) loadProjectSubs(idStr string)([]*project.Submission, error){
-	if !bson.IsObjectIdHex(idStr){
-		return nil, fmt.Errorf("Invalid id %q", idStr)
-	}
-	pid := bson.ObjectIdHex(idStr)
-	if ctx.ProjectSubs[pid] == nil{
-		var err error
-		ctx.ProjectSubs[pid], err = db.GetSubmissions(bson.M{project.PROJECT_ID:pid}, nil)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return ctx.ProjectSubs[pid], nil
-}
-
-func (ctx *Context) GetFiles(idStr string)([]*project.File, error){
-	if !bson.IsObjectIdHex(idStr){
-		return nil, fmt.Errorf("Invalid submission id %q", idStr)
-	}
-	subId := bson.ObjectIdHex(idStr)
-	if ctx.Files[subId] == nil{
-		var err error
-		choices := []bson.M{bson.M{project.INFO+"."+project.TYPE:project.EXEC}, bson.M{project.INFO+"."+project.TYPE:project.SRC}}
-		ctx.Files[subId], err = db.GetFiles(bson.M{project.SUBID: subId, "$or": choices}, bson.M{project.INFO: 1})
-		if err != nil {
-			return nil, err
-		}
-	}
-	return ctx.Files[subId], nil
-}
-
+func (ctx *Context) Close() { }
 
 func (ctx *Context) LoggedIn() bool{
 	_, err := ctx.Username()
@@ -102,15 +29,15 @@ func (ctx *Context) Username()(string, error){
 	return username, nil
 }
 
-func (ctx *Context) AddError(err string){
-	ctx.Session.AddFlash(err, "error")
+func (ctx *Context) AddMessage(msg string, isErr bool){
+	var tipe string
+	if isErr{
+		tipe = "error"
+	} else{
+		tipe = "success"
+	}
+	ctx.Session.AddFlash(msg, tipe)
 }
-
-
-func (ctx *Context) AddSuccess(msg string){
-	ctx.Session.AddFlash(msg, "success")
-}
-
 
 func (ctx *Context) Errors()[]interface{}{
 	return ctx.Session.Flashes("error")
@@ -121,12 +48,28 @@ func (ctx *Context) Successes()[]interface{}{
 	return ctx.Session.Flashes("success")
 }
 
-func NewContext(req *http.Request, sess *sessions.Session) *Context {
-	db.Setup(db.DEFAULT_CONN)
+func (ctx *Context) AddUser(user string){
+	ctx.Session.Values["user"] = user
+}
+
+func (ctx *Context) Projects() ([]*project.Project, error) {
+	var err error
+	if ctx.projects == nil{
+		ctx.projects, err = db.GetProjects(nil, nil)
+	}
+	return ctx.projects, err
+}
+
+func (ctx *Context) Users()([]*user.User, error) {
+	var err error
+	if ctx.users == nil{
+		ctx.users, err = db.GetUsers(nil)
+	} 
+	return ctx.users, err
+}
+
+
+func NewContext(sess *sessions.Session) *Context {
 	ctx := &Context{Session:  sess}
-	//ctx.loadProjects()
-	ctx.ProjectSubs = make(map[bson.ObjectId][]*project.Submission)
-	ctx.UserSubs = make(map[string][]*project.Submission)
-	ctx.Files = make(map[bson.ObjectId][]*project.File)
 	return ctx
 }
