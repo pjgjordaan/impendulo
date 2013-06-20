@@ -131,12 +131,6 @@ func doProject(req *http.Request, ctx *context.Context) (string, error) {
 	return "Successfully added project.", nil
 }
 
-type DisplayResult struct {
-	Name    string
-	Code    string
-	Results []*tool.Result
-}
-
 func doLogin(req *http.Request, ctx *context.Context) (string, error) {
 	uname, pword := strings.TrimSpace(req.FormValue("username")), strings.TrimSpace(req.FormValue("password"))
 	u, err := db.GetUserById(uname)
@@ -185,6 +179,12 @@ func retrieveFiles(req *http.Request) ([]*project.File, string, error) {
 	return files, "", nil
 }
 
+type DisplayResult struct {
+	Name    string
+	Code    string
+	Results bson.M
+}
+
 func buildResults(req *http.Request) (*DisplayResult, string, error) {
 	fileId := req.FormValue("fileid")
 	if !bson.IsObjectIdHex(fileId) {
@@ -195,19 +195,15 @@ func buildResults(req *http.Request) (*DisplayResult, string, error) {
 	if err != nil {
 		return nil, fmt.Sprintf("Could not retrieve file."), err
 	}
-	res := &DisplayResult{Name: f.InfoStr(project.NAME), Results: make([]*tool.Result, len(f.Results))}
+	res := &DisplayResult{Name: f.InfoStr(project.NAME), Results: f.Results}
 	if f.Type() == project.SRC {
 		res.Code = strings.TrimSpace(string(f.Data))
 	}
-	i := 0
-	for k, v := range f.Results {
-		res.Results[i], err = db.GetResult(bson.M{project.ID: v}, nil)
-		if err != nil {
-			return res, fmt.Sprintf("No result found for %q.", k), err
-		}
-		i++
-	}
 	return res, "Successfully retrieved results.", nil
+}
+
+func getResult(id interface{})(*tool.Result, error){
+	return db.GetResult(bson.M{project.ID: id}, nil)	
 }
 
 func retrieveSubmissions(req *http.Request, ctx *context.Context) (subs []*project.Submission, msg string, err error) {

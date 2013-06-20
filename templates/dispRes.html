@@ -15,19 +15,21 @@
     </div>
   </div>
   {{end}}
-  {{range .res.Results}}
+  {{range $k,$v := .res.Results}}
   <div class="accordion-group">
     <div class="accordion-heading">
-      <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#{{.Name}}">
-	{{.Name}}
+      <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#{{$k}}">
+	{{$k}}
       </a>
     </div>
-    <div id="{{.Name}}" class="accordion-body collapse">
+    <div id="{{$k}}" class="accordion-body collapse">
       <div class="accordion-inner">
-	{{if .HTML}}
-	<iframe src='{{genHTML .Name .Data}}' allowTransparency="true" sandbox="" width="1000" height="500" seamless></iframe>
+	{{with $res := getResult $v}}
+	{{if $res.HTML}}
+	<iframe src='{{genHTML $res.Name $res.Data}}' allowTransparency="true" sandbox="" width="1000" height="500" seamless></iframe>
 	{{else}}
-	<p>{{.Output}}</p>
+	<p>{{$res.Output}}</p>
+	{{end}}
 	{{end}}
       </div>
     </div>

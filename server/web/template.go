@@ -9,6 +9,7 @@ import (
 var funcs = template.FuncMap{
 	"reverse": reverse,
 	"genHTML": genHTML,
+	"getResult": getResult,
 }
 
 func genHTML(name string, data []byte) string {
