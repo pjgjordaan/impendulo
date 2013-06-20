@@ -25,7 +25,8 @@ func (ti *TargetInfo) FilePath() string {
 
 //PkgPath
 func (ti *TargetInfo) PkgPath() string {
-	return filepath.Join(ti.Dir, ti.Package)
+	vals := strings.Split(ti.Dir+"."+ti.Package, ".")
+	return filepath.Join(vals...)
 }
 
 //FullName

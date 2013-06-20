@@ -155,7 +155,7 @@ func ProcessArchive(archive *project.File, dir string, tests []*TestRunner) erro
 		if err != nil {
 			return err
 		}
-		matcher := bson.M{project.INFO: info}
+		matcher := bson.M{project.SUBID: archive.SubId, project.INFO: info}
 		f, err := db.GetFile(matcher, nil)
 		if err != nil {
 			f = project.NewFile(archive.SubId, info, data)

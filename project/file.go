@@ -77,7 +77,7 @@ func ParseName(name string) (map[string]interface{}, error) {
 	}
 	info := make(map[string]interface{})
 	info[MOD] = elems[len(elems)-1]
-	num, err := strconv.Atoi(elems[len(elems)-2])
+	num, err := strconv.ParseFloat(elems[len(elems)-2], 64)
 	if err != nil {
 		return nil, fmt.Errorf("%q in name %q could not be parsed as an int.", elems[len(elems)-2], name)
 	}
