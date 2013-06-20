@@ -10,8 +10,8 @@ const (
 	SUBMISSIONS  = "submissions"
 	FILES        = "files"
 	RESULTS      = "results"
-	TESTS = "tests"
-	PROJECTS = "projects"
+	TESTS        = "tests"
+	PROJECTS     = "projects"
 	SET          = "$set"
 	DEFAULT_CONN = "mongodb://localhost/impendulo"
 	TEST_CONN    = "mongodb://localhost/impendulo_test"
@@ -30,7 +30,7 @@ func Setup(conn string) {
 	}
 }
 
-//getSession retrieves the current active session.  
+//getSession retrieves the current active session.
 func getSession() (s *mgo.Session) {
 	if activeSession == nil {
 		panic(fmt.Errorf("Could not retrieve session."))
@@ -38,8 +38,8 @@ func getSession() (s *mgo.Session) {
 	return activeSession.Clone()
 }
 
-func Close(){
-	if activeSession != nil{
+func Close() {
+	if activeSession != nil {
 		activeSession.Close()
 	}
 }
@@ -62,7 +62,7 @@ func Update(col string, matcher, change interface{}) error {
 	return nil
 }
 
-func Count(col string,  matcher interface{}) (int, error){
+func Count(col string, matcher interface{}) (int, error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(col)

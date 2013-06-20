@@ -1,14 +1,14 @@
 package web
 
 import (
-	"net/http"
 	"code.google.com/p/gorilla/pat"
 	"fmt"
+	"net/http"
 )
 
 var router *pat.Router
 
-func init(){
+func init() {
 	router = pat.New()
 	router.Add("POST", "/login", handler(login))
 	router.Add("GET", "/getresults", handler(getResults)).Name("getresults")
@@ -20,14 +20,14 @@ func init(){
 	router.Add("POST", "/register", handler(register))
 	router.Add("POST", "/logout", handler(logout))
 	router.Add("POST", "/addproject", handler(addProject))
-	router.Add("POST", "/addtest", handler(addTest))	
+	router.Add("POST", "/addtest", handler(addTest))
 	router.Add("POST", "/submitarchive", handler(submitArchive))
 	router.Add("GET", "/projectview", handler(projectView)).Name("projectview")
-	router.Add("GET", "/testview", handler(testView)).Name("testview")	
+	router.Add("GET", "/testview", handler(testView)).Name("testview")
 	router.Add("GET", "/homeview", handler(homeView)).Name("homeview")
 	router.Add("GET", "/archiveview", handler(archiveView)).Name("archiveview")
-	router.Add("GET","/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
-	router.Add("GET","/gen/", http.StripPrefix("/gen/", http.FileServer(http.Dir("gen/"))))
+	router.Add("GET", "/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
+	router.Add("GET", "/gen/", http.StripPrefix("/gen/", http.FileServer(http.Dir("gen/"))))
 	router.Add("GET", "/", handler(homeView)).Name("index")
 }
 

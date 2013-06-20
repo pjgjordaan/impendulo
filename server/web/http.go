@@ -1,16 +1,16 @@
 package web
 
 import (
-	"net/http"
 	"code.google.com/p/gorilla/sessions"
-	"github.com/godfried/impendulo/httpbuf"
 	"github.com/godfried/impendulo/context"
+	"github.com/godfried/impendulo/httpbuf"
 	"github.com/godfried/impendulo/util"
+	"net/http"
 )
 
 var store sessions.Store
 
-func init(){
+func init() {
 	store = sessions.NewCookieStore(util.CookieKeys())
 }
 
@@ -33,4 +33,3 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	buf.Apply(w)
 }
-

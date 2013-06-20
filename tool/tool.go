@@ -1,35 +1,36 @@
 package tool
 
-import(
+import (
+	"bytes"
+	"fmt"
 	"labix.org/v2/mgo/bson"
-"reflect"
-"os/exec"
-"fmt"
-"bytes"
+	"os/exec"
+	"reflect"
 )
 
-const(
-	JUNIT = "junit"
-	JAVAC = "javac"
+const (
+	JUNIT    = "junit"
+	JAVAC    = "javac"
 	FINDBUGS = "findbugs"
-LINT4J = "lint4j"
+	LINT4J   = "lint4j"
 )
-type Tool interface{
+
+type Tool interface {
 	GenHTML() bool
 	GetName() string
-	GetLang()string
-	Run(fileId bson.ObjectId, target *TargetInfo)(*Result, error)
+	GetLang() string
+	Run(fileId bson.ObjectId, target *TargetInfo) (*Result, error)
 }
 
 //Tool is a generic tool specification.
-type GenericTool struct{
-	name string
-	lang string
-	exec string 
-	preamble []string 
-	flags []string 
-	args map[string]string
-	target TargetSpec 
+type GenericTool struct {
+	name     string
+	lang     string
+	exec     string
+	preamble []string
+	flags    []string
+	args     map[string]string
+	target   TargetSpec
 }
 
 //GetArgs sets up tool arguments for execution.
@@ -67,25 +68,24 @@ func (this *GenericTool) Equals(that Tool) bool {
 	return reflect.DeepEqual(this, that)
 }
 
-func (this *GenericTool) Run(fileId bson.ObjectId, ti *TargetInfo)(*Result, error){
+func (this *GenericTool) Run(fileId bson.ObjectId, ti *TargetInfo) (*Result, error) {
 	target := ti.GetTarget(this.target)
 	args := this.GetArgs(target)
 	stderr, stdout, ok, err := RunCommand(args...)
 	if !ok {
 		return nil, err
 	}
-	if stderr != nil && len(stderr) > 0{
+	if stderr != nil && len(stderr) > 0 {
 		return NewResult(fileId, this, stderr), nil
 	}
 	return NewResult(fileId, this, stdout), nil
 }
 
-func (this *GenericTool) GetName()string{
+func (this *GenericTool) GetName() string {
 	return this.name
 }
 
-
-func (this *GenericTool) GetLang()string{
+func (this *GenericTool) GetLang() string {
 	return this.lang
 }
 
@@ -101,4 +101,3 @@ func RunCommand(args ...string) ([]byte, []byte, bool, error) {
 	err = cmd.Wait()
 	return stdout.Bytes(), stderr.Bytes(), true, err
 }
-

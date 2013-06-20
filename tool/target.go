@@ -1,14 +1,14 @@
 package tool
 
-import(
+import (
+	"path/filepath"
 	"reflect"
-"strings"
-"path/filepath"
+	"strings"
 )
 
 //TargetInfo stores information about the target file.
 type TargetInfo struct {
-//	Project string
+	//	Project string
 	//File name without extension
 	Name string
 	//Language file is written in
@@ -33,7 +33,7 @@ func (ti *TargetInfo) FullName() string {
 	return ti.Name + "." + ti.Ext
 }
 
-//Executable retrieves the path to the compiled executable with its package. 
+//Executable retrieves the path to the compiled executable with its package.
 func (ti *TargetInfo) Executable() string {
 	return ti.Package + "." + ti.Name
 }
@@ -51,7 +51,7 @@ const (
 	EXEC_PATH
 )
 
-//GetTarget retrieves the target path based on the type required. 
+//GetTarget retrieves the target path based on the type required.
 func (ti *TargetInfo) GetTarget(spec TargetSpec) string {
 	switch spec {
 	case DIR_PATH:

@@ -1,20 +1,20 @@
 package util
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
 	"os"
 	"os/user"
 	"path/filepath"
-	"bufio"
 	"strings"
 )
 
 const DPERM = 0777
 const FPERM = os.O_WRONLY | os.O_CREATE | os.O_TRUNC
 
-func BaseDir() string{
+func BaseDir() string {
 	cur, err := user.Current()
 	if err != nil {
 		panic(err)
@@ -22,7 +22,7 @@ func BaseDir() string{
 	return filepath.Join(cur.HomeDir, ".impendulo")
 }
 
-//ReadData reads data from a reader until io.EOF or []byte("eof") is encountered. 
+//ReadData reads data from a reader until io.EOF or []byte("eof") is encountered.
 func ReadData(r io.Reader) ([]byte, error) {
 	buffer := new(bytes.Buffer)
 	eof := []byte("eof")
@@ -72,11 +72,11 @@ func ReadBytes(r io.Reader) []byte {
 	return buffer.Bytes()
 }
 
-func GetPackage(r io.Reader)string{
+func GetPackage(r io.Reader) string {
 	scanner := bufio.NewScanner(r)
 	scanner.Split(bufio.ScanWords)
 	for scanner.Scan() {
-		if scanner.Text() == "package"{
+		if scanner.Text() == "package" {
 			scanner.Scan()
 			return strings.Split(scanner.Text(), ";")[0]
 		}
@@ -84,7 +84,7 @@ func GetPackage(r io.Reader)string{
 	return ""
 }
 
-func GenHTML(dir, name string, data []byte)(string, error){
+func GenHTML(dir, name string, data []byte) (string, error) {
 	err := os.MkdirAll(dir, 0777)
 	if err != nil {
 		return "", fmt.Errorf("Encountered error %q while creating directory %q", err, dir)
@@ -98,5 +98,5 @@ func GenHTML(dir, name string, data []byte)(string, error){
 	if err != nil {
 		return "", fmt.Errorf("Encountered error %q while writing data to %q", err, f)
 	}
-	return "/"+name, nil
+	return "/" + name, nil
 }

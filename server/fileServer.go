@@ -3,33 +3,32 @@ package server
 import (
 	"fmt"
 	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
-	"github.com/godfried/impendulo/processing"
-	"net"
 	"io"
 	"labix.org/v2/mgo/bson"
+	"net"
 )
 
-
 //SubmissionSpawner is an implementation of HandlerSpawner for SubmissionHandlers.
-type SubmissionSpawner struct{
+type SubmissionSpawner struct {
 }
 
 //Spawn creates a new ConnHandler of type SubmissionHandler.
-func (this *SubmissionSpawner) Spawn() ConnHandler{
+func (this *SubmissionSpawner) Spawn() ConnHandler {
 	return &SubmissionHandler{}
 }
 
 //SubmissionHandler is an implementation of ConnHandler used to receive submissions from users of the impendulo system.
-type SubmissionHandler struct{
-	Conn net.Conn
+type SubmissionHandler struct {
+	Conn       net.Conn
 	Submission *project.Submission
 }
 
 //Start sets the connection, launches the Handle method and ends the session when it returns.
-func (this *SubmissionHandler) Start(conn net.Conn){
+func (this *SubmissionHandler) Start(conn net.Conn) {
 	this.Conn = conn
 	this.Submission = new(project.Submission)
 	this.Submission.Id = bson.NewObjectId()
@@ -46,12 +45,12 @@ func (this *SubmissionHandler) Handle() error {
 	if err != nil {
 		return err
 	}
-	processing.StartSubmission(this.Submission)	
-	defer func(){processing.EndSubmission(this.Submission)}()
-	for err == nil{
+	processing.StartSubmission(this.Submission)
+	defer func() { processing.EndSubmission(this.Submission) }()
+	for err == nil {
 		err = this.Read()
-	} 
-	if err == io.EOF{
+	}
+	if err == io.EOF {
 		return nil
 	}
 	return err
@@ -67,7 +66,7 @@ func (this *SubmissionHandler) Login() error {
 	req, err := util.GetString(loginInfo, REQ)
 	if err != nil {
 		return err
-	} else if req != LOGIN{
+	} else if req != LOGIN {
 		return fmt.Errorf("Invalid request %q, expected %q", req, LOGIN)
 	}
 	this.Submission.User, err = util.GetString(loginInfo, project.USER)
@@ -99,7 +98,7 @@ func (this *SubmissionHandler) Login() error {
 	return nil
 }
 
-func (this *SubmissionHandler) LoadInfo() error{
+func (this *SubmissionHandler) LoadInfo() error {
 	reqInfo, err := util.ReadJSON(this.Conn)
 	if err != nil {
 		return err
@@ -107,7 +106,7 @@ func (this *SubmissionHandler) LoadInfo() error{
 	req, err := util.GetString(reqInfo, REQ)
 	if err != nil {
 		return err
-	}else if req != PROJECTS{
+	} else if req != PROJECTS {
 		return fmt.Errorf("Invalid request %q, expected %q", req, PROJECTS)
 	}
 	projects, err := db.GetProjects(bson.M{}, nil)
@@ -125,13 +124,13 @@ func (this *SubmissionHandler) LoadInfo() error{
 	req, err = util.GetString(subInfo, REQ)
 	if err != nil {
 		return err
-	}else if req != SUBMISSION{
+	} else if req != SUBMISSION {
 		return fmt.Errorf("Invalid request %q, expected %q", req, SUBMISSION)
 	}
 	idStr, err := util.GetString(subInfo, project.PROJECT_ID)
 	if err != nil {
 		return err
-	} else if !bson.IsObjectIdHex(idStr){
+	} else if !bson.IsObjectIdHex(idStr) {
 		return fmt.Errorf("Invalid id hex %q", idStr)
 	}
 	this.Submission.ProjectId = bson.ObjectIdHex(idStr)
@@ -143,9 +142,8 @@ func (this *SubmissionHandler) LoadInfo() error{
 	return err
 }
 
-
 //Read reads Files from the connection and sends them for processing.
-func (this *SubmissionHandler) Read()error{
+func (this *SubmissionHandler) Read() error {
 	requestInfo, err := util.ReadJSON(this.Conn)
 	if err != nil {
 		return err
@@ -177,11 +175,11 @@ func (this *SubmissionHandler) Read()error{
 		return nil
 	} else if req == LOGOUT {
 		return io.EOF
-	} 
+	}
 	return fmt.Errorf("Unknown request %q", req)
 }
 
-//End ends a session and reports any errors to the user. 
+//End ends a session and reports any errors to the user.
 func (this *SubmissionHandler) End(err error) {
 	defer this.Conn.Close()
 	var msg string
@@ -193,4 +191,3 @@ func (this *SubmissionHandler) End(err error) {
 	}
 	this.Conn.Write([]byte(msg))
 }
-

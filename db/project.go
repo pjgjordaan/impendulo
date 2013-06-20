@@ -1,12 +1,12 @@
 package db
 
-import(
+import (
+	"fmt"
 	"github.com/godfried/impendulo/project"
-"fmt"
 	"labix.org/v2/mgo/bson"
 )
 
-//GetFile retrieves a file matching the given interface from the active database. 
+//GetFile retrieves a file matching the given interface from the active database.
 func GetFile(matcher, selector interface{}) (*project.File, error) {
 	session := getSession()
 	defer session.Close()
@@ -19,7 +19,7 @@ func GetFile(matcher, selector interface{}) (*project.File, error) {
 	return ret, nil
 }
 
-//GetFiles retrieves files matching the given interface from the active database. 
+//GetFiles retrieves files matching the given interface from the active database.
 func GetFiles(matcher, selector interface{}) ([]*project.File, error) {
 	session := getSession()
 	defer session.Close()
@@ -31,7 +31,6 @@ func GetFiles(matcher, selector interface{}) ([]*project.File, error) {
 	}
 	return ret, nil
 }
-
 
 //GetSubmission retrieves a submission matching the given interface from the active database.
 func GetSubmission(matcher, selector interface{}) (*project.Submission, error) {
@@ -47,7 +46,7 @@ func GetSubmission(matcher, selector interface{}) (*project.Submission, error) {
 }
 
 //GetSubmission retrieves submissions matching the given interface from the active database.
-func GetSubmissions(matcher, selector interface{}) ([] *project.Submission, error) {
+func GetSubmissions(matcher, selector interface{}) ([]*project.Submission, error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(SUBMISSIONS)
@@ -58,7 +57,6 @@ func GetSubmissions(matcher, selector interface{}) ([] *project.Submission, erro
 	}
 	return ret, nil
 }
-
 
 //GetTest retrieves a test matching the given interface from the active database.
 func GetTest(matcher, selector interface{}) (*project.Test, error) {
@@ -73,7 +71,6 @@ func GetTest(matcher, selector interface{}) (*project.Test, error) {
 	return ret, nil
 }
 
-
 //GetTest retrieves a test matching the given interface from the active database.
 func GetTests(matcher, selector interface{}) ([]*project.Test, error) {
 	session := getSession()
@@ -86,7 +83,6 @@ func GetTests(matcher, selector interface{}) ([]*project.Test, error) {
 	}
 	return ret, nil
 }
-
 
 //GetTest retrieves a test matching the given interface from the active database.
 func GetProject(matcher, selector interface{}) (*project.Project, error) {
@@ -113,7 +109,6 @@ func GetProjects(matcher, selector interface{}) ([]*project.Project, error) {
 	}
 	return ret, nil
 }
-
 
 //AddFile adds a new file to the active database.
 func AddFile(f *project.File) error {
@@ -144,7 +139,6 @@ func AddTest(t *project.Test) error {
 	return nil
 }
 
-
 //AddSubmission adds a new submission to the active database.
 func AddSubmission(s *project.Submission) error {
 	session := getSession()
@@ -157,7 +151,6 @@ func AddSubmission(s *project.Submission) error {
 	return nil
 }
 
-
 //AddSubmission adds a new submission to the active database.
 func AddProject(p *project.Project) error {
 	session := getSession()
@@ -169,7 +162,6 @@ func AddProject(p *project.Project) error {
 	}
 	return nil
 }
-
 
 //RemoveFileById removes a file matching the given id from the active database.
 func RemoveFileByID(id interface{}) error {

@@ -1,12 +1,14 @@
 package user
- import(
-"reflect"
-"os"
-"bufio"
-"fmt"
-"strings"
-"github.com/godfried/impendulo/util"
+
+import (
+	"bufio"
+	"fmt"
+	"github.com/godfried/impendulo/util"
+	"os"
+	"reflect"
+	"strings"
 )
+
 const (
 	NONE    = 0
 	F_SUB   = 1
@@ -51,7 +53,7 @@ func (this *User) HasAccess(access int) bool {
 	return false
 }
 
-//CheckSubmit checks whether the user may provide the requested submission. 
+//CheckSubmit checks whether the user may provide the requested submission.
 func (this *User) CheckSubmit(mode string) bool {
 	if mode == SINGLE || mode == ARCHIVE {
 		return this.HasAccess(F_SUB)
@@ -63,7 +65,7 @@ func (this *User) CheckSubmit(mode string) bool {
 	return false
 }
 
-func (this *User) Equals(that *User)bool{
+func (this *User) Equals(that *User) bool {
 	return reflect.DeepEqual(this, that)
 }
 
@@ -73,7 +75,7 @@ func NewUser(uname, pword string) *User {
 	return &User{uname, hash, salt, F_SUB}
 }
 
-//EqualsOne returns true if test is equal to any of the members of args. 
+//EqualsOne returns true if test is equal to any of the members of args.
 func EqualsOne(test interface{}, args ...interface{}) bool {
 	for _, arg := range args {
 		if test == arg {
@@ -83,20 +85,19 @@ func EqualsOne(test interface{}, args ...interface{}) bool {
 	return false
 }
 
-
 //ReadUsers reads user configurations from a file.
 //It also sets up their passwords.
 func ReadUsers(fname string) ([]*User, error) {
 	f, err := os.Open(fname)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	scanner := bufio.NewScanner(f)
 	users := make([]*User, 100, 1000)
 	i := 0
-	for scanner.Scan(){
+	for scanner.Scan() {
 		vals := strings.Split(scanner.Text(), ":")
-		if len(vals) != 2{
+		if len(vals) != 2 {
 			return nil, fmt.Errorf("Config file not formatted correctly.")
 		}
 		uname := strings.TrimSpace(vals[0])
@@ -110,12 +111,12 @@ func ReadUsers(fname string) ([]*User, error) {
 		}
 		i++
 	}
-	if err = scanner.Err(); err != nil{
+	if err = scanner.Err(); err != nil {
 		return nil, err
 	}
 	if i < len(users) {
 		users = users[:i]
 	}
 	return users, nil
-	
+
 }

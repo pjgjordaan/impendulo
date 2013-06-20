@@ -5,15 +5,15 @@ import (
 	"reflect"
 )
 
-//File stores a single file's data from a submission. 
+//File stores a single file's data from a submission.
 type Test struct {
-	Id      bson.ObjectId "_id"
+	Id        bson.ObjectId "_id"
 	ProjectId bson.ObjectId "projectid"
-	Name string "name"
-	User    string        "user"
-	Package string "pkg"
-	Test    []byte        "test"
-	Data  []byte  "data"
+	Name      string        "name"
+	User      string        "user"
+	Package   string        "pkg"
+	Test      []byte        "test"
+	Data      []byte        "data"
 }
 
 func (this *Test) Equals(that *Test) bool {

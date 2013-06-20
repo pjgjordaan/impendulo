@@ -3,12 +3,12 @@ package processing
 import (
 	"fmt"
 	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/tool/java"
-	"github.com/godfried/impendulo/tool/findbugs"
-	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/processing/monitor"
+	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/findbugs"
+	"github.com/godfried/impendulo/tool/java"
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"os"
 	"path/filepath"
@@ -17,34 +17,33 @@ import (
 var fileChan chan *project.File
 var subChan chan *project.Submission
 
-func init(){
+func init() {
 	fileChan = make(chan *project.File)
-	subChan = make(chan *project.Submission)	
+	subChan = make(chan *project.Submission)
 }
 
-func AddFile(file *project.File){
+func AddFile(file *project.File) {
 	fileChan <- file
 }
 
-
-func StartSubmission(sub *project.Submission){
+func StartSubmission(sub *project.Submission) {
 	subChan <- sub
 }
 
-func EndSubmission(sub *project.Submission){
+func EndSubmission(sub *project.Submission) {
 	subChan <- sub
 }
 
 //Serve spawns new processing routines for each new submission received on subChan.
 //New files are received on fileChan and then sent to the relevant submission process.
-//Incomplete submissions are read from disk and reprocessed using the ProcessStored function.   
+//Incomplete submissions are read from disk and reprocessed using the ProcessStored function.
 func Serve() {
 	// Start handlers
 	go monitor.Listen()
-	go func(){
+	go func() {
 		stored := monitor.GetStored()
-		for subId, busy :=  range stored{
-			if busy{
+		for subId, busy := range stored {
+			if busy {
 				go ProcessStored(subId)
 			}
 		}
@@ -56,10 +55,10 @@ func Serve() {
 			if ch, ok := subs[sub.Id]; ok {
 				close(ch)
 				delete(subs, sub.Id)
-			} else{
+			} else {
 				subs[sub.Id] = make(chan *project.File)
 				go ProcessSubmission(sub, subs[sub.Id])
-			} 
+			}
 		case file := <-fileChan:
 			if ch, ok := subs[file.SubId]; ok {
 				ch <- file
@@ -70,8 +69,8 @@ func Serve() {
 	}
 }
 
-//ProcessStored processes an incompletely processed submission. 
-//It retrieves files in the submission from the db and sends them on fileChan to be processed. 
+//ProcessStored processes an incompletely processed submission.
+//It retrieves files in the submission from the db and sends them on fileChan to be processed.
 func ProcessStored(subId bson.ObjectId) {
 	sub, err := db.GetSubmission(bson.M{project.ID: subId}, nil)
 	if err != nil {
@@ -85,15 +84,15 @@ func ProcessStored(subId bson.ObjectId) {
 	}
 	StartSubmission(sub)
 	count := 0
-	for count < total{
-		matcher := bson.M{project.SUBID: subId, project.INFO+"."+project.NUM: count}
+	for count < total {
+		matcher := bson.M{project.SUBID: subId, project.INFO + "." + project.NUM: count}
 		file, err := db.GetFile(matcher, nil)
 		if err != nil {
 			util.Log(err)
 			return
 		}
 		AddFile(file)
-		count ++
+		count++
 	}
 	EndSubmission(sub)
 }
@@ -106,13 +105,13 @@ func ProcessSubmission(sub *project.Submission, rcvFile chan *project.File) {
 	dir := filepath.Join(os.TempDir(), sub.Id.Hex())
 	//defer os.RemoveAll(dir)
 	tests, err := SetupTests(sub.ProjectId, dir)
-	if err != nil{
+	if err != nil {
 		util.Log(err)
 		return
 	}
 	for {
-		file, ok := <- rcvFile
-		if !ok{
+		file, ok := <-rcvFile
+		if !ok {
 			break
 		}
 		err := ProcessFile(file, dir, tests)
@@ -125,8 +124,7 @@ func ProcessSubmission(sub *project.Submission, rcvFile chan *project.File) {
 	monitor.Done(sub.Id)
 }
 
-
-//ProcessFile processes a file according to its type. 
+//ProcessFile processes a file according to its type.
 func ProcessFile(f *project.File, dir string, tests []*TestRunner) error {
 	util.Log("Processing file", f.Id)
 	t := f.Type()
@@ -225,21 +223,20 @@ func ExtractFile(f *project.File, dir string) (*tool.TargetInfo, error) {
 	return ti, nil
 }
 
-
 //Compile compiles a java source file and saves the results thereof.
 //It returns true if compiled successfully.
 func Compile(fileId bson.ObjectId, ti *tool.TargetInfo, isSource bool) (bool, error) {
 	var res *tool.Result
 	var err error
 	javac := java.NewJavac(ti.Dir)
-	if isSource{
-		res, err = javac.Run(fileId, ti) 
+	if isSource {
+		res, err = javac.Run(fileId, ti)
 		if err != nil {
 			return false, err
 		}
-	} else{
+	} else {
 		res = tool.NewResult(fileId, javac, []byte(""))
-	} 
+	}
 	util.Log("Compile result", res)
 	err = AddResult(res)
 	if err != nil {
@@ -268,7 +265,7 @@ func RunTools(f *project.File, ti *tool.TargetInfo) error {
 	}
 	res, err := fb.Run(f.Id, ti)
 	util.Log("Tool result", res)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	return AddResult(res)

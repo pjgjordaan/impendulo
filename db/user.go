@@ -1,12 +1,12 @@
 package db
 
-import(
+import (
+	"fmt"
 	"github.com/godfried/impendulo/user"
-"fmt"
 	"labix.org/v2/mgo/bson"
 )
 
-//GetUserById retrieves a user matching the given id from the active database. 
+//GetUserById retrieves a user matching the given id from the active database.
 func GetUserById(id interface{}) (*user.User, error) {
 	session := getSession()
 	defer session.Close()
@@ -19,19 +19,18 @@ func GetUserById(id interface{}) (*user.User, error) {
 	return ret, nil
 }
 
-//GetUsers retrieves a user matching the given id from the active database. 
+//GetUsers retrieves a user matching the given id from the active database.
 func GetUsers(matcher interface{}) ([]*user.User, error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(USERS)
 	var ret []*user.User
-	err := c.Find(matcher).Select(bson.M{user.ID:1}).All(&ret)
+	err := c.Find(matcher).Select(bson.M{user.ID: 1}).All(&ret)
 	if err != nil {
 		return nil, fmt.Errorf("Encountered error %q when retrieving users from db", err)
 	}
 	return ret, nil
 }
-
 
 //AddUser adds a new user to the active database.
 func AddUser(u *user.User) error {

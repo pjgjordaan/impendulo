@@ -8,8 +8,7 @@ import (
 	"strings"
 )
 
-
-//File stores a single file's data from a submission. 
+//File stores a single file's data from a submission.
 type File struct {
 	Id      bson.ObjectId "_id"
 	SubId   bson.ObjectId "subid"
@@ -32,24 +31,29 @@ func (f *File) Type() string {
 //Type
 func (f *File) Mod() string {
 	mod := f.InfoStr(MOD)
-	switch mod{
-	case "c":return "Saved"
-	case "r":return "Removed"
-	case "l":return "Launched"
-	case "f":return "From"
-	case "t":return "To"
-	case "a":return "Added"
-	default :return "Unknown"
+	switch mod {
+	case "c":
+		return "Saved"
+	case "r":
+		return "Removed"
+	case "l":
+		return "Launched"
+	case "f":
+		return "From"
+	case "t":
+		return "To"
+	case "a":
+		return "Added"
+	default:
+		return "Unknown"
 	}
 }
-
 
 //InfoStr retrieves file metadata.
 func (f *File) InfoStr(key string) string {
 	val, _ := f.Info[key].(string)
 	return val
 }
-
 
 //InfoStr retrieves file metadata.
 func (f *File) Num() string {
@@ -64,8 +68,8 @@ func (this *File) Equals(that *File) bool {
 //ParseName retrieves file metadata encoded in a file name.
 //These file names must have the format:
 //[[<package descriptor>"_"]*<file name>"_"]<time in nanoseconds>"_"<file number in current submission>"_"<modification char>
-//Where values between '[]' are optional, '*' indicates 0 to many, values inside '""' are literals and values inside '<>' 
-//describe the contents at that position.  
+//Where values between '[]' are optional, '*' indicates 0 to many, values inside '""' are literals and values inside '<>'
+//describe the contents at that position.
 func ParseName(name string) (map[string]interface{}, error) {
 	elems := strings.Split(name, "_")
 	if len(elems) < 3 {

@@ -1,24 +1,24 @@
 package config
 
-import(
-"os"
-"bufio"
-"strings"
-"fmt"
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"strings"
 )
 
-var settings map[string] string
+var settings map[string]string
 
-func LoadConfigs(fname string)error{
+func LoadConfigs(fname string) error {
 	f, err := os.Open(fname)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	scanner := bufio.NewScanner(f)
 	settings = make(map[string]string)
-	for scanner.Scan(){
+	for scanner.Scan() {
 		vals := strings.Split(scanner.Text(), ":")
-		if len(vals) != 2{
+		if len(vals) != 2 {
 			return fmt.Errorf("Config file not formatted correctly.")
 		}
 		name := strings.TrimSpace(vals[0])
@@ -28,19 +28,19 @@ func LoadConfigs(fname string)error{
 	return scanner.Err()
 }
 
-func GetConfig(name string)string{
+func GetConfig(name string) string {
 	return settings[name]
 }
 
-func SetConfig(name, value string){
+func SetConfig(name, value string) {
 	settings[name] = value
 }
 
-const(
+const (
 	JUNIT_EXEC = "junit_exec"
-	LINT4J = "lint4j"
-	FINDBUGS = "findbugs"
-	JUNIT_JAR = "junit_jar"
-	JAVAC = "javac"
-	JAVA = "java"
+	LINT4J     = "lint4j"
+	FINDBUGS   = "findbugs"
+	JUNIT_JAR  = "junit_jar"
+	JAVAC      = "javac"
+	JAVA       = "java"
 )

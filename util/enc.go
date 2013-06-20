@@ -1,15 +1,15 @@
 package util
 
-import(
+import (
 	"encoding/gob"
 	"encoding/json"
-"fmt"
+	"fmt"
+	"io"
 	"labix.org/v2/mgo/bson"
-"os"
-"io"
+	"os"
 )
 
-//ReadJSON reads all JSON data from a reader. 
+//ReadJSON reads all JSON data from a reader.
 func ReadJSON(r io.Reader) (map[string]interface{}, error) {
 	read, err := ReadData(r)
 	if err != nil {
@@ -26,7 +26,6 @@ func ReadJSON(r io.Reader) (map[string]interface{}, error) {
 	}
 	return jmap, nil
 }
-
 
 //LoadMap loads a map stored in a file.
 func LoadMap(fname string) (map[bson.ObjectId]bool, error) {
@@ -57,7 +56,7 @@ func SaveMap(mp map[bson.ObjectId]bool, fname string) error {
 	return nil
 }
 
-func WriteJson(w io.Writer, data interface{})error{
+func WriteJson(w io.Writer, data interface{}) error {
 	marshalled, err := json.Marshal(data)
 	if err != nil {
 		return err

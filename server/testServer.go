@@ -6,26 +6,26 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
-	"net"
 	"labix.org/v2/mgo/bson"
+	"net"
 )
 
 //TestSpawner is a basic implementation of HandlerSpawner for TestHandlers.
 type TestSpawner struct{}
 
 //Spawn creates a new ConnHandler of type TestHandler.
-func (this *TestSpawner) Spawn() ConnHandler{
+func (this *TestSpawner) Spawn() ConnHandler {
 	return new(TestHandler)
 }
 
 //TestHandler is an implementation of ConnHandler used to receive tests for projects.
-type TestHandler struct{
+type TestHandler struct {
 	Conn net.Conn
 	Test *project.Test
 }
 
 //Start sets the connection, launches the Handle method and ends the session when it returns.
-func (this *TestHandler) Start(conn net.Conn){
+func (this *TestHandler) Start(conn net.Conn) {
 	this.Conn = conn
 	this.Test = new(project.Test)
 	this.End(this.Handle())
@@ -48,7 +48,7 @@ func (this *TestHandler) Handle() error {
 	return db.AddTest(this.Test)
 }
 
-//Login authenticates a connection by validating user credentials and checking user permissions. 
+//Login authenticates a connection by validating user credentials and checking user permissions.
 func (this *TestHandler) Login() error {
 	loginInfo, err := util.ReadJSON(this.Conn)
 	if err != nil {
@@ -76,13 +76,12 @@ func (this *TestHandler) Login() error {
 	return err
 }
 
-
-func (this *TestHandler) LoadInfo() error{
+func (this *TestHandler) LoadInfo() error {
 	projects, err := db.GetProjects(bson.M{}, nil)
 	if err != nil {
 		return err
 	}
-	err = util.WriteJson(this.Conn, map[string]interface{}{"projects":projects})
+	err = util.WriteJson(this.Conn, map[string]interface{}{"projects": projects})
 	if err != nil {
 		return err
 	}
@@ -107,7 +106,7 @@ func (this *TestHandler) LoadInfo() error{
 }
 
 //Read retrieves information about the tests as well as the tests themselves and their data files from the connection.
-func (this *TestHandler) Read() error{
+func (this *TestHandler) Read() error {
 	var err error
 	this.Test.Test, err = util.ReadData(this.Conn)
 	if err != nil {
@@ -128,7 +127,7 @@ func (this *TestHandler) Read() error{
 	return nil
 }
 
-//End ends a session and reports any errors to the user. 
+//End ends a session and reports any errors to the user.
 func (this *TestHandler) End(err error) {
 	defer this.Conn.Close()
 	var msg string

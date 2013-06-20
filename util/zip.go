@@ -57,7 +57,7 @@ func ExtractFile(zf *zip.File, dir string) error {
 }
 
 //UnzipToMap reads the contents of a zip file into a map.
-//Each file's path is a map key and its data is the associated value. 
+//Each file's path is a map key and its data is the associated value.
 func UnzipToMap(data []byte) (map[string][]byte, error) {
 	br := bytes.NewReader(data)
 	zr, err := zip.NewReader(br, int64(br.Len()))
@@ -78,7 +78,7 @@ func UnzipToMap(data []byte) (map[string][]byte, error) {
 	return extracted, nil
 }
 
-//ExtractBytes extracts data from a zip.File. 
+//ExtractBytes extracts data from a zip.File.
 func ExtractBytes(zf *zip.File) ([]byte, error) {
 	frc, err := zf.Open()
 	if err != nil {

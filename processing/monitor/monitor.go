@@ -7,32 +7,33 @@ import (
 	"os/signal"
 	"path/filepath"
 )
+
 const INCOMPLETE = "incomplete.gob"
 
 var busy, done chan bson.ObjectId
 var storeName string = INCOMPLETE
 
-func init(){
+func init() {
 	busy, done = make(chan bson.ObjectId), make(chan bson.ObjectId)
-	
+
 }
 
-func SetStore(fname string){
+func SetStore(fname string) {
 	storeName = fname
 }
 
-func Busy(subId bson.ObjectId){
+func Busy(subId bson.ObjectId) {
 	busy <- subId
 }
 
-func Done(subId bson.ObjectId){
+func Done(subId bson.ObjectId) {
 	done <- subId
 }
 
-//Monitor listens for new submissions and adds them to the map of active processes. 
+//Monitor listens for new submissions and adds them to the map of active processes.
 //It also listens for completed submissions and removes them from the active process map.
 //Finally it detects Kill and Interrupt signals, saving the active processes if they are detected.
-func Listen() {	
+func Listen() {
 	quit := make(chan os.Signal)
 	signal.Notify(quit, os.Kill, os.Interrupt)
 	active := GetStored()
@@ -44,7 +45,7 @@ func Listen() {
 			delete(active, id)
 		case <-quit:
 			err := saveActive(active)
-			if err != nil{
+			if err != nil {
 				util.Log(err)
 			}
 			os.Exit(0)
@@ -64,7 +65,7 @@ func GetStored() map[bson.ObjectId]bool {
 }
 
 //saveActive saves active submissions to the filesystem.
-func saveActive(active map[bson.ObjectId]bool)error {
+func saveActive(active map[bson.ObjectId]bool) error {
 	err := util.SaveMap(active, filepath.Join(util.BaseDir(), storeName))
 	if err != nil {
 		return err

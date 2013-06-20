@@ -1,6 +1,5 @@
 package util
 
-
 import (
 	"log"
 	"os"
@@ -9,7 +8,6 @@ import (
 	"sync"
 	"time"
 )
-
 
 var errLogger, infoLogger *SyncLogger
 

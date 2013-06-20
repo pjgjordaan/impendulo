@@ -37,8 +37,7 @@ func clientLogin(conn net.Conn, uname, pword string) error {
 	return checkMessage(conn, OK)
 }
 
-
-func loginClient(port, uname, pword string) error{
+func loginClient(port, uname, pword string) error {
 	conn, err := net.Dial("tcp", "localhost:"+port)
 	if err != nil {
 		return err
@@ -47,10 +46,9 @@ func loginClient(port, uname, pword string) error{
 	return clientLogin(conn, uname, pword)
 }
 
-
 func sendFile(conn net.Conn, fileChan chan *submission.File) error {
 	err := writeJson(conn, map[string]interface{}{REQ: SEND})
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	err = checkMessage(conn, OK)
@@ -72,9 +70,8 @@ func sendFile(conn net.Conn, fileChan chan *submission.File) error {
 	return nil
 }
 
-
 func sendTest(conn net.Conn) error {
-	fmap := map[string]interface{}{REQ:SEND, submission.PROJECT:"project", submission.PKG:"package", submission.LANG: "lang", submission.NAMES: []string{"test0","test1","test2"}}
+	fmap := map[string]interface{}{REQ: SEND, submission.PROJECT: "project", submission.PKG: "package", submission.LANG: "lang", submission.NAMES: []string{"test0", "test1", "test2"}}
 	err := writeJson(conn, fmap)
 	if err != nil {
 		return err
@@ -98,7 +95,7 @@ func sendTest(conn net.Conn) error {
 	return checkMessage(conn, OK)
 }
 
-func writeData(conn net.Conn, data []byte)error{
+func writeData(conn net.Conn, data []byte) error {
 	_, err := conn.Write(data)
 	if err != nil {
 		return err
@@ -110,7 +107,7 @@ func writeData(conn net.Conn, data []byte)error{
 	return nil
 }
 
-func writeJson(conn net.Conn, data map[string]interface{}) error{
+func writeJson(conn net.Conn, data map[string]interface{}) error {
 	marshalled, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -122,7 +119,7 @@ func writeJson(conn net.Conn, data map[string]interface{}) error{
 	return err
 }
 
-func basicClient(port string, doneChan chan bool)error{
+func basicClient(port string, doneChan chan bool) error {
 	conn, err := net.Dial("tcp", "localhost:"+port)
 	if err != nil {
 		return err
@@ -149,35 +146,34 @@ func basicClient(port string, doneChan chan bool)error{
 		return err
 	}
 	doneChan <- true
-	return nil		
+	return nil
 }
 
-func TestRun(t *testing.T){
+func TestRun(t *testing.T) {
 	doneChan := make(chan bool)
 	n := 100
 	port := "8100"
 	go Run(port, new(BasicSpawner))
 	go func() {
-		for i := 0; i < n; i ++{
+		for i := 0; i < n; i++ {
 			go func() {
 				err := basicClient(port, doneChan)
-				if err != nil{
+				if err != nil {
 					t.Error(err)
 				}
 			}()
 		}
 	}()
 	count := 0
-	for _ = range doneChan{
-		count ++
-		if count == 100{
+	for _ = range doneChan {
+		count++
+		if count == 100 {
 			break
 		}
 	}
 }
 
-
-func endClient(port string) error{
+func endClient(port string) error {
 	conn, err := net.Dial("tcp", "localhost:"+port)
 	if err != nil {
 		return err
@@ -186,7 +182,7 @@ func endClient(port string) error{
 	return checkMessage(conn, OK)
 }
 
-func endServer(port string) error{
+func endServer(port string) error {
 	ln, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		return err
@@ -204,33 +200,32 @@ func TestEnd(t *testing.T) {
 	port := "2000"
 	go func() {
 		err := endClient(port)
-		if err != nil{
+		if err != nil {
 			t.Error(err)
 		}
 	}()
 	err := endServer(port)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 }
 
-
 func TestReadSubmission(t *testing.T) {
-	expected := submission.NewSubmission("project", "uname",submission.FILE_MODE, "java")
+	expected := submission.NewSubmission("project", "uname", submission.FILE_MODE, "java")
 	umap := map[string]interface{}{submission.USER: "uname", user.PWORD: "pword", submission.PROJECT: "project", submission.MODE: submission.FILE_MODE, submission.LANG: "java"}
 	handler := new(SubmissionHandler)
 	err := handler.ReadSubmission(umap)
 	if err != nil {
 		t.Error(err)
 	}
-	expected.Id = handler.Submission.Id 
+	expected.Id = handler.Submission.Id
 	expected.Time = handler.Submission.Time
-	if !expected.Equals(handler.Submission){
+	if !expected.Equals(handler.Submission) {
 		t.Error("Submissions don't match", expected, handler.Submission)
 	}
 }
 
-func loginSubServer(port string) error{
+func loginSubServer(port string) error {
 	ln, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		return err
@@ -244,10 +239,10 @@ func loginSubServer(port string) error{
 	return handler.Login()
 }
 
-func TestSubLogin(t *testing.T){
+func TestSubLogin(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
-	uname,pword := "unamel","pwordl"
+	uname, pword := "unamel", "pwordl"
 	hash, salt := util.Hash(pword)
 	u := user.NewUser(uname, hash, salt)
 	err := db.AddUser(u)
@@ -257,43 +252,43 @@ func TestSubLogin(t *testing.T){
 	port := "9002"
 	go func() {
 		err = loginClient(port, uname, pword)
-		if err != nil{
+		if err != nil {
 			t.Error(err)
 		}
 	}()
 	err = loginSubServer(port)
-	if err != nil{
-			t.Error(err)
+	if err != nil {
+		t.Error(err)
 	}
 	go func() {
 		err = loginClient(port, uname, "")
-		if err == nil{
+		if err == nil {
 			t.Error("Expected error")
 		}
 	}()
 	err = loginSubServer(port)
-	if err == nil{
+	if err == nil {
 		t.Error("Expected error")
 	}
 	go func() {
 		err = loginClient(port, "", pword)
-		if err == nil{
+		if err == nil {
 			t.Error("Expected error")
 		}
 	}()
 	err = loginSubServer(port)
-	if err == nil{
+	if err == nil {
 		t.Error("Expected error")
 	}
 }
 
-func readSubClient(port string, fileChan chan *submission.File) error{
+func readSubClient(port string, fileChan chan *submission.File) error {
 	conn, err := net.Dial("tcp", "localhost:"+port)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
-	fmap := map[string]interface{}{REQ:SEND}
+	fmap := map[string]interface{}{REQ: SEND}
 	err = writeJson(conn, fmap)
 	if err != nil {
 		return err
@@ -317,8 +312,7 @@ func readSubClient(port string, fileChan chan *submission.File) error{
 	return nil
 }
 
-
-func readSubServer(port string, fileChan chan *submission.File) error{
+func readSubServer(port string, fileChan chan *submission.File) error {
 	ln, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		return err
@@ -328,7 +322,7 @@ func readSubServer(port string, fileChan chan *submission.File) error{
 		return err
 	}
 	defer sconn.Close()
-	sub := submission.NewSubmission("","","","")
+	sub := submission.NewSubmission("", "", "", "")
 	handler := &SubmissionHandler{Conn: sconn, Submission: sub, FileChan: fileChan}
 	return handler.Read()
 }
@@ -340,7 +334,7 @@ func TestSubRead(t *testing.T) {
 	port := "7000"
 	go func() {
 		err := readSubClient(port, fileChan)
-		if err != nil{
+		if err != nil {
 			t.Error(err)
 		}
 	}()
@@ -350,7 +344,7 @@ func TestSubRead(t *testing.T) {
 	}
 }
 
-func handleSubClient(port, uname,pword string, subChan chan *submission.Submission, fileChan chan *submission.File) error {
+func handleSubClient(port, uname, pword string, subChan chan *submission.Submission, fileChan chan *submission.File) error {
 	conn, err := net.Dial("tcp", "localhost:"+port)
 	if err != nil {
 		return err
@@ -360,7 +354,7 @@ func handleSubClient(port, uname,pword string, subChan chan *submission.Submissi
 	if err != nil {
 		return err
 	}
-	<- subChan
+	<-subChan
 	for i := 0; i < 10; i++ {
 		err = sendFile(conn, fileChan)
 		if err != nil {
@@ -372,7 +366,7 @@ func handleSubClient(port, uname,pword string, subChan chan *submission.Submissi
 	if err != nil {
 		return err
 	}
-	<- subChan
+	<-subChan
 	return nil
 }
 
@@ -404,7 +398,7 @@ func TestSubHandle(t *testing.T) {
 	fileChan := make(chan *submission.File)
 	subChan := make(chan *submission.Submission)
 	go func() {
-		err = handleSubClient(port,uname,pword, subChan, fileChan)
+		err = handleSubClient(port, uname, pword, subChan, fileChan)
 		if err != nil {
 			t.Error(err)
 		}
@@ -415,9 +409,7 @@ func TestSubHandle(t *testing.T) {
 	}
 }
 
-
-
-func startSubClient(port, uname,pword string, subChan chan *submission.Submission, fileChan chan *submission.File) error {
+func startSubClient(port, uname, pword string, subChan chan *submission.Submission, fileChan chan *submission.File) error {
 	conn, err := net.Dial("tcp", "localhost:"+port)
 	if err != nil {
 		return err
@@ -427,7 +419,7 @@ func startSubClient(port, uname,pword string, subChan chan *submission.Submissio
 	if err != nil {
 		return err
 	}
-	<- subChan
+	<-subChan
 	for i := 0; i < 10; i++ {
 		err = sendFile(conn, fileChan)
 		if err != nil {
@@ -439,8 +431,8 @@ func startSubClient(port, uname,pword string, subChan chan *submission.Submissio
 	if err != nil {
 		return err
 	}
-	<- subChan
-	return checkMessage(conn, OK) 
+	<-subChan
+	return checkMessage(conn, OK)
 }
 
 func startSubServer(port string, subChan chan *submission.Submission, fileChan chan *submission.File) error {
@@ -458,7 +450,6 @@ func startSubServer(port string, subChan chan *submission.Submission, fileChan c
 	return nil
 }
 
-
 func TestSubStart(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
@@ -473,7 +464,7 @@ func TestSubStart(t *testing.T) {
 	fileChan := make(chan *submission.File)
 	subChan := make(chan *submission.Submission)
 	go func() {
-		err = startSubClient(port,uname,pword, subChan, fileChan)
+		err = startSubClient(port, uname, pword, subChan, fileChan)
 		if err != nil {
 			t.Error(err)
 		}
@@ -484,8 +475,7 @@ func TestSubStart(t *testing.T) {
 	}
 }
 
-
-func loginTestClient(port, uname, pword string) error{
+func loginTestClient(port, uname, pword string) error {
 	conn, err := net.Dial("tcp", "localhost:"+port)
 	if err != nil {
 		return err
@@ -494,7 +484,7 @@ func loginTestClient(port, uname, pword string) error{
 	return clientLogin(conn, uname, pword)
 }
 
-func loginTestServer(port string) error{
+func loginTestServer(port string) error {
 	ln, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		return err
@@ -508,10 +498,10 @@ func loginTestServer(port string) error{
 	return handler.Login()
 }
 
-func TestTestLogin(t *testing.T){
+func TestTestLogin(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
-	uname,pword := "unametl","pwordtl"
+	uname, pword := "unametl", "pwordtl"
 	hash, salt := util.Hash(pword)
 	u := &user.User{uname, hash, salt, user.T_SUB}
 	err := db.AddUser(u)
@@ -521,37 +511,37 @@ func TestTestLogin(t *testing.T){
 	port := "9003"
 	go func() {
 		err = loginClient(port, uname, pword)
-		if err != nil{
+		if err != nil {
 			t.Error(err)
 		}
 	}()
 	err = loginTestServer(port)
-	if err != nil{
-			t.Error(err)
+	if err != nil {
+		t.Error(err)
 	}
 	go func() {
 		err = loginClient(port, uname, "")
-		if err == nil{
+		if err == nil {
 			t.Error("Expected error")
 		}
 	}()
 	err = loginTestServer(port)
-	if err == nil{
+	if err == nil {
 		t.Error("Expected error")
 	}
 	go func() {
 		err = loginClient(port, "", pword)
-		if err == nil{
+		if err == nil {
 			t.Error("Expected error")
 		}
 	}()
 	err = loginTestServer(port)
-	if err == nil{
+	if err == nil {
 		t.Error("Expected error")
 	}
 }
 
-func readTestClient(port string) error{
+func readTestClient(port string) error {
 	conn, err := net.Dial("tcp", "localhost:"+port)
 	if err != nil {
 		return err
@@ -560,8 +550,7 @@ func readTestClient(port string) error{
 	return sendTest(conn)
 }
 
-
-func readTestServer(port string) error{
+func readTestServer(port string) error {
 	ln, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		return err
@@ -576,9 +565,9 @@ func readTestServer(port string) error{
 	if err != nil {
 		return err
 	}
-	expected := submission.NewTest("project", "package", "lang", []string{"test0","test1","test2"}, testData, fileData)
+	expected := submission.NewTest("project", "package", "lang", []string{"test0", "test1", "test2"}, testData, fileData)
 	expected.Id = handler.Test.Id
-	if !expected.Equals(handler.Test){
+	if !expected.Equals(handler.Test) {
 		return fmt.Errorf("Tests not equivalent")
 	}
 	return nil
@@ -590,7 +579,7 @@ func TestTestRead(t *testing.T) {
 	port := "7001"
 	go func() {
 		err := readTestClient(port)
-		if err != nil{
+		if err != nil {
 			t.Error(err)
 		}
 	}()
@@ -600,7 +589,7 @@ func TestTestRead(t *testing.T) {
 	}
 }
 
-func handleTestClient(port, uname,pword string) error {
+func handleTestClient(port, uname, pword string) error {
 	conn, err := net.Dial("tcp", "localhost:"+port)
 	if err != nil {
 		return err
@@ -639,7 +628,7 @@ func TestTestHandle(t *testing.T) {
 	}
 	port := "6001"
 	go func() {
-		err = handleTestClient(port,uname,pword)
+		err = handleTestClient(port, uname, pword)
 		if err != nil {
 			t.Error(err)
 		}
@@ -650,9 +639,7 @@ func TestTestHandle(t *testing.T) {
 	}
 }
 
-
-
-func startTestClient(port, uname,pword string) error {
+func startTestClient(port, uname, pword string) error {
 	conn, err := net.Dial("tcp", "localhost:"+port)
 	if err != nil {
 		return err
@@ -666,7 +653,7 @@ func startTestClient(port, uname,pword string) error {
 	if err != nil {
 		return err
 	}
-	return checkMessage(conn, OK) 
+	return checkMessage(conn, OK)
 }
 
 func startTestServer(port string) error {
@@ -684,7 +671,6 @@ func startTestServer(port string) error {
 	return nil
 }
 
-
 func TestTestStart(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
@@ -697,7 +683,7 @@ func TestTestStart(t *testing.T) {
 	}
 	port := "4001"
 	go func() {
-		err = startTestClient(port,uname,pword)
+		err = startTestClient(port, uname, pword)
 		if err != nil {
 			t.Error(err)
 		}
@@ -707,7 +693,6 @@ func TestTestStart(t *testing.T) {
 		t.Error(err)
 	}
 }
-
 
 var eof = []byte("eof")
 

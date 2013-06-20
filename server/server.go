@@ -7,13 +7,13 @@ import (
 )
 
 const (
-	OK     = "ok"
-	SEND   = "send"
-	LOGIN  = "begin"
-	LOGOUT = "end"
-	REQ    = "req"
-	PROJECTS      = "projects"
-	SUBMISSION      = "submission"
+	OK         = "ok"
+	SEND       = "send"
+	LOGIN      = "begin"
+	LOGOUT     = "end"
+	REQ        = "req"
+	PROJECTS   = "projects"
+	SUBMISSION = "submission"
 )
 
 //Run is used to listen for new tcp connections and spawn a new goroutine for each connection.
@@ -37,12 +37,12 @@ func Run(port string, spawner HandlerSpawner) {
 }
 
 //HandlerSpawner is an interface used to spawn new ConnHandlers.
-type HandlerSpawner interface{
+type HandlerSpawner interface {
 	Spawn() ConnHandler
 }
 
 //ConnHandler is an interface with basic methods for handling connections.
-type ConnHandler interface{
+type ConnHandler interface {
 	Start(conn net.Conn)
 	Handle() error
 	Login() error
@@ -53,29 +53,29 @@ type ConnHandler interface{
 
 type BasicSpawner struct{}
 
-func (this *BasicSpawner) Spawn() ConnHandler{
+func (this *BasicSpawner) Spawn() ConnHandler {
 	return new(BasicHandler)
 }
 
-type BasicHandler struct{
+type BasicHandler struct {
 	Conn net.Conn
 }
 
-func (this *BasicHandler) Start(conn net.Conn){
+func (this *BasicHandler) Start(conn net.Conn) {
 	this.Conn = conn
 	this.End(this.Handle())
 }
 
 func (this *BasicHandler) Handle() error {
 	err := this.Login()
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	return this.Read()
-	
+
 }
 
-func (this *BasicHandler) Login() error{
+func (this *BasicHandler) Login() error {
 	_, err := util.ReadJSON(this.Conn)
 	if err != nil {
 		return err
@@ -87,7 +87,7 @@ func (this *BasicHandler) Login() error{
 	return nil
 }
 
-func (this *BasicHandler) LoadInfo() error{
+func (this *BasicHandler) LoadInfo() error {
 	_, err := util.ReadJSON(this.Conn)
 	if err != nil {
 		return err
@@ -99,7 +99,7 @@ func (this *BasicHandler) LoadInfo() error{
 	return nil
 }
 
-func (this *BasicHandler) Read()error{
+func (this *BasicHandler) Read() error {
 	_, err := util.ReadData(this.Conn)
 	if err != nil {
 		return err
@@ -111,7 +111,7 @@ func (this *BasicHandler) Read()error{
 	return nil
 }
 
-func (this *BasicHandler) End(err error){
+func (this *BasicHandler) End(err error) {
 	defer this.Conn.Close()
 	var msg string
 	if err != nil {

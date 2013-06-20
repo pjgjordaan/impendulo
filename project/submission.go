@@ -8,11 +8,11 @@ import (
 
 //Submission is used for individual project submissions
 type Submission struct {
-	Id      bson.ObjectId "_id"
+	Id        bson.ObjectId "_id"
 	ProjectId bson.ObjectId "projectid"
-	User    string        "user"
-	Time    int64         "time"
-	Mode    string        "mode"
+	User      string        "user"
+	Time      int64         "time"
+	Mode      string        "mode"
 }
 
 //IsTest

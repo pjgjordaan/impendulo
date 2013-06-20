@@ -2,13 +2,13 @@ package main
 
 import (
 	"flag"
+	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processing"
-	"github.com/godfried/impendulo/server/web"	
 	"github.com/godfried/impendulo/server"
+	"github.com/godfried/impendulo/server/web"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
-	"github.com/godfried/impendulo/config"
 	"runtime"
 )
 
@@ -24,7 +24,7 @@ func init() {
 func main() {
 	flag.Parse()
 	err := config.LoadConfigs(ConfigFile)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	if UsersFile != "" {
@@ -47,12 +47,12 @@ func AddUsers() error {
 }
 
 //Run starts a routine for processing snapshot submissions as well as a routine for receiving project tests.
-//An instance of our tcp snapshot server is then launched. 
+//An instance of our tcp snapshot server is then launched.
 func Run() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	db.Setup(db.DEFAULT_CONN)
 	go server.Run(FilePort, &server.SubmissionSpawner{})
 	go web.Run()
 	processing.Serve()
-	
+
 }

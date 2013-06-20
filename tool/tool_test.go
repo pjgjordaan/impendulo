@@ -1,12 +1,12 @@
 package tool
 
 import (
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
-	"os"
-	"github.com/godfried/impendulo/util"
-	"path/filepath"
 )
 
 func TestGenericGetArgs(t *testing.T) {
@@ -29,52 +29,49 @@ func TestGenericGetArgs(t *testing.T) {
 	}
 }
 
-func TestAddArgs(t *testing.T){
+func TestAddArgs(t *testing.T) {
 	javac := &GenericTool{"javac", "java", "javac", []string{}, []string{"-implicit:class"}, nil, FILE_PATH}
-	expected := map[string]string{"-cp":"there"}
+	expected := map[string]string{"-cp": "there"}
 	javac.AddArgs(expected)
-	if !reflect.DeepEqual(expected, javac.args){
+	if !reflect.DeepEqual(expected, javac.args) {
 		t.Error("Flags not set properly", expected, javac.args)
 	}
 }
 
-func TestRunCommand(t *testing.T){
+func TestRunCommand(t *testing.T) {
 	failCmd := []string{"chmod", "777"}
 	_, _, ok, err := RunCommand(failCmd...)
-	if err == nil{
+	if err == nil {
 		t.Error("Command should have failed", err)
 	}
-	succeedCmd := []string{"ls","-a","-l"}
+	succeedCmd := []string{"ls", "-a", "-l"}
 	_, _, ok, err = RunCommand(succeedCmd...)
-	if !ok || err != nil{
+	if !ok || err != nil {
 		t.Error(err)
 	}
 	noCmd := []string{"lsa"}
 	_, _, ok, err = RunCommand(noCmd...)
-	if ok{
+	if ok {
 		t.Error("Command should not have started", err)
 	}
 }
 
-
-func TestGenericRun(t *testing.T){
+func TestGenericRun(t *testing.T) {
 	fileId := bson.NewObjectId()
-	javac := &GenericTool{"javac", "java", "javac", []string{}, []string{"-implicit:class"}, nil,  FILE_PATH}
+	javac := &GenericTool{"javac", "java", "javac", []string{}, []string{"-implicit:class"}, nil, FILE_PATH}
 	ti, err := setupTarget()
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
-	javac.AddArgs(map[string]string{"-cp":ti.Dir})
+	javac.AddArgs(map[string]string{"-cp": ti.Dir})
 	_, err = javac.Run(fileId, ti)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	os.RemoveAll(ti.Dir)
 }
 
-	
-
-func setupTarget() (*TargetInfo, error){
+func setupTarget() (*TargetInfo, error) {
 	fileData := []byte(`package bermuda;
 
 public class Triangle {
@@ -90,7 +87,7 @@ public class Triangle {
 }`)
 	fname := "Triangle.java"
 	pkg := "bermuda"
-	
+
 	dir := filepath.Join(os.TempDir(), "test")
 	ti := NewTarget("Triangle", fname, "java", pkg, dir)
 	err := util.SaveFile(filepath.Join(dir, ti.Package), ti.FullName(), fileData)
@@ -98,5 +95,4 @@ public class Triangle {
 		return nil, err
 	}
 	return ti, nil
-} 
-
+}

@@ -29,9 +29,9 @@ const (
 	RES          = "results"
 	JSRC         = ".java"
 	JCOMP        = ".class"
-	ZIP = "zip"
+	ZIP          = "zip"
 	BIN_DIR      = "bin"
 	SRC_DIR      = "src"
-	TESTS = "tests"
-	NAMES = "names"
+	TESTS        = "tests"
+	NAMES        = "names"
 )

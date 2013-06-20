@@ -1,31 +1,32 @@
 package lint4j
 
-import(
-	"labix.org/v2/mgo/bson"
+import (
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
+	"labix.org/v2/mgo/bson"
 )
-type Lint4j struct{
+
+type Lint4j struct {
 	cmd string
 }
 
-func NewLint4j() *Lint4j{
-	return &Lint4j{config.GetConfig(config.FINDBUGS)}	
+func NewLint4j() *Lint4j {
+	return &Lint4j{config.GetConfig(config.FINDBUGS)}
 }
 
-func (this *Lint4j) GetLang() string{
+func (this *Lint4j) GetLang() string {
 	return "java"
 }
 
-func (this *Lint4j) GetName()string{
+func (this *Lint4j) GetName() string {
 	return tool.LINT4J
 }
 
-func (this *Lint4j) GetArgs(target string)[]string{
+func (this *Lint4j) GetArgs(target string) []string {
 	return []string{this.cmd, "-textui", "-low", target}
 }
 
-func (this *Lint4j) Run(fileId bson.ObjectId, ti *tool.TargetInfo)(*tool.Result, error){
+func (this *Lint4j) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (*tool.Result, error) {
 	target := ti.GetTarget(tool.PKG_PATH)
 	args := this.GetArgs(target)
 	stderr, stdout, ok, err := tool.RunCommand(args...)

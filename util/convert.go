@@ -102,13 +102,13 @@ func toStrings(ivals interface{}) ([]string, error) {
 	vals, ok := ivals.([]string)
 	if !ok {
 		islice, ok := ivals.([]interface{})
-		if !ok{
+		if !ok {
 			return nil, fmt.Errorf("Error casting value %q to []string", ivals)
 		}
 		vals = make([]string, len(islice))
-		for i, ival := range islice{
+		for i, ival := range islice {
 			val, ok := ival.(string)
-			if !ok{
+			if !ok {
 				return nil, fmt.Errorf("Error casting value %q to string", ival)
 			}
 			vals[i] = val

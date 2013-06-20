@@ -1,8 +1,8 @@
-package db 
+package db
 
-import(
+import (
+	"fmt"
 	"github.com/godfried/impendulo/tool"
-"fmt"
 )
 
 //GetResult retrieves a result matching the given interface from the active database.

@@ -1,161 +1,160 @@
 package processing
 
-import(
-	"testing"
+import (
 	"github.com/godfried/impendulo/config"
-	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/submission"
 	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/submission"
+	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
-"os"
-"path/filepath"
+	"os"
+	"path/filepath"
+	"testing"
 )
 
-func TestSetupTests(t *testing.T){
+func TestSetupTests(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
 	s := getSubmission()
 	err := db.AddSubmission(s)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
-	}	
+	}
 	test, err := getTest()
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	err = db.AddTest(test)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	dir := filepath.Join(os.TempDir(), s.Id.Hex())
 	defer os.RemoveAll(dir)
-	runner := SetupTests(test.Project, test.Lang,  dir)
-	if runner == nil{
+	runner := SetupTests(test.Project, test.Lang, dir)
+	if runner == nil {
 		t.Error("Could not set up tests properly")
 	}
 
 }
 
-func TestCompileTest(t *testing.T){
+func TestCompileTest(t *testing.T) {
 	err := config.LoadConfigs("../config.txt")
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
 	s := getSubmission()
 	err = db.AddSubmission(s)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	f := getFile(s.Id)
 	err = db.AddFile(f)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	test, err := getTest()
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	err = db.AddTest(test)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	dir := filepath.Join(os.TempDir(), f.Id.Hex())
 	defer os.RemoveAll(dir)
-	runner := SetupTests(test.Project, test.Lang,  dir)
-	if runner == nil{
+	runner := SetupTests(test.Project, test.Lang, dir)
+	if runner == nil {
 		t.Error("Could not set up tests properly")
-	}	
-	ti, err := ExtractFile(f,dir)
-	if err != nil{
+	}
+	ti, err := ExtractFile(f, dir)
+	if err != nil {
 		t.Error(err)
 	}
 	target := tool.NewTarget(runner.Project, test.Names[0], runner.Lang, runner.Package, runner.Dir)
 	ok, err := runner.Compile(target, f, ti.Dir)
-	if !ok || err != nil{
+	if !ok || err != nil {
 		t.Error(err)
 	}
 	f = getFile(s.Id)
 	f.Data = errSrc
 	err = db.AddFile(f)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	dir = filepath.Join(os.TempDir(), f.Id.Hex())
 	defer os.RemoveAll(dir)
-	runner = SetupTests(test.Project, test.Lang,  dir)
-	if runner == nil{
+	runner = SetupTests(test.Project, test.Lang, dir)
+	if runner == nil {
 		t.Error("Could not set up tests properly")
-	}	
-	ti, err = ExtractFile(f,dir)
-	if err != nil{
+	}
+	ti, err = ExtractFile(f, dir)
+	if err != nil {
 		t.Error(err)
 	}
 	target = tool.NewTarget(runner.Project, test.Names[0], runner.Lang, runner.Package, runner.Dir)
 	ok, err = runner.Compile(target, f, ti.Dir)
-	if ok && err == nil{
+	if ok && err == nil {
 		t.Error("Expected no compile")
 	}
 
 }
 
-
-func TestExecute(t *testing.T){
+func TestExecute(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
 	s := getSubmission()
 	err := db.AddSubmission(s)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	f := getFile(s.Id)
 	err = db.AddFile(f)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	test, err := getTest()
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	err = db.AddTest(test)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	dir := filepath.Join(os.TempDir(), s.Id.Hex())
 	defer os.RemoveAll(dir)
-	runner := SetupTests(test.Project, test.Lang,  dir)
-	if runner == nil{
+	runner := SetupTests(test.Project, test.Lang, dir)
+	if runner == nil {
 		t.Error("Could not set up tests properly")
-	}	
-	ti, err := ExtractFile(f,dir)
-	if err != nil{
+	}
+	ti, err := ExtractFile(f, dir)
+	if err != nil {
 		t.Error(err)
 	}
 	err = runner.Execute(f, ti.Dir)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 }
 
-func getSubmission()*submission.Submission{
+func getSubmission() *submission.Submission {
 	return submission.NewSubmission("Triangle", "user", submission.FILE_MODE, "java")
 }
 
-func getTest()(*submission.Test, error){
-	testZip, err := util.Zip(map[string][]byte{"testing/EasyTests.java":testData})
-	if err != nil{
+func getTest() (*submission.Test, error) {
+	testZip, err := util.Zip(map[string][]byte{"testing/EasyTests.java": testData})
+	if err != nil {
 		return nil, err
 	}
-	dataZip, err := util.Zip(map[string][]byte{"0001.etxt":testCase})
-	if err != nil{
+	dataZip, err := util.Zip(map[string][]byte{"0001.etxt": testCase})
+	if err != nil {
 		return nil, err
 	}
 	return submission.NewTest("Triangle", "testing", "java", []string{"EasyTests.java"}, testZip, dataZip), nil
 }
 
-func getFile(subId bson.ObjectId)*submission.File{
+func getFile(subId bson.ObjectId) *submission.File {
 	info := bson.M{submission.TIME: 1000, submission.TYPE: submission.SRC, submission.MOD: 'c', submission.NAME: "Triangle.java", submission.FTYPE: "java", submission.PKG: "triangle", submission.NUM: 100}
 	return submission.NewFile(subId, info, srcData)
 }

@@ -14,18 +14,18 @@ import (
 var authName string = "authentication.key"
 var encName string = "encryption.key"
 
-func CookieKeys()(auth, enc []byte){
+func CookieKeys() (auth, enc []byte) {
 	auth, enc = cookieKey(authName), cookieKey(encName)
 	return
 }
 
-func cookieKey(fname string)(data []byte){
+func cookieKey(fname string) (data []byte) {
 	var err error
 	data, err = ioutil.ReadFile(filepath.Join(BaseDir(), fname))
-	if err != nil{
+	if err != nil {
 		data = securecookie.GenerateRandomKey(32)
 		err = SaveFile(BaseDir(), fname, data)
-		if err != nil{
+		if err != nil {
 			Log(err)
 		}
 	}

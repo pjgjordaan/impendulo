@@ -1,19 +1,19 @@
 package processing
 
 import (
+	"bytes"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/submission"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/java"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
-	"testing"
+	"math/rand"
 	"os"
 	"path/filepath"
-	"bytes"
 	"reflect"
+	"testing"
 	"time"
-	"math/rand"
 )
 
 func TestAddResult(t *testing.T) {
@@ -41,12 +41,12 @@ func TestAddResult(t *testing.T) {
 	}
 }
 
-func TestExtractFile(t *testing.T){
+func TestExtractFile(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
 	s := submission.NewSubmission("Triangle", "user", submission.FILE_MODE, "java")
 	err := db.AddSubmission(s)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	info := bson.M{submission.TIME: 1000, submission.TYPE: submission.SRC, submission.MOD: 'c', submission.NAME: "Triangle.java", submission.FTYPE: "java", submission.PKG: "triangle", submission.NUM: 100}
@@ -54,43 +54,42 @@ func TestExtractFile(t *testing.T){
 	dir := filepath.Join(os.TempDir(), s.Id.Hex())
 	defer os.RemoveAll(dir)
 	ti, err := ExtractFile(f, dir)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	expected := tool.NewTarget("Triangle", "Triangle.java", "java", "triangle", dir)
-	if !expected.Equals(ti){
+	if !expected.Equals(ti) {
 		t.Error("Targets not equivalent")
 	}
-	file, err := os.Open(filepath.Join(dir, filepath.Join("triangle","Triangle.java")))
-	if err != nil{
+	file, err := os.Open(filepath.Join(dir, filepath.Join("triangle", "Triangle.java")))
+	if err != nil {
 		t.Error(err)
 	}
 	buff := new(bytes.Buffer)
 	_, err = buff.ReadFrom(file)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
-	if !bytes.Equal(fileData, buff.Bytes()){
+	if !bytes.Equal(fileData, buff.Bytes()) {
 		t.Error("Data not equivalent")
 	}
 }
 
-func TestStore(t *testing.T){
+func TestStore(t *testing.T) {
 	fname := "test0.gob"
 	orig := genMap()
 	defer os.Remove(filepath.Join(util.BaseDir(), fname))
 	err := saveActive(fname, orig)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	ret := getStored(fname)
-	if !reflect.DeepEqual(orig, ret){
+	if !reflect.DeepEqual(orig, ret) {
 		t.Error("Maps not equal")
 	}
 }
 
-
-func TestMonitor(t *testing.T){
+func TestMonitor(t *testing.T) {
 	fname := "test1.gob"
 	busy := make(chan bson.ObjectId)
 	done := make(chan bson.ObjectId)
@@ -101,54 +100,54 @@ func TestMonitor(t *testing.T){
 	go Monitor(fname, busy, done, quit)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	count := 0
-	for k, v := range subMap{
+	for k, v := range subMap {
 		busy <- k
 		if !v {
-			count ++
-			go func(id bson.ObjectId){
-				time.Sleep(time.Millisecond*time.Duration(r.Intn(100)))
+			count++
+			go func(id bson.ObjectId) {
+				time.Sleep(time.Millisecond * time.Duration(r.Intn(100)))
 				done <- id
 				completed <- true
 			}(k)
 		}
 	}
-	for i := 0; i < count; i ++{
+	for i := 0; i < count; i++ {
 		<-completed
 	}
 	quit <- os.Interrupt
-	//Have to wait for file to be 
-	time.Sleep(time.Second)	
+	//Have to wait for file to be
+	time.Sleep(time.Second)
 	retrieved := getStored(fname)
-	for k,v := range subMap{
-		if v != retrieved[k]{
+	for k, v := range subMap {
+		if v != retrieved[k] {
 			t.Error("Map values did not match for submission:", k, v, retrieved[k])
 		}
 	}
 }
 
-func genMap()map[bson.ObjectId]bool{
+func genMap() map[bson.ObjectId]bool {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	idMap := make(map[bson.ObjectId]bool)
-	for i := 0; i < 100; i++{
+	for i := 0; i < 100; i++ {
 		idMap[bson.NewObjectId()] = r.Float64() > 0.5
 	}
 	return idMap
 }
 
-func TestProcessStored(t *testing.T){
+func TestProcessStored(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
 	sub := submission.NewSubmission("Triangle", "user", submission.FILE_MODE, "java")
 	err := db.AddSubmission(sub)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	ids := make(map[bson.ObjectId]bool)
-	for i := 0; i < 5; i ++{
-		info := bson.M{submission.TIME: 1000+i, submission.TYPE: submission.SRC, submission.MOD: 'c', submission.NAME: "Triangle.java", submission.FTYPE: "java", submission.PKG: "triangle", submission.NUM: i}
+	for i := 0; i < 5; i++ {
+		info := bson.M{submission.TIME: 1000 + i, submission.TYPE: submission.SRC, submission.MOD: 'c', submission.NAME: "Triangle.java", submission.FTYPE: "java", submission.PKG: "triangle", submission.NUM: i}
 		f := submission.NewFile(sub.Id, info, fileData)
 		err := db.AddFile(f)
-		if err != nil{
+		if err != nil {
 			t.Error(err)
 		}
 		ids[f.Id] = true
@@ -157,32 +156,33 @@ func TestProcessStored(t *testing.T){
 	fileChan := make(chan *submission.File)
 	go ProcessStored(sub.Id, subChan, fileChan)
 	gotSub := false
-loop : for{
-		select{
+loop:
+	for {
+		select {
 		case s := <-subChan:
-			if !sub.Equals(s){
+			if !sub.Equals(s) {
 				t.Error("Submissions not equal", sub, s)
 			}
-			if gotSub{
+			if gotSub {
 				break loop
 			}
 			gotSub = true
-		case file := <- fileChan:
-			if !ids[file.Id]{
+		case file := <-fileChan:
+			if !ids[file.Id] {
 				t.Error("Unknown id", file.Id)
 			} else {
 				f, err := db.GetFile(bson.M{submission.ID: file.Id})
-				if err != nil{
+				if err != nil {
 					t.Error(err)
 				}
-				if !f.Equals(file){
+				if !f.Equals(file) {
 					t.Error("Files not equal")
 				}
 			}
 			delete(ids, file.Id)
 		}
 	}
-	if len(ids) > 0{
+	if len(ids) > 0 {
 		t.Error("All files not received", ids)
 	}
 }

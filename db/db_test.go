@@ -5,8 +5,8 @@ import (
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/user"
 	"labix.org/v2/mgo/bson"
-	"testing"
 	"strconv"
+	"testing"
 )
 
 func TestSetup(t *testing.T) {
@@ -154,79 +154,78 @@ func TestGetTools(t *testing.T) {
 	}
 }
 
-func TestGetUserById(t *testing.T){
+func TestGetUserById(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
 	s := getSession()
 	defer s.Close()
 	u := user.NewUser("uname", "pword", "salt")
 	err := AddUser(u)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	found, err := GetUserById("uname")
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
-	if !u.Equals(found){
+	if !u.Equals(found) {
 		t.Error("Users not equivalent", u, found)
 	}
 }
 
-func TestGetTest(t *testing.T){
+func TestGetTest(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
 	s := getSession()
 	defer s.Close()
 	test := submission.NewTest("project", "lang", []string{"name0", "name1", "name2"}, testData, fileData)
 	err := AddTest(test)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	found, err := GetTest(bson.M{"_id": test.Id})
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
-	if !test.Equals(found){
+	if !test.Equals(found) {
 		t.Error("Tests don't match", test, found)
 	}
 }
 
-func TestCount(t *testing.T){
+func TestCount(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
 	s := getSession()
 	defer s.Close()
 	num := 100
 	n, err := Count(USERS, bson.M{})
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
-	if n != 0{
+	if n != 0 {
 		t.Error("Invalid count, should be 0", n)
 	}
-	for i := 0; i < num; i ++{
-		var s int = i/10
+	for i := 0; i < num; i++ {
+		var s int = i / 10
 		err = AddUser(user.NewUser("uname"+strconv.Itoa(i), "pword", "salt"+strconv.Itoa(s)))
-		if err != nil{
+		if err != nil {
 			t.Error(err)
 		}
 	}
 	n, err = Count(USERS, bson.M{})
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
-	if n != 100{
+	if n != 100 {
 		t.Error("Invalid count, should be 100", n)
 	}
-	n, err = Count(USERS, bson.M{"salt":"salt0"})
-	if err != nil{
+	n, err = Count(USERS, bson.M{"salt": "salt0"})
+	if err != nil {
 		t.Error(err)
 	}
-	if n != 10{
+	if n != 10 {
 		t.Error("Invalid count, should be 10", n)
 	}
-	
 
 }
 
