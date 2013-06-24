@@ -16,11 +16,11 @@ import (
 	"strings"
 )
 
-func getTabs(ctx *context.Context) string {
-	if ctx.Session.Values["user"] != nil {
-		return "adminTabs.html"
+func getNav(ctx *context.Context) string {
+	if _, err := ctx.Username(); err != nil {
+		return "outNav.html"
 	}
-	return "outTabs.html"
+	return "inNav.html"
 }
 
 type processor func(*http.Request, *context.Context) (string, error)
@@ -163,13 +163,13 @@ func doRegister(req *http.Request, ctx *context.Context) (string, error) {
 	return fmt.Sprintf("Successfully registered as %q.", uname), nil
 }
 
-func retrieveFiles(req *http.Request) ([]*project.File, string, error) {
-	idStr := req.FormValue("subid")
-	if !bson.IsObjectIdHex(idStr) {
-		err := fmt.Errorf("Invalid submission id %q", idStr)
+func retrieveFiles(req *http.Request, ctx *context.Context) ([]*project.File, string, error) {
+	ctx.Browse.Sid = req.FormValue("subid")
+	if !bson.IsObjectIdHex(ctx.Browse.Sid) {
+		err := fmt.Errorf("Invalid submission id %q", ctx.Browse.Sid)
 		return nil, err.Error(), err
 	}
-	subId := bson.ObjectIdHex(idStr)
+	subId := bson.ObjectIdHex(ctx.Browse.Sid)
 	var err error
 	choices := []bson.M{bson.M{project.INFO + "." + project.TYPE: project.EXEC}, bson.M{project.INFO + "." + project.TYPE: project.SRC}}
 	files, err := db.GetFiles(bson.M{project.SUBID: subId, "$or": choices}, bson.M{project.INFO: 1})
@@ -215,6 +215,8 @@ func retrieveSubmissions(req *http.Request, ctx *context.Context) (subs []*proje
 			msg = err.Error()
 			return
 		}
+		ctx.Browse.Pid = idStr
+		ctx.Browse.IsUser = false
 		pid := bson.ObjectIdHex(idStr)
 		subs, err = db.GetSubmissions(bson.M{project.PROJECT_ID: pid}, nil)
 		if err != nil {
@@ -222,13 +224,9 @@ func retrieveSubmissions(req *http.Request, ctx *context.Context) (subs []*proje
 		}
 		return
 	} else if tipe == "user" {
-		var uname string
-		uname, err = ctx.Username()
-		if err != nil {
-			msg = err.Error()
-			return
-		}
-		subs, err = db.GetSubmissions(bson.M{project.USER: uname}, nil)
+		ctx.Browse.Uid = idStr
+		ctx.Browse.IsUser = true
+		subs, err = db.GetSubmissions(bson.M{project.USER: ctx.Browse.Uid}, nil)
 		if err != nil {
 			msg = "Could not retrieve user submissions."
 		}

@@ -6,27 +6,46 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/user"
+	"github.com/godfried/impendulo/httpbuf"
+	"net/http"
+	"encoding/gob"
 )
+
+func init(){
+	gob.Register(new(BrowseData))
+}
 
 type Context struct {
 	Session  *sessions.Session
 	projects []*project.Project
 	users    []*user.User
+	Browse *BrowseData
 }
 
-func (ctx *Context) Close() {}
+type BrowseData struct{
+	IsUser bool
+	Uid string
+	Pid string
+	Sid string
+}
+
+func (ctx *Context) Close() {
+	ctx.save()
+}
+
+func (ctx *Context) save(){
+	ctx.Session.Values["browse"] = ctx.Browse
+}
+
+
+func (ctx *Context) Save(req *http.Request, buff *httpbuf.Buffer)(error){
+	ctx.save()
+	return ctx.Session.Save(req, buff)
+}
 
 func (ctx *Context) LoggedIn() bool {
 	_, err := ctx.Username()
 	return err == nil
-}
-
-func (ctx *Context) Username() (string, error) {
-	username, ok := ctx.Session.Values["user"].(string)
-	if !ok {
-		return "", fmt.Errorf("Could not retrieve user.")
-	}
-	return username, nil
 }
 
 func (ctx *Context) AddMessage(msg string, isErr bool) {
@@ -45,6 +64,14 @@ func (ctx *Context) Errors() []interface{} {
 
 func (ctx *Context) Successes() []interface{} {
 	return ctx.Session.Flashes("success")
+}
+
+func (ctx *Context) Username() (string, error) {
+	username, ok := ctx.Session.Values["user"].(string)
+	if !ok {
+		return "", fmt.Errorf("Could not retrieve user.")
+	}
+	return username, nil
 }
 
 func (ctx *Context) AddUser(user string) {
@@ -69,5 +96,10 @@ func (ctx *Context) Users() ([]*user.User, error) {
 
 func NewContext(sess *sessions.Session) *Context {
 	ctx := &Context{Session: sess}
+	if val, ok := ctx.Session.Values["browse"]; ok{
+		ctx.Browse = val.(*BrowseData)
+	} else{
+		ctx.Browse = new(BrowseData)
+	}
 	return ctx
 }

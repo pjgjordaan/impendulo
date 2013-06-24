@@ -1,13 +1,17 @@
 {{ define "view" }}
-  <div class="btn-group">
-    <a class="btn dropdown-toggle btn-inverse" data-toggle="dropdown" href="#">
-      Browse
-    <span class="caret"></span>
+<ul class="breadcrumb">
+  <li class="active">Home</li>
+</ul>
+<div class="hero-unit">
+  <h2>Explore Impendulo</h2>
+  <p>Browse through our code snapshot analysis</p>
+  <p>
+    <a class="btn btn-inverse btn-large" href="getprojects">
+      Projects
     </a>
-    <ul class="dropdown-menu">
-    <li><a href="getprojects">Projects</a></li>
-    <li><a href="getusers">Users</a></li>
-    </ul>
-    </div>
-  {{ template "result" . }}
+    <a class="btn btn-inverse btn-large" href="getusers">
+      Users
+    </a>
+  </p>
+</div>
 {{ end }}

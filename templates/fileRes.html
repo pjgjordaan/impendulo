@@ -1,6 +1,17 @@
-{{define "result"}}
+{{define "view"}}
+<ul class="breadcrumb">
+  <li><a href="homeview">Home</a><span class="divider">/</span></li>  
+  {{if .ctx.Browse.IsUser}}
+  <li><a href="getusers">Users</a><span class="divider"></span></li>
+  <li><a href="getsubmissions?id={{.ctx.Browse.Uid}}&type=user">Submissions</a><span class="divider"></span></li>
+  {{else}}
+  <li><a href="getprojects">Projects</a><span class="divider"></span></li>
+  <li><a href="getsubmissions?id={{.ctx.Browse.Pid}}&type=project">Submissions</a><span class="divider"></span></li>
+  {{end}}
+  <li class="active">Snapshots</li>
+</ul>
 <table class="table table-hover">
-  <thead><tr>
+  <thead><tr class="info">
       <th>Name</th>
       <th>Package</th>
       <th>Type</th>
@@ -9,7 +20,7 @@
   </tr></thead>
   <tbody data-provides="rowlink" >
     {{ range .fileRes}}
-    <tr><td><a class="rowlink" href="getresults?fileid={{.Id.Hex}}" >{{.InfoStr "name"}}</a></td>
+    <tr class="success"><td><a class="rowlink" href="getresults?fileid={{.Id.Hex}}" >{{.InfoStr "name"}}</a></td>
       <td><a class="rowlink" href="getresults?fileid={{.Id.Hex}}" >{{.InfoStr "pkg"}}</a></td>
       <td><a class="rowlink" href="getresults?fileid={{.Id.Hex}}" >{{.InfoStr "type"}}</a></td>
       <td><a class="rowlink" href="getresults?fileid={{.Id.Hex}}" >{{.Num}}</a></td>

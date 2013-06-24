@@ -6,32 +6,32 @@ import (
 )
 
 func homeView(w http.ResponseWriter, req *http.Request, ctx *context.Context) (err error) {
-	return T("homeView.html", "noRes.html", getTabs(ctx)).Execute(w, map[string]interface{}{"ctx": ctx, "h": true})
+	return T(getNav(ctx), "homeView.html").Execute(w, map[string]interface{}{"ctx": ctx, "h": true})
 }
 
 func projectView(w http.ResponseWriter, req *http.Request, ctx *context.Context) (err error) {
 	langs := []string{"Java"}
-	return T("projectView.html", getTabs(ctx)).Execute(w, map[string]interface{}{"ctx": ctx, "p": true, "langs": langs})
+	return T(getNav(ctx), "projectView.html").Execute(w, map[string]interface{}{"ctx": ctx, "s": true, "langs": langs})
 }
-
+ 
 func testView(w http.ResponseWriter, req *http.Request, ctx *context.Context) (err error) {
-	return T("testView.html", getTabs(ctx)).Execute(w, map[string]interface{}{"ctx": ctx, "t": true})
+	return T(getNav(ctx), "testView.html").Execute(w, map[string]interface{}{"ctx": ctx, "s": true})
 }
 
 func archiveView(w http.ResponseWriter, req *http.Request, ctx *context.Context) (err error) {
-	return T("archiveView.html", getTabs(ctx)).Execute(w, map[string]interface{}{"ctx": ctx, "a": true})
+	return T(getNav(ctx), "archiveView.html").Execute(w, map[string]interface{}{"ctx": ctx, "s": true})
 }
 
 func registerView(w http.ResponseWriter, req *http.Request, ctx *context.Context) (err error) {
-	return T("registerView.html", getTabs(ctx)).Execute(w, map[string]interface{}{"ctx": ctx, "r": true})
+	return T(getNav(ctx), "registerView.html").Execute(w, map[string]interface{}{"ctx": ctx, "r": true})
 }
 
 func getUsers(w http.ResponseWriter, req *http.Request, ctx *context.Context) error {
-	return T("homeView.html", "userRes.html", getTabs(ctx)).Execute(w, map[string]interface{}{"ctx": ctx, "h": true})
+	return T(getNav(ctx), "userRes.html").Execute(w, map[string]interface{}{"ctx": ctx, "h": true})
 }
 
 func getProjects(w http.ResponseWriter, req *http.Request, ctx *context.Context) error {
-	return T("homeView.html", "projRes.html", getTabs(ctx)).Execute(w, map[string]interface{}{"ctx": ctx, "h": true})
+	return T(getNav(ctx), "projRes.html").Execute(w, map[string]interface{}{"ctx": ctx, "h": true})
 }
 
 func getSubmissions(w http.ResponseWriter, req *http.Request, ctx *context.Context) error {
@@ -41,17 +41,17 @@ func getSubmissions(w http.ResponseWriter, req *http.Request, ctx *context.Conte
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 		return err
 	}
-	return T("homeView.html", "subRes.html", getTabs(ctx)).Execute(w, map[string]interface{}{"ctx": ctx, "h": true, "subRes": subs})
+	return T(getNav(ctx), "subRes.html").Execute(w, map[string]interface{}{"ctx": ctx, "h": true, "subRes": subs})
 }
 
 func getFiles(w http.ResponseWriter, req *http.Request, ctx *context.Context) error {
-	fileRes, msg, err := retrieveFiles(req)
+	fileRes, msg, err := retrieveFiles(req, ctx)
 	if err != nil {
 		ctx.AddMessage(msg, true)
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 		return err
 	}
-	return T("homeView.html", "fileRes.html", getTabs(ctx)).Execute(w, map[string]interface{}{"ctx": ctx, "h": true, "fileRes": fileRes})
+	return T(getNav(ctx), "fileRes.html").Execute(w, map[string]interface{}{"ctx": ctx, "h": true, "fileRes": fileRes})
 }
 
 func getResults(w http.ResponseWriter, req *http.Request, ctx *context.Context) error {
@@ -61,7 +61,7 @@ func getResults(w http.ResponseWriter, req *http.Request, ctx *context.Context) 
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 		return err
 	}
-	return T("homeView.html", "dispRes.html", getTabs(ctx)).Execute(w, map[string]interface{}{"ctx": ctx, "h": true, "res": res})
+	return T(getNav(ctx), "dispRes.html").Execute(w, map[string]interface{}{"ctx": ctx, "h": true, "res": res})
 }
 
 func login(w http.ResponseWriter, req *http.Request, ctx *context.Context) error {

@@ -1,4 +1,8 @@
-{{define "result"}}
+{{define "view"}}
+<ul class="breadcrumb">
+  <li><a href="homeview">Home</a> <span class="divider">/</span></li>  
+  <li class="active">Users</li>
+</ul>
 <ul>
   {{ range .ctx.Users}}
   <li><a href="getsubmissions?id={{.Name}}&type=user">{{.Name}}</a></li>

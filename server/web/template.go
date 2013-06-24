@@ -20,9 +20,7 @@ func genHTML(name string, data []byte) string {
 	return val
 }
 
-var basicT = []string{filepath.Join("templates", "_base.html"),
-	filepath.Join("templates", "index.html"), filepath.Join("templates", "navbar.html"),
-	filepath.Join("templates", "sidebar.html"), filepath.Join("templates", "messages.html")}
+var basicT = []string{filepath.Join("templates", "_base.html"), filepath.Join("templates", "index.html"), filepath.Join("templates", "messages.html")}
 
 func T(names ...string) *template.Template {
 	t := template.New("_base.html").Funcs(funcs)

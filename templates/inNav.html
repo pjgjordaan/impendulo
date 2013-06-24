@@ -1,0 +1,25 @@
+{{ define "navbar" }}
+<div id="navbar" class="row-fluid">
+  <h1>Impendulo</h1>
+  <div class="navbar navbar-inverse" style="position: static;">
+    <div class="navbar-inner" style="height: auto;">
+      <div class="container">
+	<ul class="nav">
+	  <li {{ if .h }} class="active" {{ end }}><a href="homeview">Home</a></li>
+	  <li {{ if .s }} class="dropdown active" {{else}} class="dropdown" {{end}}>
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Submit<b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="projectview">New Project</a></li>
+              <li><a href="testview">Project Test</a></li>
+              <li><a href="archiveview">Intlola Recording</a></li>
+	    </ul>
+          </li>
+	</ul>
+	<form class="navbar-form pull-right" action="logout" method="POST">
+          <button type="submit" class="btn btn-inverse">Logout</button>
+	</form>
+      </div>
+    </div>
+  </div>
+</div>
+{{ end }}

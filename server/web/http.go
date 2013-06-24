@@ -27,7 +27,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		util.Log(err)
 	}
-	if err = ctx.Session.Save(req, buf); err != nil {
+	if err = ctx.Save(req, buf); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

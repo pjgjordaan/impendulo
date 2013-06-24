@@ -1,4 +1,16 @@
-{{define "result"}}
+{{define "view"}}
+<ul class="breadcrumb">
+  <li><a href="homeview">Home</a><span class="divider">/</span></li>
+  {{if .ctx.Browse.IsUser}}
+  <li><a href="getusers">Users</a><span class="divider"></span></li>
+  <li><a href="getsubmissions?id={{.ctx.Browse.Uid}}&type=user">Submissions</a><span class="divider"></span></li>
+  {{else}}
+  <li><a href="getprojects">Projects</a><span class="divider"></span></li>
+  <li><a href="getsubmissions?id={{.ctx.Browse.Pid}}&type=project">Submissions</a><span class="divider"></span></li>
+  {{end}}
+  <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">Snapshots</a><span class="divider"></span></li>
+  <li class="active">Analysis</li>
+</ul>
 <h2>{{ .res.Name}}</h2>
 <div class="accordion" id="accordion2">
   {{if .res.Code}}
