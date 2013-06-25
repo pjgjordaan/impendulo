@@ -15,7 +15,7 @@ type File struct {
 	Name string "name"
 	Package string "package"
 	Type string "type"
-	FileType string "type"
+	FileType string "ftype"
 	Mod string "mod"
 	Num int "num"
 	Time int64 "time"
@@ -59,16 +59,18 @@ func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) (*Fi
 		file.SetMod(mod)
 	}
 	if v, ok := info[NUM]; ok{
-		file.Num, ok = v.(int)
+		n, ok := v.(float64)
 		if !ok {
 			return nil, fmt.Errorf("%q could not be parsed as an int.", v)
 		}
+		file.Num = int(n)
 	}
 	if v, ok := info[TIME]; ok{
-		file.Time, ok = v.(int64)
+		t, ok := v.(float64)
 		if !ok {
 			return nil, fmt.Errorf("%q could not be parsed as an int64.", v)
 		}
+		file.Time = int64(t)
 	}
 	return file, nil
 }

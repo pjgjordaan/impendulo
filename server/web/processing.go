@@ -200,8 +200,9 @@ func retrieveFiles(req *http.Request, ctx *context.Context) ([]*project.File, st
 	}
 	subId := bson.ObjectIdHex(ctx.Browse.Sid)
 	var err error
-	choices := []bson.M{bson.M{project.INFO + "." + project.TYPE: project.EXEC}, bson.M{project.INFO + "." + project.TYPE: project.SRC}}
-	files, err := db.GetFiles(bson.M{project.SUBID: subId, "$or": choices}, bson.M{project.INFO: 1})
+	choices := []bson.M{bson.M{project.TYPE: project.EXEC}, bson.M{project.TYPE: project.SRC}}
+	selector := bson.M{project.NAME: 1, project.PKG: 1, project.NUM: 1, project.MOD: 1, project.TYPE: 1}
+	files, err := db.GetFiles(bson.M{project.SUBID: subId, "$or": choices}, selector)
 	if err != nil {
 		return nil, fmt.Sprintf("Could not retrieve files for submission."), err
 	}

@@ -19,7 +19,7 @@ const (
 	ARCHIVE_MODE = "archive_remote"
 	FTYPE        = "ftype"
 	NAME         = "name"
-	PKG          = "pkg"
+	PKG          = "package"
 	NUM          = "num"
 	MOD          = "mod"
 	LANG         = "lang"
