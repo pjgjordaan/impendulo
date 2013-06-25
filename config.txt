@@ -4,4 +4,4 @@ java = /usr/bin/java
 javac = /usr/bin/javac
 findbugs = ~/apps/findbugs-2.0.2/lib/findbugs.jar
 lint4j = ~/apps/lint4j-0.9.1/bin/lint4j
-jpf_home = ~/dev/jpf/jpf-core
+jpf_jar = ~/dev/jpf/jpf-core/build/jpf.jar

@@ -55,14 +55,13 @@ func doArchive(req *http.Request, ctx *context.Context) (string, error) {
 	if err != nil {
 		return fmt.Sprintf("Could not create submission."), err
 	}
-	info := map[string]interface{}{project.TYPE: project.ARCHIVE, project.FTYPE: project.ZIP}
-	f := project.NewFile(sub.Id, info, archiveBytes)
-	err = db.AddFile(f)
+	file := project.NewArchive(sub.Id, archiveBytes, project.ZIP)
+	err = db.AddFile(file)
 	if err != nil {
 		return fmt.Sprintf("Could not create submission."), err
 	}
 	processing.StartSubmission(sub)
-	processing.AddFile(f)
+	processing.AddFile(file)
 	processing.EndSubmission(sub)
 	return fmt.Sprintf("Submission successful."), nil
 }
@@ -109,14 +108,44 @@ func doTest(req *http.Request, ctx *context.Context) (string, error) {
 	return fmt.Sprintf("Successfully added test %q.", testHeader.Filename), err
 }
 
+func doJPF(req *http.Request, ctx *context.Context) (string, error) {
+	proj := req.FormValue("project")
+	if !bson.IsObjectIdHex(proj) {
+		err := fmt.Errorf("Error parsing selected project %q.", proj)
+		return err.Error(), err
+	}
+	projectId := bson.ObjectIdHex(proj)
+	jpfFile, jpfHeader, err := req.FormFile("jpf")
+	if err != nil {
+		return fmt.Sprintf("Error loading jpf config file."), err
+	}
+	jpfBytes, err := ioutil.ReadAll(jpfFile)
+	if err != nil {
+		return fmt.Sprintf("Error reading jpf config file %q.", jpfHeader.Filename), err
+	}
+	username, err := ctx.Username()
+	if err != nil {
+		return err.Error(), err
+	}
+	jpf := project.NewJPF(projectId, jpfHeader.Filename, username, jpfBytes)
+	if jpf.IsJava{
+		jpf.Package = util.GetPackage(bytes.NewReader(jpf.Data))
+	}
+	err = db.AddJPF(jpf)
+	if err != nil {
+		return fmt.Sprintf("Unable to add jpf config file %q.", jpf.Name), err
+	}
+	return fmt.Sprintf("Successfully added jpf config file %q.", jpf.Name), err
+}
+
 func doProject(req *http.Request, ctx *context.Context) (string, error) {
 	name, lang := strings.TrimSpace(req.FormValue("name")), strings.TrimSpace(req.FormValue("lang"))
 	if name == "" {
-		err := fmt.Errorf("Invalid project name")
+		err := fmt.Errorf("Invalid project name.")
 		return err.Error(), err
 	}
 	if lang == "" {
-		err := fmt.Errorf("Invalid language")
+		err := fmt.Errorf("Invalid language.")
 		return err.Error(), err
 	}
 	username, err := ctx.Username()
@@ -191,13 +220,13 @@ func buildResults(req *http.Request) (*DisplayResult, string, error) {
 		err := fmt.Errorf("Could not retrieve file.")
 		return nil, err.Error(), err
 	}
-	f, err := db.GetFile(bson.M{project.ID: bson.ObjectIdHex(fileId)}, nil)
+	file, err := db.GetFile(bson.M{project.ID: bson.ObjectIdHex(fileId)}, nil)
 	if err != nil {
 		return nil, fmt.Sprintf("Could not retrieve file."), err
 	}
-	res := &DisplayResult{Name: f.InfoStr(project.NAME), Results: f.Results}
-	if f.Type() == project.SRC {
-		res.Code = strings.TrimSpace(string(f.Data))
+	res := &DisplayResult{Name: file.Name, Results: file.Results}
+	if file.Type == project.SRC {
+		res.Code = strings.TrimSpace(string(file.Data))
 	}
 	return res, "Successfully retrieved results.", nil
 }

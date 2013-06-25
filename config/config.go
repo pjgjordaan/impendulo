@@ -17,7 +17,7 @@ func LoadConfigs(fname string) error {
 	scanner := bufio.NewScanner(f)
 	settings = make(map[string]string)
 	for scanner.Scan() {
-		vals := strings.Split(scanner.Text(), ":")
+		vals := strings.Split(scanner.Text(), "=")
 		if len(vals) != 2 {
 			return fmt.Errorf("Config file not formatted correctly.")
 		}

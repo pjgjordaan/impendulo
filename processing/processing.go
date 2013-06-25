@@ -127,15 +127,15 @@ func ProcessSubmission(sub *project.Submission, rcvFile chan *project.File) {
 //ProcessFile processes a file according to its type.
 func ProcessFile(f *project.File, dir string, tests []*TestRunner) error {
 	util.Log("Processing file", f.Id)
-	t := f.Type()
-	if t == project.ARCHIVE {
+	switch f.Type{
+	case project.ARCHIVE:
 		err := ProcessArchive(f, dir, tests)
 		if err != nil {
 			return err
 		}
 		db.RemoveFileByID(f.Id)
-	} else if t == project.SRC || t == project.EXEC {
-		err := Evaluate(f, dir, tests, t == project.SRC)
+	case project.SRC, project.EXEC:
+		err := Evaluate(f, dir, tests, f.Type == project.SRC)
 		if err != nil {
 			return err
 		}
@@ -151,20 +151,21 @@ func ProcessArchive(archive *project.File, dir string, tests []*TestRunner) erro
 		return err
 	}
 	for name, data := range files {
-		info, err := project.ParseName(name)
+		file, err := project.ParseName(name)
 		if err != nil {
 			return err
 		}
-		matcher := bson.M{project.SUBID: archive.SubId, project.INFO: info}
-		f, err := db.GetFile(matcher, nil)
+		matcher := bson.M{project.SUBID: archive.SubId, project.NUM: file.Num}
+		file, err = db.GetFile(matcher, nil)
 		if err != nil {
-			f = project.NewFile(archive.SubId, info, data)
-			err = db.AddFile(f)
+			file.SubId = archive.SubId
+			file.Data = data
+			err = db.AddFile(file)
 			if err != nil {
 				return err
 			}
 		}
-		err = ProcessFile(f, dir, tests)
+		err = ProcessFile(file, dir, tests)
 		if err != nil {
 			return err
 		}
@@ -204,8 +205,8 @@ func Evaluate(f *project.File, dir string, tests []*TestRunner, isSource bool) e
 
 //ExtractFile saves a file to filesystem.
 //It returns file info used by tools & tests.
-func ExtractFile(f *project.File, dir string) (*tool.TargetInfo, error) {
-	matcher := bson.M{project.ID: f.SubId}
+func ExtractFile(file *project.File, dir string) (*tool.TargetInfo, error) {
+	matcher := bson.M{project.ID: file.SubId}
 	s, err := db.GetSubmission(matcher, nil)
 	if err != nil {
 		return nil, err
@@ -215,8 +216,8 @@ func ExtractFile(f *project.File, dir string) (*tool.TargetInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	ti := tool.NewTarget(f.InfoStr(project.NAME), p.Lang, f.InfoStr(project.PKG), dir)
-	err = util.SaveFile(filepath.Join(dir, ti.Package), ti.FullName(), f.Data)
+	ti := tool.NewTarget(file.Name, p.Lang, file.Package, dir)
+	err = util.SaveFile(filepath.Join(dir, ti.Package), ti.FullName(), file.Data)
 	if err != nil {
 		return nil, err
 	}

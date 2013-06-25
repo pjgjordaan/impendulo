@@ -12,53 +12,91 @@ import (
 type File struct {
 	Id      bson.ObjectId "_id"
 	SubId   bson.ObjectId "subid"
-	Info    bson.M        "info"
+	Name string "name"
+	Package string "package"
+	Type string "type"
+	FileType string "type"
+	Mod string "mod"
+	Num int "num"
+	Time int64 "time"
 	Data    []byte        "data"
 	Results bson.M        "results"
 }
 
 //NewFile
-func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) *File {
+func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) (*File, error) {
 	id := bson.NewObjectId()
-	return &File{id, subId, info, data, bson.M{}}
+	file := &File{Id: id, SubId: subId, Data: data}
+	if v, ok := info[NAME]; ok{
+		file.Name, ok = v.(string)
+		if !ok {
+			return nil, fmt.Errorf("%q could not be parsed as a string.", v)
+		}
+	}
+	if v, ok := info[PKG]; ok{
+		file.Package, ok = v.(string)
+		if !ok {
+			return nil, fmt.Errorf("%q could not be parsed as a string.", v)
+		}
+	}
+	if v, ok := info[TYPE]; ok{
+		file.Type, ok = v.(string)
+		if !ok {
+			return nil, fmt.Errorf("%q could not be parsed as a string.", v)
+		}
+	}
+	if v, ok := info[FTYPE]; ok{
+		file.FileType, ok = v.(string)
+		if !ok {
+			return nil, fmt.Errorf("%q could not be parsed as a string.", v)
+		}
+	}
+	if v, ok := info[MOD]; ok{
+		mod, ok := v.(string)
+		if !ok {
+			return nil, fmt.Errorf("%q could not be parsed as a string.", v)
+		}
+		file.SetMod(mod)
+	}
+	if v, ok := info[NUM]; ok{
+		file.Num, ok = v.(int)
+		if !ok {
+			return nil, fmt.Errorf("%q could not be parsed as an int.", v)
+		}
+	}
+	if v, ok := info[TIME]; ok{
+		file.Time, ok = v.(int64)
+		if !ok {
+			return nil, fmt.Errorf("%q could not be parsed as an int64.", v)
+		}
+	}
+	return file, nil
 }
 
-//Type
-func (f *File) Type() string {
-	return f.InfoStr(TYPE)
+//NewFile
+func NewArchive(subId bson.ObjectId, data []byte, ftype string) *File{
+	id := bson.NewObjectId()
+	return &File{Id: id, SubId: subId, Data: data, FileType: ftype, Type: ARCHIVE}
 }
 
-//Type
-func (f *File) Mod() string {
-	mod := f.InfoStr(MOD)
+
+func (this *File) SetMod(mod string) {
 	switch mod {
 	case "c":
-		return "Saved"
+		this.Mod = "Saved"
 	case "r":
-		return "Removed"
+		this.Mod = "Removed"
 	case "l":
-		return "Launched"
+		this.Mod = "Launched"
 	case "f":
-		return "From"
+		this.Mod = "From"
 	case "t":
-		return "To"
+		this.Mod = "To"
 	case "a":
-		return "Added"
+		this.Mod = "Added"
 	default:
-		return "Unknown"
+		this.Mod = "Unknown"
 	}
-}
-
-//InfoStr retrieves file metadata.
-func (f *File) InfoStr(key string) string {
-	val, _ := f.Info[key].(string)
-	return val
-}
-
-//InfoStr retrieves file metadata.
-func (f *File) Num() string {
-	val, _ := f.Info[NUM].(float64)
-	return strconv.Itoa(int(val))
 }
 
 func (this *File) Equals(that *File) bool {
@@ -70,45 +108,44 @@ func (this *File) Equals(that *File) bool {
 //[[<package descriptor>"_"]*<file name>"_"]<time in nanoseconds>"_"<file number in current submission>"_"<modification char>
 //Where values between '[]' are optional, '*' indicates 0 to many, values inside '""' are literals and values inside '<>'
 //describe the contents at that position.
-func ParseName(name string) (map[string]interface{}, error) {
+func ParseName(name string) (*File, error) {
 	elems := strings.Split(name, "_")
 	if len(elems) < 3 {
 		return nil, fmt.Errorf("Encoded name %q does not have enough parameters.", name)
 	}
-	info := make(map[string]interface{})
-	info[MOD] = elems[len(elems)-1]
-	num, err := strconv.ParseFloat(elems[len(elems)-2], 64)
+	file := new(File)
+	file.Id = bson.NewObjectId()
+	var err error
+	file.SetMod(elems[len(elems)-1])
+	file.Num, err = strconv.Atoi(elems[len(elems)-2])
 	if err != nil {
 		return nil, fmt.Errorf("%q in name %q could not be parsed as an int.", elems[len(elems)-2], name)
 	}
-	info[NUM] = num
-	time, err := strconv.ParseInt(elems[len(elems)-3], 10, 64)
+	file.Time, err = strconv.ParseInt(elems[len(elems)-3], 10, 64)
 	if err != nil {
 		return nil, fmt.Errorf("%q in name %q could not be parsed as an int64.", elems[len(elems)-3], name)
 	}
-	info[TIME] = time
-	fname := ""
 	if len(elems) > 3 {
-		info[NAME] = elems[len(elems)-4]
-		fname = elems[len(elems)-4]
-		pkg := ""
+		file.Name = elems[len(elems)-4]
 		for i := 0; i < len(elems)-4; i++ {
-			pkg += elems[i]
+			file.Package += elems[i]
 			if i < len(elems)-5 {
-				pkg += "."
+				file.Package += "."
 			}
 			if isOutFolder(elems[i]) {
-				pkg = ""
+				file.Package = ""
 			}
 		}
-		info[PKG] = pkg
 	}
-	if strings.HasSuffix(fname, JSRC) {
-		info[TYPE] = SRC
-	} else if strings.HasSuffix(fname, JCOMP) {
-		info[TYPE] = EXEC
+	if strings.HasSuffix(file.Name, JSRC) {
+		file.Type = SRC
+		file.FileType = JAVA
+	} else if strings.HasSuffix(file.Name, JCOMP) {
+		file.Type = EXEC
+		file.FileType = CLASS
 	} else {
-		info[TYPE] = CHANGE
+		file.Type = CHANGE
+		file.FileType = EMPTY
 	}
-	return info, nil
+	return file, nil
 }

@@ -24,6 +24,7 @@ func init() {
 	router.Add("POST", "/submitarchive", handler(submitArchive))
 	router.Add("GET", "/projectview", handler(projectView)).Name("projectview")
 	router.Add("GET", "/testview", handler(testView)).Name("testview")
+	router.Add("GET", "/jpfview", handler(jpfView)).Name("jpfview")
 	router.Add("GET", "/homeview", handler(homeView)).Name("homeview")
 	router.Add("GET", "/archiveview", handler(archiveView)).Name("archiveview")
 	router.Add("GET", "/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))

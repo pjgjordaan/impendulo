@@ -166,12 +166,15 @@ func (this *SubmissionHandler) Read() error {
 			return err
 		}
 		delete(requestInfo, REQ)
-		f := project.NewFile(this.Submission.Id, requestInfo, buffer)
-		err = db.AddFile(f)
+		file, err := project.NewFile(this.Submission.Id, requestInfo, buffer)
 		if err != nil {
 			return err
 		}
-		processing.AddFile(f)
+		err = db.AddFile(file)
+		if err != nil {
+			return err
+		}
+		processing.AddFile(file)
 		return nil
 	} else if req == LOGOUT {
 		return io.EOF

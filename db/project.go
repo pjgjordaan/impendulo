@@ -139,6 +139,23 @@ func AddTest(t *project.Test) error {
 	return nil
 }
 
+func AddJPF(jpf *project.JPF) error {
+	session := getSession()
+	defer session.Close()
+	col := session.DB("").C(JPF)
+	matcher := bson.M{project.PROJECT_ID: jpf.ProjectId}
+	_, err := col.RemoveAll(matcher)
+	if err != nil {
+		return fmt.Errorf("Encountered error %q when removing jpf configs matching %q from db", err, matcher)
+	}
+	err = col.Insert(jpf)
+	if err != nil {
+		return fmt.Errorf("Encountered error %q when adding jpf config %q to db", err, jpf)
+	}
+	return nil
+}
+
+
 //AddSubmission adds a new submission to the active database.
 func AddSubmission(s *project.Submission) error {
 	session := getSession()

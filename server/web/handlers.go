@@ -17,6 +17,10 @@ func projectView(w http.ResponseWriter, req *http.Request, ctx *context.Context)
 func testView(w http.ResponseWriter, req *http.Request, ctx *context.Context) (err error) {
 	return T(getNav(ctx), "testView.html").Execute(w, map[string]interface{}{"ctx": ctx, "s": true})
 }
+ 
+func jpfView(w http.ResponseWriter, req *http.Request, ctx *context.Context) (err error) {
+	return T(getNav(ctx), "jpfView.html").Execute(w, map[string]interface{}{"ctx": ctx, "s": true})
+}
 
 func archiveView(w http.ResponseWriter, req *http.Request, ctx *context.Context) (err error) {
 	return T(getNav(ctx), "archiveView.html").Execute(w, map[string]interface{}{"ctx": ctx, "s": true})
@@ -89,6 +93,12 @@ func logout(w http.ResponseWriter, req *http.Request, ctx *context.Context) erro
 func addTest(w http.ResponseWriter, req *http.Request, ctx *context.Context) error {
 	err := processor(doTest).exec(req, ctx)
 	http.Redirect(w, req, reverse("testview"), http.StatusSeeOther)
+	return err
+}
+
+func addJPF(w http.ResponseWriter, req *http.Request, ctx *context.Context) error {
+	err := processor(doJPF).exec(req, ctx)
+	http.Redirect(w, req, reverse("jpfview"), http.StatusSeeOther)
 	return err
 }
 

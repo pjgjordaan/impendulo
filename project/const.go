@@ -32,6 +32,7 @@ const (
 	ZIP          = "zip"
 	BIN_DIR      = "bin"
 	SRC_DIR      = "src"
-	TESTS        = "tests"
-	NAMES        = "names"
+	JAVA = "java"
+	CLASS = "class"
+	EMPTY = "empty"
 )
