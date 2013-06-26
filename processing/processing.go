@@ -8,6 +8,7 @@ import (
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/tool/java"
+	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"os"
@@ -269,5 +270,22 @@ func RunTools(f *project.File, ti *tool.TargetInfo) error {
 	if err != nil {
 		return err
 	}
-	return AddResult(res)
+	err = AddResult(res)
+	if err != nil {
+		return err
+	}
+	j := jpf.NewJPF()
+	if _, ok := f.Results[j.GetName()]; ok{
+		return nil
+	}
+	res, err = j.Run(f.Id, ti)
+	util.Log("JPF result", res)
+	if err != nil {
+		return err
+	}
+	err = AddResult(res)
+	if err != nil {
+		return err
+	}
+	return nil
 }

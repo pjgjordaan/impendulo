@@ -43,4 +43,7 @@ const (
 	JUNIT_JAR  = "junit_jar"
 	JAVAC      = "javac"
 	JAVA       = "java"
+	JPF_JAR = "jpf_jar"
+	GSON_JAR = "gson_jar"
+	RUNNER_DIR = "runner_dir"
 )

@@ -13,6 +13,7 @@ const (
 	JAVAC    = "javac"
 	FINDBUGS = "findbugs"
 	LINT4J   = "lint4j"
+	JPF   = "jpf"
 )
 
 type Tool interface {
@@ -90,14 +91,17 @@ func (this *GenericTool) GetLang() string {
 }
 
 //RunCommand executes a given external command.
-func RunCommand(args ...string) ([]byte, []byte, bool, error) {
+func RunCommand(args ...string) ([]byte, []byte, error) {
 	cmd := exec.Command(args[0], args[1:]...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	err := cmd.Start()
 	if err != nil {
-		return nil, nil, false, fmt.Errorf("Encountered error %q executing command %q", err, args)
+		return nil, nil, fmt.Errorf("Encountered error %q executing command %q", err, args)
 	}
 	err = cmd.Wait()
-	return stdout.Bytes(), stderr.Bytes(), true, err
+	if err != nil{
+		return nil, nil, fmt.Errorf("Encountered error %q executing command %q", err, args)
+	}
+	return stdout.Bytes(), stderr.Bytes(), nil
 }

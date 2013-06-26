@@ -100,3 +100,36 @@ func GenHTML(dir, name string, data []byte) (string, error) {
 	}
 	return "/" + name, nil
 }
+type copier struct{
+	dest, src string
+}
+
+func (this *copier) copyFile(path string, f os.FileInfo, err error) error{
+	destPath, err := filepath.Rel(this.src, path)
+	if err != nil{
+		return err
+	}
+	destPath = filepath.Join(this.dest, destPath)
+	if f == nil{
+		fmt.Println(err, path, f)
+		return nil
+	} else if f.IsDir(){
+		return os.MkdirAll(destPath, os.ModePerm)
+	} else{
+		srcFile, err := os.Open(path)
+		if err != nil{
+			return err
+		}
+		destFile, err := os.Create(destPath)
+		if err != nil{
+			return err
+		}
+		_, err = io.Copy(destFile, srcFile)
+		return err
+	}
+}
+
+func Copy(dest, src string) error{
+	c := &copier{dest, src}
+	return filepath.Walk(src, c.copyFile)
+}

@@ -4,4 +4,6 @@ java = /usr/bin/java
 javac = /usr/bin/javac
 findbugs = ~/apps/findbugs-2.0.2/lib/findbugs.jar
 lint4j = ~/apps/lint4j-0.9.1/bin/lint4j
-jpf_jar = ~/dev/jpf/jpf-core/build/jpf.jar
+jpf_jar = ~/dev/java/jpf/jpf-core/build/jpf.jar
+gson_jar = ~/dev/go/src/github.com/godfried/impendulo/tool/jpf/lib/gson-2.2.4.jar
+runner_dir = ~/dev/go/src/github.com/godfried/impendulo/tool/jpf/src
