@@ -24,7 +24,7 @@ func cookieKey(fname string) (data []byte) {
 	data, err = ioutil.ReadFile(filepath.Join(BaseDir(), fname))
 	if err != nil {
 		data = securecookie.GenerateRandomKey(32)
-		err = SaveFile(BaseDir(), fname, data)
+		err = SaveFile(filepath.Join(BaseDir(), fname), data)
 		if err != nil {
 			Log(err)
 		}

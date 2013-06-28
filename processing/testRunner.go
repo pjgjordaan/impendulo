@@ -25,7 +25,7 @@ func SetupTests(projectId bson.ObjectId, dir string) ([]*TestRunner, error) {
 	ret := make([]*TestRunner, len(tests))
 	for i, test := range tests {
 		ret[i] = &TestRunner{tool.NewTarget(test.Name, proj.Lang, test.Package, dir)}
-		err = util.SaveFile(ret[i].Info.PkgPath(), ret[i].Info.FullName(), test.Test)
+		err = util.SaveFile(ret[i].Info.FilePath(), test.Test)
 		if err != nil {
 			return nil, err
 		}

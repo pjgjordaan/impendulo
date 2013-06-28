@@ -22,15 +22,15 @@ func (this *FindBugs) GetName() string {
 	return tool.FINDBUGS
 }
 
-func (this *FindBugs) GetArgs(target string) []string {
+func (this *FindBugs) args(target string) []string {
 	return []string{config.GetConfig(config.JAVA), "-jar", this.cmd, "-textui", "-low", "-html:fancy-hist.xsl", target}
 }
 
 func (this *FindBugs) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (*tool.Result, error) {
 	target := ti.GetTarget(tool.PKG_PATH)
-	args := this.GetArgs(target)
-	stdout, stderr, ok, err := tool.RunCommand(args...)
-	if !ok {
+	args := this.args(target)
+	stdout, stderr, err := tool.RunCommand(args...)
+	if err != nil {
 		return nil, err
 	}
 	if stderr != nil && len(stderr) > 0 {

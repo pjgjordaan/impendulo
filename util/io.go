@@ -45,12 +45,12 @@ func ReadData(r io.Reader) ([]byte, error) {
 }
 
 //SaveFile saves a file (given as a []byte)  in dir.
-func SaveFile(dir, fname string, data []byte) error {
-	err := os.MkdirAll(dir, DPERM)
+func SaveFile(fname string, data []byte) error {
+	err := os.MkdirAll(filepath.Dir(fname), DPERM)
 	if err != nil {
-		return fmt.Errorf("Encountered error %q while creating directory %q", err, dir)
+		return fmt.Errorf("Encountered error %q while creating parent directory for %q", err, fname)
 	}
-	f, err := os.Create(filepath.Join(dir, fname))
+	f, err := os.Create(fname)
 	if err != nil {
 		return fmt.Errorf("Encountered error %q while creating file %q", err, fname)
 	}

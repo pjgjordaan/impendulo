@@ -58,7 +58,8 @@ func Serve() {
 				delete(subs, sub.Id)
 			} else {
 				subs[sub.Id] = make(chan *project.File)
-				go ProcessSubmission(sub, subs[sub.Id])
+				proc := NewProcessor(sub, subs[sub.Id])
+				go proc.Process()
 			}
 		case file := <-fileChan:
 			if ch, ok := subs[file.SubId]; ok {
@@ -98,45 +99,70 @@ func ProcessStored(subId bson.ObjectId) {
 	EndSubmission(sub)
 }
 
+type Processor struct{
+	sub *project.Submission
+	recv chan *project.File
+	tests []*TestRunner
+	dir string
+	jpfPath string
+}
+
+func NewProcessor(sub *project.Submission, recv chan *project.File) *Processor{
+	return &Processor{sub: sub, recv: recv, dir : filepath.Join(os.TempDir(), sub.Id.Hex())}
+}
+
 //ProcessSubmission processes a new submission.
 //It listens for incoming files on fileChan and processes them.
-func ProcessSubmission(sub *project.Submission, rcvFile chan *project.File) {
-	monitor.Busy(sub.Id)
-	util.Log("Processing submission", sub)
-	dir := filepath.Join(os.TempDir(), sub.Id.Hex())
-	//defer os.RemoveAll(dir)
-	tests, err := SetupTests(sub.ProjectId, dir)
-	if err != nil {
+func (this *Processor) Process() {
+	monitor.Busy(this.sub.Id)
+	util.Log("Processing submission", this.sub)
+	defer os.RemoveAll(this.dir)
+	err := this.Setup()
+	if err != nil{
 		util.Log(err)
-		return
 	}
 	for {
-		file, ok := <-rcvFile
+		file, ok := <- this.recv
 		if !ok {
 			break
 		}
-		err := ProcessFile(file, dir, tests)
+		err := this.ProcessFile(file)
 		if err != nil {
 			util.Log(err)
 			return
 		}
 	}
-	util.Log("Processed submission", sub)
-	monitor.Done(sub.Id)
+	util.Log("Processed submission", this.sub)
+	monitor.Done(this.sub.Id)
+}
+
+func (this *Processor) Setup() error{
+	var err error
+	this.tests, err = SetupTests(this.sub.ProjectId, this.dir)
+	if err != nil {
+		return err
+	}
+	jpfFile, err := db.GetJPF(bson.M{project.PROJECT_ID: this.sub.ProjectId}, nil)
+	if err != nil {
+		return err
+	}
+	this.jpfPath = filepath.Join(this.dir, jpfFile.Name)
+	return util.SaveFile(this.jpfPath, jpfFile.Data) 
 }
 
 //ProcessFile processes a file according to its type.
-func ProcessFile(f *project.File, dir string, tests []*TestRunner) error {
+func (this *Processor) ProcessFile(f *project.File) error {
 	util.Log("Processing file", f.Id)
 	switch f.Type{
 	case project.ARCHIVE:
-		err := ProcessArchive(f, dir, tests)
+		err := this.extract(f)
 		if err != nil {
 			return err
 		}
 		db.RemoveFileByID(f.Id)
 	case project.SRC, project.EXEC:
-		err := Evaluate(f, dir, tests, f.Type == project.SRC)
+		analyser := &Analyser{proc: this, file: f}
+		err := analyser.Eval()
 		if err != nil {
 			return err
 		}
@@ -146,7 +172,7 @@ func ProcessFile(f *project.File, dir string, tests []*TestRunner) error {
 }
 
 //ProcessArchive extracts files from an archive and processes them.
-func ProcessArchive(archive *project.File, dir string, tests []*TestRunner) error {
+func (this *Processor) extract(archive *project.File) error {
 	files, err := util.UnzipToMap(archive.Data)
 	if err != nil {
 		return err
@@ -157,7 +183,7 @@ func ProcessArchive(archive *project.File, dir string, tests []*TestRunner) erro
 			return err
 		}
 		matcher := bson.M{project.SUBID: archive.SubId, project.NUM: file.Num}
-		file, err = db.GetFile(matcher, nil)
+		foundFile, err := db.GetFile(matcher, nil)
 		if err != nil {
 			file.SubId = archive.SubId
 			file.Data = data
@@ -165,8 +191,10 @@ func ProcessArchive(archive *project.File, dir string, tests []*TestRunner) erro
 			if err != nil {
 				return err
 			}
+		} else{
+			file = foundFile
 		}
-		err = ProcessFile(file, dir, tests)
+		err = this.ProcessFile(file)
 		if err != nil {
 			return err
 		}
@@ -174,77 +202,90 @@ func ProcessArchive(archive *project.File, dir string, tests []*TestRunner) erro
 	return nil
 }
 
+type Analyser struct{
+	proc *Processor
+	file *project.File
+	target *tool.TargetInfo
+}
+
 //Evaluate evaluates a source or compiled file by attempting to run tests and tools on it.
-func Evaluate(f *project.File, dir string, tests []*TestRunner, isSource bool) error {
-	target, err := ExtractFile(f, dir)
+func (this *Analyser) Eval() error {
+	err := this.buildTarget()
 	if err != nil {
 		return err
 	}
-	compiled, err := Compile(f.Id, target, isSource)
+	err = this.compile()
 	if err != nil {
 		return err
 	}
-	if !compiled {
-		return nil
-	}
-	f, err = db.GetFile(bson.M{project.ID: f.Id}, nil)
+	this.file, err = db.GetFile(bson.M{project.ID: this.file.Id}, nil)
 	if err != nil {
 		return err
 	}
-	for _, test := range tests {
-		err = test.Execute(f, target.Dir)
+	for _, test := range this.proc.tests {
+		err = test.Execute(this.file, this.proc.dir)
 		if err != nil {
 			return err
 		}
 	}
-	err = RunTools(f, target)
-	if err != nil {
-		return err
-	}
-	return nil
+	return this.RunTools()
 }
 
 //ExtractFile saves a file to filesystem.
 //It returns file info used by tools & tests.
-func ExtractFile(file *project.File, dir string) (*tool.TargetInfo, error) {
-	matcher := bson.M{project.ID: file.SubId}
-	s, err := db.GetSubmission(matcher, nil)
-	if err != nil {
-		return nil, err
-	}
-	matcher = bson.M{project.ID: s.ProjectId}
+func (this *Analyser) buildTarget() error {
+	matcher := bson.M{project.ID: this.proc.sub.ProjectId}
 	p, err := db.GetProject(matcher, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	ti := tool.NewTarget(file.Name, p.Lang, file.Package, dir)
-	err = util.SaveFile(filepath.Join(dir, ti.Package), ti.FullName(), file.Data)
-	if err != nil {
-		return nil, err
-	}
-	return ti, nil
+	this.target = tool.NewTarget(this.file.Name, p.Lang, this.file.Package, this.proc.dir)
+	return util.SaveFile(this.target.FilePath(), this.file.Data)
 }
 
 //Compile compiles a java source file and saves the results thereof.
 //It returns true if compiled successfully.
-func Compile(fileId bson.ObjectId, ti *tool.TargetInfo, isSource bool) (bool, error) {
+func (this *Analyser) compile() error {
 	var res *tool.Result
 	var err error
-	javac := java.NewJavac(ti.Dir)
-	if isSource {
-		res, err = javac.Run(fileId, ti)
+	javac := java.NewJavac(this.target.Dir)
+	if this.file.Type == project.SRC {
+		res, err = javac.Run(this.file.Id, this.target)
 		if err != nil {
-			return false, err
+			return err
 		}
 	} else {
-		res = tool.NewResult(fileId, javac, []byte(""))
+		res = tool.NewResult(this.file.Id, javac, []byte(""))
 	}
 	util.Log("Compile result", res)
+	return AddResult(res)
+}
+
+//RunTools runs all available tools on a file, skipping previously run tools.
+func (this *Analyser) RunTools() error {
+	fb := findbugs.NewFindBugs()
+	if _, ok := this.file.Results[fb.GetName()]; ok {
+		return nil
+	}
+	res, err := fb.Run(this.file.Id, this.target)
+	util.Log("Findbugs result", res)
+	if err != nil {
+		return err
+	}
 	err = AddResult(res)
 	if err != nil {
-		return false, err
+		return err
 	}
-	return true, nil
+	j := jpf.NewJPF(this.proc.jpfPath)
+	if _, ok := this.file.Results[j.GetName()]; ok{
+		return nil
+	}
+	res, err = j.Run(this.file.Id, this.target)
+	util.Log("JPF result", res)
+	if err != nil {
+		return err
+	}
+	return AddResult(res)
 }
 
 //AddResult adds a tool result to the db.
@@ -257,35 +298,4 @@ func AddResult(res *tool.Result) error {
 		return err
 	}
 	return db.AddResult(res)
-}
-
-//RunTools runs all available tools on a file, skipping previously run tools.
-func RunTools(f *project.File, ti *tool.TargetInfo) error {
-	fb := findbugs.NewFindBugs()
-	if _, ok := f.Results[fb.GetName()]; ok {
-		return nil
-	}
-	res, err := fb.Run(f.Id, ti)
-	util.Log("Tool result", res)
-	if err != nil {
-		return err
-	}
-	err = AddResult(res)
-	if err != nil {
-		return err
-	}
-	j := jpf.NewJPF()
-	if _, ok := f.Results[j.GetName()]; ok{
-		return nil
-	}
-	res, err = j.Run(f.Id, ti)
-	util.Log("JPF result", res)
-	if err != nil {
-		return err
-	}
-	err = AddResult(res)
-	if err != nil {
-		return err
-	}
-	return nil
 }

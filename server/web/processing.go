@@ -127,10 +127,7 @@ func doJPF(req *http.Request, ctx *context.Context) (string, error) {
 	if err != nil {
 		return err.Error(), err
 	}
-	jpf := project.NewJPF(projectId, jpfHeader.Filename, username, jpfBytes)
-	if jpf.IsJava{
-		jpf.Package = util.GetPackage(bytes.NewReader(jpf.Data))
-	}
+	jpf := project.NewJPFFile(projectId, jpfHeader.Filename, username, jpfBytes)
 	err = db.AddJPF(jpf)
 	if err != nil {
 		return fmt.Sprintf("Unable to add jpf config file %q.", jpf.Name), err

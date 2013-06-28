@@ -3,7 +3,6 @@ package project
 import (
 	"labix.org/v2/mgo/bson"
 	"reflect"
-	"strings"
 )
 
 type JPFFile struct {
@@ -14,7 +13,7 @@ type JPFFile struct {
 	Data      []byte        "data"
 }
 
-func (this *JPFFile) Equals(that *JPF) bool {
+func (this *JPFFile) Equals(that *JPFFile) bool {
 	return reflect.DeepEqual(this, that)
 }
 

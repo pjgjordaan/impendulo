@@ -22,15 +22,15 @@ func (this *Lint4j) GetName() string {
 	return tool.LINT4J
 }
 
-func (this *Lint4j) GetArgs(target string) []string {
+func (this *Lint4j) args(target string) []string {
 	return []string{this.cmd, "-textui", "-low", target}
 }
 
 func (this *Lint4j) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (*tool.Result, error) {
 	target := ti.GetTarget(tool.PKG_PATH)
-	args := this.GetArgs(target)
-	stderr, stdout, ok, err := tool.RunCommand(args...)
-	if !ok {
+	args := this.args(target)
+	stderr, stdout, err := tool.RunCommand(args...)
+	if err != nil {
 		return nil, err
 	}
 	return tool.NewResult(fileId, this, stdout, stderr, err), nil

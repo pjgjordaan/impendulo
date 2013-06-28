@@ -24,15 +24,15 @@ func (this *Javac) GetName() string {
 	return tool.JAVAC
 }
 
-func (this *Javac) GetArgs(target string) []string {
+func (this *Javac) args(target string) []string {
 	return []string{this.cmd, "-cp", this.cp, "-implicit:class", target}
 }
 
 func (this *Javac) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (*tool.Result, error) {
 	target := ti.GetTarget(tool.FILE_PATH)
-	args := this.GetArgs(target)
-	stderr, stdout, ok, err := tool.RunCommand(args...)
-	if !ok {
+	args := this.args(target)
+	stderr, stdout, err := tool.RunCommand(args...)
+	if err != nil {
 		return nil, err
 	}
 	if stderr != nil && len(stderr) > 0 {

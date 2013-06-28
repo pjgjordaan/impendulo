@@ -84,6 +84,18 @@ func GetTests(matcher, selector interface{}) ([]*project.Test, error) {
 	return ret, nil
 }
 
+func GetJPF(matcher, selector interface{}) (*project.JPFFile, error) {
+	session := getSession()
+	defer session.Close()
+	c := session.DB("").C(JPF)
+	var ret *project.JPFFile
+	err := c.Find(matcher).Select(selector).One(&ret)
+	if err != nil {
+		return nil, fmt.Errorf("Encountered error %q when retrieving jpf config matching %q from db", err, matcher)
+	}
+	return ret, nil
+}
+
 //GetTest retrieves a test matching the given interface from the active database.
 func GetProject(matcher, selector interface{}) (*project.Project, error) {
 	session := getSession()
@@ -139,7 +151,7 @@ func AddTest(t *project.Test) error {
 	return nil
 }
 
-func AddJPF(jpf *project.JPF) error {
+func AddJPF(jpf *project.JPFFile) error {
 	session := getSession()
 	defer session.Close()
 	col := session.DB("").C(JPF)
