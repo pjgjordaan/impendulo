@@ -21,6 +21,7 @@ func init() {
 	router.Add("POST", "/logout", handler(logout))
 	router.Add("POST", "/addproject", handler(addProject))
 	router.Add("POST", "/addtest", handler(addTest))
+	router.Add("POST", "/addjpf", handler(addJPF))
 	router.Add("POST", "/submitarchive", handler(submitArchive))
 	router.Add("GET", "/projectview", handler(projectView)).Name("projectview")
 	router.Add("GET", "/testview", handler(testView)).Name("testview")

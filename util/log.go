@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"sync"
 	"time"
+	"fmt"
 )
 
 var errLogger, infoLogger *SyncLogger
@@ -54,6 +55,7 @@ func NewLogger(fname string) (*SyncLogger, error) {
 
 //Log sends data to be logged to the appropriate logger.
 func Log(v ...interface{}) {
+	fmt.Println(v)
 	if len(v) > 0 {
 		if _, ok := v[0].(error); ok {
 			errLogger.Log(v)

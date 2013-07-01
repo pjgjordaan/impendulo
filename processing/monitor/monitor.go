@@ -43,7 +43,8 @@ func Listen() {
 			active[id] = true
 		case id := <-done:
 			delete(active, id)
-		case <-quit:
+		case sig := <-quit:
+			util.Log(sig)
 			err := saveActive(active)
 			if err != nil {
 				util.Log(err)

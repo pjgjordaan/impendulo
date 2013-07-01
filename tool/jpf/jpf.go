@@ -10,6 +10,7 @@ import (
 
 type JPF struct {
 	java         string
+	javac string
 	compCP          string
 	execCP string
 	jpfPath  string
@@ -17,8 +18,8 @@ type JPF struct {
 
 func NewJPF(jpfPath  string) *JPF {
 	compCP := config.GetConfig(config.JPF_JAR)+":"+config.GetConfig(config.GSON_JAR)
-	execCP := config.GetConfig(config.RUNJPF_JAR)+":"+config.GetConfig(config.GSON_JAR)
-	return &JPF{config.GetConfig(config.JAVA), compCP, execCP, jpfPath}
+	execCP := config.GetConfig(config.JPF_JAR)+":"+config.GetConfig(config.RUNJPF_JAR)+":"+config.GetConfig(config.GSON_JAR)
+	return &JPF{config.GetConfig(config.JAVA), config.GetConfig(config.JAVAC), compCP, execCP, jpfPath}
 }
 
 func (this *JPF) GetLang() string {
@@ -30,12 +31,13 @@ func (this *JPF) GetName() string {
 }
 
 func (this *JPF) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (*tool.Result, error) {
+	fmt.Println(ti)
 	err := util.Copy(ti.Dir, config.GetConfig(config.RUNNER_DIR))
 	if err != nil {
 		return nil, err
 	}
 	jpfInfo := tool.NewTarget("JPFRunner.java", "java", "runner", ti.Dir)
-	compileArgs := []string{this.java, "-cp", jpfInfo.Dir+":"+this.compCP, jpfInfo.FilePath()}
+	compileArgs := []string{this.javac, "-cp", jpfInfo.Dir+":"+this.compCP, jpfInfo.FilePath()}
 	stderr, stdout, err := tool.RunCommand(compileArgs...)
 	if err != nil {
 		return nil, err

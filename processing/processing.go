@@ -6,25 +6,31 @@ import (
 	"github.com/godfried/impendulo/processing/monitor"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/tool/findbugs"
+//	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/tool/java"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"os"
 	"path/filepath"
+	"container/list"
 )
 
-var fileChan chan *project.File
+var fileChan chan *FileId
 var subChan chan *project.Submission
 
 func init() {
-	fileChan = make(chan *project.File)
+	fileChan = make(chan *FileId)
 	subChan = make(chan *project.Submission)
 }
 
+type FileId struct{
+	id bson.ObjectId
+	subid bson.ObjectId
+}
+
 func AddFile(file *project.File) {
-	fileChan <- file
+	fileChan <- &FileId{file.Id, file.SubId}
 }
 
 func StartSubmission(sub *project.Submission) {
@@ -32,6 +38,7 @@ func StartSubmission(sub *project.Submission) {
 }
 
 func EndSubmission(sub *project.Submission) {
+	fmt.Println("ending")
 	subChan <- sub
 }
 
@@ -49,7 +56,7 @@ func Serve() {
 			}
 		}
 	}()
-	subs := make(map[bson.ObjectId]chan *project.File)
+	subs := make(map[bson.ObjectId]chan bson.ObjectId)
 	for {
 		select {
 		case sub := <-subChan:
@@ -57,15 +64,15 @@ func Serve() {
 				close(ch)
 				delete(subs, sub.Id)
 			} else {
-				subs[sub.Id] = make(chan *project.File)
+				subs[sub.Id] = make(chan bson.ObjectId)
 				proc := NewProcessor(sub, subs[sub.Id])
 				go proc.Process()
 			}
-		case file := <-fileChan:
-			if ch, ok := subs[file.SubId]; ok {
-				ch <- file
+		case fileIds := <-fileChan:
+			if ch, ok := subs[fileIds.subid]; ok {
+				ch <- fileIds.id
 			} else {
-				util.Log(fmt.Errorf("No channel found for submission: %q", file.SubId))
+				util.Log(fmt.Errorf("No channel found for submission: %q", fileIds.subid))
 			}
 		}
 	}
@@ -87,12 +94,13 @@ func ProcessStored(subId bson.ObjectId) {
 	StartSubmission(sub)
 	count := 0
 	for count < total {
-		matcher := bson.M{project.SUBID: subId, project.INFO + "." + project.NUM: count}
-		file, err := db.GetFile(matcher, nil)
+		matcher := bson.M{project.SUBID: subId, project.NUM: count}
+		file, err := db.GetFile(matcher, bson.M{project.ID:1})
 		if err != nil {
 			util.Log(err)
 			return
 		}
+		file.SubId = sub.Id
 		AddFile(file)
 		count++
 	}
@@ -101,16 +109,16 @@ func ProcessStored(subId bson.ObjectId) {
 
 type Processor struct{
 	sub *project.Submission
-	recv chan *project.File
+	recv chan bson.ObjectId
 	tests []*TestRunner
 	dir string
 	jpfPath string
 }
 
-func NewProcessor(sub *project.Submission, recv chan *project.File) *Processor{
+func NewProcessor(sub *project.Submission, recv chan bson.ObjectId) *Processor{
 	return &Processor{sub: sub, recv: recv, dir : filepath.Join(os.TempDir(), sub.Id.Hex())}
 }
-
+var gr = 0
 //ProcessSubmission processes a new submission.
 //It listens for incoming files on fileChan and processes them.
 func (this *Processor) Process() {
@@ -121,20 +129,36 @@ func (this *Processor) Process() {
 	if err != nil{
 		util.Log(err)
 	}
-	for {
-		file, ok := <- this.recv
-		if !ok {
-			break
-		}
-		err := this.ProcessFile(file)
-		if err != nil {
-			util.Log(err)
-			return
-		}
+	var fId bson.ObjectId
+	files := list.New()
+	receiving, busy := true, false
+	errChan := make(chan error)
+	for receiving || busy{
+		select{
+		case fId, receiving = <- this.recv:
+			if receiving{
+				files.PushBack(fId)
+				if !busy{
+					go func(){errChan <- nil}()
+				}
+			}
+		case err := <- errChan:
+			busy = false
+			if err != nil {
+				util.Log(err)
+			}
+			if e := files.Front(); e != nil{
+				busy = true
+				fId := files.Remove(e).(bson.ObjectId)
+				go this.goFile(fId, errChan)						
+			} 
+		} 
 	}
 	util.Log("Processed submission", this.sub)
 	monitor.Done(this.sub.Id)
 }
+
+
 
 func (this *Processor) Setup() error{
 	var err error
@@ -150,24 +174,33 @@ func (this *Processor) Setup() error{
 	return util.SaveFile(this.jpfPath, jpfFile.Data) 
 }
 
+func (this *Processor) goFile(fId bson.ObjectId, errChan chan error){
+	file, err := db.GetFile(bson.M{project.ID:fId}, nil)
+	if err == nil {
+		err = this.ProcessFile(file)
+	} 
+	errChan <- err
+}
+
+
 //ProcessFile processes a file according to its type.
-func (this *Processor) ProcessFile(f *project.File) error {
-	util.Log("Processing file", f.Id)
-	switch f.Type{
+func (this *Processor) ProcessFile(file *project.File) error{
+	util.Log("Processing file", file.Id)
+	switch file.Type{
 	case project.ARCHIVE:
-		err := this.extract(f)
+		err := this.extract(file)
 		if err != nil {
 			return err
 		}
-		db.RemoveFileByID(f.Id)
+		db.RemoveFileByID(file.Id)
 	case project.SRC, project.EXEC:
-		analyser := &Analyser{proc: this, file: f}
+		analyser := &Analyser{proc: this, file: file}
 		err := analyser.Eval()
 		if err != nil {
 			return err
 		}
 	}
-	util.Log("Processed file", f.Id)
+	util.Log("Processed file", file.Id)
 	return nil
 }
 
@@ -263,24 +296,24 @@ func (this *Analyser) compile() error {
 
 //RunTools runs all available tools on a file, skipping previously run tools.
 func (this *Analyser) RunTools() error {
-	fb := findbugs.NewFindBugs()
+	/*fb := findbugs.NewFindBugs()
 	if _, ok := this.file.Results[fb.GetName()]; ok {
 		return nil
 	}
-	res, err := fb.Run(this.file.Id, this.target)
+	res, _ := fb.Run(this.file.Id, this.target)
 	util.Log("Findbugs result", res)
 	if err != nil {
 		return err
 	}
-	err = AddResult(res)
+	err := AddResult(res)
 	if err != nil {
 		return err
-	}
+	}*/
 	j := jpf.NewJPF(this.proc.jpfPath)
 	if _, ok := this.file.Results[j.GetName()]; ok{
 		return nil
 	}
-	res, err = j.Run(this.file.Id, this.target)
+	res, err := j.Run(this.file.Id, this.target)
 	util.Log("JPF result", res)
 	if err != nil {
 		return err

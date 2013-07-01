@@ -29,7 +29,11 @@ func LoadConfigs(fname string) error {
 }
 
 func GetConfig(name string) string {
-	return settings[name]
+	ret, ok := settings[name]
+	if !ok{
+		panic("Config not found: "+name)
+	}
+	return ret
 }
 
 func SetConfig(name, value string) {

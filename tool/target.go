@@ -20,13 +20,17 @@ type TargetInfo struct {
 
 //FilePath
 func (ti *TargetInfo) FilePath() string {
-	return filepath.Join(ti.Dir, ti.Package, ti.FullName())
+	return filepath.Join(ti.PkgPath(), ti.FullName())
 }
 
 //PkgPath
 func (ti *TargetInfo) PkgPath() string {
-	vals := strings.Split(ti.Dir+"."+ti.Package, ".")
-	return filepath.Join(vals...)
+	if ti.Package != ""{
+		vals := strings.Split(ti.Dir+"."+ti.Package, ".")
+		return filepath.Join(vals...)
+	} else{
+		return ti.Dir
+	}
 }
 
 //FullName
@@ -36,7 +40,11 @@ func (ti *TargetInfo) FullName() string {
 
 //Executable retrieves the path to the compiled executable with its package.
 func (ti *TargetInfo) Executable() string {
-	return ti.Package + "." + ti.Name
+	if ti.Package != ""{
+		return ti.Package + "." + ti.Name
+	} else{
+		return ti.Name
+	}
 }
 
 func (this *TargetInfo) Equals(that *TargetInfo) bool {
