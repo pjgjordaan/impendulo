@@ -263,3 +263,16 @@ func retrieveSubmissions(req *http.Request, ctx *context.Context) (subs []*proje
 	msg = err.Error()
 	return
 }
+
+
+func projectName(idStr string) string{
+	if !bson.IsObjectIdHex(idStr) {
+		return ""
+	}
+	id := bson.ObjectIdHex(idStr)
+	proj, err :=  db.GetProject(bson.M{project.ID: id}, bson.M{project.NAME: 1})
+	if err != nil{
+		return ""
+	}
+	return proj.Name
+}

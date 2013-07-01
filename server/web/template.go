@@ -10,6 +10,7 @@ var funcs = template.FuncMap{
 	"reverse": reverse,
 	"genHTML": genHTML,
 	"getResult": getResult,
+	"projectName": projectName,
 }
 
 func genHTML(name string, data []byte) string {

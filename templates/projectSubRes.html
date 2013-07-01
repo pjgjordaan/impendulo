@@ -1,0 +1,20 @@
+{{define "view"}}
+<ul class="breadcrumb">
+  <li><a href="homeview">Home</a><span class="divider">/</span></li>  
+  <li><a href="getprojects">Projects</a><span class="divider"></span></li>
+  <li class="active">Submissions</li>
+</ul>
+<h2>{{projectName .ctx.Browse.Pid}}</h2>
+<table class="table table-hover">
+  <thead><tr class="info">
+      <th>User</th>
+      <th>Created</th>
+  </tr></thead>
+  <tbody data-provides="rowlink" >
+    {{ range .subRes}}
+    <tr class="success"><td><a class="rowlink" href="getfiles?subid={{.Id.Hex}}" >{{.User}}</a></td>
+      <td><a class="rowlink" href="getfiles?subid={{.Id.Hex}}" >{{.Date}}</a></td></tr>
+    {{end}}
+  </tbody>
+</table>
+{{end}}

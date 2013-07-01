@@ -45,7 +45,13 @@ func getSubmissions(w http.ResponseWriter, req *http.Request, ctx *context.Conte
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 		return err
 	}
-	return T(getNav(ctx), "subRes.html").Execute(w, map[string]interface{}{"ctx": ctx, "h": true, "subRes": subs})
+	var temp string
+	if ctx.Browse.IsUser{
+		temp = "userSubRes.html"
+	} else{
+		temp = "projectSubRes.html"
+	}
+	return T(getNav(ctx), temp).Execute(w, map[string]interface{}{"ctx": ctx, "h": true, "subRes": subs})
 }
 
 func getFiles(w http.ResponseWriter, req *http.Request, ctx *context.Context) error {
