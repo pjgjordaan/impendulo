@@ -29,7 +29,7 @@ func (this *Lint4j) args(target string) []string {
 func (this *Lint4j) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (*tool.Result, error) {
 	target := ti.GetTarget(tool.PKG_PATH)
 	args := this.args(target)
-	stderr, stdout, err := tool.RunCommand(args...)
+	stdout, stderr, err := tool.RunCommand(args...)
 	if err != nil {
 		return nil, err
 	}

@@ -39,7 +39,7 @@ public class JPFRunner {
 		System.setOut(new PrintStream(new NullOutputStream()));
 		JsonArray errs = null;
 		try {
-			JPF jpf = new JPF();
+			JPF jpf = new JPF(config);
 			jpf.run();
 			if (jpf.foundErrors()) {
 				errs = new JsonArray();

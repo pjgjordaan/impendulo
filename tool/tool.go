@@ -72,7 +72,7 @@ func (this *GenericTool) Equals(that Tool) bool {
 func (this *GenericTool) Run(fileId bson.ObjectId, ti *TargetInfo) (*Result, error) {
 	target := ti.GetTarget(this.target)
 	args := this.GetArgs(target)
-	stderr, stdout, err := RunCommand(args...)
+	stdout, stderr, err := RunCommand(args...)
 	if err != nil {
 		return nil, err
 	}

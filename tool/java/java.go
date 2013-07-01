@@ -31,7 +31,7 @@ func (this *Javac) args(target string) []string {
 func (this *Javac) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (*tool.Result, error) {
 	target := ti.GetTarget(tool.FILE_PATH)
 	args := this.args(target)
-	stderr, stdout, err := tool.RunCommand(args...)
+	stdout, stderr, err := tool.RunCommand(args...)
 	if err != nil {
 		return nil, err
 	}

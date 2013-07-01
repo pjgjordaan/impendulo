@@ -33,7 +33,7 @@ func (this *JUnit) args(target string) []string {
 func (this *JUnit) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (*tool.Result, error) {
 	target := ti.GetTarget(tool.EXEC_PATH)
 	args := this.args(target)
-	stderr, stdout, err := tool.RunCommand(args...)
+	stdout, stderr, err := tool.RunCommand(args...)
 	if err != nil {
 		return nil, err
 	}
