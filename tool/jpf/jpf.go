@@ -31,25 +31,23 @@ func (this *JPF) GetName() string {
 }
 
 func (this *JPF) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (*tool.Result, error) {
-	err := util.Copy(ti.Dir, config.GetConfig(config.RUNNER_DIR))
+	err := util.Copy(ti.Dir, config.GetConfig(config.IMP_JPF))
 	if err != nil {
 		return nil, err
 	}
 	jpfInfo := tool.NewTarget("JPFRunner.java", "java", "runner", ti.Dir)
 	compileArgs := []string{this.javac, "-cp", jpfInfo.Dir+":"+this.compCP, jpfInfo.FilePath()}
-	stdout, stderr, err := tool.RunCommand(compileArgs...)
+	_, stderr, err := tool.RunCommand(compileArgs...)
 	if err != nil {
 		return nil, err
-	}
-	if stderr != nil && len(stderr) > 0 {
+	} else if stderr != nil && len(stderr) > 0 {
 		return nil, fmt.Errorf("Could not compile jpf runner: %q.", string(stderr))
 	}
 	runArgs := []string{this.java, "-cp", jpfInfo.Dir+":"+this.execCP, jpfInfo.Executable(), this.jpfPath, ti.Executable(), ti.Dir}
-	stdout, stderr, err = tool.RunCommand(runArgs...)	
+	stdout, stderr, err := tool.RunCommand(runArgs...)	
 	if err != nil {
 		return nil, err
-	}
-	if stderr != nil && len(stderr) > 0 {
+	} else if stderr != nil && len(stderr) > 0 {
 		return nil, fmt.Errorf("Could not execute jpf runner: %q.", string(stderr))
 	}
 	return tool.NewResult(fileId, this, stdout), nil

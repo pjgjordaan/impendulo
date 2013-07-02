@@ -1,0 +1,26 @@
+{{ define "view" }}
+<form class="form-horizontal" action="createjpf" method="post" enctype="multipart/form-data">
+  <div class="control-group">
+    <label class="control-label" for="name">JPF Configuration Name</label>
+    <div class="controls">
+      <input name="name" type="text" id="name">
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label" for="available">Listeners</label>
+    <div class="controls">
+      <select name="available" id="available" multiple="multiple">
+	{{ range .ctx.Listeners}}
+	<option value={{.Name}} onclick="movevalue('available', 'added', this)">{{.Name}}</option>
+	{{end}}
+      </select>
+      <select name="added" id="added" multiple="multiple"></select>
+    </div>
+  </div>
+  <div class="control-group">
+    <div class="controls">
+      <button type="submit" class="btn btn-inverse">Create</button>
+    </div>
+  </div>
+</form>
+{{ end }}

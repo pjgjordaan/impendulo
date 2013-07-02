@@ -7,4 +7,5 @@ lint4j = /home/godfried/apps/lint4j-0.9.1/bin/lint4j
 jpf_jar = /home/godfried/dev/java/jpf/jpf-core/build/jpf.jar
 runjpf_jar = /home/godfried/dev/java/jpf/jpf-core/build/RunJPF.jar
 gson_jar = /home/godfried/dev/go/src/github.com/godfried/impendulo/tool/jpf/lib/gson-2.2.4.jar
-runner_dir = /home/godfried/dev/go/src/github.com/godfried/impendulo/tool/jpf/src
+jpf_home = /home/godfried/dev/java/jpf/jpf-core
+imp_jpf = /home/godfried/dev/go/src/github.com/godfried/impendulo/tool/jpf/src

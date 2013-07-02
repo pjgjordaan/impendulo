@@ -3,6 +3,7 @@ package context
 import (
 	"code.google.com/p/gorilla/sessions"
 	"fmt"
+	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/user"
@@ -19,6 +20,7 @@ type Context struct {
 	Session  *sessions.Session
 	projects []*project.Project
 	users    []*user.User
+	listeners []*jpf.Listener
 	Browse *BrowseData
 }
 
@@ -92,6 +94,14 @@ func (ctx *Context) Users() ([]*user.User, error) {
 		ctx.users, err = db.GetUsers(nil)
 	}
 	return ctx.users, err
+}
+
+func (ctx *Context) Listeners() ([]*jpf.Listener, error) {
+	var err error
+	if ctx.listeners == nil {
+		ctx.listeners, err = jpf.Listeners()
+	}
+	return ctx.listeners, err
 }
 
 func NewContext(sess *sessions.Session) *Context {

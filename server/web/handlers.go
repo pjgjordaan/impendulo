@@ -18,8 +18,12 @@ func testView(w http.ResponseWriter, req *http.Request, ctx *context.Context) (e
 	return T(getNav(ctx), "testView.html").Execute(w, map[string]interface{}{"ctx": ctx, "s": true})
 }
  
-func jpfView(w http.ResponseWriter, req *http.Request, ctx *context.Context) (err error) {
-	return T(getNav(ctx), "jpfView.html").Execute(w, map[string]interface{}{"ctx": ctx, "s": true})
+func jpfFileView(w http.ResponseWriter, req *http.Request, ctx *context.Context) (err error) {
+	return T(getNav(ctx), "jpfFileView.html").Execute(w, map[string]interface{}{"ctx": ctx, "s": true})
+}
+
+func jpfConfigView(w http.ResponseWriter, req *http.Request, ctx *context.Context) (err error) {
+	return T(getNav(ctx), "jpfConfigView.html").Execute(w, map[string]interface{}{"ctx": ctx, "s": true})
 }
 
 func archiveView(w http.ResponseWriter, req *http.Request, ctx *context.Context) (err error) {

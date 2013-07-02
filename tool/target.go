@@ -26,8 +26,8 @@ func (ti *TargetInfo) FilePath() string {
 //PkgPath
 func (ti *TargetInfo) PkgPath() string {
 	if ti.Package != ""{
-		vals := strings.Split(ti.Dir+"."+ti.Package, ".")
-		return filepath.Join(vals...)
+		vals := strings.Split(ti.Package, ".")
+		return filepath.Join(ti.Dir, filepath.Join(vals...))
 	} else{
 		return ti.Dir
 	}
