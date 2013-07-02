@@ -229,8 +229,8 @@ func buildResults(req *http.Request) (*DisplayResult, string, error) {
 	return res, "Successfully retrieved results.", nil
 }
 
-func getResult(id interface{})(*tool.Result, error){
-	return db.GetResult(bson.M{project.ID: id}, nil)	
+func getResult(id interface{}) (*tool.Result, error) {
+	return db.GetResult(bson.M{project.ID: id}, nil)
 }
 
 func retrieveSubmissions(req *http.Request, ctx *context.Context) (subs []*project.Submission, msg string, err error) {
@@ -264,14 +264,13 @@ func retrieveSubmissions(req *http.Request, ctx *context.Context) (subs []*proje
 	return
 }
 
-
-func projectName(idStr string) string{
+func projectName(idStr string) string {
 	if !bson.IsObjectIdHex(idStr) {
 		return ""
 	}
 	id := bson.ObjectIdHex(idStr)
-	proj, err :=  db.GetProject(bson.M{project.ID: id}, bson.M{project.NAME: 1})
-	if err != nil{
+	proj, err := db.GetProject(bson.M{project.ID: id}, bson.M{project.NAME: 1})
+	if err != nil {
 		return ""
 	}
 	return proj.Name

@@ -2,45 +2,44 @@ package context
 
 import (
 	"code.google.com/p/gorilla/sessions"
-	"fmt"
-	"github.com/godfried/impendulo/tool/jpf"
-	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/user"
-	"github.com/godfried/impendulo/httpbuf"
-	"net/http"
 	"encoding/gob"
+	"fmt"
+	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/httpbuf"
+	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/tool/jpf"
+	"github.com/godfried/impendulo/user"
+	"net/http"
 )
 
-func init(){
+func init() {
 	gob.Register(new(BrowseData))
 }
 
 type Context struct {
-	Session  *sessions.Session
-	projects []*project.Project
-	users    []*user.User
+	Session   *sessions.Session
+	projects  []*project.Project
+	users     []*user.User
 	listeners []*jpf.Listener
-	Browse *BrowseData
+	Browse    *BrowseData
 }
 
-type BrowseData struct{
+type BrowseData struct {
 	IsUser bool
-	Uid string
-	Pid string
-	Sid string
+	Uid    string
+	Pid    string
+	Sid    string
 }
 
 func (ctx *Context) Close() {
 	ctx.save()
 }
 
-func (ctx *Context) save(){
+func (ctx *Context) save() {
 	ctx.Session.Values["browse"] = ctx.Browse
 }
 
-
-func (ctx *Context) Save(req *http.Request, buff *httpbuf.Buffer)(error){
+func (ctx *Context) Save(req *http.Request, buff *httpbuf.Buffer) error {
 	ctx.save()
 	return ctx.Session.Save(req, buff)
 }
@@ -106,9 +105,9 @@ func (ctx *Context) Listeners() ([]*jpf.Listener, error) {
 
 func NewContext(sess *sessions.Session) *Context {
 	ctx := &Context{Session: sess}
-	if val, ok := ctx.Session.Values["browse"]; ok{
+	if val, ok := ctx.Session.Values["browse"]; ok {
 		ctx.Browse = val.(*BrowseData)
-	} else{
+	} else {
 		ctx.Browse = new(BrowseData)
 	}
 	return ctx

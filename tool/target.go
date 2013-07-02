@@ -25,10 +25,10 @@ func (ti *TargetInfo) FilePath() string {
 
 //PkgPath
 func (ti *TargetInfo) PkgPath() string {
-	if ti.Package != ""{
+	if ti.Package != "" {
 		vals := strings.Split(ti.Package, ".")
 		return filepath.Join(ti.Dir, filepath.Join(vals...))
-	} else{
+	} else {
 		return ti.Dir
 	}
 }
@@ -40,9 +40,9 @@ func (ti *TargetInfo) FullName() string {
 
 //Executable retrieves the path to the compiled executable with its package.
 func (ti *TargetInfo) Executable() string {
-	if ti.Package != ""{
+	if ti.Package != "" {
 		return ti.Package + "." + ti.Name
-	} else{
+	} else {
 		return ti.Name
 	}
 }

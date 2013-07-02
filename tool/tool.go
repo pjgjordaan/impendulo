@@ -13,7 +13,7 @@ const (
 	JAVAC    = "javac"
 	FINDBUGS = "findbugs"
 	LINT4J   = "lint4j"
-	JPF   = "jpf"
+	JPF      = "jpf"
 )
 
 type Tool interface {
@@ -100,7 +100,7 @@ func RunCommand(args ...string) ([]byte, []byte, error) {
 		return nil, nil, fmt.Errorf("Encountered error %q executing command %q", err, args)
 	}
 	err = cmd.Wait()
-	if err != nil{
+	if err != nil {
 		return nil, nil, fmt.Errorf("Encountered error %q executing command %q", err, args)
 	}
 	return stdout.Bytes(), stderr.Bytes(), nil

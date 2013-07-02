@@ -7,9 +7,9 @@ import (
 )
 
 var funcs = template.FuncMap{
-	"reverse": reverse,
-	"genHTML": genHTML,
-	"getResult": getResult,
+	"reverse":     reverse,
+	"genHTML":     genHTML,
+	"getResult":   getResult,
 	"projectName": projectName,
 }
 

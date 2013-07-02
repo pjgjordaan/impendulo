@@ -30,8 +30,8 @@ func LoadConfigs(fname string) error {
 
 func GetConfig(name string) string {
 	ret, ok := settings[name]
-	if !ok{
-		panic("Config not found: "+name)
+	if !ok {
+		panic("Config not found: " + name)
 	}
 	return ret
 }
@@ -47,9 +47,9 @@ const (
 	JUNIT_JAR  = "junit_jar"
 	JAVAC      = "javac"
 	JAVA       = "java"
-	JPF_JAR = "jpf_jar"
+	JPF_JAR    = "jpf_jar"
 	RUNJPF_JAR = "runjpf_jar"
-	GSON_JAR = "gson_jar"
-	IMP_JPF = "imp_jpf"
-	JPF_HOME = "jpf_home"
+	GSON_JAR   = "gson_jar"
+	IMP_JPF    = "imp_jpf"
+	JPF_HOME   = "jpf_home"
 )

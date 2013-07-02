@@ -167,7 +167,6 @@ func AddJPF(jpf *project.JPFFile) error {
 	return nil
 }
 
-
 //AddSubmission adds a new submission to the active database.
 func AddSubmission(s *project.Submission) error {
 	session := getSession()

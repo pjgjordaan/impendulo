@@ -32,7 +32,7 @@ const (
 	ZIP          = "zip"
 	BIN_DIR      = "bin"
 	SRC_DIR      = "src"
-	JAVA = "java"
-	CLASS = "class"
-	EMPTY = "empty"
+	JAVA         = "java"
+	CLASS        = "class"
+	EMPTY        = "empty"
 )

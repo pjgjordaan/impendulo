@@ -1,13 +1,13 @@
 package util
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
-	"fmt"
 )
 
 var errLogger, infoLogger *SyncLogger

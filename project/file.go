@@ -10,62 +10,62 @@ import (
 
 //File stores a single file's data from a submission.
 type File struct {
-	Id      bson.ObjectId "_id"
-	SubId   bson.ObjectId "subid"
-	Name string "name"
-	Package string "package"
-	Type string "type"
-	FileType string "ftype"
-	Mod string "mod"
-	Num int "num"
-	Time int64 "time"
-	Data    []byte        "data"
-	Results bson.M        "results"
+	Id       bson.ObjectId "_id"
+	SubId    bson.ObjectId "subid"
+	Name     string        "name"
+	Package  string        "package"
+	Type     string        "type"
+	FileType string        "ftype"
+	Mod      string        "mod"
+	Num      int           "num"
+	Time     int64         "time"
+	Data     []byte        "data"
+	Results  bson.M        "results"
 }
 
 //NewFile
 func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) (*File, error) {
 	id := bson.NewObjectId()
 	file := &File{Id: id, SubId: subId, Data: data}
-	if v, ok := info[NAME]; ok{
+	if v, ok := info[NAME]; ok {
 		file.Name, ok = v.(string)
 		if !ok {
 			return nil, fmt.Errorf("%q could not be parsed as a string.", v)
 		}
 	}
-	if v, ok := info[PKG]; ok{
+	if v, ok := info[PKG]; ok {
 		file.Package, ok = v.(string)
 		if !ok {
 			return nil, fmt.Errorf("%q could not be parsed as a string.", v)
 		}
 	}
-	if v, ok := info[TYPE]; ok{
+	if v, ok := info[TYPE]; ok {
 		file.Type, ok = v.(string)
 		if !ok {
 			return nil, fmt.Errorf("%q could not be parsed as a string.", v)
 		}
 	}
-	if v, ok := info[FTYPE]; ok{
+	if v, ok := info[FTYPE]; ok {
 		file.FileType, ok = v.(string)
 		if !ok {
 			return nil, fmt.Errorf("%q could not be parsed as a string.", v)
 		}
 	}
-	if v, ok := info[MOD]; ok{
+	if v, ok := info[MOD]; ok {
 		mod, ok := v.(string)
 		if !ok {
 			return nil, fmt.Errorf("%q could not be parsed as a string.", v)
 		}
 		file.SetMod(mod)
 	}
-	if v, ok := info[NUM]; ok{
+	if v, ok := info[NUM]; ok {
 		n, ok := v.(float64)
 		if !ok {
 			return nil, fmt.Errorf("%q could not be parsed as an int.", v)
 		}
 		file.Num = int(n)
 	}
-	if v, ok := info[TIME]; ok{
+	if v, ok := info[TIME]; ok {
 		t, ok := v.(float64)
 		if !ok {
 			return nil, fmt.Errorf("%q could not be parsed as an int64.", v)
@@ -76,11 +76,10 @@ func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) (*Fi
 }
 
 //NewFile
-func NewArchive(subId bson.ObjectId, data []byte, ftype string) *File{
+func NewArchive(subId bson.ObjectId, data []byte, ftype string) *File {
 	id := bson.NewObjectId()
 	return &File{Id: id, SubId: subId, Data: data, FileType: ftype, Type: ARCHIVE}
 }
-
 
 func (this *File) SetMod(mod string) {
 	switch mod {

@@ -13,11 +13,11 @@ func projectView(w http.ResponseWriter, req *http.Request, ctx *context.Context)
 	langs := []string{"Java"}
 	return T(getNav(ctx), "projectView.html").Execute(w, map[string]interface{}{"ctx": ctx, "s": true, "langs": langs})
 }
- 
+
 func testView(w http.ResponseWriter, req *http.Request, ctx *context.Context) (err error) {
 	return T(getNav(ctx), "testView.html").Execute(w, map[string]interface{}{"ctx": ctx, "s": true})
 }
- 
+
 func jpfFileView(w http.ResponseWriter, req *http.Request, ctx *context.Context) (err error) {
 	return T(getNav(ctx), "jpfFileView.html").Execute(w, map[string]interface{}{"ctx": ctx, "s": true})
 }
@@ -50,9 +50,9 @@ func getSubmissions(w http.ResponseWriter, req *http.Request, ctx *context.Conte
 		return err
 	}
 	var temp string
-	if ctx.Browse.IsUser{
+	if ctx.Browse.IsUser {
 		temp = "userSubRes.html"
-	} else{
+	} else {
 		temp = "projectSubRes.html"
 	}
 	return T(getNav(ctx), temp).Execute(w, map[string]interface{}{"ctx": ctx, "h": true, "subRes": subs})

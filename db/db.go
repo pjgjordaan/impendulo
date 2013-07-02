@@ -12,7 +12,7 @@ const (
 	RESULTS      = "results"
 	TESTS        = "tests"
 	PROJECTS     = "projects"
-	JPF     = "jpf"
+	JPF          = "jpf"
 	SET          = "$set"
 	DEFAULT_CONN = "mongodb://localhost/impendulo"
 	TEST_CONN    = "mongodb://localhost/impendulo_test"
