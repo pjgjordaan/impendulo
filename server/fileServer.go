@@ -91,11 +91,11 @@ func (this *SubmissionHandler) Login() error {
 	if !util.Validate(u.Password, u.Salt, pword) {
 		return fmt.Errorf("User %q attempted to login with an invalid username or password", this.Submission.User)
 	}
-	_, err = this.Conn.Write([]byte(OK))
+	projects, err := db.GetProjects(bson.M{}, nil)
 	if err != nil {
 		return err
 	}
-	return nil
+	return util.WriteJson(this.Conn, projects)
 }
 
 func (this *SubmissionHandler) LoadInfo() error {
@@ -106,27 +106,16 @@ func (this *SubmissionHandler) LoadInfo() error {
 	req, err := util.GetString(reqInfo, REQ)
 	if err != nil {
 		return err
-	} else if req != PROJECTS {
-		return fmt.Errorf("Invalid request %q, expected %q", req, PROJECTS)
+	} else if req == SUBMISSION_NEW {
+		return this.createSubmission(reqInfo)
+	}else if  req == SUBMISSION_CONTINUE {
+		return this.continueSubmission(reqInfo)
+	}else{ 
+		return fmt.Errorf("Invalid request %q", req)
 	}
-	projects, err := db.GetProjects(bson.M{}, nil)
-	if err != nil {
-		return err
-	}
-	err = util.WriteJson(this.Conn, projects)
-	if err != nil {
-		return err
-	}
-	subInfo, err := util.ReadJSON(this.Conn)
-	if err != nil {
-		return err
-	}
-	req, err = util.GetString(subInfo, REQ)
-	if err != nil {
-		return err
-	} else if req != SUBMISSION {
-		return fmt.Errorf("Invalid request %q, expected %q", req, SUBMISSION)
-	}
+}
+
+func (this *SubmissionHandler) createSubmission(subInfo map[string]interface{}) error{
 	idStr, err := util.GetString(subInfo, project.PROJECT_ID)
 	if err != nil {
 		return err
@@ -138,9 +127,24 @@ func (this *SubmissionHandler) LoadInfo() error {
 	if err != nil {
 		return err
 	}
+	return util.WriteJson(this.Conn, this.Submission)
+}
+
+func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{}) error{
+	idStr, err := util.GetString(subInfo, project.SUBID)
+	if err != nil {
+		return err
+	} else if !bson.IsObjectIdHex(idStr) {
+		return fmt.Errorf("Invalid id hex %q", idStr)
+	}
+	this.Submission, err = db.GetSubmission(bson.M{project.ID: bson.ObjectIdHex(idStr)}, nil)
+	if err != nil {
+		return err
+	}
 	_, err = this.Conn.Write([]byte(OK))
 	return err
 }
+
 
 //Read reads Files from the connection and sends them for processing.
 func (this *SubmissionHandler) Read() error {

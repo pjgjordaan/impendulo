@@ -13,7 +13,8 @@ const (
 	LOGOUT     = "end"
 	REQ        = "req"
 	PROJECTS   = "projects"
-	SUBMISSION = "submission"
+	SUBMISSION_NEW = "submission_new"
+	SUBMISSION_CONTINUE = "submission_continue"
 )
 
 //Run is used to listen for new tcp connections and spawn a new goroutine for each connection.
