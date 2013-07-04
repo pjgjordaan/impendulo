@@ -77,7 +77,7 @@ func (this *BasicHandler) Handle() error {
 }
 
 func (this *BasicHandler) Login() error {
-	_, err := util.ReadJSON(this.Conn)
+	_, err := util.ReadJson(this.Conn)
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func (this *BasicHandler) Login() error {
 }
 
 func (this *BasicHandler) LoadInfo() error {
-	_, err := util.ReadJSON(this.Conn)
+	_, err := util.ReadJson(this.Conn)
 	if err != nil {
 		return err
 	}

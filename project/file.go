@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"github.com/godfried/impendulo/util"
 )
 
 //File stores a single file's data from a submission.
@@ -24,55 +25,36 @@ type File struct {
 }
 
 //NewFile
-func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) (*File, error) {
+func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) (file *File, err error) {
 	id := bson.NewObjectId()
-	file := &File{Id: id, SubId: subId, Data: data}
-	if v, ok := info[NAME]; ok {
-		file.Name, ok = v.(string)
-		if !ok {
-			return nil, fmt.Errorf("%q could not be parsed as a string.", v)
-		}
+	file = &File{Id: id, SubId: subId, Data: data}
+	file.Name, err = util.GetString(info, NAME)
+	if err != nil{
+		return
 	}
-	if v, ok := info[PKG]; ok {
-		file.Package, ok = v.(string)
-		if !ok {
-			return nil, fmt.Errorf("%q could not be parsed as a string.", v)
-		}
+	file.Package, err = util.GetString(info, PKG)
+	if err != nil{
+		return
 	}
-	if v, ok := info[TYPE]; ok {
-		file.Type, ok = v.(string)
-		if !ok {
-			return nil, fmt.Errorf("%q could not be parsed as a string.", v)
-		}
+	file.Type, err = util.GetString(info, TYPE)
+	if err != nil{
+		return
 	}
-	if v, ok := info[FTYPE]; ok {
-		file.FileType, ok = v.(string)
-		if !ok {
-			return nil, fmt.Errorf("%q could not be parsed as a string.", v)
-		}
+	file.FileType, err = util.GetString(info, FTYPE)
+	if err != nil{
+		return
 	}
-	if v, ok := info[MOD]; ok {
-		mod, ok := v.(string)
-		if !ok {
-			return nil, fmt.Errorf("%q could not be parsed as a string.", v)
-		}
-		file.SetMod(mod)
+	mod, err := util.GetString(info, MOD)
+	if err != nil{
+		return
 	}
-	if v, ok := info[NUM]; ok {
-		n, ok := v.(float64)
-		if !ok {
-			return nil, fmt.Errorf("%q could not be parsed as an int.", v)
-		}
-		file.Num = int(n)
+	file.SetMod(mod)
+	file.Num, err = util.GetInt(info, NUM)
+	if err != nil{
+		return
 	}
-	if v, ok := info[TIME]; ok {
-		t, ok := v.(float64)
-		if !ok {
-			return nil, fmt.Errorf("%q could not be parsed as an int64.", v)
-		}
-		file.Time = int64(t)
-	}
-	return file, nil
+	file.Time, err = util.GetInt64(info, TIME)
+	return
 }
 
 //NewFile

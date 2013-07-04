@@ -13,18 +13,16 @@
 <table class="table table-hover">
   <thead><tr class="info">
       <th>Name</th>
-      <th>Package</th>
-      <th>Type</th>
       <th>Number</th>
       <th>Change</th>
+      <th>Created</th>
   </tr></thead>
   <tbody data-provides="rowlink" >
     {{ range .fileRes}}
     <tr class="success"><td><a class="rowlink" href="getresults?fileid={{.Id.Hex}}" >{{.Name}}</a></td>
-      <td><a class="rowlink" href="getresults?fileid={{.Id.Hex}}" >{{.Package}}</a></td>
-      <td><a class="rowlink" href="getresults?fileid={{.Id.Hex}}" >{{.Type}}</a></td>
       <td><a class="rowlink" href="getresults?fileid={{.Id.Hex}}" >{{.Num}}</a></td>
-      <td><a class="rowlink" href="getresults?fileid={{.Id.Hex}}" >{{.Mod}}</a></td></tr>
+      <td><a class="rowlink" href="getresults?fileid={{.Id.Hex}}" >{{.Mod}}</a></td>
+      <td><a class="rowlink" href="getresults?fileid={{.Id.Hex}}" >{{date .Time}}</a></td></tr>
     {{end}}
   </tbody>
 </table>

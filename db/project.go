@@ -7,131 +7,133 @@ import (
 )
 
 //GetFile retrieves a file matching the given interface from the active database.
-func GetFile(matcher, selector interface{}) (*project.File, error) {
+func GetFile(matcher, selector interface{}) (ret *project.File, err error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(FILES)
-	var ret *project.File
-	err := c.Find(matcher).Select(selector).One(&ret)
+	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
-		return nil, fmt.Errorf("Encountered error %q when retrieving file matching %q from db", err, matcher)
+		err = fmt.Errorf("Encountered error %q when retrieving file matching %q from db", err, matcher)
 	}
-	return ret, nil
+	return
 }
 
 //GetFiles retrieves files matching the given interface from the active database.
-func GetFiles(matcher, selector interface{}) ([]*project.File, error) {
+func GetFiles(matcher, selector interface{}) (ret []*project.File, err error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(FILES)
-	var ret []*project.File
-	err := c.Find(matcher).Select(selector).All(&ret)
+	err = c.Find(matcher).Select(selector).All(&ret)
 	if err != nil {
-		return nil, fmt.Errorf("Encountered error %q when retrieving files matching %q from db", err, matcher)
+		err = fmt.Errorf("Encountered error %q when retrieving files matching %q from db", err, matcher)
 	}
-	return ret, nil
+	return
+}
+
+func GetFileCount(matcher interface{})(n int, err error){
+	session := getSession()
+	defer session.Close()
+	c := session.DB("").C(FILES)
+	n, err = c.Find(matcher).Count()
+	if err != nil {
+		err = fmt.Errorf("Encountered error %q when counting files matching %q from db", err, matcher)
+	}
+	return
 }
 
 //GetSubmission retrieves a submission matching the given interface from the active database.
-func GetSubmission(matcher, selector interface{}) (*project.Submission, error) {
+func GetSubmission(matcher, selector interface{}) (ret *project.Submission, err error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(SUBMISSIONS)
-	var ret *project.Submission
-	err := c.Find(matcher).Select(selector).One(&ret)
+	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
-		return nil, fmt.Errorf("Encountered error %q when retrieving submission matching %q from db", err, matcher)
+		err = fmt.Errorf("Encountered error %q when retrieving submission matching %q from db", err, matcher)
 	}
-	return ret, nil
+	return
 }
 
 //GetSubmission retrieves submissions matching the given interface from the active database.
-func GetSubmissions(matcher, selector interface{}) ([]*project.Submission, error) {
+func GetSubmissions(matcher, selector interface{}) (ret []*project.Submission, err error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(SUBMISSIONS)
-	var ret []*project.Submission
-	err := c.Find(matcher).Select(selector).All(&ret)
+	err = c.Find(matcher).Select(selector).All(&ret)
 	if err != nil {
-		return nil, fmt.Errorf("Encountered error %q when retrieving submissions matching %q from db", err, matcher)
+		err = fmt.Errorf("Encountered error %q when retrieving submissions matching %q from db", err, matcher)
 	}
-	return ret, nil
+	return
 }
 
 //GetTest retrieves a test matching the given interface from the active database.
-func GetTest(matcher, selector interface{}) (*project.Test, error) {
+func GetTest(matcher, selector interface{}) (ret *project.Test, err error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(TESTS)
-	var ret *project.Test
-	err := c.Find(matcher).Select(selector).One(&ret)
+	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
-		return nil, fmt.Errorf("Encountered error %q when retrieving test matching %q from db", err, matcher)
+		err = fmt.Errorf("Encountered error %q when retrieving test matching %q from db", err, matcher)
 	}
-	return ret, nil
+	return
 }
 
 //GetTest retrieves a test matching the given interface from the active database.
-func GetTests(matcher, selector interface{}) ([]*project.Test, error) {
+func GetTests(matcher, selector interface{}) (ret []*project.Test, err error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(TESTS)
-	var ret []*project.Test
-	err := c.Find(matcher).Select(selector).All(&ret)
+	err = c.Find(matcher).Select(selector).All(&ret)
 	if err != nil {
-		return nil, fmt.Errorf("Encountered error %q when retrieving test matching %q from db", err, matcher)
+		err = fmt.Errorf("Encountered error %q when retrieving test matching %q from db", err, matcher)
 	}
-	return ret, nil
+	return
 }
 
-func GetJPF(matcher, selector interface{}) (*project.JPFFile, error) {
+func GetJPF(matcher, selector interface{}) (ret *project.JPFFile, err error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(JPF)
-	var ret *project.JPFFile
-	err := c.Find(matcher).Select(selector).One(&ret)
+	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
-		return nil, fmt.Errorf("Encountered error %q when retrieving jpf config matching %q from db", err, matcher)
+		err = fmt.Errorf("Encountered error %q when retrieving jpf config matching %q from db", err, matcher)
 	}
-	return ret, nil
+	return
 }
 
 //GetTest retrieves a test matching the given interface from the active database.
-func GetProject(matcher, selector interface{}) (*project.Project, error) {
+func GetProject(matcher, selector interface{}) (ret *project.Project, err error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(PROJECTS)
-	var ret *project.Project
-	err := c.Find(matcher).Select(selector).One(&ret)
+	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
-		return nil, fmt.Errorf("Encountered error %q when retrieving project matching %q from db", err, matcher)
+		err = fmt.Errorf("Encountered error %q when retrieving project matching %q from db", err, matcher)
 	}
-	return ret, nil
+	return
 }
 
 //GetTest retrieves a test matching the given interface from the active database.
-func GetProjects(matcher, selector interface{}) ([]*project.Project, error) {
+func GetProjects(matcher, selector interface{}) (ret []*project.Project, err error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(PROJECTS)
-	var ret []*project.Project
-	err := c.Find(matcher).All(&ret)
+	err = c.Find(matcher).All(&ret)
 	if err != nil {
-		return nil, fmt.Errorf("Encountered error %q when retrieving projects matching %q from db", err, matcher)
+		err = fmt.Errorf("Encountered error %q when retrieving projects matching %q from db", err, matcher)
 	}
-	return ret, nil
+	return 
 }
 
 //AddFile adds a new file to the active database.
-func AddFile(f *project.File) error {
+func AddFile(f *project.File)(err error) {
 	session := getSession()
 	defer session.Close()
 	col := session.DB("").C(FILES)
-	err := col.Insert(f)
+	err = col.Insert(f)
 	if err != nil {
-		return fmt.Errorf("Encountered error %q when adding file %q to db", err, f)
+		err = fmt.Errorf("Encountered error %q when adding file %q to db", err, f)
 	}
-	return nil
+	return
 }
 
 //AddFile adds a new file to the active database.
@@ -162,43 +164,43 @@ func AddJPF(jpf *project.JPFFile) error {
 	}
 	err = col.Insert(jpf)
 	if err != nil {
-		return fmt.Errorf("Encountered error %q when adding jpf config %q to db", err, jpf)
+		err = fmt.Errorf("Encountered error %q when adding jpf config %q to db", err, jpf)
 	}
 	return nil
 }
 
 //AddSubmission adds a new submission to the active database.
-func AddSubmission(s *project.Submission) error {
+func AddSubmission(s *project.Submission) (err error) {
 	session := getSession()
 	defer session.Close()
 	col := session.DB("").C(SUBMISSIONS)
-	err := col.Insert(s)
+	err = col.Insert(s)
 	if err != nil {
-		return fmt.Errorf("Encountered error %q when adding submission %q to db", err, s)
+		err = fmt.Errorf("Encountered error %q when adding submission %q to db", err, s)
 	}
-	return nil
+	return
 }
 
 //AddSubmission adds a new submission to the active database.
-func AddProject(p *project.Project) error {
+func AddProject(p *project.Project) (err error) {
 	session := getSession()
 	defer session.Close()
 	col := session.DB("").C(PROJECTS)
-	err := col.Insert(p)
+	err = col.Insert(p)
 	if err != nil {
-		return fmt.Errorf("Encountered error %q when adding project %q to db", err, p)
+		err = fmt.Errorf("Encountered error %q when adding project %q to db", err, p)
 	}
-	return nil
+	return
 }
 
 //RemoveFileById removes a file matching the given id from the active database.
-func RemoveFileByID(id interface{}) error {
+func RemoveFileByID(id interface{}) (err error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(FILES)
-	err := c.RemoveId(id)
+	err = c.RemoveId(id)
 	if err != nil {
-		return fmt.Errorf("Encountered error %q when removing file %q from db", err, id)
+		err = fmt.Errorf("Encountered error %q when removing file %q from db", err, id)
 	}
-	return nil
+	return
 }

@@ -50,7 +50,7 @@ func (this *TestHandler) Handle() error {
 
 //Login authenticates a connection by validating user credentials and checking user permissions.
 func (this *TestHandler) Login() error {
-	loginInfo, err := util.ReadJSON(this.Conn)
+	loginInfo, err := util.ReadJson(this.Conn)
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,7 @@ func (this *TestHandler) LoadInfo() error {
 	if err != nil {
 		return err
 	}
-	info, err := util.ReadJSON(this.Conn)
+	info, err := util.ReadJson(this.Conn)
 	if err != nil {
 		return err
 	}

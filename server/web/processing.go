@@ -50,7 +50,7 @@ func doArchive(req *http.Request, ctx *context.Context) (string, error) {
 	if err != nil {
 		return err.Error(), err
 	}
-	sub := project.NewSubmission(projectId, username, project.ARCHIVE_MODE)
+	sub := project.NewSubmission(projectId, username, project.ARCHIVE_MODE, util.CurMilis())
 	err = db.AddSubmission(sub)
 	if err != nil {
 		return fmt.Sprintf("Could not create submission."), err

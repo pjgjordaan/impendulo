@@ -3,7 +3,7 @@ package tool
 import (
 	"labix.org/v2/mgo/bson"
 	"reflect"
-	"time"
+	"github.com/godfried/impendulo/util"
 )
 
 //Result describes a tool or test's results for a given file.
@@ -11,9 +11,9 @@ type Result struct {
 	Id     bson.ObjectId "_id"
 	FileId bson.ObjectId "fileid"
 	Name   string        "name"
-	Data   []byte        "data"
-	Time   int64         "time"
 	HTML   bool          "html"
+	Time   int64         "time"
+	Data   []byte        "data"
 }
 
 func (this *Result) Equals(that *Result) bool {
@@ -30,5 +30,5 @@ func (this *Result) Output() string {
 
 //NewResult
 func NewResult(fileId bson.ObjectId, tool Tool, data []byte) *Result {
-	return &Result{bson.NewObjectId(), fileId, tool.GetName(), data, time.Now().UnixNano(), tool.GenHTML()}
+	return &Result{bson.NewObjectId(), fileId, tool.GetName(), tool.GenHTML(), util.CurMilis(), data}
 }

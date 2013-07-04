@@ -59,7 +59,7 @@ func (this *SubmissionHandler) Handle() error {
 //Login authenticates this Submission by validating the user's credentials and permissions.
 //This Submission is then stored.
 func (this *SubmissionHandler) Login() error {
-	loginInfo, err := util.ReadJSON(this.Conn)
+	loginInfo, err := util.ReadJson(this.Conn)
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func (this *SubmissionHandler) Login() error {
 }
 
 func (this *SubmissionHandler) LoadInfo() error {
-	reqInfo, err := util.ReadJSON(this.Conn)
+	reqInfo, err := util.ReadJson(this.Conn)
 	if err != nil {
 		return err
 	}
@@ -123,6 +123,10 @@ func (this *SubmissionHandler) createSubmission(subInfo map[string]interface{}) 
 		return fmt.Errorf("Invalid id hex %q", idStr)
 	}
 	this.Submission.ProjectId = bson.ObjectIdHex(idStr)
+	this.Submission.Time, err = util.GetInt64(subInfo, project.TIME)
+	if err != nil {
+		return err
+	}
 	err = db.AddSubmission(this.Submission)
 	if err != nil {
 		return err
@@ -141,14 +145,17 @@ func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{}
 	if err != nil {
 		return err
 	}
-	_, err = this.Conn.Write([]byte(OK))
-	return err
+	count, err := db.GetFileCount(bson.M{project.SUBID: this.Submission.Id})
+	if err != nil {
+		return err
+	}
+	return util.WriteJson(this.Conn, count)
 }
 
 
 //Read reads Files from the connection and sends them for processing.
 func (this *SubmissionHandler) Read() error {
-	requestInfo, err := util.ReadJSON(this.Conn)
+	requestInfo, err := util.ReadJson(this.Conn)
 	if err != nil {
 		return err
 	}

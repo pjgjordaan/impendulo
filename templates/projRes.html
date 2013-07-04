@@ -12,7 +12,7 @@
   <tbody data-provides="rowlink" >
     {{ range .ctx.Projects}}
     <tr class="success"><td><a class="rowlink" href="getsubmissions?id={{.Id.Hex}}&type=project" >{{.Name}}</a></td>
-      <td><a class="rowlink" href="getsubmissions?id={{.Id.Hex}}&type=project" >{{.Date}}</a></td>
+      <td><a class="rowlink" href="getsubmissions?id={{.Id.Hex}}&type=project" >{{date .Time}}</a></td>
       <td><a class="rowlink" href="getsubmissions?id={{.Id.Hex}}&type=project" >{{.Lang}}</a></td></tr>
     {{end}}
   </tbody>

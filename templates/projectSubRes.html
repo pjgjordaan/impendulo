@@ -13,7 +13,7 @@
   <tbody data-provides="rowlink" >
     {{ range .subRes}}
     <tr class="success"><td><a class="rowlink" href="getfiles?subid={{.Id.Hex}}" >{{.User}}</a></td>
-      <td><a class="rowlink" href="getfiles?subid={{.Id.Hex}}" >{{.Date}}</a></td></tr>
+      <td><a class="rowlink" href="getfiles?subid={{.Id.Hex}}" >{{date .Time}}</a></td></tr>
     {{end}}
   </tbody>
 </table>

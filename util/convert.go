@@ -24,11 +24,11 @@ func GetInt(jobj map[string]interface{}, key string) (int, error) {
 	if !ok {
 		return -1, fmt.Errorf("Error reading value for %q ", key)
 	}
-	val, ok := ival.(int)
+	val, ok := ival.(float64)
 	if !ok {
-		return -1, fmt.Errorf("Error casting value %q to int", ival)
+		return -1, fmt.Errorf("%q could not be parsed as an int.", ival)
 	}
-	return val, nil
+	return int(val), nil
 }
 
 //GetInt64
@@ -37,11 +37,11 @@ func GetInt64(jobj map[string]interface{}, key string) (int64, error) {
 	if !ok {
 		return -1, fmt.Errorf("Error reading value for %q ", key)
 	}
-	val, ok := ival.(int64)
+	val, ok := ival.(float64)
 	if !ok {
-		return -1, fmt.Errorf("Error casting value %q to int64", ival)
+		return -1, fmt.Errorf("%q could not be parsed as an int64.", ival)
 	}
-	return val, nil
+	return int64(val), nil
 }
 
 //GetID

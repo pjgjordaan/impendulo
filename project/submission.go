@@ -3,7 +3,7 @@ package project
 import (
 	"labix.org/v2/mgo/bson"
 	"reflect"
-	"time"
+	"strconv"
 )
 
 //Submission is used for individual project submissions
@@ -11,8 +11,8 @@ type Submission struct {
 	Id        bson.ObjectId "_id"
 	ProjectId bson.ObjectId "projectid"
 	User      string        "user"
-	Time      int64         "time"
 	Mode      string        "mode"
+	Time      int64         "time"
 }
 
 //IsTest
@@ -21,12 +21,8 @@ func (s *Submission) IsTest() bool {
 }
 
 func (this *Submission) String() string {
-	return "ProjectId: " + this.ProjectId.String() + "; User: " + this.User + "; Time: " + time.Unix(0, this.Time).String()
+	return "ProjectId: " + this.ProjectId.String() + "; User: " + this.User + "; Time: " + strconv.Itoa(int(this.Time))
 
-}
-
-func (this *Submission) Date() string {
-	return time.Unix(0, this.Time).String()
 }
 
 func (this *Submission) Equals(that *Submission) bool {
@@ -34,10 +30,9 @@ func (this *Submission) Equals(that *Submission) bool {
 }
 
 //NewSubmission
-func NewSubmission(projectId bson.ObjectId, user, mode string) *Submission {
+func NewSubmission(projectId bson.ObjectId, user, mode string, time int64) *Submission {
 	subId := bson.NewObjectId()
-	now := time.Now().UnixNano()
-	return &Submission{subId, projectId, user, now, mode}
+	return &Submission{subId, projectId, user, mode, time}
 }
 
 //isOutFolder

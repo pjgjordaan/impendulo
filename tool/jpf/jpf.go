@@ -31,7 +31,7 @@ func (this *JPF) GetName() string {
 }
 
 func (this *JPF) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (*tool.Result, error) {
-	err := util.Copy(ti.Dir, config.GetConfig(config.IMP_JPF))
+	err := util.Copy(ti.Dir, config.GetConfig(config.RUNNER_DIR))
 	if err != nil {
 		return nil, err
 	}

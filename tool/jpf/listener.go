@@ -33,7 +33,7 @@ func Listeners() (listeners []*Listener, err error) {
 }
 
 func FindListeners() ([]byte, error) {
-	target := tool.NewTarget("ListenerFinder.java", "java", "listener", config.GetConfig(config.IMP_JPF))
+	target := tool.NewTarget("ListenerFinder.java", "java", "listener", config.GetConfig(config.LISTENER_DIR))
 	cp := filepath.Join(config.GetConfig(config.JPF_HOME), "build", "main") + ":" + target.Dir + ":" + config.GetConfig(config.GSON_JAR)
 	compArgs := []string{config.GetConfig(config.JAVAC), "-cp", cp, target.FilePath()}
 	execArgs := []string{config.GetConfig(config.JAVA), "-cp", cp, target.Executable()}

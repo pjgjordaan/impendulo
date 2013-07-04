@@ -50,6 +50,7 @@ const (
 	JPF_JAR    = "jpf_jar"
 	RUNJPF_JAR = "runjpf_jar"
 	GSON_JAR   = "gson_jar"
-	IMP_JPF    = "imp_jpf"
+	RUNNER_DIR    = "runner_dir"
 	JPF_HOME   = "jpf_home"
+	LISTENER_DIR = "listener_dir"
 )

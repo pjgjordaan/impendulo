@@ -10,7 +10,7 @@ import (
 )
 
 //ReadJSON reads all JSON data from a reader.
-func ReadJSON(r io.Reader) (map[string]interface{}, error) {
+func ReadJson(r io.Reader) (map[string]interface{}, error) {
 	read, err := ReadData(r)
 	if err != nil {
 		return nil, err
