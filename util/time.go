@@ -15,7 +15,5 @@ func GetTime(miliseconds int64) time.Time {
 const layout = "2006-01-02 15:04:05"
 
 func Date(miliseconds int64) string{
-	println(GetTime(miliseconds).String())
 	return GetTime(miliseconds).Format(layout)
-
 }

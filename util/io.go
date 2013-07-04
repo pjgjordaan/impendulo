@@ -112,7 +112,6 @@ func (this *copier) copyFile(path string, f os.FileInfo, err error) error {
 	}
 	destPath = filepath.Join(this.dest, destPath)
 	if f == nil {
-		fmt.Println(path)
 		return nil
 	} else if f.IsDir() {
 		return os.MkdirAll(destPath, os.ModePerm)
@@ -131,7 +130,6 @@ func (this *copier) copyFile(path string, f os.FileInfo, err error) error {
 }
 
 func Copy(dest, src string) error {
-	fmt.Println(dest, src)
 	c := &copier{dest, src}
 	return filepath.Walk(src, c.copyFile)
 }

@@ -108,7 +108,7 @@ func addTest(w http.ResponseWriter, req *http.Request, ctx *context.Context) err
 
 func addJPF(w http.ResponseWriter, req *http.Request, ctx *context.Context) error {
 	err := processor(doJPF).exec(req, ctx)
-	http.Redirect(w, req, reverse("jpfview"), http.StatusSeeOther)
+	http.Redirect(w, req, reverse("jpffileview"), http.StatusSeeOther)
 	return err
 }
 

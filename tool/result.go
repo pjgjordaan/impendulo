@@ -20,8 +20,12 @@ func (this *Result) Equals(that *Result) bool {
 	return reflect.DeepEqual(this, that)
 }
 
+func (this *Result) TypeName() string{
+	return "result"
+}
+
 func (this *Result) String() string {
-	return "File: " + this.FileId.String() + "; Name: " + this.Name + "; Output:" + this.Output()
+	return "Type: tool.Result; Id: "+this.Id.Hex()+"; FileId: "+this.FileId.Hex()+"; Name: " + this.Name + "; Time: "+ util.Date(this.Time)
 }
 
 func (this *Result) Output() string {

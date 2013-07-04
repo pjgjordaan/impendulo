@@ -38,7 +38,6 @@ func StartSubmission(sub *project.Submission) {
 }
 
 func EndSubmission(sub *project.Submission) {
-	fmt.Println("ending")
 	subChan <- sub
 }
 
@@ -119,8 +118,6 @@ func NewProcessor(sub *project.Submission, recv chan bson.ObjectId) *Processor {
 	return &Processor{sub: sub, recv: recv, dir: filepath.Join(os.TempDir(), sub.Id.Hex())}
 }
 
-var gr = 0
-
 //ProcessSubmission processes a new submission.
 //It listens for incoming files on fileChan and processes them.
 func (this *Processor) Process() {
@@ -192,7 +189,7 @@ func (this *Processor) ProcessFile(file *project.File) error {
 			return err
 		}
 		db.RemoveFileByID(file.Id)
-	case project.SRC, project.EXEC:
+	case project.SRC:
 		analyser := &Analyser{proc: this, file: file}
 		err := analyser.Eval()
 		if err != nil {
@@ -278,16 +275,10 @@ func (this *Analyser) buildTarget() error {
 //Compile compiles a java source file and saves the results thereof.
 //It returns true if compiled successfully.
 func (this *Analyser) compile() error {
-	var res *tool.Result
-	var err error
 	javac := java.NewJavac(this.target.Dir)
-	if this.file.Type == project.SRC {
-		res, err = javac.Run(this.file.Id, this.target)
-		if err != nil {
-			return err
-		}
-	} else {
-		res = tool.NewResult(this.file.Id, javac, []byte(""))
+	res, err := javac.Run(this.file.Id, this.target)
+	if err != nil {
+		return err
 	}
 	util.Log("Compile result", res)
 	return AddResult(res)

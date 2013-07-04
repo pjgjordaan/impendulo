@@ -24,43 +24,12 @@ type File struct {
 	Results  bson.M        "results"
 }
 
-//NewFile
-func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) (file *File, err error) {
-	id := bson.NewObjectId()
-	file = &File{Id: id, SubId: subId, Data: data}
-	file.Name, err = util.GetString(info, NAME)
-	if err != nil{
-		return
-	}
-	file.Package, err = util.GetString(info, PKG)
-	if err != nil{
-		return
-	}
-	file.Type, err = util.GetString(info, TYPE)
-	if err != nil{
-		return
-	}
-	file.FileType, err = util.GetString(info, FTYPE)
-	if err != nil{
-		return
-	}
-	mod, err := util.GetString(info, MOD)
-	if err != nil{
-		return
-	}
-	file.SetMod(mod)
-	file.Num, err = util.GetInt(info, NUM)
-	if err != nil{
-		return
-	}
-	file.Time, err = util.GetInt64(info, TIME)
-	return
+func (this *File) TypeName() string{
+	return "file"
 }
 
-//NewFile
-func NewArchive(subId bson.ObjectId, data []byte, ftype string) *File {
-	id := bson.NewObjectId()
-	return &File{Id: id, SubId: subId, Data: data, FileType: ftype, Type: ARCHIVE}
+func (this *File) String() string {
+	return "Type: project.File; Id: "+this.Id.Hex()+"; SubId: "+this.SubId.Hex()+"; Name: " + this.Name + "; Package: " + this.Package + "; Type: " + this.Type+ "; FileType: " + this.FileType+ "; Mod: " + this.Mod+ "; Num: " + strconv.Itoa(this.Num) + "; Time: "+ util.Date(this.Time)
 }
 
 func (this *File) SetMod(mod string) {
@@ -84,6 +53,47 @@ func (this *File) SetMod(mod string) {
 
 func (this *File) Equals(that *File) bool {
 	return reflect.DeepEqual(this, that)
+}
+
+//NewFile
+func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) (file *File, err error) {
+	id := bson.NewObjectId()
+	file = &File{Id: id, SubId: subId, Data: data}
+	//Non essential fields
+	file.Type, err = util.GetString(info, TYPE)
+	if err != nil && util.IsCastError(err){
+		return
+	}
+	file.FileType, err = util.GetString(info, FTYPE)
+	if err != nil && util.IsCastError(err){
+		return
+	}
+	//Essential fields
+	file.Name, err = util.GetString(info, NAME)
+	if err != nil{
+		return
+	}
+	file.Package, err = util.GetString(info, PKG)
+	if err != nil{
+		return
+	}
+	mod, err := util.GetString(info, MOD)
+	if err != nil{
+		return
+	}
+	file.SetMod(mod)
+	file.Num, err = util.GetInt(info, NUM)
+	if err != nil{
+		return
+	}
+	file.Time, err = util.GetInt64(info, TIME)
+	return
+}
+
+//NewFile
+func NewArchive(subId bson.ObjectId, data []byte, ftype string) *File {
+	id := bson.NewObjectId()
+	return &File{Id: id, SubId: subId, Data: data, FileType: ftype, Type: ARCHIVE}
 }
 
 //ParseName retrieves file metadata encoded in a file name.

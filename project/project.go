@@ -3,7 +3,6 @@ package project
 import (
 	"labix.org/v2/mgo/bson"
 	"reflect"
-	"strconv"
 	"github.com/godfried/impendulo/util"
 )
 
@@ -15,8 +14,12 @@ type Project struct {
 	Time int64         "time"
 }
 
+func (this *Project) TypeName() string{
+	return "project"
+}
+
 func (this *Project) String() string {
-	return "Name: " + this.Name + "; User: " + this.User + "; Time: " + strconv.Itoa(int(this.Time))
+	return "Type: project.Project; Id: "+this.Id.Hex()+"; Name: " + this.Name + "; User: " + this.User + "; Lang: " + this.Lang + "; Time: "+ util.Date(this.Time)
 }
 
 func (this *Project) Equals(that *Project) bool {

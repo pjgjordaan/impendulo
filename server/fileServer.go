@@ -145,7 +145,7 @@ func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{}
 	if err != nil {
 		return err
 	}
-	count, err := db.GetFileCount(bson.M{project.SUBID: this.Submission.Id})
+	count, err := db.Count(db.FILES, bson.M{project.SUBID: this.Submission.Id})
 	if err != nil {
 		return err
 	}

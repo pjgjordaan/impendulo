@@ -19,6 +19,14 @@ func (this *JPFFile) Equals(that *JPFFile) bool {
 	return reflect.DeepEqual(this, that)
 }
 
+func (this *JPFFile) TypeName() string{
+	return "jpf configuration file"
+}
+
+func (this *JPFFile) String() string {
+	return "Type: project.JPFFile; Id: "+this.Id.Hex()+"; ProjectId: "+this.ProjectId.Hex()+"; Name: " + this.Name + "; User: " + this.User + "; Time: "+ util.Date(this.Time)
+}
+
 //NewFile
 func NewJPFFile(projectId bson.ObjectId, name, user string, data []byte) *JPFFile {
 	id := bson.NewObjectId()

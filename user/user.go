@@ -38,6 +38,15 @@ type User struct {
 	Access   int    "access"
 }
 
+
+func (this *User) TypeName() string{
+	return "user"
+}
+
+func (this *User) String() string {
+	return "Type: user.User; Name: "+this.Name
+}
+
 //HasAccess checks whether a user has the required access level.
 func (this *User) HasAccess(access int) bool {
 	switch access {

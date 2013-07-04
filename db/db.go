@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"labix.org/v2/mgo"
+	"github.com/godfried/impendulo/util"
 )
 
 const (
@@ -20,6 +21,36 @@ const (
 )
 
 var activeSession *mgo.Session
+
+type DBGetError struct{
+	tipe string
+	err error
+	matcher interface{}
+}
+
+func (this *DBGetError) Error() string{
+	return fmt.Sprintf("Encountered error %q when retrieving %q matching %q from db", this.err, this.tipe, this.matcher)
+}
+
+type DBAddError struct{
+	val util.Stringer
+	err error
+}
+
+func (this *DBAddError) Error() string{
+	return fmt.Sprintf("Encountered error %q when adding %q %q to db", this.err, this.val.TypeName(), this.val.String())
+}
+
+type DBRemoveError struct{
+	tipe string
+	err error
+	matcher interface{}
+}
+
+func (this *DBRemoveError) Error() string{
+	return fmt.Sprintf("Encountered error %q when removing %q matching %q from db", this.err, this.tipe, this.matcher)
+}
+
 
 //Setup creates a mongodb session.
 //This must be called before using any other db functions.
@@ -52,24 +83,24 @@ func DeleteDB(db string) error {
 }
 
 //Update updates documents from the collection col matching the matcher interface to the change interface.
-func Update(col string, matcher, change interface{}) error {
+func Update(col string, matcher, change interface{}) (err error) {
 	session := getSession()
 	defer session.Close()
 	tcol := session.DB("").C(col)
-	err := tcol.Update(matcher, change)
+	err = tcol.Update(matcher, change)
 	if err != nil {
-		return fmt.Errorf("Encountered error %q when updating %q matching %q to %q in db", err, col, matcher, change)
+		err = fmt.Errorf("Encountered error %q when updating %q matching %q to %q in db", err, col, matcher, change)
 	}
-	return nil
+	return
 }
 
-func Count(col string, matcher interface{}) (int, error) {
+func Count(col string, matcher interface{}) (n int, err error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(col)
-	n, err := c.Find(matcher).Count()
+	n, err = c.Find(matcher).Count()
 	if err != nil {
-		return -1, fmt.Errorf("Encountered error %q when counting documents matching %q in db", err, matcher)
+		err = &DBGetError{col+" count", err, matcher}
 	}
 	return n, nil
 }

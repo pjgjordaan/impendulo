@@ -22,6 +22,14 @@ func (this *Test) Equals(that *Test) bool {
 	return reflect.DeepEqual(this, that)
 }
 
+func (this *Test) TypeName() string{
+	return "test file"
+}
+
+func (this *Test) String() string {
+	return "Type: project.Test; Id: "+this.Id.Hex()+"; ProjectId: "+this.ProjectId.Hex()+"; Name: " + this.Name + "; Package: " + this.Package + "; User: " + this.User + "; Time: "+ util.Date(this.Time)
+}
+
 //NewFile
 func NewTest(projectId bson.ObjectId, name, user, pkg string, test, data []byte) *Test {
 	id := bson.NewObjectId()

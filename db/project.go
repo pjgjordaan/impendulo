@@ -1,7 +1,6 @@
 package db
 
 import (
-	"fmt"
 	"github.com/godfried/impendulo/project"
 	"labix.org/v2/mgo/bson"
 )
@@ -13,7 +12,7 @@ func GetFile(matcher, selector interface{}) (ret *project.File, err error) {
 	c := session.DB("").C(FILES)
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q when retrieving file matching %q from db", err, matcher)
+		err = &DBGetError{"file", err, matcher}
 	}
 	return
 }
@@ -25,18 +24,7 @@ func GetFiles(matcher, selector interface{}) (ret []*project.File, err error) {
 	c := session.DB("").C(FILES)
 	err = c.Find(matcher).Select(selector).All(&ret)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q when retrieving files matching %q from db", err, matcher)
-	}
-	return
-}
-
-func GetFileCount(matcher interface{})(n int, err error){
-	session := getSession()
-	defer session.Close()
-	c := session.DB("").C(FILES)
-	n, err = c.Find(matcher).Count()
-	if err != nil {
-		err = fmt.Errorf("Encountered error %q when counting files matching %q from db", err, matcher)
+		err = &DBGetError{"files", err, matcher}
 	}
 	return
 }
@@ -48,7 +36,7 @@ func GetSubmission(matcher, selector interface{}) (ret *project.Submission, err 
 	c := session.DB("").C(SUBMISSIONS)
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q when retrieving submission matching %q from db", err, matcher)
+		err = &DBGetError{"submission", err, matcher}
 	}
 	return
 }
@@ -60,7 +48,7 @@ func GetSubmissions(matcher, selector interface{}) (ret []*project.Submission, e
 	c := session.DB("").C(SUBMISSIONS)
 	err = c.Find(matcher).Select(selector).All(&ret)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q when retrieving submissions matching %q from db", err, matcher)
+		err = &DBGetError{"submissions", err, matcher}
 	}
 	return
 }
@@ -72,7 +60,7 @@ func GetTest(matcher, selector interface{}) (ret *project.Test, err error) {
 	c := session.DB("").C(TESTS)
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q when retrieving test matching %q from db", err, matcher)
+		err = &DBGetError{"test", err, matcher}
 	}
 	return
 }
@@ -84,7 +72,7 @@ func GetTests(matcher, selector interface{}) (ret []*project.Test, err error) {
 	c := session.DB("").C(TESTS)
 	err = c.Find(matcher).Select(selector).All(&ret)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q when retrieving test matching %q from db", err, matcher)
+		err = &DBGetError{"tests", err, matcher}
 	}
 	return
 }
@@ -95,7 +83,7 @@ func GetJPF(matcher, selector interface{}) (ret *project.JPFFile, err error) {
 	c := session.DB("").C(JPF)
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q when retrieving jpf config matching %q from db", err, matcher)
+		err = &DBGetError{"jpf config file", err, matcher}
 	}
 	return
 }
@@ -107,7 +95,7 @@ func GetProject(matcher, selector interface{}) (ret *project.Project, err error)
 	c := session.DB("").C(PROJECTS)
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q when retrieving project matching %q from db", err, matcher)
+		err = &DBGetError{"project", err, matcher}
 	}
 	return
 }
@@ -119,7 +107,7 @@ func GetProjects(matcher, selector interface{}) (ret []*project.Project, err err
 	c := session.DB("").C(PROJECTS)
 	err = c.Find(matcher).All(&ret)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q when retrieving projects matching %q from db", err, matcher)
+		err = &DBGetError{"projects", err, matcher}
 	}
 	return 
 }
@@ -131,7 +119,7 @@ func AddFile(f *project.File)(err error) {
 	col := session.DB("").C(FILES)
 	err = col.Insert(f)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q when adding file %q to db", err, f)
+		err = &DBAddError{f, err}
 	}
 	return
 }
@@ -143,12 +131,12 @@ func AddTest(t *project.Test) error {
 	col := session.DB("").C(TESTS)
 	matcher := bson.M{project.PROJECT_ID: t.ProjectId}
 	_, err := col.RemoveAll(matcher)
-	if err != nil {
-		return fmt.Errorf("Encountered error %q when removing tests matching %q to db", err, matcher)
+	if err != nil {		
+		err = &DBRemoveError{"test files", err, matcher}
 	}
 	err = col.Insert(t)
 	if err != nil {
-		return fmt.Errorf("Encountered error %q when adding test %q to db", err, t)
+		err = &DBAddError{t, err}
 	}
 	return nil
 }
@@ -160,11 +148,11 @@ func AddJPF(jpf *project.JPFFile) error {
 	matcher := bson.M{project.PROJECT_ID: jpf.ProjectId}
 	_, err := col.RemoveAll(matcher)
 	if err != nil {
-		return fmt.Errorf("Encountered error %q when removing jpf configs matching %q from db", err, matcher)
+		err = &DBRemoveError{"jpf config files", err, matcher}
 	}
 	err = col.Insert(jpf)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q when adding jpf config %q to db", err, jpf)
+		err = &DBAddError{jpf, err}
 	}
 	return nil
 }
@@ -176,7 +164,7 @@ func AddSubmission(s *project.Submission) (err error) {
 	col := session.DB("").C(SUBMISSIONS)
 	err = col.Insert(s)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q when adding submission %q to db", err, s)
+		err = &DBAddError{s, err}
 	}
 	return
 }
@@ -188,7 +176,7 @@ func AddProject(p *project.Project) (err error) {
 	col := session.DB("").C(PROJECTS)
 	err = col.Insert(p)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q when adding project %q to db", err, p)
+		err = &DBAddError{p, err}
 	}
 	return
 }
@@ -200,7 +188,7 @@ func RemoveFileByID(id interface{}) (err error) {
 	c := session.DB("").C(FILES)
 	err = c.RemoveId(id)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q when removing file %q from db", err, id)
+		err = &DBRemoveError{"file", err, id}
 	}
 	return
 }
