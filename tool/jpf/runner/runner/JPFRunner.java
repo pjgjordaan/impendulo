@@ -51,7 +51,7 @@ public class JPFRunner {
 		config.setProperty("report.xml.start", "jpf,sut");
 		config.setProperty("report.xml.transition", "");
 		config.setProperty("report.xml.constraint", "constraint,snapshot");
-		config.setProperty("report.xml.property_violation", "error,snapshot");
+		config.setProperty("report.xml.property_violation", "error,snapshot,trace");
 		config.setProperty("report.xml.show_steps", "true");
 		config.setProperty("report.xml.show_method", "true");
 		config.setProperty("report.xml.show_code", "true");
