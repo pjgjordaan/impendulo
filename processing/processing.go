@@ -122,7 +122,7 @@ func NewProcessor(sub *project.Submission, recv chan bson.ObjectId) *Processor {
 func (this *Processor) Process() {
 	monitor.Busy(this.sub.Id)
 	util.Log("Processing submission", this.sub)
-	defer os.RemoveAll(this.dir)
+	//defer os.RemoveAll(this.dir)
 	err := this.Setup()
 	if err != nil {
 		util.Log(err)

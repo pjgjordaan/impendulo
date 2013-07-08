@@ -7,13 +7,6 @@ import gov.nasa.jpf.JPFException;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.PrintStream;
-
-import util.NullOutputStream;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 
 public class JPFRunner {
 
@@ -22,55 +15,47 @@ public class JPFRunner {
 	 * @throws FileNotFoundException
 	 */
 	public static void main(String[] args) throws FileNotFoundException {
-		if(args.length != 3){
+		if (args.length != 3) {
 			throw new IllegalArgumentException("Expected 3 arguments.");
 		}
-		if(!new File(args[0]).exists()){
-			throw new FileNotFoundException("Could not find config file "+args[0]);
+		if (!new File(args[0]).exists()) {
+			throw new FileNotFoundException("Could not find config file "
+					+ args[0]);
 		}
-		System.out.println(run(createConfig(args[0], args[1], args[2])));
-		
+		Exception e = run(createConfig(args[0], args[1], args[2]));
+		if (e != null) {
+			System.err.println(e.getMessage());
+		}
 	}
-	
-	public static JsonElement run(Config config){
-		PrintStream defaultOut = System.out;
-		PrintStream defaultErr = System.err;
-		System.setErr(new PrintStream(new NullOutputStream()));
-		System.setOut(new PrintStream(new NullOutputStream()));
-		JsonArray errs = null;
+
+	public static Exception run(Config config) {
 		try {
 			JPF jpf = new JPF(config);
 			jpf.run();
-			if (jpf.foundErrors()) {
-				errs = new JsonArray();
-				for (gov.nasa.jpf.Error err : jpf.getSearchErrors()) {
-					final JsonObject ret = new JsonObject();
-					ret.addProperty("Description", err.getDescription());
-					ret.addProperty("Details", err.getDetails());
-					errs.add(ret);
-				}
-			}
+			return null;
 		} catch (JPFConfigException cx) {
-			JsonObject err = new JsonObject();
-			err.addProperty("error", cx.getMessage());
-			return err;
+			return cx;
 		} catch (JPFException jx) {
-			JsonObject err = new JsonObject();
-			err.addProperty("error", jx.getMessage());
-			return err;
-		} finally{
-			System.setOut(defaultOut);
-			System.setErr(defaultErr);
+			return jx;
 		}
-		return errs;
 	}
 
 	public static Config createConfig(String configName, String target,
 			String targetLocation) {
 		Config config = JPF.createConfig(new String[] { configName });
 		config.setProperty("target", target);
+		config.setProperty("report.publisher", "xml");
+		config.setProperty("report.xml.class", "util.ImpenduloPublisher");
 		config.setProperty("classpath",
 				targetLocation + ";" + config.getProperty("classpath"));
+		config.setProperty("report.xml.start", "jpf,sut");
+		config.setProperty("report.xml.transition", "");
+		config.setProperty("report.xml.constraint", "constraint,snapshot");
+		config.setProperty("report.xml.property_violation", "error,snapshot");
+		config.setProperty("report.xml.show_steps", "true");
+		config.setProperty("report.xml.show_method", "true");
+		config.setProperty("report.xml.show_code", "true");
+		config.setProperty("report.xml.finished", "result,statistics");
 		return config;
 	}
 

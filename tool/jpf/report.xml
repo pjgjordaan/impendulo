@@ -1,0 +1,59 @@
+<?xml version="1.0" ?>
+<jpfreport>
+  <jpf-version>7.0</jpf-version>
+  <sut>
+    <source>BoundedBuffer.main("2","4","1")</source>
+  </sut>
+  <live-threads>
+    <thread id="1" name="P1" status="WAITING">
+      <lock-request object="BoundedBuffer@16f"/>
+      <frame>java.lang.Object.wait(Object.java)</frame>
+      <frame>BoundedBuffer.put(BoundedBuffer.java:55)</frame>
+      <frame>BoundedBuffer$Producer.run(BoundedBuffer.java:91)</frame>
+    </thread>
+    <thread id="2" name="P2" status="WAITING">
+      <lock-request object="BoundedBuffer@16f"/>
+      <frame>java.lang.Object.wait(Object.java)</frame>
+      <frame>BoundedBuffer.put(BoundedBuffer.java:55)</frame>
+      <frame>BoundedBuffer$Producer.run(BoundedBuffer.java:91)</frame>
+    </thread>
+    <thread id="3" name="P3" status="WAITING">
+      <lock-request object="BoundedBuffer@16f"/>
+      <frame>java.lang.Object.wait(Object.java)</frame>
+      <frame>BoundedBuffer.put(BoundedBuffer.java:55)</frame>
+      <frame>BoundedBuffer$Producer.run(BoundedBuffer.java:91)</frame>
+    </thread>
+    <thread id="4" name="P4" status="WAITING">
+      <lock-request object="BoundedBuffer@16f"/>
+      <frame>java.lang.Object.wait(Object.java)</frame>
+      <frame>BoundedBuffer.put(BoundedBuffer.java:55)</frame>
+      <frame>BoundedBuffer$Producer.run(BoundedBuffer.java:91)</frame>
+    </thread>
+    <thread id="5" name="C1" status="WAITING">
+      <lock-request object="BoundedBuffer@16f"/>
+      <frame>java.lang.Object.wait(Object.java)</frame>
+      <frame>BoundedBuffer.get(BoundedBuffer.java:66)</frame>
+      <frame>BoundedBuffer$Consumer.run(BoundedBuffer.java:110)</frame>
+    </thread>
+  </live-threads>
+  <result findings="errors">
+    <error id="0">
+      <property>gov.nasa.jpf.vm.NotDeadlockedProperty</property>
+      <details>deadlock encountered:
+  thread BoundedBuffer$Producer:{id:1,name:P1,status:WAITING,priority:5,lockCount:1,suspendCount:0}
+  thread BoundedBuffer$Producer:{id:2,name:P2,status:WAITING,priority:5,lockCount:1,suspendCount:0}
+  thread BoundedBuffer$Producer:{id:3,name:P3,status:WAITING,priority:5,lockCount:1,suspendCount:0}
+  thread BoundedBuffer$Producer:{id:4,name:P4,status:WAITING,priority:5,lockCount:1,suspendCount:0}
+  thread BoundedBuffer$Consumer:{id:5,name:C1,status:WAITING,priority:5,lockCount:1,suspendCount:0}
+      </details>
+    </error>
+  </result>
+  <statistics>
+    <elapsed-time>00:00:03</elapsed-time>
+    <new-states>6300</new-states>
+    <visited-states>20177</visited-states>
+    <backtracked-states>26426</backtracked-states>
+    <end-states>1</end-states>
+    <max-memory unit="MB">166</max-memory>
+  </statistics>
+</jpfreport>

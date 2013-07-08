@@ -33,8 +33,13 @@ func (this *JPF) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Result
 	if err != nil {
 		return
 	}
-	jpfInfo := tool.NewTarget("JPFRunner.java", "java", "runner", ti.Dir)
+	pubInfo := tool.NewTarget("ImpenduloPublisher.java", "java", "util", ti.Dir)
 	comp := javac.NewJavac(this.cp)
+	_, err = comp.Run(fileId, pubInfo)
+	if err != nil{
+		return
+	}
+	jpfInfo := tool.NewTarget("JPFRunner.java", "java", "runner", ti.Dir)
 	_, err = comp.Run(fileId, jpfInfo)
 	if err != nil{
 		return

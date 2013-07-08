@@ -9,7 +9,7 @@ public class JPFExample {
 						"/home/godfried/dev/go/src/github.com/godfried/impendulo/tool/jpf/example/BoundedBuffer.jpf",
 						"BoundedBuffer",
 						"/home/godfried/dev/go/src/github.com/godfried/impendulo/tool/jpf/bin/");
-		System.out.println(JPFRunner.run(config));
+		JPFRunner.run(config);
 	}
 
 }
