@@ -8,6 +8,9 @@ import (
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/javac"
+	"github.com/godfried/impendulo/tool/junit"
+	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"io/ioutil"
@@ -229,8 +232,17 @@ func buildResults(req *http.Request) (*DisplayResult, string, error) {
 	return res, "Successfully retrieved results.", nil
 }
 
-func getResult(id interface{}) (*tool.Result, error) {
-	return db.GetResult(bson.M{project.ID: id}, nil)
+func getResult(tipe string, id interface{}) (res tool.Result, err error) {
+	if strings.HasPrefix(javac.NAME, tipe){
+		res, err = db.GetJavacResult(bson.M{project.ID: id}, nil)
+	} else if strings.HasPrefix(junit.NAME, tipe){
+		res, err = db.GetJUnitResult(bson.M{project.ID: id}, nil)
+	}else if strings.HasPrefix(jpf.NAME, tipe){
+		res, err = db.GetJPFResult(bson.M{project.ID: id}, nil)
+	}else{
+		err = fmt.Errorf("Unknown result type %q.", tipe)
+	}
+	return 
 }
 
 func retrieveSubmissions(req *http.Request, ctx *context.Context) (subs []*project.Submission, msg string, err error) {

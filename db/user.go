@@ -37,7 +37,7 @@ func AddUser(u *user.User)(err error) {
 	c := session.DB("").C(USERS)
 	err = c.Insert(u)
 	if err != nil {
-		err = &DBAddError{u, err}
+		err = &DBAddError{u.String(), err}
 	}
 	return
 }

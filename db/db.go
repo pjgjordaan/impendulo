@@ -3,7 +3,6 @@ package db
 import (
 	"fmt"
 	"labix.org/v2/mgo"
-	"github.com/godfried/impendulo/util"
 )
 
 const (
@@ -33,12 +32,12 @@ func (this *DBGetError) Error() string{
 }
 
 type DBAddError struct{
-	val util.Stringer
+	msg  string
 	err error
 }
 
 func (this *DBAddError) Error() string{
-	return fmt.Sprintf("Encountered error %q when adding %q %q to db", this.err, this.val.TypeName(), this.val.String())
+	return fmt.Sprintf("Encountered error %q when adding %q to db", this.err, this.msg)
 }
 
 type DBRemoveError struct{

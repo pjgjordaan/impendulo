@@ -6,9 +6,8 @@ import (
 	"github.com/godfried/impendulo/processing/monitor"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
-	//	"github.com/godfried/impendulo/tool/findbugs"
 	"container/list"
-	"github.com/godfried/impendulo/tool/java"
+	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
@@ -252,7 +251,7 @@ func (this *Analyser) Eval() error {
 		return err
 	}
 	for _, test := range this.proc.tests {
-		err = test.Execute(this.file, this.proc.dir)
+		err = test.Run(this.file, this.proc.dir)
 		if err != nil {
 			return err
 		}
@@ -275,8 +274,8 @@ func (this *Analyser) buildTarget() error {
 //Compile compiles a java source file and saves the results thereof.
 //It returns true if compiled successfully.
 func (this *Analyser) compile() error {
-	javac := java.NewJavac(this.target.Dir)
-	res, err := javac.Run(this.file.Id, this.target)
+	comp := javac.NewJavac(this.target.Dir)
+	res, err := comp.Run(this.file.Id, this.target)
 	if err != nil {
 		return err
 	}
@@ -313,9 +312,9 @@ func (this *Analyser) RunTools() error {
 
 //AddResult adds a tool result to the db.
 //It updates the associated file's list of results to point to this new result.
-func AddResult(res *tool.Result) error {
-	matcher := bson.M{project.ID: res.FileId}
-	change := bson.M{db.SET: bson.M{project.RES + "." + res.Name: res.Id}}
+func AddResult(res tool.Result) error {
+	matcher := bson.M{project.ID: res.GetFileId()}
+	change := bson.M{db.SET: bson.M{project.RES + "." + res.Name(): res.GetId()}}
 	err := db.Update(db.FILES, matcher, change)
 	if err != nil {
 		return err

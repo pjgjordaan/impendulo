@@ -119,7 +119,7 @@ func AddFile(f *project.File)(err error) {
 	col := session.DB("").C(FILES)
 	err = col.Insert(f)
 	if err != nil {
-		err = &DBAddError{f, err}
+		err = &DBAddError{f.String(), err}
 	}
 	return
 }
@@ -136,7 +136,7 @@ func AddTest(t *project.Test) error {
 	}
 	err = col.Insert(t)
 	if err != nil {
-		err = &DBAddError{t, err}
+		err = &DBAddError{t.String(), err}
 	}
 	return nil
 }
@@ -152,7 +152,7 @@ func AddJPF(jpf *project.JPFFile) error {
 	}
 	err = col.Insert(jpf)
 	if err != nil {
-		err = &DBAddError{jpf, err}
+		err = &DBAddError{jpf.String(), err}
 	}
 	return nil
 }
@@ -164,7 +164,7 @@ func AddSubmission(s *project.Submission) (err error) {
 	col := session.DB("").C(SUBMISSIONS)
 	err = col.Insert(s)
 	if err != nil {
-		err = &DBAddError{s, err}
+		err = &DBAddError{s.String(), err}
 	}
 	return
 }
@@ -176,7 +176,7 @@ func AddProject(p *project.Project) (err error) {
 	col := session.DB("").C(PROJECTS)
 	err = col.Insert(p)
 	if err != nil {
-		err = &DBAddError{p, err}
+		err = &DBAddError{p.String(), err}
 	}
 	return
 }

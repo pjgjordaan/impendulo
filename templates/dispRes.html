@@ -36,12 +36,8 @@
     </div>
     <div id="{{$k}}" class="accordion-body collapse">
       <div class="accordion-inner">
-	{{with $res := getResult $v}}
-	{{if $res.HTML}}
-	<iframe src='{{genHTML $res.Name $res.Data}}' allowTransparency="true" sandbox="" width="1000" height="500" seamless></iframe>
-	{{else}}
-	<p>{{$res.Output}}</p>
-	{{end}}
+	{{with $res := getResult $k $v}}
+	<p>{{$res.HTML}}</p>
 	{{end}}
       </div>
     </div>

@@ -3,6 +3,7 @@ package junit
 import (
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/javac"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -26,23 +27,20 @@ func (this *JUnit) GetName() string {
 	return tool.JUNIT
 }
 
-func (this *JUnit) args(target string) []string {
-	return []string{this.java, "-cp", this.cp, "-Ddata.location=" + this.datalocation, this.exec, target}
-}
-
-func (this *JUnit) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (*tool.Result, error) {
+func (this *JUnit) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (tool.Result, error) {
+	comp := javac.NewJavac(this.cp)
+	_, err := comp.Run(fileId, ti)
+	if err != nil{
+		return nil, err
+	}
 	target := ti.GetTarget(tool.EXEC_PATH)
-	args := this.args(target)
+	args := []string{this.java, "-cp", this.cp, "-Ddata.location=" + this.datalocation, this.exec, target}
 	stdout, stderr, err := tool.RunCommand(args...)
 	if err != nil {
 		return nil, err
 	}
 	if stderr != nil && len(stderr) > 0 {
-		return tool.NewResult(fileId, this, stderr), nil
+		return NewResult(fileId, ti.Name, stderr), nil
 	}
-	return tool.NewResult(fileId, this, stdout), nil
-}
-
-func (this *JUnit) GenHTML() bool {
-	return false
+	return NewResult(fileId, ti.Name, stdout), nil
 }

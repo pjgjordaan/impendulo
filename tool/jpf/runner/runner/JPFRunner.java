@@ -45,9 +45,8 @@ public class JPFRunner {
 				errs = new JsonArray();
 				for (gov.nasa.jpf.Error err : jpf.getSearchErrors()) {
 					final JsonObject ret = new JsonObject();
-					ret.addProperty("description", err.getDescription());
-					ret.addProperty("details", err.getDetails());
-					ret.addProperty("id", err.getId());
+					ret.addProperty("Description", err.getDescription());
+					ret.addProperty("Details", err.getDetails());
 					errs.add(ret);
 				}
 			}

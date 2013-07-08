@@ -4,22 +4,20 @@ import (
 	"fmt"
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 )
 
 type JPF struct {
-	java    string
-	javac   string
-	compCP  string
-	execCP  string
+	exec    string
+	cp  string
 	jpfPath string
 }
 
 func NewJPF(jpfPath string) *JPF {
-	compCP := config.GetConfig(config.JPF_JAR) + ":" + config.GetConfig(config.GSON_JAR)
-	execCP := config.GetConfig(config.JPF_JAR) + ":" + config.GetConfig(config.RUNJPF_JAR) + ":" + config.GetConfig(config.GSON_JAR)
-	return &JPF{config.GetConfig(config.JAVA), config.GetConfig(config.JAVAC), compCP, execCP, jpfPath}
+	cp := config.GetConfig(config.JPF_JAR) + ":" + config.GetConfig(config.RUNJPF_JAR) + ":" + config.GetConfig(config.GSON_JAR)
+	return &JPF{config.GetConfig(config.JAVA), cp, jpfPath}
 }
 
 func (this *JPF) GetLang() string {
@@ -30,29 +28,25 @@ func (this *JPF) GetName() string {
 	return tool.JPF
 }
 
-func (this *JPF) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (*tool.Result, error) {
-	err := util.Copy(ti.Dir, config.GetConfig(config.RUNNER_DIR))
+func (this *JPF) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Result, err error) {
+	err = util.Copy(ti.Dir, config.GetConfig(config.RUNNER_DIR))
 	if err != nil {
-		return nil, err
+		return
 	}
 	jpfInfo := tool.NewTarget("JPFRunner.java", "java", "runner", ti.Dir)
-	compileArgs := []string{this.javac, "-cp", jpfInfo.Dir + ":" + this.compCP, jpfInfo.FilePath()}
-	_, stderr, err := tool.RunCommand(compileArgs...)
-	if err != nil {
-		return nil, err
-	} else if stderr != nil && len(stderr) > 0 {
-		return nil, fmt.Errorf("Could not compile jpf runner: %q.", string(stderr))
+	comp := javac.NewJavac(this.cp)
+	_, err = comp.Run(fileId, jpfInfo)
+	if err != nil{
+		return
 	}
-	runArgs := []string{this.java, "-cp", jpfInfo.Dir + ":" + this.execCP, jpfInfo.Executable(), this.jpfPath, ti.Executable(), ti.Dir}
-	stdout, stderr, err := tool.RunCommand(runArgs...)
-	if err != nil {
-		return nil, err
-	} else if stderr != nil && len(stderr) > 0 {
-		return nil, fmt.Errorf("Could not execute jpf runner: %q.", string(stderr))
+	args := []string{this.exec, "-cp", jpfInfo.Dir + ":" + this.cp, jpfInfo.Executable(), this.jpfPath, ti.Executable(), ti.Dir}
+	stdout, stderr, err := tool.RunCommand(args...)
+	if err == nil {
+		if stderr != nil && len(stderr) > 0 {
+			err = fmt.Errorf("Could not execute jpf runner: %q.", string(stderr))
+		} else{
+			res = NewResult(fileId, stdout)
+		}
 	}
-	return tool.NewResult(fileId, this, stdout), nil
-}
-
-func (this *JPF) GenHTML() bool {
-	return false
+	return
 }

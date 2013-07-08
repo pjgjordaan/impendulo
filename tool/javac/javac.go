@@ -1,10 +1,11 @@
-package java
+package javac
 
 import (
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
 	"strings"
+	"fmt"
 )
 
 type Javac struct {
@@ -24,26 +25,32 @@ func (this *Javac) GetName() string {
 	return tool.JAVAC
 }
 
-func (this *Javac) args(target string) []string {
-	return []string{this.cmd, "-cp", this.cp, "-implicit:class", target}
-}
-
-func (this *Javac) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (*tool.Result, error) {
+func (this *Javac) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (tool.Result, error) {
 	target := ti.GetTarget(tool.FILE_PATH)
-	args := this.args(target)
+	args := []string{this.cmd, "-cp", this.cp+":"+ti.Dir, "-implicit:class", target}
 	stdout, stderr, err := tool.RunCommand(args...)
 	if err != nil {
 		return nil, err
 	}
 	if stderr != nil && len(stderr) > 0 {
-		return tool.NewResult(fileId, this, stderr), nil
+		return NewResult(fileId, stderr), &CompileError{ti.FullName(), string(stderr)}
 	}
 	if stdout == nil || len(stdout) == 0 || len(strings.TrimSpace(string(stdout))) == 0 {
 		stdout = []byte("Compiled successfully")
 	}
-	return tool.NewResult(fileId, this, stdout), nil
+	return NewResult(fileId, stdout), nil
 }
 
-func (this *Javac) GenHTML() bool {
-	return false
+type CompileError struct{
+	name string
+	msg string
+}
+
+func (this *CompileError) Error() string{
+	return fmt.Sprintf("Could not compile %q due to: %q.", this.name, this.msg) 
+}
+
+func IsCompileError(err error)(ok bool){
+	_, ok = err.(*CompileError)
+	return
 }
