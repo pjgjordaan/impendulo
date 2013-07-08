@@ -1,4 +1,4 @@
-Cabanga
+Impendulo
 =======
 
-Server for impendulo system. Processes data received from intlola.
+Server and web frontend for impendulo system.
