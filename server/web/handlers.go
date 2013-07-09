@@ -59,23 +59,44 @@ func getSubmissions(w http.ResponseWriter, req *http.Request, ctx *context.Conte
 }
 
 func getFiles(w http.ResponseWriter, req *http.Request, ctx *context.Context) error {
-	fileRes, msg, err := retrieveFiles(req, ctx)
+	names, msg, err := retrieveNames(req, ctx)
 	if err != nil {
 		ctx.AddMessage(msg, true)
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 		return err
 	}
-	return T(getNav(ctx), "fileRes.html").Execute(w, map[string]interface{}{"ctx": ctx, "h": true, "fileRes": fileRes})
+	return T(getNav(ctx), "fileRes.html").Execute(w, map[string]interface{}{"ctx": ctx, "h": true, "names": names})
 }
 
 func getResults(w http.ResponseWriter, req *http.Request, ctx *context.Context) error {
-	res, msg, err := buildResults(req)
+	files, msg, err := retrieveFiles(req, ctx)
 	if err != nil {
 		ctx.AddMessage(msg, err != nil)
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 		return err
 	}
-	return T(getNav(ctx), "dispRes.html").Execute(w, map[string]interface{}{"ctx": ctx, "h": true, "res": res})
+	curFile, msg, err := getCurrentFile(req, files[0].Id)
+	if err != nil {
+		ctx.AddMessage(msg, err != nil)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
+	}
+	selected, msg, err := getSelected(req, len(files))
+	if err != nil {
+		ctx.AddMessage(msg, err != nil)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
+	}
+	if selected == len(files)-1{
+		return T(getNav(ctx), "singleDispRes.html").Execute(w, map[string]interface{}{"ctx": ctx, "h": true, "curFile": curFile, "files": files, "selected": selected})
+	}
+	nextFile, msg, err := getFile(files[selected+1].Id)
+	if err != nil {
+		ctx.AddMessage(msg, err != nil)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
+	} 
+	return T(getNav(ctx), "doubleDispRes.html").Execute(w, map[string]interface{}{"ctx": ctx, "h": true, "curFile": curFile, "files": files, "selected": selected, "nextFile":nextFile})
 }
 
 func login(w http.ResponseWriter, req *http.Request, ctx *context.Context) error {

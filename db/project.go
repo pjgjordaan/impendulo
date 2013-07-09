@@ -33,6 +33,18 @@ func GetFiles(matcher, selector interface{}, sort string) (ret []*project.File, 
 	return
 }
 
+
+func GetFileNames(matcher interface{}) (ret []string, err error) {
+	session := getSession()
+	defer session.Close()
+	c := session.DB("").C(FILES)
+	err = c.Find(matcher).Distinct(project.NAME, &ret)
+	if err != nil {
+		err = &DBGetError{"filenames", err, matcher}
+	}
+	return
+}
+
 //GetSubmission retrieves a submission matching the given interface from the active database.
 func GetSubmission(matcher, selector interface{}) (ret *project.Submission, err error) {
 	session := getSession()

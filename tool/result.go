@@ -7,7 +7,7 @@ import (
 
 //Result describes a tool or test's results for a given file.
 type Result interface {
-	HTML() template.HTML
+	GetHTML() template.HTML
 	Success() bool
 	Name() string
 	GetId() bson.ObjectId

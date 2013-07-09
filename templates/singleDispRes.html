@@ -11,33 +11,37 @@
   <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">Snapshots</a><span class="divider"></span></li>
   <li class="active">Analysis</li>
 </ul>
-<h2>{{ .res.Name}}</h2>
-<div class="accordion" id="accordion2">
-  {{if .res.Code}}
+<h3>{{ .curFile.Name}}</h3>
+<h4>{{date .curFile.Time}}</h4>
+<div id="filePager" files="{{len .files}}" selected="{{.selected}}" class="pagination pagination-centered pagination-large">
+  {{range $index, $file := .files}}
+  <a id="file{{$index}}" href="getresults?filename={{$file.Name}}&fileid={{$file.Id.Hex}}&pageindex={{$index}}"></a>
+  {{end}}
+</div>
+<div class="accordion" id="resaccordion">
   <div class="accordion-group">
     <div class="accordion-heading">
-      <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#code">Code</a>
+      <a class="accordion-toggle" data-toggle="collapse" data-parent="#resaccordion" href="#code">Code</a>
     </div>
     <div id="code" class="accordion-body collapse">
       <div class="accordion-inner">
 	<textarea name="code" cols="60" rows="10" class="java">
-	  {{ .res.Code }}
+	  {{code .curFile.Id }}
 	</textarea>
       </div>
     </div>
   </div>
-  {{end}}
-  {{range $k,$v := .res.Results}}
+  {{range $k,$v := .curFile.Results}}
   <div class="accordion-group">
     <div class="accordion-heading">
-      <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#{{$k}}">
+      <a class="accordion-toggle" data-toggle="collapse" data-parent="#resaccordion" href="#{{$k}}">
 	{{$k}}
       </a>
     </div>
     <div id="{{$k}}" class="accordion-body collapse">
       <div class="accordion-inner">
 	{{with $res := getResult $k $v}}
-	<p>{{$res.HTML}}</p>
+	<p>{{$res.GetHTML}}</p>
 	{{end}}
       </div>
     </div>

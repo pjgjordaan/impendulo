@@ -1,0 +1,77 @@
+{{define "view"}}
+<ul class="breadcrumb">
+  <li><a href="homeview">Home</a><span class="divider">/</span></li>
+  {{if .ctx.Browse.IsUser}}
+  <li><a href="getusers">Users</a><span class="divider"></span></li>
+  <li><a href="getsubmissions?id={{.ctx.Browse.Uid}}&type=user">Submissions</a><span class="divider"></span></li>
+  {{else}}
+  <li><a href="getprojects">Projects</a><span class="divider"></span></li>
+  <li><a href="getsubmissions?id={{.ctx.Browse.Pid}}&type=project">Submissions</a><span class="divider"></span></li>
+  {{end}}
+  <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">Snapshots</a><span class="divider"></span></li>
+  <li class="active">Analysis</li>
+</ul>
+<h3>{{ .curFile.Name}}</h3>
+<div class="row-fluid">
+  <div class="span6">
+    <h4>{{date .curFile.Time}}</h4>
+  </div>
+  <div class="span6">
+    <h4>{{date .nextFile.Time}}</h4>
+  </div>
+</div>
+<div id="filePager" files="{{len .files}}" selected="{{.selected}}" class="pagination pagination-centered pagination-large">
+  {{range $index, $file := .files}}
+  <a id="file{{$index}}" href="getresults?filename={{$file.Name}}&fileid={{$file.Id.Hex}}&pageindex={{$index}}"></a>
+  {{end}}
+</div>
+<div class="accordion" id="resaccordion">
+  <div class="accordion-group">
+    <div class="accordion-heading">
+      <a class="accordion-toggle" data-toggle="collapse" data-parent="#resaccordion" href="#code">Code</a>
+    </div>
+    <div id="code" class="accordion-body collapse">
+      <div class="accordion-inner">
+	<div class="row-fluid">
+	  <div class="span6">
+  	    <textarea name="code" cols="60" rows="10" class="java">
+	      {{code .curFile.Id }}
+	    </textarea>
+	  </div>
+	  <div class="span6">
+  	    <textarea name="code" cols="60" rows="10" class="java">
+	      {{code .nextFile.Id }}
+	    </textarea>
+	  </div>
+	</div>
+      </div>
+    </div>
+  </div>
+  {{$nextResults := .nextFile.Results}}
+  {{$curResults := .curFile.Results}}
+  {{range $k,$v := $curResults}}
+  <div class="accordion-group">
+    <div class="accordion-heading">
+      <a class="accordion-toggle" data-toggle="collapse" data-parent="#resaccordion" href="#{{$k}}">
+	{{$k}}
+      </a>
+    </div>
+    <div id="{{$k}}" class="accordion-body collapse">
+      <div class="accordion-inner">
+	<div class="row-fluid">
+	  {{$cur := getResult $k $v}}
+	  <div class="span6">
+	    <p>{{$cur.GetHTML}}</p>
+	  </div>
+	  {{$val := index $nextResults $k}}
+	  {{$next := getResult $k $val}}
+	  <div class="span6">
+	    <p>{{$next.GetHTML}}</p>
+	  </div>
+	</div>
+      </div>
+    </div>
+  </div>
+  {{end}}
+</div>
+{{end}}

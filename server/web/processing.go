@@ -17,6 +17,7 @@ import (
 	"labix.org/v2/mgo/bson"
 	"net/http"
 	"strings"
+	"strconv"
 )
 
 func getNav(ctx *context.Context) string {
@@ -192,44 +193,83 @@ func doRegister(req *http.Request, ctx *context.Context) (string, error) {
 	return fmt.Sprintf("Successfully registered as %q.", uname), nil
 }
 
-func retrieveFiles(req *http.Request, ctx *context.Context) ([]*project.File, string, error) {
+func retrieveNames(req *http.Request, ctx *context.Context) (ret []string, msg string, err error) {
 	ctx.Browse.Sid = req.FormValue("subid")
 	if !bson.IsObjectIdHex(ctx.Browse.Sid) {
-		err := fmt.Errorf("Invalid submission id %q", ctx.Browse.Sid)
-		return nil, err.Error(), err
+		err = fmt.Errorf("Invalid submission id %q", ctx.Browse.Sid)
+		msg = err.Error()
+		return
 	}
 	subId := bson.ObjectIdHex(ctx.Browse.Sid)
-	var err error
 	matcher := bson.M{project.SUBID: subId, project.TYPE: project.SRC}
-	selector := bson.M{project.NAME: 1, project.NUM: 1, project.MOD: 1, project.TIME: 1}
-	files, err := db.GetFiles(matcher, selector, project.NUM)
-	if err != nil {
-		return nil, fmt.Sprintf("Could not retrieve files for submission."), err
+	ret, err = db.GetFileNames(matcher)
+	if err != nil{
+		msg = fmt.Sprintf("Could not retrieve filenames for submission.")	
 	}
-	return files, "", nil
+	return
+}
+	
+func retrieveFiles(req *http.Request, ctx *context.Context)(ret []*project.File, msg string, err error){
+	name := req.FormValue("filename")
+	if !bson.IsObjectIdHex(ctx.Browse.Sid) {
+		err = fmt.Errorf("Invalid submission id %q.", ctx.Browse.Sid)
+		msg = err.Error()
+		return
+	}
+	matcher := bson.M{project.SUBID: bson.ObjectIdHex(ctx.Browse.Sid), project.TYPE: project.SRC, project.NAME: name}
+	selector := bson.M{project.ID: 1, project.NAME: 1}
+	ret, err = db.GetFiles(matcher, selector, project.NUM)
+	if err != nil {
+		msg = fmt.Sprintf("Could not retrieve files for submission.")
+	}
+	if len(ret) == 0{
+		err = fmt.Errorf("No files found with name %q.", name)
+		msg = err.Error()
+	}
+	return
 }
 
-type DisplayResult struct {
-	Name    string
-	Code    string
-	Results bson.M
-}
-
-func buildResults(req *http.Request) (*DisplayResult, string, error) {
+func getCurrentFile(req *http.Request, defualt bson.ObjectId) (*project.File, string, error) {
 	fileId := req.FormValue("fileid")
+	var id bson.ObjectId
 	if !bson.IsObjectIdHex(fileId) {
-		err := fmt.Errorf("Could not retrieve file.")
-		return nil, err.Error(), err
+		id = defualt
+	} else{
+		id = bson.ObjectIdHex(fileId)
 	}
-	file, err := db.GetFile(bson.M{project.ID: bson.ObjectIdHex(fileId)}, nil)
+	return getFile(id)
+}
+
+func getFile(id bson.ObjectId) (file *project.File, msg string, err error) {
+	selector := bson.M{project.NAME:1, project.ID:1, project.RES:1, project.TIME:1}
+	file, err = db.GetFile(bson.M{project.ID: id}, selector)
 	if err != nil {
-		return nil, fmt.Sprintf("Could not retrieve file."), err
+		msg = fmt.Sprintf("Could not retrieve file.")
 	}
-	res := &DisplayResult{Name: file.Name, Results: file.Results}
-	if file.Type == project.SRC {
-		res.Code = strings.TrimSpace(string(file.Data))
+	return
+}
+
+func getSelected(req *http.Request, maxSize int)(selected int, msg string, err error){
+	selStr := req.FormValue("pageindex")
+	selected, err = strconv.Atoi(selStr)
+	if err != nil {
+		msg = fmt.Sprintf("Invalid index %q.", selStr)
+		return
 	}
-	return res, "Successfully retrieved results.", nil
+	if selected >= maxSize{
+		err = fmt.Errorf("Index size %q too big.", selected)
+		msg = err.Error()
+	}
+	return
+}
+
+func code(id bson.ObjectId)(code string, err error){
+	var file *project.File
+	file, err = db.GetFile(bson.M{project.ID: id}, bson.M{project.DATA:1})
+	if err == nil {
+		code = strings.TrimSpace(string(file.Data))
+	}
+	return
 }
 
 func getResult(tipe string, id interface{}) (res tool.Result, err error) {

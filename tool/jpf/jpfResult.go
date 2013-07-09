@@ -13,6 +13,54 @@ import (
 
 const NAME = "JPF"
 
+type JPFResult struct {
+	Id     bson.ObjectId "_id"
+	FileId bson.ObjectId "fileid"
+	Time   int64         "time"
+	Report *JPFReport    "report"
+	HTML template.HTML "html"
+}
+
+func (this *JPFResult) Equals(that *JPFResult) bool {
+	return reflect.DeepEqual(this, that)
+}
+
+func (this *JPFResult) Name() string{
+	return NAME
+}
+
+func (this *JPFResult) GetId() bson.ObjectId{
+	return this.Id
+}
+
+func (this *JPFResult) GetFileId() bson.ObjectId{
+	return this.FileId
+}
+
+
+func (this *JPFResult) GetHTML() template.HTML{
+	return this.HTML
+}
+
+
+func (this *JPFResult) String() string {
+	return "Type: tool.jpf.JPFResult; Id: "+this.Id.Hex()+"; FileId: "+this.FileId.Hex() + "; Time: "+ util.Date(this.Time)
+}
+
+
+func (this *JPFResult) Success() bool{
+	return false
+}
+
+//NewResult
+func NewResult(fileId bson.ObjectId, data []byte) *JPFResult {
+	report := ReadReport(data)
+	gen := &Generator{id: fileId.Hex()}
+	html := gen.genHTML(report)
+	return &JPFResult{bson.NewObjectId(), fileId, util.CurMilis(), report, html}
+}
+
+
 type JPFReport struct{
 	Version string `xml:"jpf-version"`
 	Threads []Thread `xml:"live-threads>thread"`
@@ -84,133 +132,116 @@ func ReadReport(data []byte)(res *JPFReport) {
 	return
 }
 
-type JPFResult struct {
-	Id     bson.ObjectId "_id"
-	FileId bson.ObjectId "fileid"
-	Time   int64         "time"
-	Report *JPFReport    "report"
+type Generator struct{
+	id string
+	buffer *bytes.Buffer
 }
 
-func (this *JPFResult) Equals(that *JPFResult) bool {
-	return reflect.DeepEqual(this, that)
+func (this *Generator) genHTML(report *JPFReport)template.HTML{
+	this.buffer = new(bytes.Buffer)
+	this.buffer.WriteString(`<div class="accordion" id=jpfaccordion`+this.id+`>`)
+	this.genStats(report.Stats)
+	this.genErrors(report.Result.Errors, report.Success)
+	this.genThreads(report.Threads)
+	this.genTrace(report.Trace)
+	this.buffer.WriteString(`</div>`)
+	return template.HTML(this.buffer.String()) 
 }
 
-func (this *JPFResult) Name() string{
-	return NAME
+func (this *Generator) genHeader(name string){
+	this.buffer.WriteString(`<div class="accordion-group">`)
+	this.buffer.WriteString(`<div class="accordion-heading">`)
+	this.buffer.WriteString(`<a class="accordion-toggle" data-toggle="collapse" data-parent="#jpfaccordion`+this.id+`" href="#`+name+this.id+`">`+name+`</a></div>`)
+	this.buffer.WriteString(`<div id="`+name+this.id+`" class="accordion-body collapse">`)
+	this.buffer.WriteString(`<div class="accordion-inner">`)
 }
 
-func (this *JPFResult) GetId() bson.ObjectId{
-	return this.Id
+func (this *Generator) genFooter(){
+	this.buffer.WriteString(`</div></div></div>`)
 }
 
-func (this *JPFResult) GetFileId() bson.ObjectId{
-	return this.FileId
+func (this *Generator) genStats(stats Statistics){
+	this.genHeader("Statistics")
+	this.buffer.WriteString(`<dl class="dl-horizontal">`)
+	this.buffer.WriteString(`<dt>Elapsed time</dt>`)
+	this.buffer.WriteString(`<dd>`+stats.Time+`</dd>`)
+	this.buffer.WriteString(`<dt>New States</dt>`)
+	this.buffer.WriteString(`<dd>`+strconv.Itoa(stats.NewStates)+`</dd>`)
+	this.buffer.WriteString(`<dt>Visited States</dt>`)
+	this.buffer.WriteString(`<dd>`+strconv.Itoa(stats.VisitedStates)+`</dd>`)
+	this.buffer.WriteString(`<dt>BackTracked States</dt>`)
+	this.buffer.WriteString(`<dd>`+strconv.Itoa(stats.BacktrackedStates)+`</dd>`)
+	this.buffer.WriteString(`<dt>End States</dt>`)
+	this.buffer.WriteString(`<dd>`+strconv.Itoa(stats.EndStates)+`</dd>`)
+	this.buffer.WriteString(`<dt>Memory Usage</dt>`)
+	this.buffer.WriteString(`<dd>`+strconv.Itoa(stats.Memory)+` MB</dd>`)
+	this.buffer.WriteString(`</dl>`)
+	this.genFooter()	
 }
 
-func (this *JPFResult) String() string {
-	return "Type: tool.jpf.JPFResult; Id: "+this.Id.Hex()+"; FileId: "+this.FileId.Hex() + "; Time: "+ util.Date(this.Time)
-}
-
-func (this *JPFResult) HTML()template.HTML{
-	buffer := new(bytes.Buffer)
-	buffer.WriteString(`<div class="accordion" id=jpfaccordion>`)
-	buffer.WriteString(`<div class="accordion-group">`)
-	buffer.WriteString(`<div class="accordion-heading">`)
-	buffer.WriteString(`<a class="accordion-toggle" data-toggle="collapse" data-parent="#jpfaccordion" href="#stats">Statistics.</a></div>`)
-	buffer.WriteString(`<div id="stats" class="accordion-body collapse">`)
-	buffer.WriteString(`<div class="accordion-inner">`)
-	buffer.WriteString(`<dl class="dl-horizontal">`)
-	buffer.WriteString(`<dt>Elapsed time</dt>`)
-	buffer.WriteString(`<dd>`+this.Report.Stats.Time+`</dd>`)
-	buffer.WriteString(`<dt>New States</dt>`)
-	buffer.WriteString(`<dd>`+strconv.Itoa(this.Report.Stats.NewStates)+`</dd>`)
-	buffer.WriteString(`<dt>Visited States</dt>`)
-	buffer.WriteString(`<dd>`+strconv.Itoa(this.Report.Stats.VisitedStates)+`</dd>`)
-	buffer.WriteString(`<dt>BackTracked States</dt>`)
-	buffer.WriteString(`<dd>`+strconv.Itoa(this.Report.Stats.BacktrackedStates)+`</dd>`)
-	buffer.WriteString(`<dt>End States</dt>`)
-	buffer.WriteString(`<dd>`+strconv.Itoa(this.Report.Stats.EndStates)+`</dd>`)
-	buffer.WriteString(`<dt>Memory Usage</dt>`)
-	buffer.WriteString(`<dd>`+strconv.Itoa(this.Report.Stats.Memory)+` MB</dd>`)
-	buffer.WriteString(`</dl></div></div></div>`)	
-	buffer.WriteString(`<div class="accordion-group">`)
-	buffer.WriteString(`<div class="accordion-heading">`)
-	buffer.WriteString(`<a class="accordion-toggle" data-toggle="collapse" data-parent="#jpfaccordion" href="#errors">Errors.</a></div>`)
-	buffer.WriteString(`<div id="errors" class="accordion-body collapse">`)
-	buffer.WriteString(`<div class="accordion-inner">`)
-	if this.Report.Success{
-		buffer.WriteString(`<h3 class="text-success">No errors detected</h3>`)
+func (this *Generator) genErrors(errors []Error, success bool){
+	this.genHeader("Errors")
+	if success{
+		this.buffer.WriteString(`<h3 class="text-success">No errors detected</h3>`)
 	} else{
-		buffer.WriteString(`<h3 class="text-error">`)
-		buffer.WriteString(strconv.Itoa(len(this.Report.Result.Errors))+" errors found.")
-		buffer.WriteString("</h3>")
-		for _, err := range this.Report.Result.Errors{
-			buffer.WriteString(`<h4 class="text-warning">`)
-			buffer.WriteString(err.Property)
-			buffer.WriteString("</h4>")
-			buffer.WriteString("<p>")
+		this.buffer.WriteString(`<h3 class="text-error">`)
+		this.buffer.WriteString(strconv.Itoa(len(errors))+" errors found.")
+		this.buffer.WriteString("</h3>")
+		for _, err := range errors{
+			this.buffer.WriteString(`<h4 class="text-warning">`)
+			this.buffer.WriteString(err.Property)
+			this.buffer.WriteString("</h4>")
+			this.buffer.WriteString("<p>")
 			details := strings.Replace(err.Details, "\n", "<br>", -1)
-			buffer.WriteString(details)
-			buffer.WriteString("</p>")
+			this.buffer.WriteString(details)
+			this.buffer.WriteString("</p>")
 		}
 	}
-	buffer.WriteString(`</div></div></div>`)
-	buffer.WriteString(`<div class="accordion-group">`)
-	buffer.WriteString(`<div class="accordion-heading">`)
-	buffer.WriteString(`<a class="accordion-toggle" data-toggle="collapse" data-parent="#jpfaccordion" href="#threads">Threads.</a></div>`)
-	buffer.WriteString(`<div id="threads" class="accordion-body collapse">`)
-	buffer.WriteString(`<div class="accordion-inner">`)
-	for _, th := range this.Report.Threads{
-		buffer.WriteString(`<dl class="dl-horizontal">`)
-		buffer.WriteString(`<dt>Name</dt>`)
-		buffer.WriteString(`<dd>`+th.Name+`</dd>`)
-		buffer.WriteString(`<dt>Identifier</dt>`)
-		buffer.WriteString(`<dd>`+strconv.Itoa(th.Id)+`</dd>`)
-		buffer.WriteString(`<dt>Status</dt>`)
-		buffer.WriteString(`<dd>`+th.Status+`</dd>`)
-		buffer.WriteString(`<dt>Stack Frames</dt>`)
+	this.genFooter()
+}
+
+func (this *Generator) genThreads(threads []Thread){
+	this.genHeader("Threads")
+	for _, th := range threads{
+		this.buffer.WriteString(`<dl class="dl-horizontal">`)
+		this.buffer.WriteString(`<dt>Name</dt>`)
+		this.buffer.WriteString(`<dd>`+th.Name+`</dd>`)
+		this.buffer.WriteString(`<dt>Identifier</dt>`)
+		this.buffer.WriteString(`<dd>`+strconv.Itoa(th.Id)+`</dd>`)
+		this.buffer.WriteString(`<dt>Status</dt>`)
+		this.buffer.WriteString(`<dd>`+th.Status+`</dd>`)
+		this.buffer.WriteString(`<dt>Stack Frames</dt>`)
 		for _, frame := range th.Frames{
-			buffer.WriteString(`<dd>`+frame+`</dd>`)
+			this.buffer.WriteString(`<dd>`+frame+`</dd>`)
 		}
-		buffer.WriteString(`</dl>`)
+		this.buffer.WriteString(`</dl>`)
 	}
-	buffer.WriteString(`</div></div></div>`)
-	buffer.WriteString(`<div class="accordion-group">`)
-	buffer.WriteString(`<div class="accordion-heading">`)
-	buffer.WriteString(`<a class="accordion-toggle" data-toggle="collapse" data-parent="#jpfaccordion" href="#trace">Trace.</a></div>`)
-	buffer.WriteString(`<div id="trace" class="accordion-body collapse">`)
-	buffer.WriteString(`<div class="accordion-inner">`)
-	buffer.WriteString(`<div class="accordion" id=traceaccordion>`)
-	for _, trans := range this.Report.Trace{
-		buffer.WriteString(`<div class="accordion-group">`)
-		buffer.WriteString(`<div class="accordion-heading">`)
-		buffer.WriteString(`<a class="accordion-toggle" data-toggle="collapse" data-parent="#traceaccordion" href="#trans`+strconv.Itoa(trans.Id)+`">`)
-		buffer.WriteString(trans.String())
-		buffer.WriteString(`</a></div>`)
-		buffer.WriteString(`<div id="trans`+strconv.Itoa(trans.Id)+`" class="accordion-body collapse">`)
-		buffer.WriteString(`<div class="accordion-inner">`)
-		buffer.WriteString(`<dl class="dl-horizontal">`)
-		buffer.WriteString(`<dt>Choice Generator</dt>`)
-		buffer.WriteString(`<dd>`+trans.CG.Class+`; choice = `+trans.CG.Choice+`</dd>`)
-		buffer.WriteString(`<dt>Instructions</dt>`)
+	this.genFooter()
+}
+
+func (this *Generator) genTrace(trace []Transition){
+	this.genHeader("Trace")
+	this.buffer.WriteString(`<div class="accordion" id=traceaccordion`+this.id+`>`)
+	for _, trans := range trace{
+		this.buffer.WriteString(`<div class="accordion-group">`)
+		this.buffer.WriteString(`<div class="accordion-heading">`)
+		this.buffer.WriteString(`<a class="accordion-toggle" data-toggle="collapse" data-parent="#traceaccordion`+this.id+`" href="#`+this.id+`trans`+strconv.Itoa(trans.Id)+`">`)
+		this.buffer.WriteString(trans.String())
+		this.buffer.WriteString(`</a></div>`)
+		this.buffer.WriteString(`<div id="`+this.id+`trans`+strconv.Itoa(trans.Id)+`" class="accordion-body collapse">`)
+		this.buffer.WriteString(`<div class="accordion-inner">`)
+		this.buffer.WriteString(`<dl class="dl-horizontal">`)
+		this.buffer.WriteString(`<dt>Choice Generator</dt>`)
+		this.buffer.WriteString(`<dd>`+trans.CG.Class+`; choice = `+trans.CG.Choice+`</dd>`)
+		this.buffer.WriteString(`</dl>`)
+		this.buffer.WriteString(`<h5>Instructions</h5>`)
+		this.buffer.WriteString(`<ol>`)
 		for _, insn := range trans.Insns{
-			buffer.WriteString(`<dd>`+insn.Value+` (`+insn.Source+`)</dd>`)
+			this.buffer.WriteString(`<dd>`+insn.Value+` (`+insn.Source+`)</dd>`)
 		}
-		buffer.WriteString(`</dl>`)
-		buffer.WriteString(`</div>`)
-		buffer.WriteString(`</div>`)
-		buffer.WriteString(`</div>`)
+		this.buffer.WriteString(`</ol>`)
+		this.genFooter()
 	}
-	buffer.WriteString(`</div>`)
-	buffer.WriteString(`</div></div></div>`)
-	return template.HTML(buffer.String())
-}
-
-func (this *JPFResult) Success() bool{
-	return false
-}
-
-//NewResult
-func NewResult(fileId bson.ObjectId, data []byte) *JPFResult {
-	return &JPFResult{bson.NewObjectId(), fileId, util.CurMilis(), ReadReport(data)}
+	this.buffer.WriteString(`</div>`)
+	this.genFooter()
 }

@@ -36,7 +36,7 @@ func (this *JavacResult) String() string {
 	return "Type: tool.java.JavacResult; Id: "+this.Id.Hex()+"; FileId: "+this.FileId.Hex() + "; Time: "+ util.Date(this.Time)
 }
 
-func (this *JavacResult) HTML()template.HTML{
+func (this *JavacResult) GetHTML()template.HTML{
 	return template.HTML(this.Name())
 }
 

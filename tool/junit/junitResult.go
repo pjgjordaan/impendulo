@@ -37,7 +37,7 @@ func (this *JUnitResult) String() string {
 	return "Type: tool.junit.JUnitResult; Id: "+this.Id.Hex()+"; FileId: "+this.FileId.Hex() + "; Time: "+ util.Date(this.Time)
 }
 
-func (this *JUnitResult) HTML()template.HTML{
+func (this *JUnitResult) GetHTML()template.HTML{
 	return template.HTML(string(this.Data))
 }
 

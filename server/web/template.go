@@ -12,6 +12,7 @@ var funcs = template.FuncMap{
 	"getResult":   getResult,
 	"projectName": projectName,
 	"date": util.Date,
+	"code": code,
 }
 
 func genHTML(name string, data []byte) string {
