@@ -202,7 +202,7 @@ func retrieveFiles(req *http.Request, ctx *context.Context) ([]*project.File, st
 	var err error
 	matcher := bson.M{project.SUBID: subId, project.TYPE: project.SRC}
 	selector := bson.M{project.NAME: 1, project.NUM: 1, project.MOD: 1, project.TIME: 1}
-	files, err := db.GetFiles(matcher, selector)
+	files, err := db.GetFiles(matcher, selector, project.NUM)
 	if err != nil {
 		return nil, fmt.Sprintf("Could not retrieve files for submission."), err
 	}

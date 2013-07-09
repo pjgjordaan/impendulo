@@ -84,23 +84,14 @@ func ProcessStored(subId bson.ObjectId) {
 		util.Log(err)
 		return
 	}
-	total, err := db.Count(db.FILES, bson.M{project.SUBID: subId})
+	files, err := db.GetFiles(bson.M{project.SUBID: subId}, bson.M{project.ID: 1, project.SUBID: 1}, project.NUM)
 	if err != nil {
 		util.Log(err)
 		return
 	}
 	StartSubmission(sub)
-	count := 0
-	for count < total {
-		matcher := bson.M{project.SUBID: subId, project.NUM: count}
-		file, err := db.GetFile(matcher, bson.M{project.ID: 1})
-		if err != nil {
-			util.Log(err)
-			return
-		}
-		file.SubId = sub.Id
+	for _,file := range files{
 		AddFile(file)
-		count++
 	}
 	EndSubmission(sub)
 }

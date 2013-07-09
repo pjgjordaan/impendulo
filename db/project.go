@@ -18,11 +18,15 @@ func GetFile(matcher, selector interface{}) (ret *project.File, err error) {
 }
 
 //GetFiles retrieves files matching the given interface from the active database.
-func GetFiles(matcher, selector interface{}) (ret []*project.File, err error) {
+func GetFiles(matcher, selector interface{}, sort string) (ret []*project.File, err error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(FILES)
-	err = c.Find(matcher).Select(selector).All(&ret)
+	q := c.Find(matcher)
+	if sort != ""{
+		q = q.Sort(sort)
+	}
+	err = q.Select(selector).All(&ret)
 	if err != nil {
 		err = &DBGetError{"files", err, matcher}
 	}
