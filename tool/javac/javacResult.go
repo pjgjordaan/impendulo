@@ -4,7 +4,6 @@ import (
 	"labix.org/v2/mgo/bson"
 	"reflect"
 	"github.com/godfried/impendulo/util"
-	"html/template"
 )
 
 const NAME = "Javac"
@@ -36,8 +35,8 @@ func (this *JavacResult) String() string {
 	return "Type: tool.java.JavacResult; Id: "+this.Id.Hex()+"; FileId: "+this.FileId.Hex() + "; Time: "+ util.Date(this.Time)
 }
 
-func (this *JavacResult) GetHTML()template.HTML{
-	return template.HTML(this.Name())
+func (this *JavacResult) TemplateArgs(current bool)(string, interface{}){
+	return "",""
 }
 
 func (this *JavacResult) Success() bool{

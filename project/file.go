@@ -28,10 +28,6 @@ func (this *File) TypeName() string{
 	return "file"
 }
 
-func (this *File) Code() string{
-	return strings.TrimSpace(string(this.Data))
-}
-
 func (this *File) String() string {
 	return "Type: project.File; Id: "+this.Id.Hex()+"; SubId: "+this.SubId.Hex()+"; Name: " + this.Name + "; Package: " + this.Package + "; Type: " + this.Type+ "; FileType: " + this.FileType+ "; Mod: " + this.Mod+ "; Num: " + strconv.Itoa(this.Num) + "; Time: "+ util.Date(this.Time)
 }

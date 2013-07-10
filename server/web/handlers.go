@@ -68,14 +68,8 @@ func getFiles(w http.ResponseWriter, req *http.Request, ctx *context.Context) er
 	return T(getNav(ctx), "fileRes.html").Execute(w, map[string]interface{}{"ctx": ctx, "h": true, "names": names})
 }
 
-func getResults(w http.ResponseWriter, req *http.Request, ctx *context.Context) error {
+func getResultList(w http.ResponseWriter, req *http.Request, ctx *context.Context) error {
 	files, msg, err := retrieveFiles(req, ctx)
-	if err != nil {
-		ctx.AddMessage(msg, err != nil)
-		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
-		return err
-	}
-	curFile, msg, err := getCurrentFile(req, files[0].Id)
 	if err != nil {
 		ctx.AddMessage(msg, err != nil)
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
@@ -87,16 +81,62 @@ func getResults(w http.ResponseWriter, req *http.Request, ctx *context.Context) 
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 		return err
 	}
+	curFile, msg, err := getFile(files[0].Id)
+	if err != nil {
+		ctx.AddMessage(msg, err != nil)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
+	}
+	return T(getNav(ctx), "resultList.html").Execute(w, map[string]interface{}{"ctx": ctx, "h": true, "curFile": curFile, "files": files, "selected": selected})
+}
+
+
+func displayResult(w http.ResponseWriter, req *http.Request, ctx *context.Context) error {
+	files, msg, err := retrieveFiles(req, ctx)
+	if err != nil {
+		ctx.AddMessage(msg, err != nil)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
+	}
+	selected, msg, err := getSelected(req, len(files))
+	if err != nil {
+		ctx.AddMessage(msg, err != nil)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
+	}
+	curFile, msg, err := getFile(files[selected].Id)
+	if err != nil {
+		ctx.AddMessage(msg, err != nil)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
+	}
+	res, msg, err := getResult(req, curFile.Id)
+	if err != nil {
+		ctx.AddMessage(msg, err != nil)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
+	}
+	curTemp, curResult := res.TemplateArgs(true)
+	args := map[string]interface{}{"ctx": ctx, "h": true, "files": files, "selected": selected, "resultName": res.Name(), "curFile": curFile, "curResult": curResult}
 	if selected == len(files)-1{
-		return T(getNav(ctx), "singleDispRes.html").Execute(w, map[string]interface{}{"ctx": ctx, "h": true, "curFile": curFile, "files": files, "selected": selected})
+		return T(getNav(ctx), "singleResult.html", curTemp).Execute(w, args)
 	}
 	nextFile, msg, err := getFile(files[selected+1].Id)
 	if err != nil {
 		ctx.AddMessage(msg, err != nil)
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 		return err
+	}
+	res, msg, err = getResult(req, nextFile.Id)
+	if err != nil {
+		ctx.AddMessage(msg, err != nil)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
 	} 
-	return T(getNav(ctx), "doubleDispRes.html").Execute(w, map[string]interface{}{"ctx": ctx, "h": true, "curFile": curFile, "files": files, "selected": selected, "nextFile":nextFile})
+	nextTemp, nextResult := res.TemplateArgs(false)
+	args["nextFile"] = nextFile
+	args["nextResult"] = nextResult
+	return T(getNav(ctx), "doubleResult.html", curTemp, nextTemp).Execute(w, args)
 }
 
 func login(w http.ResponseWriter, req *http.Request, ctx *context.Context) error {

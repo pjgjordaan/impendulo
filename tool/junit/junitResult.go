@@ -4,7 +4,6 @@ import (
 	"labix.org/v2/mgo/bson"
 	"reflect"
 	"github.com/godfried/impendulo/util"
-	"html/template"
 )
 
 const NAME = "JUnit Test"
@@ -37,8 +36,9 @@ func (this *JUnitResult) String() string {
 	return "Type: tool.junit.JUnitResult; Id: "+this.Id.Hex()+"; FileId: "+this.FileId.Hex() + "; Time: "+ util.Date(this.Time)
 }
 
-func (this *JUnitResult) GetHTML()template.HTML{
-	return template.HTML(string(this.Data))
+
+func (this *JUnitResult) TemplateArgs(current bool)(string, interface{}){
+	return "",""
 }
 
 func (this *JUnitResult) Success() bool{

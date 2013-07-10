@@ -11,7 +11,8 @@ var router *pat.Router
 func init() {
 	router = pat.New()
 	router.Add("POST", "/login", handler(login))
-	router.Add("GET", "/getresults", handler(getResults)).Name("getresults")
+	router.Add("GET", "/getresultlist", handler(getResultList)).Name("getresultlist")
+	router.Add("GET", "/displayresult", handler(displayResult)).Name("displayresult")
 	router.Add("GET", "/getfiles", handler(getFiles)).Name("getfiles")
 	router.Add("GET", "/getsubmissions", handler(getSubmissions)).Name("getsubmissions")
 	router.Add("GET", "/getprojects", handler(getProjects)).Name("getprojects")

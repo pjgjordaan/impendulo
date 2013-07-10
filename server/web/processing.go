@@ -229,19 +229,8 @@ func retrieveFiles(req *http.Request, ctx *context.Context)(ret []*project.File,
 	return
 }
 
-func getCurrentFile(req *http.Request, defualt bson.ObjectId) (*project.File, string, error) {
-	fileId := req.FormValue("fileid")
-	var id bson.ObjectId
-	if !bson.IsObjectIdHex(fileId) {
-		id = defualt
-	} else{
-		id = bson.ObjectIdHex(fileId)
-	}
-	return getFile(id)
-}
-
 func getFile(id bson.ObjectId) (file *project.File, msg string, err error) {
-	selector := bson.M{project.NAME:1, project.ID:1, project.RES:1, project.TIME:1}
+	selector := bson.M{project.NAME:1, project.ID:1, project.RESULTS:1, project.TIME:1}
 	file, err = db.GetFile(bson.M{project.ID: id}, selector)
 	if err != nil {
 		msg = fmt.Sprintf("Could not retrieve file.")
@@ -250,7 +239,7 @@ func getFile(id bson.ObjectId) (file *project.File, msg string, err error) {
 }
 
 func getSelected(req *http.Request, maxSize int)(selected int, msg string, err error){
-	selStr := req.FormValue("pageindex")
+	selStr := req.FormValue("selected")
 	selected, err = strconv.Atoi(selStr)
 	if err != nil {
 		msg = fmt.Sprintf("Invalid index %q.", selStr)
@@ -263,27 +252,46 @@ func getSelected(req *http.Request, maxSize int)(selected int, msg string, err e
 	return
 }
 
-func code(id bson.ObjectId)(code string, err error){
+func getResult(req *http.Request, fileId bson.ObjectId) (res tool.Result, msg string, err error) {
+	name := req.FormValue("resultname")
 	var file *project.File
-	file, err = db.GetFile(bson.M{project.ID: id}, bson.M{project.DATA:1})
-	if err == nil {
-		code = strings.TrimSpace(string(file.Data))
+	if strings.ToLower(name) == "code"{
+		file, err = db.GetFile(bson.M{project.ID: fileId}, bson.M{project.DATA:1})
+		if err != nil{
+			msg = fmt.Sprintf("Could not retrieve code.")
+			return
+		}
+		res = tool.NewCodeResult(fileId, file.Data)
+	} else{
+		file, err = db.GetFile(bson.M{project.ID: fileId}, bson.M{project.RESULTS:1})
+		if err != nil{
+			msg = fmt.Sprintf("Could not retrieve file results.")
+			return
+		}
+		id, ok := file.Results[name]
+		if !ok{
+			err = fmt.Errorf("Could not retrieve result for %q from file.", name)
+			msg = err.Error()
+			return
+		}
+		selector := bson.M{project.NAME:1, project.DATA:1}
+		matcher := bson.M{project.ID: id}
+		if strings.HasPrefix(javac.NAME, name){
+			res, err = db.GetJavacResult(matcher, selector)
+		} else if strings.HasPrefix(junit.NAME, name){
+			res, err = db.GetJUnitResult(matcher, selector)
+		}else if strings.HasPrefix(jpf.NAME, name){
+			res, err = db.GetJPFResult(matcher, selector)
+		}else{
+			err = fmt.Errorf("Unknown result %q.", name)
+		}
+		if err != nil {
+			msg = fmt.Sprintf("Could not retrieve result.")
+		}
 	}
 	return
 }
 
-func getResult(tipe string, id interface{}) (res tool.Result, err error) {
-	if strings.HasPrefix(javac.NAME, tipe){
-		res, err = db.GetJavacResult(bson.M{project.ID: id}, nil)
-	} else if strings.HasPrefix(junit.NAME, tipe){
-		res, err = db.GetJUnitResult(bson.M{project.ID: id}, nil)
-	}else if strings.HasPrefix(jpf.NAME, tipe){
-		res, err = db.GetJPFResult(bson.M{project.ID: id}, nil)
-	}else{
-		err = fmt.Errorf("Unknown result type %q.", tipe)
-	}
-	return 
-}
 
 func retrieveSubmissions(req *http.Request, ctx *context.Context) (subs []*project.Submission, msg string, err error) {
 	tipe := req.FormValue("type")

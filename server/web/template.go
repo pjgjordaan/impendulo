@@ -4,23 +4,18 @@ import (
 	"github.com/godfried/impendulo/util"
 	"html/template"
 	"path/filepath"
+	"strings"
 )
 
 var funcs = template.FuncMap{
 	"reverse":     reverse,
-	"genHTML":     genHTML,
-	"getResult":   getResult,
 	"projectName": projectName,
 	"date": util.Date,
-	"code": code,
+	"setBreaks": setBreaks,
 }
 
-func genHTML(name string, data []byte) string {
-	val, err := util.GenHTML(filepath.Join("static", "gen"), name, data)
-	if err != nil {
-		util.Log(err)
-	}
-	return val
+func setBreaks(val string) string {
+	return strings.Replace(val, "\n", "<br>", -1)
 }
 
 var basicT = []string{filepath.Join("templates", "_base.html"), filepath.Join("templates", "index.html"), filepath.Join("templates", "messages.html")}

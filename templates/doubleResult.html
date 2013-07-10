@@ -1,0 +1,40 @@
+{{define "view"}}
+<ul class="breadcrumb">
+  <li><a href="homeview">Home</a><span class="divider">/</span></li>
+  {{if .ctx.Browse.IsUser}}
+  <li><a href="getusers">Users</a><span class="divider"></span></li>
+  <li><a href="getsubmissions?id={{.ctx.Browse.Uid}}&type=user">Submissions</a><span class="divider"></span></li>
+  {{else}}
+  <li><a href="getprojects">Projects</a><span class="divider"></span></li>
+  <li><a href="getsubmissions?id={{.ctx.Browse.Pid}}&type=project">Submissions</a><span class="divider"></span></li>
+  {{end}}
+  <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">Snapshots</a><span class="divider"></span></li>
+  <li><a href="getresultlist?filename={{.curFile.Name}}&selected={{.selected}}">Result List</a><span class="divider"></span></li>
+  <li class="active">{{.resultName}}</li>
+</ul>
+<h3>{{ .curFile.Name}}</h3>
+<div class="row-fluid">
+  <div class="span6">
+    <h4>{{date .curFile.Time}}</h4>
+  </div>
+  <div class="span6">
+    <h4>{{date .nextFile.Time}}</h4>
+  </div>
+</div>
+<div id="filePager" files="{{len .files}}" selected="{{.selected}}" class="pagination pagination-centered pagination-large">
+  {{$resultName := .resultName}}
+  {{$fileName := .curFile.Name}}
+  {{range $index, $file := .files}}
+  <a id="file{{$index}}" href="displayresult?filename={{$fileName}}&selected={{$index}}&resultname={{$resultName}}"></a>
+  {{end}}
+</div>
+<h4>{{.resultName}}</h4>
+<div class="row-fluid">
+  <div class="span6">
+    {{template "currentResult" .curResult}}
+  </div>
+  <div class="span6">
+    {{template "nextResult" .nextResult}}
+  </div>
+</div>
+{{end}}

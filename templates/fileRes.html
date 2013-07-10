@@ -8,11 +8,11 @@
   <li><a href="getprojects">Projects</a><span class="divider"></span></li>
   <li><a href="getsubmissions?id={{.ctx.Browse.Pid}}&type=project">Submissions</a><span class="divider"></span></li>
   {{end}}
-  <li class="active">Snapshots</li>
+  <li class="active">Files</li>
 </ul>
-<ul>
+<ul class="unstyled">
   {{range .names}}
-  <li><a class="rowlink" href="getresults?filename={{.}}&pageindex={{0}}"><h3>{{.}}</h3></a></li>
+  <li><a class="rowlink" href="getresultlist?filename={{.}}&selected=0"><h3>{{.}}</h3></a></li>
   {{end}}
 </ul>
 {{end}}

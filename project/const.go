@@ -26,7 +26,7 @@ const (
 	SUBID        = "subid"
 	INFO         = "info"
 	DATA         = "data"
-	RES          = "results"
+	RESULTS      = "results"
 	JSRC         = ".java"
 	JCOMP        = ".class"
 	ZIP          = "zip"
@@ -35,4 +35,6 @@ const (
 	JAVA         = "java"
 	CLASS        = "class"
 	EMPTY        = "empty"
+	HTML = "html"
+	FILEID = "fileid"
 )
