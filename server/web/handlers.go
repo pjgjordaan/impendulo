@@ -81,7 +81,7 @@ func getResultList(w http.ResponseWriter, req *http.Request, ctx *context.Contex
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 		return err
 	}
-	curFile, msg, err := getFile(files[0].Id)
+	curFile, msg, err := getFile(files[selected].Id)
 	if err != nil {
 		ctx.AddMessage(msg, err != nil)
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
@@ -115,7 +115,7 @@ func displayResult(w http.ResponseWriter, req *http.Request, ctx *context.Contex
 		ctx.AddMessage(msg, err != nil)
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 		return err
-	}
+	} 
 	curTemp, curResult := res.TemplateArgs(true)
 	args := map[string]interface{}{"ctx": ctx, "h": true, "files": files, "selected": selected, "resultName": res.Name(), "curFile": curFile, "curResult": curResult}
 	if selected == len(files)-1{

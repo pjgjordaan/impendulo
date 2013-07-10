@@ -15,6 +15,42 @@ type Result interface {
 	String() string
 }
 
+func NewErrorResult(msg string)*ErrorResult{
+	return &ErrorResult{msg}
+}
+
+type ErrorResult struct{
+	msg string
+}
+
+func (this *ErrorResult) String()string{
+	return this.msg
+}
+
+func (this *ErrorResult) Name()string{
+	return "Error"
+}
+
+func (this *ErrorResult) Success()bool{
+	return false
+}
+
+func (this *ErrorResult) GetId()bson.ObjectId{
+	return bson.NewObjectId()
+}
+
+func (this *ErrorResult) GetFileId()bson.ObjectId{
+	return bson.NewObjectId()
+}
+
+func (this *ErrorResult) TemplateArgs(current bool)(string, interface{}){
+	if current{
+		return "errorCurrent.html", this.msg
+	} else{
+		return "errorNext.html", this.msg
+	} 
+}
+
 func NewCodeResult(fileId bson.ObjectId, data []byte)*CodeResult{
 	return &CodeResult{fileId, strings.TrimSpace(string(data))}
 }

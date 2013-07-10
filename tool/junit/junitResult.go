@@ -36,9 +36,12 @@ func (this *JUnitResult) String() string {
 	return "Type: tool.junit.JUnitResult; Id: "+this.Id.Hex()+"; FileId: "+this.FileId.Hex() + "; Time: "+ util.Date(this.Time)
 }
 
-
 func (this *JUnitResult) TemplateArgs(current bool)(string, interface{}){
-	return "",""
+	if current{
+		return "junitCurrent.html", string(this.Data)
+	}else{
+		return "junitNext.html", string(this.Data)
+	}
 }
 
 func (this *JUnitResult) Success() bool{

@@ -233,9 +233,12 @@ func (this *Analyser) Eval() error {
 	if err != nil {
 		return err
 	}
-	err = this.compile()
+	var compileErr bool
+	compileErr, err = this.compile()
 	if err != nil {
 		return err
+	} else if compileErr{
+		return nil
 	}
 	this.file, err = db.GetFile(bson.M{project.ID: this.file.Id}, nil)
 	if err != nil {
@@ -264,14 +267,15 @@ func (this *Analyser) buildTarget() error {
 
 //Compile compiles a java source file and saves the results thereof.
 //It returns true if compiled successfully.
-func (this *Analyser) compile() error {
+func (this *Analyser) compile() (bool, error) {
 	comp := javac.NewJavac(this.target.Dir)
 	res, err := comp.Run(this.file.Id, this.target)
-	if err != nil {
-		return err
+	compileErr := javac.IsCompileError(err)
+	if err != nil && !compileErr{
+		return false, err
 	}
 	util.Log("Compile result", res)
-	return AddResult(res)
+	return compileErr, AddResult(res)
 }
 
 //RunTools runs all available tools on a file, skipping previously run tools.

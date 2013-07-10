@@ -14,8 +14,8 @@ var funcs = template.FuncMap{
 	"setBreaks": setBreaks,
 }
 
-func setBreaks(val string) string {
-	return strings.Replace(val, "\n", "<br>", -1)
+func setBreaks(val string) template.HTML {
+	return template.HTML(strings.Replace(val, "\n", "<br>", -1))
 }
 
 var basicT = []string{filepath.Join("templates", "_base.html"), filepath.Join("templates", "index.html"), filepath.Join("templates", "messages.html")}

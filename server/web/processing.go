@@ -270,8 +270,7 @@ func getResult(req *http.Request, fileId bson.ObjectId) (res tool.Result, msg st
 		}
 		id, ok := file.Results[name]
 		if !ok{
-			err = fmt.Errorf("Could not retrieve result for %q from file.", name)
-			msg = err.Error()
+			res = tool.NewErrorResult(fmt.Sprintf("Could not retrieve result for %q.", name))
 			return
 		}
 		selector := bson.M{project.NAME:1, project.DATA:1}

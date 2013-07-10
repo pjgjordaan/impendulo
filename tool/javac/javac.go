@@ -29,11 +29,10 @@ func (this *Javac) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (tool.Result, 
 	target := ti.GetTarget(tool.FILE_PATH)
 	args := []string{this.cmd, "-cp", this.cp+":"+ti.Dir, "-implicit:class", target}
 	stdout, stderr, err := tool.RunCommand(args...)
-	if err != nil {
-		return nil, err
-	}
 	if stderr != nil && len(stderr) > 0 {
 		return NewResult(fileId, stderr), &CompileError{ti.FullName(), string(stderr)}
+	}else if err != nil{
+		return nil, err
 	}
 	if stdout == nil || len(stdout) == 0 || len(strings.TrimSpace(string(stdout))) == 0 {
 		stdout = []byte("Compiled successfully")

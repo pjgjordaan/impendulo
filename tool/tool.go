@@ -32,7 +32,7 @@ func RunCommand(args ...string) ([]byte, []byte, error) {
 	}
 	err = cmd.Wait()
 	if err != nil {
-		return nil, nil, fmt.Errorf("Encountered error %q executing command %q", err, args)
+		return stdout.Bytes(), stderr.Bytes(), fmt.Errorf("Encountered error %q executing command %q", err, args)
 	}
 	return stdout.Bytes(), stderr.Bytes(), nil
 }

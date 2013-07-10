@@ -1,0 +1,8 @@
+{{define "currentResult"}}
+{{$res := setBreaks .Result}}
+{{if .Success}}
+<p class="text-success">{{$res}}</p>
+{{else}}
+<p class="text-error">{{$res}}</p>
+{{end}}
+{{end}}

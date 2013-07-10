@@ -4,6 +4,7 @@ import (
 	"labix.org/v2/mgo/bson"
 	"reflect"
 	"github.com/godfried/impendulo/util"
+	"bytes"
 )
 
 const NAME = "Javac"
@@ -36,11 +37,19 @@ func (this *JavacResult) String() string {
 }
 
 func (this *JavacResult) TemplateArgs(current bool)(string, interface{}){
-	return "",""
+	if current{
+		return "javacCurrent.html", this
+	}else{
+		return "javacNext.html", this
+	}
 }
 
 func (this *JavacResult) Success() bool{
-	return false
+	return bytes.Equal(this.Data, []byte("Compiled successfully"))
+}
+
+func (this *JavacResult) Result() string{
+	return string(this.Data)
 }
 
 func NewResult(fileId bson.ObjectId, data []byte) *JavacResult{
