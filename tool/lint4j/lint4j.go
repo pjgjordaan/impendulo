@@ -4,6 +4,7 @@ import (
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
+	"fmt"
 )
 
 type Lint4j struct {
@@ -24,8 +25,10 @@ func (this *Lint4j) GetName() string {
 
 
 func (this *Lint4j) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (tool.Result, error) {
-	args := []string{this.cmd, "-v", "5", "-sourcepath", ti.Dir, ti.Package}
+	args := []string{this.cmd, "-v", "5", "-sourcepath", ti.Dir, ti.Executable()}
 	stdout, stderr, err := tool.RunCommand(args...)
+	fmt.Println(string(stdout), string(stderr))
+	fmt.Println(args)
 	if err != nil {
 		return nil, err
 	}
