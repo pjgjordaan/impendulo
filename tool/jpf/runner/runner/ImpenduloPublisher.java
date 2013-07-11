@@ -1,4 +1,4 @@
-package util;
+package runner;
 
 import gov.nasa.jpf.Config;
 import gov.nasa.jpf.report.Reporter;

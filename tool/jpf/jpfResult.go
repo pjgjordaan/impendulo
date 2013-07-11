@@ -51,7 +51,8 @@ func (this *JPFResult) TemplateArgs(current bool) (string, interface{}){
 
 //NewResult
 func NewResult(fileId bson.ObjectId, data []byte) *JPFResult {
-	return &JPFResult{bson.NewObjectId(), fileId, util.CurMilis(), GenReport(fileId, data)}
+	id := bson.NewObjectId()
+	return &JPFResult{id, fileId, util.CurMilis(), genReport(id, data)}
 }
 
 
@@ -115,7 +116,7 @@ type Statistics struct{
 	Memory int `xml:"max-memory"`
 }
 
-func GenReport(id bson.ObjectId, data []byte)(res *JPFReport) {
+func genReport(id bson.ObjectId, data []byte)(res *JPFReport) {
 	if err := xml.Unmarshal(data, &res); err != nil{
 		panic(err)
 	}

@@ -44,8 +44,8 @@ type TestRunner struct {
 }
 
 //Run runs a test on the current file.
-func (this *TestRunner) Run(f *project.File, dir string) error {
-	ju := junit.NewJUnit(dir+":"+this.Info.Dir, this.Info.Dir)
+func (this *TestRunner) Run(f *project.File, srcDir string) error {
+	ju := junit.NewJUnit(srcDir+":"+this.Info.Dir, this.Info.Dir)
 	if _, ok := f.Results[this.Info.Name+"_"+ju.GetName()]; ok {
 		return nil
 	}

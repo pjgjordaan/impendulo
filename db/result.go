@@ -5,7 +5,20 @@ import (
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/tool/jpf"
+	"github.com/godfried/impendulo/tool/findbugs"
 )
+
+func GetFindbugsResult(matcher, selector interface{}) (ret *findbugs.FindbugsResult, err error) {
+	session := getSession()
+	defer session.Close()
+	c := session.DB("").C(RESULTS)
+	err = c.Find(matcher).Select(selector).One(&ret)
+	if err != nil {
+		err = &DBGetError{"result", err, matcher}
+	}
+	return
+}
+
 
 func GetJPFResult(matcher, selector interface{}) (ret *jpf.JPFResult, err error) {
 	session := getSession()

@@ -8,11 +8,14 @@ import (
 	"github.com/godfried/impendulo/tool"
 	"container/list"
 	"github.com/godfried/impendulo/tool/javac"
+	"github.com/godfried/impendulo/tool/findbugs"
+	"github.com/godfried/impendulo/tool/lint4j"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"os"
 	"path/filepath"
+	"github.com/godfried/impendulo/config"
 )
 
 var fileChan chan *FileId
@@ -100,12 +103,14 @@ type Processor struct {
 	sub     *project.Submission
 	recv    chan bson.ObjectId
 	tests   []*TestRunner
-	dir     string
+	toolDir     string
+	srcDir     string
 	jpfPath string
 }
 
 func NewProcessor(sub *project.Submission, recv chan bson.ObjectId) *Processor {
-	return &Processor{sub: sub, recv: recv, dir: filepath.Join(os.TempDir(), sub.Id.Hex())}
+	dir := filepath.Join(os.TempDir(), sub.Id.Hex())
+	return &Processor{sub: sub, recv: recv, toolDir: filepath.Join(dir, "tools"), srcDir: filepath.Join(dir, "src")}
 }
 
 //ProcessSubmission processes a new submission.
@@ -149,7 +154,11 @@ func (this *Processor) Process() {
 
 func (this *Processor) Setup() error {
 	var err error
-	this.tests, err = SetupTests(this.sub.ProjectId, this.dir)
+	this.tests, err = SetupTests(this.sub.ProjectId, this.toolDir)
+	if err != nil {
+		return err
+	}
+	err = util.Copy(this.toolDir, config.GetConfig(config.RUNNER_DIR))
 	if err != nil {
 		return err
 	}
@@ -157,7 +166,7 @@ func (this *Processor) Setup() error {
 	if err != nil {
 		return err
 	}
-	this.jpfPath = filepath.Join(this.dir, jpfFile.Name)
+	this.jpfPath = filepath.Join(this.toolDir, jpfFile.Name)
 	return util.SaveFile(this.jpfPath, jpfFile.Data)
 }
 
@@ -245,7 +254,7 @@ func (this *Analyser) Eval() error {
 		return err
 	}
 	for _, test := range this.proc.tests {
-		err = test.Run(this.file, this.proc.dir)
+		err = test.Run(this.file, this.proc.srcDir)
 		if err != nil {
 			return err
 		}
@@ -261,7 +270,7 @@ func (this *Analyser) buildTarget() error {
 	if err != nil {
 		return err
 	}
-	this.target = tool.NewTarget(this.file.Name, p.Lang, this.file.Package, this.proc.dir)
+	this.target = tool.NewTarget(this.file.Name, p.Lang, this.file.Package, this.proc.srcDir)
 	return util.SaveFile(this.target.FilePath(), this.file.Data)
 }
 
@@ -280,25 +289,35 @@ func (this *Analyser) compile() (bool, error) {
 
 //RunTools runs all available tools on a file, skipping previously run tools.
 func (this *Analyser) RunTools() error {
-	/*fb := findbugs.NewFindBugs()
+	fb := findbugs.NewFindBugs()
 	if _, ok := this.file.Results[fb.GetName()]; ok {
 		return nil
 	}
-	res, _ := fb.Run(this.file.Id, this.target)
-	util.Log("Findbugs result", res)
+	res, err := fb.Run(this.file.Id, this.target)
 	if err != nil {
 		return err
 	}
-	err := AddResult(res)
+	err = AddResult(res)
 	if err != nil {
 		return err
-	}*/
-	j := jpf.NewJPF(this.proc.jpfPath)
+	}
+	l4j := lint4j.NewLint4j()
+	if _, ok := this.file.Results[l4j.GetName()]; ok {
+		return nil
+	}
+	res, err = l4j.Run(this.file.Id, this.target)
+	if err != nil {
+		return err
+	}
+	err = AddResult(res)
+	if err != nil {
+		return err
+	}
+	j := jpf.NewJPF(this.proc.toolDir, this.proc.jpfPath)
 	if _, ok := this.file.Results[j.GetName()]; ok {
 		return nil
 	}
-	res, err := j.Run(this.file.Id, this.target)
-	util.Log("JPF result", res)
+	res, err = j.Run(this.file.Id, this.target)
 	if err != nil {
 		return err
 	}

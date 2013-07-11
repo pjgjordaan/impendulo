@@ -8,6 +8,7 @@ import (
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/tool/jpf"
@@ -271,9 +272,9 @@ func getResult(req *http.Request, fileId bson.ObjectId) (res tool.Result, msg st
 		id, ok := file.Results[name]
 		if !ok{
 			res = tool.NewErrorResult(fmt.Sprintf("Could not retrieve result for %q.", name))
-			return
+			
 		}
-		selector := bson.M{project.NAME:1, project.DATA:1}
+		selector := bson.M{project.DATA:1}
 		matcher := bson.M{project.ID: id}
 		if strings.HasPrefix(javac.NAME, name){
 			res, err = db.GetJavacResult(matcher, selector)
@@ -281,6 +282,8 @@ func getResult(req *http.Request, fileId bson.ObjectId) (res tool.Result, msg st
 			res, err = db.GetJUnitResult(matcher, selector)
 		}else if strings.HasPrefix(jpf.NAME, name){
 			res, err = db.GetJPFResult(matcher, selector)
+		}else if strings.HasPrefix(findbugs.NAME, name){
+			res, err = db.GetFindbugsResult(matcher, selector)
 		}else{
 			err = fmt.Errorf("Unknown result %q.", name)
 		}

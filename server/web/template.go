@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"path/filepath"
 	"strings"
+	"fmt"
 )
 
 var funcs = template.FuncMap{
@@ -12,6 +13,11 @@ var funcs = template.FuncMap{
 	"projectName": projectName,
 	"date": util.Date,
 	"setBreaks": setBreaks,
+	"address": address,
+}
+
+func address(val interface{})string{
+	return fmt.Sprint(&val)
 }
 
 func setBreaks(val string) template.HTML {

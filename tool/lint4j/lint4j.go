@@ -11,7 +11,7 @@ type Lint4j struct {
 }
 
 func NewLint4j() *Lint4j {
-	return &Lint4j{config.GetConfig(config.FINDBUGS)}
+	return &Lint4j{config.GetConfig(config.LINT4J)}
 }
 
 func (this *Lint4j) GetLang() string {
@@ -22,16 +22,16 @@ func (this *Lint4j) GetName() string {
 	return tool.LINT4J
 }
 
-func (this *Lint4j) args(target string) []string {
-	return []string{this.cmd, "-textui", "-low", target}
-}
 
-func (this *Lint4j) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (*tool.Result, error) {
-	target := ti.GetTarget(tool.PKG_PATH)
-	args := this.args(target)
+func (this *Lint4j) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (tool.Result, error) {
+	args := []string{this.cmd, "-v", "5", "-sourcepath", ti.Dir, ti.Package}
 	stdout, stderr, err := tool.RunCommand(args...)
 	if err != nil {
 		return nil, err
 	}
-	return tool.NewResult(fileId, this, stdout, stderr, err), nil
+	if stderr != nil && len(stderr) > 0 {
+		return NewResult(fileId, stderr), nil
+	}
+	return NewResult(fileId, stdout), nil
+
 }

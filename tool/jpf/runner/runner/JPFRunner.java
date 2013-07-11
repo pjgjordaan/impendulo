@@ -45,7 +45,7 @@ public class JPFRunner {
 		Config config = JPF.createConfig(new String[] { configName });
 		config.setProperty("target", target);
 		config.setProperty("report.publisher", "xml");
-		config.setProperty("report.xml.class", "util.ImpenduloPublisher");
+		config.setProperty("report.xml.class", "runner.ImpenduloPublisher");
 		config.setProperty("classpath",
 				targetLocation + ";" + config.getProperty("classpath"));
 		config.setProperty("report.xml.start", "jpf,sut");
