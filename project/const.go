@@ -35,6 +35,6 @@ const (
 	JAVA         = "java"
 	CLASS        = "class"
 	EMPTY        = "empty"
-	HTML = "html"
-	FILEID = "fileid"
+	HTML         = "html"
+	FILEID       = "fileid"
 )

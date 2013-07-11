@@ -41,16 +41,16 @@ func SetConfig(name, value string) {
 }
 
 const (
-	JUNIT_EXEC = "junit_exec"
-	LINT4J     = "lint4j"
-	FINDBUGS   = "findbugs"
-	JUNIT_JAR  = "junit_jar"
-	JAVAC      = "javac"
-	JAVA       = "java"
-	JPF_JAR    = "jpf_jar"
-	RUNJPF_JAR = "runjpf_jar"
-	GSON_JAR   = "gson_jar"
-	RUNNER_DIR    = "runner_dir"
-	JPF_HOME   = "jpf_home"
+	JUNIT_EXEC   = "junit_exec"
+	LINT4J       = "lint4j"
+	FINDBUGS     = "findbugs"
+	JUNIT_JAR    = "junit_jar"
+	JAVAC        = "javac"
+	JAVA         = "java"
+	JPF_JAR      = "jpf_jar"
+	RUNJPF_JAR   = "runjpf_jar"
+	GSON_JAR     = "gson_jar"
+	RUNNER_DIR   = "runner_dir"
+	JPF_HOME     = "jpf_home"
 	LISTENER_DIR = "listener_dir"
 )

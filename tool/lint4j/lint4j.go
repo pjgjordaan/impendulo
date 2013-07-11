@@ -1,10 +1,10 @@
 package lint4j
 
 import (
+	"fmt"
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
-	"fmt"
 )
 
 type Lint4j struct {
@@ -22,7 +22,6 @@ func (this *Lint4j) GetLang() string {
 func (this *Lint4j) GetName() string {
 	return tool.LINT4J
 }
-
 
 func (this *Lint4j) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (tool.Result, error) {
 	args := []string{this.cmd, "-v", "5", "-sourcepath", ti.Dir, ti.Executable()}

@@ -1,21 +1,21 @@
 package processing
 
 import (
+	"container/list"
 	"fmt"
+	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processing/monitor"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
-	"container/list"
-	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/findbugs"
-	"github.com/godfried/impendulo/tool/lint4j"
+	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/jpf"
+	"github.com/godfried/impendulo/tool/lint4j"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"os"
 	"path/filepath"
-	"github.com/godfried/impendulo/config"
 )
 
 var fileChan chan *FileId
@@ -93,7 +93,7 @@ func ProcessStored(subId bson.ObjectId) {
 		return
 	}
 	StartSubmission(sub)
-	for _,file := range files{
+	for _, file := range files {
 		AddFile(file)
 	}
 	EndSubmission(sub)
@@ -103,8 +103,8 @@ type Processor struct {
 	sub     *project.Submission
 	recv    chan bson.ObjectId
 	tests   []*TestRunner
-	toolDir     string
-	srcDir     string
+	toolDir string
+	srcDir  string
 	jpfPath string
 }
 
@@ -246,7 +246,7 @@ func (this *Analyser) Eval() error {
 	compileErr, err = this.compile()
 	if err != nil {
 		return err
-	} else if compileErr{
+	} else if compileErr {
 		return nil
 	}
 	this.file, err = db.GetFile(bson.M{project.ID: this.file.Id}, nil)
@@ -280,7 +280,7 @@ func (this *Analyser) compile() (bool, error) {
 	comp := javac.NewJavac(this.target.Dir)
 	res, err := comp.Run(this.file.Id, this.target)
 	compileErr := javac.IsCompileError(err)
-	if err != nil && !compileErr{
+	if err != nil && !compileErr {
 		return false, err
 	}
 	util.Log("Compile result", res)

@@ -1,22 +1,22 @@
 package web
 
 import (
+	"fmt"
 	"github.com/godfried/impendulo/util"
 	"html/template"
 	"path/filepath"
 	"strings"
-	"fmt"
 )
 
 var funcs = template.FuncMap{
 	"reverse":     reverse,
 	"projectName": projectName,
-	"date": util.Date,
-	"setBreaks": setBreaks,
-	"address": address,
+	"date":        util.Date,
+	"setBreaks":   setBreaks,
+	"address":     address,
 }
 
-func address(val interface{})string{
+func address(val interface{}) string {
 	return fmt.Sprint(&val)
 }
 

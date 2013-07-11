@@ -2,10 +2,10 @@ package db
 
 import (
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/tool/javac"
-	"github.com/godfried/impendulo/tool/junit"
-	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/findbugs"
+	"github.com/godfried/impendulo/tool/javac"
+	"github.com/godfried/impendulo/tool/jpf"
+	"github.com/godfried/impendulo/tool/junit"
 )
 
 func GetFindbugsResult(matcher, selector interface{}) (ret *findbugs.FindbugsResult, err error) {
@@ -18,7 +18,6 @@ func GetFindbugsResult(matcher, selector interface{}) (ret *findbugs.FindbugsRes
 	}
 	return
 }
-
 
 func GetJPFResult(matcher, selector interface{}) (ret *jpf.JPFResult, err error) {
 	session := getSession()
@@ -53,9 +52,8 @@ func GetJavacResult(matcher, selector interface{}) (ret *javac.JavacResult, err 
 	return
 }
 
-
 //AddResult adds a new result to the active database.
-func AddResult(r tool.Result)(err error){
+func AddResult(r tool.Result) (err error) {
 	session := getSession()
 	defer session.Close()
 	col := session.DB("").C(RESULTS)

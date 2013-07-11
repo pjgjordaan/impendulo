@@ -25,13 +25,13 @@ func GetUsers(matcher interface{}) (ret []*user.User, err error) {
 	c := session.DB("").C(USERS)
 	err = c.Find(matcher).Select(bson.M{user.ID: 1}).All(&ret)
 	if err != nil {
-		err =  &DBGetError{"users", err, matcher}
+		err = &DBGetError{"users", err, matcher}
 	}
 	return
 }
 
 //AddUser adds a new user to the active database.
-func AddUser(u *user.User)(err error) {
+func AddUser(u *user.User) (err error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(USERS)
@@ -43,7 +43,7 @@ func AddUser(u *user.User)(err error) {
 }
 
 //AddUsers adds new users to the active database.
-func AddUsers(users ...*user.User) (err error){
+func AddUsers(users ...*user.User) (err error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(USERS)

@@ -1,9 +1,9 @@
 package project
 
 import (
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"reflect"
-	"github.com/godfried/impendulo/util"
 )
 
 //File stores a single file's data from a submission.
@@ -13,7 +13,7 @@ type Test struct {
 	Name      string        "name"
 	User      string        "user"
 	Package   string        "pkg"
-	Time   int64         "time"
+	Time      int64         "time"
 	Test      []byte        "test"
 	Data      []byte        "data"
 }
@@ -22,12 +22,12 @@ func (this *Test) Equals(that *Test) bool {
 	return reflect.DeepEqual(this, that)
 }
 
-func (this *Test) TypeName() string{
+func (this *Test) TypeName() string {
 	return "test file"
 }
 
 func (this *Test) String() string {
-	return "Type: project.Test; Id: "+this.Id.Hex()+"; ProjectId: "+this.ProjectId.Hex()+"; Name: " + this.Name + "; Package: " + this.Package + "; User: " + this.User + "; Time: "+ util.Date(this.Time)
+	return "Type: project.Test; Id: " + this.Id.Hex() + "; ProjectId: " + this.ProjectId.Hex() + "; Name: " + this.Name + "; Package: " + this.Package + "; User: " + this.User + "; Time: " + util.Date(this.Time)
 }
 
 //NewFile

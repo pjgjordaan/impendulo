@@ -1,10 +1,10 @@
 package javac
 
 import (
+	"bytes"
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"reflect"
-	"github.com/godfried/impendulo/util"
-	"bytes"
 )
 
 const NAME = "Javac"
@@ -20,38 +20,38 @@ func (this *JavacResult) Equals(that *JavacResult) bool {
 	return reflect.DeepEqual(this, that)
 }
 
-func (this *JavacResult) Name() string{
+func (this *JavacResult) Name() string {
 	return NAME
 }
 
-func (this *JavacResult) GetId() bson.ObjectId{
+func (this *JavacResult) GetId() bson.ObjectId {
 	return this.Id
 }
 
-func (this *JavacResult) GetFileId() bson.ObjectId{
+func (this *JavacResult) GetFileId() bson.ObjectId {
 	return this.FileId
 }
 
 func (this *JavacResult) String() string {
-	return "Type: tool.java.JavacResult; Id: "+this.Id.Hex()+"; FileId: "+this.FileId.Hex() + "; Time: "+ util.Date(this.Time)
+	return "Type: tool.java.JavacResult; Id: " + this.Id.Hex() + "; FileId: " + this.FileId.Hex() + "; Time: " + util.Date(this.Time)
 }
 
-func (this *JavacResult) TemplateArgs(current bool)(string, interface{}){
-	if current{
+func (this *JavacResult) TemplateArgs(current bool) (string, interface{}) {
+	if current {
 		return "javacCurrent.html", this
-	}else{
+	} else {
 		return "javacNext.html", this
 	}
 }
 
-func (this *JavacResult) Success() bool{
+func (this *JavacResult) Success() bool {
 	return bytes.Equal(this.Data, []byte("Compiled successfully"))
 }
 
-func (this *JavacResult) Result() string{
+func (this *JavacResult) Result() string {
 	return string(this.Data)
 }
 
-func NewResult(fileId bson.ObjectId, data []byte) *JavacResult{
+func NewResult(fileId bson.ObjectId, data []byte) *JavacResult {
 	return &JavacResult{bson.NewObjectId(), fileId, util.CurMilis(), data}
 }

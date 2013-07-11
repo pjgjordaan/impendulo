@@ -2,11 +2,11 @@ package project
 
 import (
 	"fmt"
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"reflect"
 	"strconv"
 	"strings"
-	"github.com/godfried/impendulo/util"
 )
 
 //File stores a single file's data from a submission.
@@ -24,12 +24,12 @@ type File struct {
 	Results  bson.M        "results"
 }
 
-func (this *File) TypeName() string{
+func (this *File) TypeName() string {
 	return "file"
 }
 
 func (this *File) String() string {
-	return "Type: project.File; Id: "+this.Id.Hex()+"; SubId: "+this.SubId.Hex()+"; Name: " + this.Name + "; Package: " + this.Package + "; Type: " + this.Type+ "; FileType: " + this.FileType+ "; Mod: " + this.Mod+ "; Num: " + strconv.Itoa(this.Num) + "; Time: "+ util.Date(this.Time)
+	return "Type: project.File; Id: " + this.Id.Hex() + "; SubId: " + this.SubId.Hex() + "; Name: " + this.Name + "; Package: " + this.Package + "; Type: " + this.Type + "; FileType: " + this.FileType + "; Mod: " + this.Mod + "; Num: " + strconv.Itoa(this.Num) + "; Time: " + util.Date(this.Time)
 }
 
 func (this *File) SetMod(mod string) {
@@ -61,29 +61,29 @@ func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) (fil
 	file = &File{Id: id, SubId: subId, Data: data}
 	//Non essential fields
 	file.Type, err = util.GetString(info, TYPE)
-	if err != nil && util.IsCastError(err){
+	if err != nil && util.IsCastError(err) {
 		return
 	}
 	file.FileType, err = util.GetString(info, FTYPE)
-	if err != nil && util.IsCastError(err){
+	if err != nil && util.IsCastError(err) {
 		return
 	}
 	//Essential fields
 	file.Name, err = util.GetString(info, NAME)
-	if err != nil{
+	if err != nil {
 		return
 	}
 	file.Package, err = util.GetString(info, PKG)
-	if err != nil{
+	if err != nil {
 		return
 	}
 	mod, err := util.GetString(info, MOD)
-	if err != nil{
+	if err != nil {
 		return
 	}
 	file.SetMod(mod)
 	file.Num, err = util.GetInt(info, NUM)
-	if err != nil{
+	if err != nil {
 		return
 	}
 	file.Time, err = util.GetInt64(info, TIME)

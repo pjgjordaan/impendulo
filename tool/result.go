@@ -15,75 +15,75 @@ type Result interface {
 	String() string
 }
 
-func NewErrorResult(msg string)*ErrorResult{
+func NewErrorResult(msg string) *ErrorResult {
 	return &ErrorResult{msg}
 }
 
-type ErrorResult struct{
+type ErrorResult struct {
 	msg string
 }
 
-func (this *ErrorResult) String()string{
+func (this *ErrorResult) String() string {
 	return this.msg
 }
 
-func (this *ErrorResult) Name()string{
+func (this *ErrorResult) Name() string {
 	return "Error"
 }
 
-func (this *ErrorResult) Success()bool{
+func (this *ErrorResult) Success() bool {
 	return false
 }
 
-func (this *ErrorResult) GetId()bson.ObjectId{
+func (this *ErrorResult) GetId() bson.ObjectId {
 	return bson.NewObjectId()
 }
 
-func (this *ErrorResult) GetFileId()bson.ObjectId{
+func (this *ErrorResult) GetFileId() bson.ObjectId {
 	return bson.NewObjectId()
 }
 
-func (this *ErrorResult) TemplateArgs(current bool)(string, interface{}){
-	if current{
+func (this *ErrorResult) TemplateArgs(current bool) (string, interface{}) {
+	if current {
 		return "errorCurrent.html", this.msg
-	} else{
+	} else {
 		return "errorNext.html", this.msg
-	} 
+	}
 }
 
-func NewCodeResult(fileId bson.ObjectId, data []byte)*CodeResult{
+func NewCodeResult(fileId bson.ObjectId, data []byte) *CodeResult {
 	return &CodeResult{fileId, strings.TrimSpace(string(data))}
 }
 
-type CodeResult struct{
+type CodeResult struct {
 	fileId bson.ObjectId
-	data string
+	data   string
 }
 
-func (this *CodeResult) String()string{
+func (this *CodeResult) String() string {
 	return this.Name()
 }
 
-func (this *CodeResult) Name()string{
+func (this *CodeResult) Name() string {
 	return "Code"
 }
 
-func (this *CodeResult) Success()bool{
+func (this *CodeResult) Success() bool {
 	return true
 }
 
-func (this *CodeResult) GetId()bson.ObjectId{
+func (this *CodeResult) GetId() bson.ObjectId {
 	return bson.NewObjectId()
 }
 
-func (this *CodeResult) GetFileId()bson.ObjectId{
+func (this *CodeResult) GetFileId() bson.ObjectId {
 	return this.fileId
 }
 
-func (this *CodeResult) TemplateArgs(current bool)(string, interface{}){
-	if current{
+func (this *CodeResult) TemplateArgs(current bool) (string, interface{}) {
+	if current {
 		return "codeCurrent.html", this.data
-	} else{
+	} else {
 		return "codeNext.html", this.data
-	} 
+	}
 }

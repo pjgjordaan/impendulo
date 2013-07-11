@@ -21,35 +21,34 @@ const (
 
 var activeSession *mgo.Session
 
-type DBGetError struct{
-	tipe string
-	err error
+type DBGetError struct {
+	tipe    string
+	err     error
 	matcher interface{}
 }
 
-func (this *DBGetError) Error() string{
+func (this *DBGetError) Error() string {
 	return fmt.Sprintf("Encountered error %q when retrieving %q matching %q from db", this.err, this.tipe, this.matcher)
 }
 
-type DBAddError struct{
-	msg  string
+type DBAddError struct {
+	msg string
 	err error
 }
 
-func (this *DBAddError) Error() string{
+func (this *DBAddError) Error() string {
 	return fmt.Sprintf("Encountered error %q when adding %q to db", this.err, this.msg)
 }
 
-type DBRemoveError struct{
-	tipe string
-	err error
+type DBRemoveError struct {
+	tipe    string
+	err     error
 	matcher interface{}
 }
 
-func (this *DBRemoveError) Error() string{
+func (this *DBRemoveError) Error() string {
 	return fmt.Sprintf("Encountered error %q when removing %q matching %q from db", this.err, this.tipe, this.matcher)
 }
-
 
 //Setup creates a mongodb session.
 //This must be called before using any other db functions.
@@ -99,7 +98,7 @@ func Count(col string, matcher interface{}) (n int, err error) {
 	c := session.DB("").C(col)
 	n, err = c.Find(matcher).Count()
 	if err != nil {
-		err = &DBGetError{col+" count", err, matcher}
+		err = &DBGetError{col + " count", err, matcher}
 	}
 	return n, nil
 }

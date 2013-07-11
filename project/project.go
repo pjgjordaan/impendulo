@@ -1,9 +1,9 @@
 package project
 
 import (
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"reflect"
-	"github.com/godfried/impendulo/util"
 )
 
 type Project struct {
@@ -14,12 +14,12 @@ type Project struct {
 	Time int64         "time"
 }
 
-func (this *Project) TypeName() string{
+func (this *Project) TypeName() string {
 	return "project"
 }
 
 func (this *Project) String() string {
-	return "Type: project.Project; Id: "+this.Id.Hex()+"; Name: " + this.Name + "; User: " + this.User + "; Lang: " + this.Lang + "; Time: "+ util.Date(this.Time)
+	return "Type: project.Project; Id: " + this.Id.Hex() + "; Name: " + this.Name + "; User: " + this.User + "; Lang: " + this.Lang + "; Time: " + util.Date(this.Time)
 }
 
 func (this *Project) Equals(that *Project) bool {

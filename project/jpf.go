@@ -1,9 +1,9 @@
 package project
 
 import (
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"reflect"
-	"github.com/godfried/impendulo/util"
 )
 
 type JPFFile struct {
@@ -11,7 +11,7 @@ type JPFFile struct {
 	ProjectId bson.ObjectId "projectid"
 	Name      string        "name"
 	User      string        "user"
-	Time   int64         "time"
+	Time      int64         "time"
 	Data      []byte        "data"
 }
 
@@ -19,12 +19,12 @@ func (this *JPFFile) Equals(that *JPFFile) bool {
 	return reflect.DeepEqual(this, that)
 }
 
-func (this *JPFFile) TypeName() string{
+func (this *JPFFile) TypeName() string {
 	return "jpf configuration file"
 }
 
 func (this *JPFFile) String() string {
-	return "Type: project.JPFFile; Id: "+this.Id.Hex()+"; ProjectId: "+this.ProjectId.Hex()+"; Name: " + this.Name + "; User: " + this.User + "; Time: "+ util.Date(this.Time)
+	return "Type: project.JPFFile; Id: " + this.Id.Hex() + "; ProjectId: " + this.ProjectId.Hex() + "; Name: " + this.Name + "; User: " + this.User + "; Time: " + util.Date(this.Time)
 }
 
 //NewFile

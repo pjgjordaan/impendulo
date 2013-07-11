@@ -7,13 +7,13 @@ import (
 )
 
 const (
-	OK         = "ok"
-	SEND       = "send"
-	LOGIN      = "begin"
-	LOGOUT     = "end"
-	REQ        = "req"
-	PROJECTS   = "projects"
-	SUBMISSION_NEW = "submission_new"
+	OK                  = "ok"
+	SEND                = "send"
+	LOGIN               = "begin"
+	LOGOUT              = "end"
+	REQ                 = "req"
+	PROJECTS            = "projects"
+	SUBMISSION_NEW      = "submission_new"
 	SUBMISSION_CONTINUE = "submission_continue"
 )
 

@@ -30,7 +30,7 @@ func (this *JUnit) GetName() string {
 func (this *JUnit) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (tool.Result, error) {
 	comp := javac.NewJavac(this.cp)
 	_, err := comp.Run(fileId, ti)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	target := ti.GetTarget(tool.EXEC_PATH)

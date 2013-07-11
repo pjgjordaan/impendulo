@@ -1,9 +1,9 @@
 package project
 
 import (
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"reflect"
-	"github.com/godfried/impendulo/util"
 )
 
 //Submission is used for individual project submissions
@@ -20,12 +20,12 @@ func (this *Submission) IsTest() bool {
 	return this.Mode == TEST_MODE
 }
 
-func (this *Submission) TypeName() string{
+func (this *Submission) TypeName() string {
 	return "submission"
 }
 
 func (this *Submission) String() string {
-	return "Type: project.Submission; Id: "+this.Id.Hex()+"; ProjectId: " + this.ProjectId.Hex() + "; User: " + this.User + "; Mode: " + this.Mode+ "; Time: "+ util.Date(this.Time)
+	return "Type: project.Submission; Id: " + this.Id.Hex() + "; ProjectId: " + this.ProjectId.Hex() + "; User: " + this.User + "; Mode: " + this.Mode + "; Time: " + util.Date(this.Time)
 }
 
 func (this *Submission) Equals(that *Submission) bool {

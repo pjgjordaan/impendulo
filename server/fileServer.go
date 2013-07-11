@@ -108,14 +108,14 @@ func (this *SubmissionHandler) LoadInfo() error {
 		return err
 	} else if req == SUBMISSION_NEW {
 		return this.createSubmission(reqInfo)
-	}else if  req == SUBMISSION_CONTINUE {
+	} else if req == SUBMISSION_CONTINUE {
 		return this.continueSubmission(reqInfo)
-	}else{ 
+	} else {
 		return fmt.Errorf("Invalid request %q", req)
 	}
 }
 
-func (this *SubmissionHandler) createSubmission(subInfo map[string]interface{}) error{
+func (this *SubmissionHandler) createSubmission(subInfo map[string]interface{}) error {
 	idStr, err := util.GetString(subInfo, project.PROJECT_ID)
 	if err != nil {
 		return err
@@ -134,7 +134,7 @@ func (this *SubmissionHandler) createSubmission(subInfo map[string]interface{}) 
 	return util.WriteJson(this.Conn, this.Submission)
 }
 
-func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{}) error{
+func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{}) error {
 	idStr, err := util.GetString(subInfo, project.SUBID)
 	if err != nil {
 		return err
@@ -151,7 +151,6 @@ func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{}
 	}
 	return util.WriteJson(this.Conn, count)
 }
-
 
 //Read reads Files from the connection and sends them for processing.
 func (this *SubmissionHandler) Read() error {

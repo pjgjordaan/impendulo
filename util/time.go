@@ -1,11 +1,11 @@
 package util
 
-import(
+import (
 	"time"
 )
 
-func CurMilis()int64{
-	return time.Now().UnixNano()/1000000
+func CurMilis() int64 {
+	return time.Now().UnixNano() / 1000000
 }
 
 func GetTime(miliseconds int64) time.Time {
@@ -14,6 +14,6 @@ func GetTime(miliseconds int64) time.Time {
 
 const layout = "2006-01-02 15:04:05"
 
-func Date(miliseconds int64) string{
+func Date(miliseconds int64) string {
 	return GetTime(miliseconds).Format(layout)
 }

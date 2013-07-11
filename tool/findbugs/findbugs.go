@@ -1,10 +1,10 @@
 package findbugs
 
 import (
+	"fmt"
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
-	"fmt"
 	"strings"
 )
 
@@ -34,7 +34,7 @@ func (this *FindBugs) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (tool.Resul
 	stdout, stderr, err := tool.RunCommand(args...)
 	if err != nil {
 		return nil, err
-	} else 	if stderr != nil && len(stderr) > 0 && !strings.HasPrefix(string(stderr), "Warnings"){
+	} else if stderr != nil && len(stderr) > 0 && !strings.HasPrefix(string(stderr), "Warnings") {
 		return nil, fmt.Errorf("Could not run findbugs: %q.", string(stderr))
 	}
 	return NewResult(fileId, stdout), nil

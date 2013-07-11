@@ -1,11 +1,11 @@
 package lint4j
 
 import (
+	"bytes"
+	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"reflect"
-	"github.com/godfried/impendulo/util"
-	"github.com/godfried/impendulo/tool"
-	"bytes"
 )
 
 const NAME = "Lint4j"
@@ -21,38 +21,38 @@ func (this *Lint4jResult) Equals(that *Lint4jResult) bool {
 	return reflect.DeepEqual(this, that)
 }
 
-func (this *Lint4jResult) Name() string{
+func (this *Lint4jResult) Name() string {
 	return NAME
 }
 
-func (this *Lint4jResult) GetId() bson.ObjectId{
+func (this *Lint4jResult) GetId() bson.ObjectId {
 	return this.Id
 }
 
-func (this *Lint4jResult) GetFileId() bson.ObjectId{
+func (this *Lint4jResult) GetFileId() bson.ObjectId {
 	return this.FileId
 }
 
 func (this *Lint4jResult) String() string {
-	return "Type: tool.java.Lint4jResult; Id: "+this.Id.Hex()+"; FileId: "+this.FileId.Hex() + "; Time: "+ util.Date(this.Time)
+	return "Type: tool.java.Lint4jResult; Id: " + this.Id.Hex() + "; FileId: " + this.FileId.Hex() + "; Time: " + util.Date(this.Time)
 }
 
-func (this *Lint4jResult) TemplateArgs(current bool)(string, interface{}){
-	if current{
+func (this *Lint4jResult) TemplateArgs(current bool) (string, interface{}) {
+	if current {
 		return "findbugsCurrent.html", this
-	}else{
+	} else {
 		return "findbugsNext.html", this
 	}
 }
 
-func (this *Lint4jResult) Success() bool{
+func (this *Lint4jResult) Success() bool {
 	return bytes.Equal(this.Data, []byte("Compiled successfully"))
 }
 
-func (this *Lint4jResult) Result() string{
+func (this *Lint4jResult) Result() string {
 	return string(this.Data)
 }
 
-func NewResult(fileId bson.ObjectId, data []byte) tool.Result{
+func NewResult(fileId bson.ObjectId, data []byte) tool.Result {
 	return &Lint4jResult{bson.NewObjectId(), fileId, util.CurMilis(), data}
 }

@@ -23,7 +23,7 @@ func GetFiles(matcher, selector interface{}, sort string) (ret []*project.File, 
 	defer session.Close()
 	c := session.DB("").C(FILES)
 	q := c.Find(matcher)
-	if sort != ""{
+	if sort != "" {
 		q = q.Sort(sort)
 	}
 	err = q.Select(selector).All(&ret)
@@ -32,7 +32,6 @@ func GetFiles(matcher, selector interface{}, sort string) (ret []*project.File, 
 	}
 	return
 }
-
 
 func GetFileNames(matcher interface{}) (ret []string, err error) {
 	session := getSession()
@@ -125,11 +124,11 @@ func GetProjects(matcher, selector interface{}) (ret []*project.Project, err err
 	if err != nil {
 		err = &DBGetError{"projects", err, matcher}
 	}
-	return 
+	return
 }
 
 //AddFile adds a new file to the active database.
-func AddFile(f *project.File)(err error) {
+func AddFile(f *project.File) (err error) {
 	session := getSession()
 	defer session.Close()
 	col := session.DB("").C(FILES)
@@ -147,7 +146,7 @@ func AddTest(t *project.Test) error {
 	col := session.DB("").C(TESTS)
 	matcher := bson.M{project.PROJECT_ID: t.ProjectId}
 	_, err := col.RemoveAll(matcher)
-	if err != nil {		
+	if err != nil {
 		err = &DBRemoveError{"test files", err, matcher}
 	}
 	err = col.Insert(t)
