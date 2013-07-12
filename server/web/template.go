@@ -14,6 +14,17 @@ var funcs = template.FuncMap{
 	"date":        util.Date,
 	"setBreaks":   setBreaks,
 	"address":     address,
+	"base": filepath.Base,
+	"shortname": shortname,
+}
+
+func shortname(exec string) string {
+	elements := strings.Split(exec, `.`)
+	num := len(elements)
+	if num < 2{
+		return exec
+	}
+	return strings.Join(elements[num-2:], `.`)
 }
 
 func address(val interface{}) string {

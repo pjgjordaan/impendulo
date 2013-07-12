@@ -10,6 +10,7 @@ import (
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/tool/javac"
+	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/util"
@@ -289,39 +290,23 @@ func (this *Analyser) compile() (bool, error) {
 
 //RunTools runs all available tools on a file, skipping previously run tools.
 func (this *Analyser) RunTools() error {
-	fb := findbugs.NewFindBugs()
-	if _, ok := this.file.Results[fb.GetName()]; ok {
-		return nil
+	tools := []tool.Tool{findbugs.NewFindBugs(), pmd.NewPMD(), 
+		jpf.NewJPF(this.proc.toolDir, this.proc.jpfPath), 
+		checkstyle.NewCheckstyle()}
+	for _, tool := range tools{
+		if _, ok := this.file.Results[tool.GetName()]; ok {
+			continue
+		}
+		res, err := tool.Run(this.file.Id, this.target)
+		if err != nil {
+			return err
+		}
+		err = AddResult(res)
+		if err != nil {
+			return err
+		}
 	}
-	res, err := fb.Run(this.file.Id, this.target)
-	if err != nil {
-		return err
-	}
-	err = AddResult(res)
-	if err != nil {
-		return err
-	}
-	pmd := pmd.NewPMD()
-	if _, ok := this.file.Results[pmd.GetName()]; ok {
-		return nil
-	}
-	res, err = pmd.Run(this.file.Id, this.target)
-	if err != nil {
-		return err
-	}
-	err = AddResult(res)
-	if err != nil {
-		return err
-	}
-	j := jpf.NewJPF(this.proc.toolDir, this.proc.jpfPath)
-	if _, ok := this.file.Results[j.GetName()]; ok {
-		return nil
-	}
-	res, err = j.Run(this.file.Id, this.target)
-	if err != nil {
-		return err
-	}
-	return AddResult(res)
+	return nil
 }
 
 //AddResult adds a tool result to the db.

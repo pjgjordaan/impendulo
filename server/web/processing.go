@@ -15,6 +15,7 @@ import (
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/tool/checkstyle"
 	"io/ioutil"
 	"labix.org/v2/mgo/bson"
 	"net/http"
@@ -287,6 +288,8 @@ func getResult(req *http.Request, fileId bson.ObjectId) (res tool.Result, msg st
 			res, err = db.GetFindbugsResult(matcher, selector)
 		} else if strings.HasPrefix(pmd.NAME, name) {
 			res, err = db.GetPMDResult(matcher, selector)
+		}else if strings.HasPrefix(checkstyle.NAME, name) {
+			res, err = db.GetCheckstyleResult(matcher, selector)
 		} else {
 			err = fmt.Errorf("Unknown result %q.", name)
 		}

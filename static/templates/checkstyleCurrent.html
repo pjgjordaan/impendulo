@@ -1,0 +1,36 @@
+{{ define "currentResult" }}
+{{$id := .Id.Hex}}
+<div class="accordion" id="checkstyleaccordion{{$id}}">
+  {{range .Files}}
+  {{$fileaddress := address .}}
+  <div class="accordion-group">
+    <div class="accordion-heading">
+      <a class="accordion-toggle" data-toggle="collapse" data-parent="#pmdaccordion{{$id}}" href="#File{{$fileaddress}}{{$id}}">{{base .Name}}</a>
+    </div>
+    <div id="File{{$fileaddress}}{{$id}}" class="accordion-body collapse">
+      <div class="accordion-inner">
+	<div class="accordion" id="errors{{$fileaddress}}{{$id}}">
+	  {{range .Errors}}
+	  {{$erroraddress := address .}}
+	  <div class="accordion-group">
+	    <div class="accordion-heading">
+	      <a class="accordion-toggle" data-toggle="collapse" data-parent="#errors{{$fileaddress}}{{$id}}" href="#Error{{$erroraddress}}{{$id}}">{{shortname .Source}}</a>
+	    </div>
+	    <div id="Error{{$erroraddress}}{{$id}}" class="accordion-body collapse">
+	      <div class="accordion-inner">
+		<dl class="dl-horizontal">
+		  <dt>Location</dt><dd>Line {{.Line}} Column {{.Column}}</dd>
+		  <dt>Severity</dt><dd>{{.Severity}}</dd>
+		  <dt>Description</dt><dd>{{.Message}}</dd>
+		</dl>
+	      </div>
+	    </div>
+	  </div>
+	  {{end}}
+	</div>
+      </div>
+    </div>
+  </div>
+  {{end}}
+</div>
+{{end}}

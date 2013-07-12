@@ -7,7 +7,19 @@ import (
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/tool/pmd"
+	"github.com/godfried/impendulo/tool/checkstyle"
 )
+
+func GetCheckstyleResult(matcher, selector interface{}) (ret *checkstyle.CheckstyleResult, err error) {
+	session := getSession()
+	defer session.Close()
+	c := session.DB("").C(RESULTS)
+	err = c.Find(matcher).Select(selector).One(&ret)
+	if err != nil {
+		err = &DBGetError{"result", err, matcher}
+	}
+	return
+}
 
 func GetPMDResult(matcher, selector interface{}) (ret *pmd.PMDResult, err error) {
 	session := getSession()
