@@ -6,7 +6,19 @@ import (
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
+	"github.com/godfried/impendulo/tool/pmd"
 )
+
+func GetPMDResult(matcher, selector interface{}) (ret *pmd.PMDResult, err error) {
+	session := getSession()
+	defer session.Close()
+	c := session.DB("").C(RESULTS)
+	err = c.Find(matcher).Select(selector).One(&ret)
+	if err != nil {
+		err = &DBGetError{"result", err, matcher}
+	}
+	return
+}
 
 func GetFindbugsResult(matcher, selector interface{}) (ret *findbugs.FindbugsResult, err error) {
 	session := getSession()

@@ -38,7 +38,7 @@ func (this *JPFResult) String() string {
 }
 
 func (this *JPFResult) Success() bool {
-	return false
+	return true
 }
 
 func (this *JPFResult) TemplateArgs(current bool) (string, interface{}) {
@@ -50,9 +50,10 @@ func (this *JPFResult) TemplateArgs(current bool) (string, interface{}) {
 }
 
 //NewResult
-func NewResult(fileId bson.ObjectId, data []byte) *JPFResult {
-	id := bson.NewObjectId()
-	return &JPFResult{id, fileId, util.CurMilis(), genReport(id, data)}
+func NewResult(fileId bson.ObjectId, data []byte) (res *JPFResult, err error) {
+	res = &JPFResult{Id: bson.NewObjectId(), FileId: fileId, Time: util.CurMilis()}
+	res.Data, err = genReport(res.Id, data)
+	return 
 }
 
 type JPFReport struct {
@@ -115,9 +116,9 @@ type Statistics struct {
 	Memory            int    `xml:"max-memory"`
 }
 
-func genReport(id bson.ObjectId, data []byte) (res *JPFReport) {
-	if err := xml.Unmarshal(data, &res); err != nil {
-		panic(err)
+func genReport(id bson.ObjectId, data []byte) (res *JPFReport, err error) {
+	if err = xml.Unmarshal(data, &res); err != nil {
+		return
 	}
 	if res.Result.Findings == "none" {
 		res.Success = true

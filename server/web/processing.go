@@ -10,6 +10,7 @@ import (
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/tool/javac"
+	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/user"
@@ -284,6 +285,8 @@ func getResult(req *http.Request, fileId bson.ObjectId) (res tool.Result, msg st
 			res, err = db.GetJPFResult(matcher, selector)
 		} else if strings.HasPrefix(findbugs.NAME, name) {
 			res, err = db.GetFindbugsResult(matcher, selector)
+		} else if strings.HasPrefix(pmd.NAME, name) {
+			res, err = db.GetPMDResult(matcher, selector)
 		} else {
 			err = fmt.Errorf("Unknown result %q.", name)
 		}

@@ -2,7 +2,6 @@ package findbugs
 
 import (
 	"encoding/xml"
-	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"html/template"
 	"labix.org/v2/mgo/bson"
@@ -50,14 +49,15 @@ func (this *FindbugsResult) Success() bool {
 	return true
 }
 
-func NewResult(fileId bson.ObjectId, data []byte) tool.Result {
-	id := bson.NewObjectId()
-	return &FindbugsResult{id, fileId, util.CurMilis(), genReport(id, data)}
+func NewResult(fileId bson.ObjectId, data []byte) (res *FindbugsResult, err error) {
+	res = &FindbugsResult{Id: bson.NewObjectId(), FileId: fileId, Time: util.CurMilis()}
+	res.Data, err = genReport(res.Id, data)
+	return 
 }
 
-func genReport(id bson.ObjectId, data []byte) (res *FindbugsReport) {
-	if err := xml.Unmarshal(data, &res); err != nil {
-		panic(err)
+func genReport(id bson.ObjectId, data []byte) (res *FindbugsReport, err error) {
+	if err = xml.Unmarshal(data, &res); err != nil {
+		return
 	}
 	res.loadMaps()
 	res.Id = id

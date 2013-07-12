@@ -1,0 +1,38 @@
+{{ define "nextResult" }}
+{{$id := .Id.Hex}}
+<div class="accordion" id="pmdaccordion{{$id}}">
+  {{range .Files}}
+  {{$fileaddress := address .}}
+  <div class="accordion-group">
+    <div class="accordion-heading">
+      <a class="accordion-toggle" data-toggle="collapse" data-parent="#pmdaccordion{{$id}}" href="#File{{$fileaddress}}{{$id}}">{{.Name}}</a>
+    </div>
+    <div id="File{{$fileaddress}}{{$id}}" class="accordion-body collapse">
+      <div class="accordion-inner">
+	<div class="accordion" id="violations{{$fileaddress}}{{$id}}">
+	  {{range .Violations}}
+	  {{$violationaddress := address .}}
+	  <div class="accordion-group">
+	    <div class="accordion-heading">
+	      <a class="accordion-toggle" data-toggle="collapse" data-parent="#violations{{$fileaddress}}{{$id}}" href="#Violation{{$violationaddress}}{{$id}}">{{.Rule}}</a>
+	    </div>
+	    <div id="Violation{{$violationaddress}}{{$id}}" class="accordion-body collapse">
+	      <div class="accordion-inner">
+		<dl class="dl-horizontal">
+		  <dt>Location</dt><dd>Line {{.Begin}} to {{.End}}</dd>
+		  <dt>Rule Set</dt><dd>{{.RuleSet}}</dd>
+		  <dt>Priority</dt><dd>{{.Priority}}</dd>
+		  <dt>Description</dt><dd>{{.Description}}</dd>
+		</dl>
+		<a href="{{.Url}}">More Info</a>
+	      </div>
+	    </div>
+	  </div>
+	  {{end}}
+	</div>
+      </div>
+    </div>
+  </div>
+  {{end}}
+</div>
+{{end}}

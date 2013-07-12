@@ -50,12 +50,12 @@
 	      <div class="accordion-inner">
 		<div class="accordion" id="fbpkgaccordion{{$id}}">
 		  {{range .Summary.Packages}}
-		  {{$address := address .}} 
+		  {{$pkgaddress := address .}} 
 		  <div class="accordion-group">
 		    <div class="accordion-heading">
-		      <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbpkgaccordion{{$id}}" href="#Package{{$address}}{{$id}}">Name: {{.Name}}</a>
+		      <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbpkgaccordion{{$id}}" href="#Package{{$pkgaddress}}{{$id}}">Name: {{.Name}}</a>
 		    </div>
-		    <div id="Package{{$address}}{{$id}}" class="accordion-body collapse">
+		    <div id="Package{{$pkgaddress}}{{$id}}" class="accordion-body collapse">
 		      <div class="accordion-inner">
 			<dl class="dl-horizontal">
 			  <dt>Number of Classes</dt><dd>{{.ClassCount}}</dd>
@@ -63,14 +63,14 @@
 			  <dt>Priority 1 Bugs Found</dt><dd>{{.Priority1}}</dd>
 			  <dt>Priority 2 Bugs Found</dt><dd>{{.Priority2}}</dd>
 			  <dt>Priority 3 Bugs Found</dt><dd>{{.Priority3}}</dd>
-			  <div class="accordion" id="fbclassaccordion{{$id}}">
+			  <div class="accordion" id="fbclass{{$pkgaddress}}{{$id}}">
 			    {{range .Classes}}
-			    {{$address := address .}} 
+			    {{$classaddress := address .}} 
 			    <div class="accordion-group">
 			      <div class="accordion-heading">
-				<a class="accordion-toggle" data-toggle="collapse" data-parent="#fbclassaccordion{{$id}}" href="#Class{{$address}}{{$id}}">{{.Name}}</a>
+				<a class="accordion-toggle" data-toggle="collapse" data-parent="#fbclass{{$pkgaddress}}{{$id}}" href="#Class{{$classaddress}}{{$id}}">{{.Name}}</a>
 			      </div>
-			      <div id="Class{{$address}}{{$id}}" class="accordion-body collapse">
+			      <div id="Class{{$classaddress}}{{$id}}" class="accordion-body collapse">
 				<div class="accordion-inner">
 			  	  <dl class="dl-horizontal">
 				    <dt>Source File</dt><dd>{{.Source}}</dd>
@@ -111,11 +111,11 @@
 	  {{$pattern := index $patterns .Type}}
 	  {{$category := index $categories .Category}}
 	  <div class="accordion-group">
-	    {{$address := address .}} 
+	    {{$bugaddress := address .}} 
 	    <div class="accordion-heading">
-	      <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbbugsaccordion{{$id}}" href="#Bug{{$address}}{{$id}}">{{$pattern.Description}}</a>
+	      <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbbugsaccordion{{$id}}" href="#Bug{{$bugaddress}}{{$id}}">{{$pattern.Description}}</a>
 	    </div>
-	    <div id="Bug{{$address}}{{$id}}" class="accordion-body collapse">
+	    <div id="Bug{{$bugaddress}}{{$id}}" class="accordion-body collapse">
 	      <div class="accordion-inner">
 		 <dl class="dl-horizontal">
 		   <dt>Priority</dt><dd>{{.Priority}}</dd>

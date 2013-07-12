@@ -10,3 +10,4 @@ gson_jar = /home/godfried/dev/go/src/github.com/godfried/impendulo/tool/jpf/lib/
 jpf_home = /home/godfried/dev/java/jpf/jpf-core
 runner_dir = /home/godfried/dev/go/src/github.com/godfried/impendulo/tool/jpf/runner
 listener_dir = /home/godfried/dev/go/src/github.com/godfried/impendulo/tool/jpf/src
+pmd = /home/godfried/applications/pmd-bin-5.0.4/bin/run.sh

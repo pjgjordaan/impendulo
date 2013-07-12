@@ -53,4 +53,5 @@ const (
 	RUNNER_DIR   = "runner_dir"
 	JPF_HOME     = "jpf_home"
 	LISTENER_DIR = "listener_dir"
+	PMD = "pmd"
 )

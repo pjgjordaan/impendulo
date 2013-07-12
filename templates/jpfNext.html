@@ -1,9 +1,10 @@
 {{ define "nextResult" }}
-<div class="accordion" id="jpfaccordion{{.Id.Hex}}">
+{{$id := .Id.Hex}}
+<div class="accordion" id="jpfaccordion{{$id}}">
   <div class="accordion-group">
     <div class="accordion-heading">
-      <a class="accordion-toggle" data-toggle="collapse" data-parent="#jpfaccordion{{.Id.Hex}}" href="#Statistics{{.Id.Hex}}">Statistics</a></div>
-	<div id="Statistics{{.Id.Hex}}" class="accordion-body collapse">
+      <a class="accordion-toggle" data-toggle="collapse" data-parent="#jpfaccordion{{$id}}" href="#Statistics{{$id}}">Statistics</a></div>
+	<div id="Statistics{{$id}}" class="accordion-body collapse">
 	  <div class="accordion-inner">
 	    <dl class="dl-horizontal">
 	      <dt>Elapsed time</dt><dd>{{.Stats.Time}}</dd>
@@ -18,8 +19,8 @@
   </div>
   <div class="accordion-group">
     <div class="accordion-heading">
-      <a class="accordion-toggle" data-toggle="collapse" data-parent="#jpfaccordion{{.Id.Hex}}" href="#Errors{{.Id.Hex}}">Errors</a></div>
-	<div id="Errors{{.Id.Hex}}" class="accordion-body collapse">
+      <a class="accordion-toggle" data-toggle="collapse" data-parent="#jpfaccordion{{$id}}" href="#Errors{{$id}}">Errors</a></div>
+	<div id="Errors{{$id}}" class="accordion-body collapse">
 	  <div class="accordion-inner">
 	    {{if .Success}}
 	    <h4 class="text-success">No errors detected</h4>
@@ -37,8 +38,8 @@
   </div>
   <div class="accordion-group">
     <div class="accordion-heading">
-      <a class="accordion-toggle" data-toggle="collapse" data-parent="#jpfaccordion{{.Id.Hex}}" href="#Threads{{.Id.Hex}}">Threads</a></div>
-	<div id="Threads{{.Id.Hex}}" class="accordion-body collapse">
+      <a class="accordion-toggle" data-toggle="collapse" data-parent="#jpfaccordion{{$id}}" href="#Threads{{$id}}">Threads</a></div>
+	<div id="Threads{{$id}}" class="accordion-body collapse">
 	  <div class="accordion-inner">
 	    {{range .Threads}}
 	    <dl class="dl-horizontal">
@@ -54,18 +55,18 @@
   </div>
   <div class="accordion-group">
     <div class="accordion-heading">
-      <a class="accordion-toggle" data-toggle="collapse" data-parent="#jpfaccordion{{.Id.Hex}}" href="#Trace{{.Id.Hex}}">Trace</a>
+      <a class="accordion-toggle" data-toggle="collapse" data-parent="#jpfaccordion{{$id}}" href="#Trace{{$id}}">Trace</a>
     </div>
-    <div id="Trace{{.Id.Hex}}" class="accordion-body collapse">
+    <div id="Trace{{$id}}" class="accordion-body collapse">
       <div class="accordion-inner">
-	<div class="accordion" id="traceaccordion{{.Id.Hex}}">
-	  {{$id := .Id.Hex}}
+	<div class="accordion" id="jpftraceaccordion{{$id}}">
 	  {{range .Trace}}
+	  {{$transaddress := address .}}
 	  <div class="accordion-group">
 	    <div class="accordion-heading">
-	      <a class="accordion-toggle" data-toggle="collapse" data-parent="#traceaccordion{{$id}}" href="#{{$id}}trans{{.Id}}">{{.String}}</a>
+	      <a class="accordion-toggle" data-toggle="collapse" data-parent="#jpftraceaccordion{{$id}}" href="#trans{{$transaddress}}{{$id}}">{{.String}}</a>
 	    </div>
-	    <div id="{{$id}}trans{{.Id}}" class="accordion-body collapse">
+	    <div id="trans{{$transaddress}}{{$id}}" class="accordion-body collapse">
 	      <div class="accordion-inner">
 		<h5>Instructions</h5>
 		<ol>

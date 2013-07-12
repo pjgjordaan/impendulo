@@ -5,7 +5,6 @@ import (
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
-	"strings"
 )
 
 type FindBugs struct {
@@ -28,16 +27,18 @@ func (this *FindBugs) args(target string) []string {
 	return []string{config.GetConfig(config.JAVA), "-jar", this.cmd, "-textui", "-low", "-xml:withMessages", target}
 }
 
-func (this *FindBugs) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (tool.Result, error) {
+func (this *FindBugs) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Result, err error) {
 	target := ti.GetTarget(tool.PKG_PATH)
 	args := this.args(target)
 	stdout, stderr, err := tool.RunCommand(args...)
-	if err != nil {
-		return nil, err
-	} else if stderr != nil && len(stderr) > 0 && !strings.HasPrefix(string(stderr), "Warnings") {
-		return nil, fmt.Errorf("Could not run findbugs: %q.", string(stderr))
+	if stdout != nil {
+		//var fres *FindbugsResult
+		res, err = NewResult(fileId, stdout)
+		//res = fres
+	} else if stderr != nil && len(stderr) > 0{
+		err = fmt.Errorf("Could not run findbugs: %q.", string(stderr))
 	}
-	return NewResult(fileId, stdout), nil
+	return
 }
 
 func (this *FindBugs) GenHTML() bool {

@@ -11,7 +11,7 @@ import (
 	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/jpf"
-	"github.com/godfried/impendulo/tool/lint4j"
+	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"os"
@@ -301,11 +301,11 @@ func (this *Analyser) RunTools() error {
 	if err != nil {
 		return err
 	}
-	l4j := lint4j.NewLint4j()
-	if _, ok := this.file.Results[l4j.GetName()]; ok {
+	pmd := pmd.NewPMD()
+	if _, ok := this.file.Results[pmd.GetName()]; ok {
 		return nil
 	}
-	res, err = l4j.Run(this.file.Id, this.target)
+	res, err = pmd.Run(this.file.Id, this.target)
 	if err != nil {
 		return err
 	}
