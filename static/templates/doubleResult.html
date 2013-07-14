@@ -28,6 +28,37 @@
   <a id="file{{$index}}" href="displayresult?filename={{$fileName}}&selected={{$index}}&resultname={{$resultName}}"></a>
   {{end}}
 </div>
+{{if isCode .resultName}}
+<div class="accordion" id="codeaccordion">
+  <div class="accordion-group">
+    <div class="accordion-heading">
+      <a class="accordion-toggle" data-toggle="collapse" data-parent="#codeaccordion" href="#code">Code</a>
+    </div>
+    <div id="code" class="accordion-body collapse">
+      <div class="accordion-inner">
+	<div class="row-fluid">
+	  <div class="span6">
+	    {{template "currentResult" .curResult}}
+	  </div>
+	  <div class="span6">
+	    {{template "nextResult" .nextResult}}
+	  </div>
+	</div>
+      </div>
+    </div>
+  </div>
+  <div class="accordion-group">
+    <div class="accordion-heading">
+      <a class="accordion-toggle" data-toggle="collapse" data-parent="#codeaccordion" href="#diff">Diff</a>
+    </div>
+    <div id="diff" class="accordion-body collapse">
+      <div class="accordion-inner">
+	{{diff .curResult .nextResult}}
+      </div>
+    </div>
+  </div>
+</div>
+{{else}}
 <h4>{{.resultName}}</h4>
 <div class="row-fluid">
   <div class="span6">
@@ -37,4 +68,5 @@
     {{template "nextResult" .nextResult}}
   </div>
 </div>
+{{end}}
 {{end}}

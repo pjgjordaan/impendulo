@@ -6,6 +6,8 @@ import (
 	"html/template"
 	"path/filepath"
 	"strings"
+	"github.com/sergi/go-diff/diffmatchpatch"
+	"bytes"
 )
 
 var funcs = template.FuncMap{
@@ -16,6 +18,37 @@ var funcs = template.FuncMap{
 	"address":     address,
 	"base": filepath.Base,
 	"shortname": shortname,
+	"isCode": isCode,
+	"diff": diff,
+}
+
+func diff(orig, change string)template.HTML{
+	
+	dmp := diffmatchpatch.New()
+	diffs := dmp.DiffMain(orig, change, true)
+	buffer := new(bytes.Buffer)
+	for _, diff := range diffs{
+		var class, symbol string
+		switch diff.Type{
+		case diffmatchpatch.DiffDelete:
+			class = "text-error"
+			symbol = "--"
+		case diffmatchpatch.DiffInsert:
+			class = "text-success"
+			symbol = "++"
+		case diffmatchpatch.DiffEqual:
+			continue
+		}
+		buffer.WriteString(`<p class="`+class+`">`+symbol)
+		buffer.WriteString(_setBreaks(diff.Text))
+		buffer.WriteString(`</p><br>`)
+			
+	}
+	return template.HTML(buffer.String())
+}
+
+func isCode(name string)bool{
+	return strings.ToLower(name) == "code"
 }
 
 func shortname(exec string) string {
@@ -32,7 +65,11 @@ func address(val interface{}) string {
 }
 
 func setBreaks(val string) template.HTML {
-	return template.HTML(strings.Replace(val, "\n", "<br>", -1))
+	return template.HTML(_setBreaks(val))
+}
+
+func _setBreaks(val string) string {
+	return strings.Replace(val, "\n", "<br>", -1)
 }
 
 var dir = filepath.Join("static", "templates")
