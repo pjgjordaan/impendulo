@@ -1,4 +1,6 @@
 {{define "view"}}
+{{$resultName := .resultName}}
+{{$fileName := .curFile.Name}}
 <ul class="breadcrumb">
   <li><a href="homeview">Home</a><span class="divider">/</span></li>
   {{if .ctx.Browse.IsUser}}
@@ -12,7 +14,7 @@
   <li><a href="getresultlist?filename={{.curFile.Name}}&selected={{.selected}}">Result List</a><span class="divider"></span></li>
   <li class="active">{{.resultName}}</li>
 </ul>
-<h3>{{ .curFile.Name}}</h3>
+<h3>{{ $fileName}}</h3>
 <div class="row-fluid">
   <div class="span6">
     <h4>{{date .curFile.Time}}</h4>
@@ -21,14 +23,25 @@
     <h4>{{date .nextFile.Time}}</h4>
   </div>
 </div>
+<form class="form-inline">
+  <select>
+    {{range $index, $file := .files}} 
+   <option>{{$index}}</option>
+   {{end}}
+  </select>
+  <select>
+    {{range $index, $file := .files}} 
+   <option>{{$index}}</option>
+   {{end}}
+  </select>        
+  <button type="submit" class="btn">Compare</button>
+</form>
 <div id="filePager" files="{{len .files}}" selected="{{.selected}}" class="pagination pagination-centered pagination-large">
-  {{$resultName := .resultName}}
-  {{$fileName := .curFile.Name}}
   {{range $index, $file := .files}}
   <a id="file{{$index}}" href="displayresult?filename={{$fileName}}&selected={{$index}}&resultname={{$resultName}}"></a>
   {{end}}
 </div>
-{{if isCode .resultName}}
+{{if isCode $resultName}}
 <div class="accordion" id="codeaccordion">
   <div class="accordion-group">
     <div class="accordion-heading">
@@ -53,13 +66,18 @@
     </div>
     <div id="diff" class="accordion-body collapse">
       <div class="accordion-inner">
-	{{diff .curResult .nextResult}}
+	{{$next := sum .selected 1}}
+	{{$diff := diff .curResult .nextResult}}
+	{{$currHeader := createHeader .curFile .selected}}
+	{{$nextHeader := createHeader .nextFile $next}} 
+	{{$diff := diffHeader $diff $currHeader $nextHeader}}
+	{{diffHTML $diff}}
       </div>
     </div>
   </div>
 </div>
 {{else}}
-<h4>{{.resultName}}</h4>
+<h4>{{$resultName}}</h4>
 <div class="row-fluid">
   <div class="span6">
     {{template "currentResult" .curResult}}

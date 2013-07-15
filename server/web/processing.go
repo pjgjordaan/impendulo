@@ -248,7 +248,7 @@ func getSelected(req *http.Request, maxSize int) (selected int, msg string, err 
 		msg = fmt.Sprintf("Invalid index %q.", selStr)
 		return
 	}
-	if selected >= maxSize {
+	if selected > maxSize {
 		err = fmt.Errorf("Index size %q too big.", selected)
 		msg = err.Error()
 	}

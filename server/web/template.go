@@ -3,11 +3,12 @@ package web
 import (
 	"fmt"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/tool/diff"		
 	"html/template"
 	"path/filepath"
 	"strings"
-	"github.com/sergi/go-diff/diffmatchpatch"
-	"bytes"
+	"strconv"
 )
 
 var funcs = template.FuncMap{
@@ -19,32 +20,23 @@ var funcs = template.FuncMap{
 	"base": filepath.Base,
 	"shortname": shortname,
 	"isCode": isCode,
-	"diff": diff,
+	"diff": diff.Diff,
+	"diffHTML": diff.Diff2HTML,	
+	"diffHeader": diff.SetHeader,
+	"createHeader": fileHeader,
+	"sum": sum,
 }
 
-func diff(orig, change string)template.HTML{
-	
-	dmp := diffmatchpatch.New()
-	diffs := dmp.DiffMain(orig, change, true)
-	buffer := new(bytes.Buffer)
-	for _, diff := range diffs{
-		var class, symbol string
-		switch diff.Type{
-		case diffmatchpatch.DiffDelete:
-			class = "text-error"
-			symbol = "--"
-		case diffmatchpatch.DiffInsert:
-			class = "text-success"
-			symbol = "++"
-		case diffmatchpatch.DiffEqual:
-			continue
-		}
-		buffer.WriteString(`<p class="`+class+`">`+symbol)
-		buffer.WriteString(_setBreaks(diff.Text))
-		buffer.WriteString(`</p><br>`)
-			
+func fileHeader(file *project.File, num int)string{
+	return file.Name +":"+strconv.Itoa(num)+" "+ util.Date(file.Time)
+}
+
+
+func sum(vals... int)(ret int){
+	for _, val := range vals{
+		ret += val
 	}
-	return template.HTML(buffer.String())
+	return
 }
 
 func isCode(name string)bool{

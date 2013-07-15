@@ -35,7 +35,7 @@ func (this *JUnit) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (tool.Result, 
 	}
 	target := ti.GetTarget(tool.EXEC_PATH)
 	args := []string{this.java, "-cp", this.cp, "-Ddata.location=" + this.datalocation, this.exec, target}
-	stdout, stderr, err := tool.RunCommand(args...)
+	stdout, stderr, err := tool.RunCommand(args)
 	if err != nil {
 		return nil, err
 	}

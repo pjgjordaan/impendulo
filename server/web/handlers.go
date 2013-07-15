@@ -97,7 +97,7 @@ func displayResult(w http.ResponseWriter, req *http.Request, ctx *context.Contex
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 		return err
 	}
-	selected, msg, err := getSelected(req, len(files))
+	selected, msg, err := getSelected(req, len(files)-1)
 	if err != nil {
 		ctx.AddMessage(msg, err != nil)
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)

@@ -30,7 +30,7 @@ func (this *FindBugs) args(target string) []string {
 func (this *FindBugs) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Result, err error) {
 	target := ti.GetTarget(tool.PKG_PATH)
 	args := this.args(target)
-	stdout, stderr, err := tool.RunCommand(args...)
+	stdout, stderr, err := tool.RunCommand(args)
 	if stdout != nil {
 		//var fres *FindbugsResult
 		res, err = NewResult(fileId, stdout)

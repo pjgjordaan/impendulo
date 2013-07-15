@@ -56,4 +56,6 @@ const (
 	PMD = "pmd"
 	CHECKSTYLE = "checkstyle"
 	CHECKSTYLE_CONFIG = "checkstyle_config"
+	DIFF2HTML = "diff2html"
+	DIFF = "diff"
 )

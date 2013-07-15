@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"labix.org/v2/mgo/bson"
 	"os/exec"
+	"io"
 )
 
 const (
@@ -22,8 +23,13 @@ type Tool interface {
 }
 
 //RunCommand executes a given external command.
-func RunCommand(args ...string) ([]byte, []byte, error) {
+func RunCommand(args []string) ([]byte, []byte, error) {
+	return RunInputCommand(args, nil)
+}
+
+func RunInputCommand(args []string, stdin io.Reader) ([]byte, []byte, error) {
 	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Stdin = stdin
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	err := cmd.Start()
@@ -32,7 +38,7 @@ func RunCommand(args ...string) ([]byte, []byte, error) {
 	}
 	err = cmd.Wait()
 	if err != nil {
-		return stdout.Bytes(), stderr.Bytes(), fmt.Errorf("Encountered error %q executing command %q", err, args)
+		err = fmt.Errorf("Encountered error %q executing command %q", err, args)
 	}
-	return stdout.Bytes(), stderr.Bytes(), nil
+	return stdout.Bytes(), stderr.Bytes(), err
 }

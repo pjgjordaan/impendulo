@@ -42,7 +42,7 @@ func (this *JPF) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Result
 		return
 	}
 	args := []string{this.exec, "-cp", ti.Dir + ":" + this.cp, this.jpfInfo.Executable(), this.jpfPath, ti.Executable(), ti.Dir}
-	stdout, stderr, err := tool.RunCommand(args...)
+	stdout, stderr, err := tool.RunCommand(args)
 	if stdout != nil{
 		//var jres *JPFResult
 		res, err = NewResult(fileId, stdout)
