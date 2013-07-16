@@ -1,6 +1,8 @@
 {{define "view"}}
+{{$curFile := .curFile}}
+{{$nextFile := .nextFile}}
 {{$resultName := .resultName}}
-{{$fileName := .curFile.Name}}
+{{$fileName := $curFile.Name}}
 <ul class="breadcrumb">
   <li><a href="homeview">Home</a><span class="divider">/</span></li>
   {{if .ctx.Browse.IsUser}}
@@ -11,35 +13,51 @@
   <li><a href="getsubmissions?id={{.ctx.Browse.Pid}}&type=project">Submissions</a><span class="divider"></span></li>
   {{end}}
   <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">Snapshots</a><span class="divider"></span></li>
-  <li><a href="getresultlist?filename={{.curFile.Name}}&selected={{.selected}}">Result List</a><span class="divider"></span></li>
+  <li><a href="getresultlist?filename={{$curFile.Name}}&currentIndex={{.selected}}">Result List</a><span class="divider"></span></li>
   <li class="active">{{.resultName}}</li>
 </ul>
-<h3>{{ $fileName}}</h3>
 <div class="row-fluid">
   <div class="span6">
-    <h4>{{date .curFile.Time}}</h4>
+    <div class="navbar">
+      <div class="navbar-inner">
+	<a class="brand" href="#">{{ $fileName}}</a>
+	<form class="navbar-form pull-right" action="displayresult" method="get">
+	  <select class="input-mini" name="currentIndex">
+	    {{range $index, $file := .files}} 
+	    {{$dispIndex := sum $index 1}}
+	    {{if $curFile.Same $file}}
+	    <option selected value="{{$index}}">{{$dispIndex}}</option>
+	    {{else}}
+	    <option value="{{$index}}">{{$dispIndex}}</option>
+	    {{end}}
+	    {{end}}
+	  </select>
+	  <select class="input-mini" name="nextIndex">
+	    {{range $index, $file := .files}} 
+	    {{$dispIndex := sum $index 1}}
+	    {{if $nextFile.Same $file}}
+	    <option selected value="{{$index}}">{{$dispIndex}}</option>
+	    {{else}}
+	    <option value="{{$index}}">{{$dispIndex}}</option>
+	    {{end}}
+	    {{end}}
+	  </select>        
+	  <input type="hidden" name="filename" value="{{$fileName}}"/>
+	  <input type="hidden" name="resultname" value="{{$resultName}}"/>
+	  <button type="submit" class="btn">Compare</button>
+	</form>
+      </div>
+    </div> 
+    <div id="filePager" files="{{len .files}}" selected="{{.selected}}" class="pagination pagination-large">
+      {{range $index, $file := .files}}
+      {{$nextIndex := sum $index 1}}
+      <a id="file{{$index}}" href="displayresult?filename={{$fileName}}&currentIndex={{$index}}&nextIndex={{$nextIndex}}&resultname={{$resultName}}"></a>
+      {{end}}
+    </div>
   </div>
   <div class="span6">
-    <h4>{{date .nextFile.Time}}</h4>
+    {{template "graph" .graphData}}
   </div>
-</div>
-<form class="form-inline">
-  <select>
-    {{range $index, $file := .files}} 
-   <option>{{$index}}</option>
-   {{end}}
-  </select>
-  <select>
-    {{range $index, $file := .files}} 
-   <option>{{$index}}</option>
-   {{end}}
-  </select>        
-  <button type="submit" class="btn">Compare</button>
-</form>
-<div id="filePager" files="{{len .files}}" selected="{{.selected}}" class="pagination pagination-centered pagination-large">
-  {{range $index, $file := .files}}
-  <a id="file{{$index}}" href="displayresult?filename={{$fileName}}&selected={{$index}}&resultname={{$resultName}}"></a>
-  {{end}}
 </div>
 {{if isCode $resultName}}
 <div class="accordion" id="codeaccordion">
@@ -66,10 +84,11 @@
     </div>
     <div id="diff" class="accordion-body collapse">
       <div class="accordion-inner">
-	{{$next := sum .selected 1}}
 	{{$diff := diff .curResult .nextResult}}
-	{{$currHeader := createHeader .curFile .selected}}
-	{{$nextHeader := createHeader .nextFile $next}} 
+	{{$cur := sum .selected 1}}
+	{{$currHeader := createHeader $curFile $cur}}
+	{{$next := sum .nextFile.Num 1}}
+	{{$nextHeader := createHeader $nextFile $next}} 
 	{{$diff := diffHeader $diff $currHeader $nextHeader}}
 	{{diffHTML $diff}}
       </div>

@@ -11,5 +11,43 @@
     <section id="content">
       {{ template "content" . }}
     </section>
+    <script language="javascript" src="/static/js/util.js"></script>
+    <script language="javascript" src="/static/js/jquery-2.0.2.min.js"></script>
+    <script language="javascript" src="/static/js/bootstrap-rowlink.min.js"></script>
+    <script language="javascript" src="/static/js/bootstrap.min.js"></script>
+    <script language="javascript" src="/static/js/shCore.js"></script>
+    <script language="javascript" src="/static/js/shBrushJava.js"></script>
+    <script language="javascript" src="/static/js/bootstrap-pagination.js"></script>
+    <script language="javascript" src="/static/js/raphael.js"></script>
+    <script language="javascript" src="/static/js/analytics.js"></script>
+    <script language="javascript" src="/static/js/popup.js"></script>
+    <script language="javascript">
+      $(function(){
+      var pager = document.getElementById("filePager");
+      var len = 0;
+      var selected = 0;
+      if(pager != null){
+      len = pager.getAttribute("files");
+      selected = pager.getAttribute("selected");
+      selected ++;
+      }
+      var target = $('.pagination'),
+      options = {
+      prev: 'prev',
+      next: 'next',
+      left: 3,
+      right: 3,
+      page: selected,
+      lastPage: len,
+      click: function(i) {
+      options.page = i;
+      target.pagination(options);
+      var a = document.getElementById("file"+(i-1));
+      a.click()
+      }
+      };
+      target.pagination(options);
+      });
+    </script>
   </body>
 </html>

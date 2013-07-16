@@ -1,4 +1,7 @@
 {{define "view"}}
+{{$curFile := .curFile}}
+{{$selected := .selected}}
+{{$nextIndex := sum $selected 1}}
 <ul class="breadcrumb">
   <li><a href="homeview">Home</a><span class="divider">/</span></li>
   {{if .ctx.Browse.IsUser}}
@@ -12,17 +15,15 @@
   <li class="active">Result List</li>
 </ul>
 <h3>{{ .curFile.Name}}</h3>
-<div id="filePager" files="{{len .files}}" selected="{{.selected}}" class="pagination pagination-centered pagination-large">
+<div id="filePager" files="{{len .files}}" selected="{{$selected}}" class="pagination pagination-centered pagination-large">
   {{range $index, $file := .files}}
-  <a id="file{{$index}}" href="getresultlist?filename={{$file.Name}}&selected={{$index}}"></a>
+  <a id="file{{$index}}" href="getresultlist?filename={{$file.Name}}&currentIndex={{$index}}"></a>
   {{end}}
 </div>
 <ul class="unstyled">
-  <li><a href="displayresult?filename={{.curFile.Name}}&selected={{.selected}}&resultname=Code"><h4>Code</h4></a></li>
-  {{$curFile := .curFile}}
-  {{$selected := .selected}}
+  <li><a href="displayresult?filename={{$curFile.Name}}&currentIndex={{$selected}}&nextIndex={{$nextIndex}}&resultname=Code"><h4>Code</h4></a></li>
   {{range $k,$v := .curFile.Results}}
-  <li><a href="displayresult?filename={{$curFile.Name}}&selected={{$selected}}&resultname={{$k}}">
+  <li><a href="displayresult?filename={{$curFile.Name}}&currentIndex={{$selected}}&nextIndex={{$nextIndex}}&resultname={{$k}}">
       <h4>{{$k}}</h4>
   </a></li>
   {{end}}

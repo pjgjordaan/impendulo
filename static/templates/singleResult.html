@@ -9,7 +9,7 @@
   <li><a href="getsubmissions?id={{.ctx.Browse.Pid}}&type=project">Submissions</a><span class="divider"></span></li>
   {{end}}
   <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">Snapshots</a><span class="divider"></span></li>
-  <li><a href="getresultlist?filename={{.curFile.Name}}&selected={{.selected}}">Result List</a><span class="divider"></span></li>
+  <li><a href="getresultlist?filename={{.curFile.Name}}&currentIndex={{.selected}}">Result List</a><span class="divider"></span></li>
   <li class="active">{{.resultName}}</li>
 </ul>
 <h3>{{ .curFile.Name}}</h3>
@@ -18,7 +18,7 @@
   {{$resultName := .resultName}}
   {{$fileName := .curFile.Name}}
   {{range $index, $file := .files}}
-  <a id="file{{$index}}" href="displayresult?filename={{$fileName}}&selected={{$index}}&resultname={{$resultName}}"></a>
+  <a id="file{{$index}}" href="displayresult?filename={{$fileName}}&currentIndex={{$index}}&nextIndex=0&resultname={{$resultName}}"></a>
   {{end}}
 </div>
 <h4>{{.resultName}}</h4>

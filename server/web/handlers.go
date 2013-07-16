@@ -120,7 +120,13 @@ func displayResult(w http.ResponseWriter, req *http.Request, ctx *context.Contex
 	if selected == len(files)-1 {
 		return T(getNav(ctx), "singleResult.html", curTemp).Execute(w, args)
 	}
-	nextFile, msg, err := getFile(files[selected+1].Id)
+	neighbour, msg, err := getNeighbour(req, len(files)-1)
+	if err != nil {
+		ctx.AddMessage(msg, err != nil)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
+	}
+	nextFile, msg, err := getFile(files[neighbour].Id)
 	if err != nil {
 		ctx.AddMessage(msg, err != nil)
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
@@ -135,7 +141,8 @@ func displayResult(w http.ResponseWriter, req *http.Request, ctx *context.Contex
 	nextTemp, nextResult := res.TemplateArgs(false)
 	args["nextFile"] = nextFile
 	args["nextResult"] = nextResult
-	return T(getNav(ctx), "doubleResult.html", curTemp, nextTemp).Execute(w, args)
+	args["graphData"] = getCompileData(files)
+	return T(getNav(ctx), "doubleResult.html", "javacGraph.html", curTemp, nextTemp).Execute(w, args)
 }
 
 func login(w http.ResponseWriter, req *http.Request, ctx *context.Context) error {

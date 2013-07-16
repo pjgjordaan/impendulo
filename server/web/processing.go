@@ -212,7 +212,23 @@ func retrieveNames(req *http.Request, ctx *context.Context) (ret []string, msg s
 	return
 }
 
+func getCompileData(files []*project.File)(ret []bool){
+	ret = make([]bool, len(files))
+	for i, file := range files{
+		file, _ = db.GetFile(bson.M{project.ID: file.Id}, nil)
+		if id,ok := file.Results[javac.NAME]; ok{
+			res,_ := db.GetJavacResult(bson.M{project.ID: id}, nil)
+			ret[i] = res.Success()
+		} else{
+			ret[i] = false
+		}
+	}
+	return ret
+}
+
 func retrieveFiles(req *http.Request, ctx *context.Context) (ret []*project.File, msg string, err error) {
+	req.ParseForm()
+	fmt.Println(req.Form)
 	name := req.FormValue("filename")
 	if !bson.IsObjectIdHex(ctx.Browse.Sid) {
 		err = fmt.Errorf("Invalid submission id %q.", ctx.Browse.Sid)
@@ -233,7 +249,7 @@ func retrieveFiles(req *http.Request, ctx *context.Context) (ret []*project.File
 }
 
 func getFile(id bson.ObjectId) (file *project.File, msg string, err error) {
-	selector := bson.M{project.NAME: 1, project.ID: 1, project.RESULTS: 1, project.TIME: 1}
+	selector := bson.M{project.NAME: 1, project.ID: 1, project.RESULTS: 1, project.TIME: 1, project.NUM:1}
 	file, err = db.GetFile(bson.M{project.ID: id}, selector)
 	if err != nil {
 		msg = fmt.Sprintf("Could not retrieve file.")
@@ -241,19 +257,28 @@ func getFile(id bson.ObjectId) (file *project.File, msg string, err error) {
 	return
 }
 
-func getSelected(req *http.Request, maxSize int) (selected int, msg string, err error) {
-	selStr := req.FormValue("selected")
-	selected, err = strconv.Atoi(selStr)
+func getInt(req *http.Request, name string, maxSize int) (found int, msg string, err error) {
+	iStr := req.FormValue(name)
+	found, err = strconv.Atoi(iStr)
 	if err != nil {
-		msg = fmt.Sprintf("Invalid index %q.", selStr)
+		msg = fmt.Sprintf("Invalid int %q.", iStr)
 		return
 	}
-	if selected > maxSize {
-		err = fmt.Errorf("Index size %q too big.", selected)
+	if found > maxSize {
+		err = fmt.Errorf("Integer size %q too big.", found)
 		msg = err.Error()
 	}
 	return
 }
+
+func getSelected(req *http.Request, maxSize int) (int, string, error) {
+	return getInt(req, "currentIndex", maxSize)
+}
+
+func getNeighbour(req *http.Request, maxSize int) (int, string, error) {
+	return getInt(req, "nextIndex", maxSize)
+}
+
 
 func getResult(req *http.Request, fileId bson.ObjectId) (res tool.Result, msg string, err error) {
 	name := req.FormValue("resultname")

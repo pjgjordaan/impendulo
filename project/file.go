@@ -55,6 +55,10 @@ func (this *File) Equals(that *File) bool {
 	return reflect.DeepEqual(this, that)
 }
 
+func (this *File) Same(that *File) bool {
+	return this.Id == that.Id
+}
+
 //NewFile
 func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) (file *File, err error) {
 	id := bson.NewObjectId()
