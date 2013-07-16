@@ -52,7 +52,7 @@ func (this *FindbugsResult) Success() bool {
 func NewResult(fileId bson.ObjectId, data []byte) (res *FindbugsResult, err error) {
 	res = &FindbugsResult{Id: bson.NewObjectId(), FileId: fileId, Time: util.CurMilis()}
 	res.Data, err = genReport(res.Id, data)
-	return 
+	return
 }
 
 func genReport(id bson.ObjectId, data []byte) (res *FindbugsReport, err error) {

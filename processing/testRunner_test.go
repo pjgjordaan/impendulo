@@ -1,10 +1,10 @@
 package processing
 
 import (
-//	"github.com/godfried/impendulo/config"
+	//	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
-//	"github.com/godfried/impendulo/tool"
+	//	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"os"
@@ -36,6 +36,7 @@ func TestSetupTests(t *testing.T) {
 	}
 
 }
+
 /*
 func TestCompileTest(t *testing.T) {
 	err := config.LoadConfigs("../config.txt")
@@ -161,7 +162,7 @@ func getTest(pId bson.ObjectId) (*project.Test, error) {
 
 func getFile(subId bson.ObjectId) *project.File {
 	info := bson.M{project.TIME: 1000, project.TYPE: project.SRC, project.MOD: 'c', project.NAME: "Triangle.java", project.FTYPE: "java", project.PKG: "triangle", project.NUM: 100}
-	file,_ := project.NewFile(subId, info, srcData)
+	file, _ := project.NewFile(subId, info, srcData)
 	return file
 }
 

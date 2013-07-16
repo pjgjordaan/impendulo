@@ -35,7 +35,7 @@ func (this *FindBugs) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.R
 		//var fres *FindbugsResult
 		res, err = NewResult(fileId, stdout)
 		//res = fres
-	} else if stderr != nil && len(stderr) > 0{
+	} else if stderr != nil && len(stderr) > 0 {
 		err = fmt.Errorf("Could not run findbugs: %q.", string(stderr))
 	}
 	return

@@ -184,7 +184,7 @@ func (this *SubmissionHandler) Read() error {
 		if err != nil {
 			return err
 		}
-		if file.Type == project.SRC || file.Type == project.ARCHIVE{ 
+		if file.Type == project.SRC || file.Type == project.ARCHIVE {
 			processing.AddFile(file)
 		}
 		return nil

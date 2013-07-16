@@ -8,9 +8,9 @@ import (
 	"github.com/godfried/impendulo/processing/monitor"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/tool/javac"
-	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/util"
@@ -111,7 +111,7 @@ type Processor struct {
 	recv    chan bson.ObjectId
 	tests   []*TestRunner
 	rootDir string
-	srcDir string
+	srcDir  string
 	toolDir string
 	jpfPath string
 }
@@ -239,7 +239,7 @@ func (this *Processor) extract(archive *project.File) error {
 	return nil
 }
 
-//Analyser is used to run tools on a file. 
+//Analyser is used to run tools on a file.
 type Analyser struct {
 	proc   *Processor
 	file   *project.File
@@ -299,10 +299,10 @@ func (this *Analyser) compile() (bool, error) {
 
 //RunTools runs all available tools on a file, skipping previously run tools.
 func (this *Analyser) RunTools() error {
-	tools := []tool.Tool{findbugs.NewFindBugs(), pmd.NewPMD(), 
-		jpf.NewJPF(this.proc.toolDir, this.proc.jpfPath), 
+	tools := []tool.Tool{findbugs.NewFindBugs(), pmd.NewPMD(),
+		jpf.NewJPF(this.proc.toolDir, this.proc.jpfPath),
 		checkstyle.NewCheckstyle()}
-	for _, tool := range tools{
+	for _, tool := range tools {
 		if _, ok := this.file.Results[tool.GetName()]; ok {
 			continue
 		}

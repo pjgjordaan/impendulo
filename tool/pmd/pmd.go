@@ -1,10 +1,10 @@
 package pmd
 
 import (
+	"fmt"
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
-	"fmt"
 )
 
 type PMD struct {
@@ -38,5 +38,3 @@ func (this *PMD) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Result
 	return
 
 }
-
-

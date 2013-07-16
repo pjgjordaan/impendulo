@@ -53,7 +53,7 @@ func (this *JPFResult) TemplateArgs(current bool) (string, interface{}) {
 func NewResult(fileId bson.ObjectId, data []byte) (res *JPFResult, err error) {
 	res = &JPFResult{Id: bson.NewObjectId(), FileId: fileId, Time: util.CurMilis()}
 	res.Data, err = genReport(res.Id, data)
-	return 
+	return
 }
 
 type JPFReport struct {

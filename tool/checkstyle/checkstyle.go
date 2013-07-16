@@ -1,15 +1,15 @@
 package checkstyle
 
 import (
+	"fmt"
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
-	"fmt"
 )
 
 type Checkstyle struct {
-	java string
-	cmd string
+	java       string
+	cmd        string
 	configFile string
 }
 
@@ -36,5 +36,3 @@ func (this *Checkstyle) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool
 	return
 
 }
-
-

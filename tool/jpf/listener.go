@@ -8,9 +8,9 @@ import (
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/util"
+	"labix.org/v2/mgo/bson"
 	"os"
 	"path/filepath"
-	"labix.org/v2/mgo/bson"
 )
 
 var listenersFile = "listeners.gob"
@@ -38,7 +38,7 @@ func FindListeners() ([]byte, error) {
 	target := tool.NewTarget("ListenerFinder.java", "java", "listener", config.GetConfig(config.LISTENER_DIR))
 	cp := filepath.Join(config.GetConfig(config.JPF_HOME), "build", "main") + ":" + target.Dir + ":" + config.GetConfig(config.GSON_JAR)
 	comp := javac.NewJavac(cp)
-	_, err := comp.Run(bson.NewObjectId(), target) 
+	_, err := comp.Run(bson.NewObjectId(), target)
 	if err != nil {
 		return nil, err
 	}

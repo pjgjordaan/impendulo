@@ -42,7 +42,7 @@ func GetString(jobj map[string]interface{}, key string) (string, error) {
 	}
 }
 
-func readString(ival interface{}) (string) {
+func readString(ival interface{}) string {
 	val, _ := ival.(string)
 	return val
 }
@@ -61,19 +61,19 @@ func GetInt(jobj map[string]interface{}, key string) (int, error) {
 	case float64:
 		return int(readFloat64(ival)), nil
 	case string:
-		return strconv.Atoi(readString(ival))	
+		return strconv.Atoi(readString(ival))
 	default:
 		return -1, &CastError{"int", ival}
-	}	
-	
+	}
+
 }
 
-func readInt(ival interface{}) (int) {
+func readInt(ival interface{}) int {
 	val, _ := ival.(int)
 	return val
 }
 
-func readFloat64(ival interface{}) (float64) {
+func readFloat64(ival interface{}) float64 {
 	val, _ := ival.(float64)
 	return val
 }
@@ -95,10 +95,10 @@ func GetInt64(jobj map[string]interface{}, key string) (int64, error) {
 		return strconv.ParseInt(readString(ival), 10, 64)
 	default:
 		return -1, &CastError{"int64", ival}
-	}	
+	}
 }
 
-func readInt64(ival interface{})(int64){
+func readInt64(ival interface{}) int64 {
 	val, _ := ival.(int64)
 	return val
 }
@@ -114,7 +114,7 @@ func GetID(jobj map[string]interface{}, key string) (bson.ObjectId, error) {
 		return ival.(bson.ObjectId), nil
 	case string:
 		idStr := readString(ival)
-		if bson.IsObjectIdHex(idStr){
+		if bson.IsObjectIdHex(idStr) {
 			return bson.ObjectIdHex(idStr), nil
 		}
 	}

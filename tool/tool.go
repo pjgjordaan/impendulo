@@ -3,9 +3,9 @@ package tool
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"labix.org/v2/mgo/bson"
 	"os/exec"
-	"io"
 )
 
 const (

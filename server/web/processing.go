@@ -8,20 +8,20 @@ import (
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/tool/javac"
-	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
+	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
-	"github.com/godfried/impendulo/tool/checkstyle"
 	"io/ioutil"
 	"labix.org/v2/mgo/bson"
+	"mime/multipart"
 	"net/http"
 	"strconv"
 	"strings"
-	"mime/multipart"
 )
 
 func getNav(ctx *context.Context) string {
@@ -40,7 +40,7 @@ func (p processor) exec(req *http.Request, ctx *context.Context) error {
 }
 
 func doArchive(req *http.Request, ctx *context.Context) (msg string, err error) {
-	projectId, err := ReadId(req.FormValue("project")) 
+	projectId, err := ReadId(req.FormValue("project"))
 	if err != nil {
 		msg = err.Error()
 		return
@@ -80,7 +80,7 @@ func doArchive(req *http.Request, ctx *context.Context) (msg string, err error) 
 }
 
 func doTest(req *http.Request, ctx *context.Context) (msg string, err error) {
-	projectId, err := ReadId(req.FormValue("project")) 
+	projectId, err := ReadId(req.FormValue("project"))
 	if err != nil {
 		msg = err.Error()
 		return
@@ -130,7 +130,7 @@ func doTest(req *http.Request, ctx *context.Context) (msg string, err error) {
 }
 
 func doJPF(req *http.Request, ctx *context.Context) (msg string, err error) {
-	projectId, err := ReadId(req.FormValue("project")) 
+	projectId, err := ReadId(req.FormValue("project"))
 	if err != nil {
 		msg = err.Error()
 		return
@@ -195,7 +195,7 @@ func doLogin(req *http.Request, ctx *context.Context) (msg string, err error) {
 		return
 	} else if !util.Validate(u.Password, u.Salt, pword) {
 		err = fmt.Errorf("Invalid username or password.")
-		msg =  err.Error()
+		msg = err.Error()
 		return
 	}
 	ctx.AddUser(uname)
@@ -241,14 +241,14 @@ func retrieveNames(req *http.Request, ctx *context.Context) (ret []string, msg s
 	return
 }
 
-func getCompileData(files []*project.File)(ret []bool){
+func getCompileData(files []*project.File) (ret []bool) {
 	ret = make([]bool, len(files))
-	for i, file := range files{
+	for i, file := range files {
 		file, _ = db.GetFile(bson.M{project.ID: file.Id}, nil)
-		if id,ok := file.Results[javac.NAME]; ok{
-			res,_ := db.GetJavacResult(bson.M{project.ID: id}, nil)
+		if id, ok := file.Results[javac.NAME]; ok {
+			res, _ := db.GetJavacResult(bson.M{project.ID: id}, nil)
 			ret[i] = res.Success()
-		} else{
+		} else {
 			ret[i] = false
 		}
 	}
@@ -278,7 +278,7 @@ func retrieveFiles(req *http.Request, ctx *context.Context) (ret []*project.File
 }
 
 func getFile(id bson.ObjectId) (file *project.File, msg string, err error) {
-	selector := bson.M{project.NAME: 1, project.ID: 1, project.RESULTS: 1, project.TIME: 1, project.NUM:1}
+	selector := bson.M{project.NAME: 1, project.ID: 1, project.RESULTS: 1, project.TIME: 1, project.NUM: 1}
 	file, err = db.GetFile(bson.M{project.ID: id}, selector)
 	if err != nil {
 		msg = fmt.Sprintf("Could not retrieve file.")
@@ -294,11 +294,10 @@ func getNeighbour(req *http.Request, maxSize int) (int, string, error) {
 	return GetInt(req, "nextIndex", maxSize)
 }
 
-
 func getResult(req *http.Request, fileId bson.ObjectId) (res tool.Result, msg string, err error) {
 	name := req.FormValue("resultname")
 	res, err = GetResultData(name, fileId)
-	if err != nil{
+	if err != nil {
 		msg = fmt.Sprintf("Could not retrieve result %q.", name)
 	}
 	return
@@ -335,7 +334,7 @@ func retrieveSubmissions(req *http.Request, ctx *context.Context) (subs []*proje
 	return
 }
 
-func projectName(idStr string) (name string,err error) {
+func projectName(idStr string) (name string, err error) {
 	var id bson.ObjectId
 	id, err = ReadId(idStr)
 	if err != nil {
@@ -350,7 +349,7 @@ func projectName(idStr string) (name string,err error) {
 	return
 }
 
-func ReadId(idStr string)(ret bson.ObjectId, err error){
+func ReadId(idStr string) (ret bson.ObjectId, err error) {
 	if !bson.IsObjectIdHex(idStr) {
 		err = fmt.Errorf("Invalid id string %q.", idStr)
 		return
@@ -404,7 +403,7 @@ func GetResultData(resultName string, fileId bson.ObjectId) (res tool.Result, er
 			res, err = db.GetFindbugsResult(matcher, selector)
 		} else if strings.HasPrefix(pmd.NAME, resultName) {
 			res, err = db.GetPMDResult(matcher, selector)
-		}else if strings.HasPrefix(checkstyle.NAME, resultName) {
+		} else if strings.HasPrefix(checkstyle.NAME, resultName) {
 			res, err = db.GetCheckstyleResult(matcher, selector)
 		} else {
 			err = fmt.Errorf("Unknown result %q.", resultName)

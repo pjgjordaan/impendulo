@@ -2,6 +2,7 @@ package processing
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
@@ -12,7 +13,6 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
-	"fmt"
 )
 
 func TestAddResult(t *testing.T) {
@@ -190,7 +190,7 @@ loop:
 			}
 			gotSub = true
 		case fileId := <-fileChan:
-			if sent, ok := files[fileId.id]; ok{ 
+			if sent, ok := files[fileId.id]; ok {
 				stored, err := db.GetFile(bson.M{project.ID: fileId.id}, nil)
 				if err != nil {
 					t.Error(err)
@@ -198,9 +198,9 @@ loop:
 				if !sent.Equals(stored) {
 					t.Error("Files not equal")
 				}
-			}else{
+			} else {
 				t.Error("Unknown id", fileId.id)
-			} 
+			}
 			delete(files, fileId.id)
 		}
 	}

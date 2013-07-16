@@ -2,51 +2,50 @@ package web
 
 import (
 	"fmt"
-	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool/diff"		
+	"github.com/godfried/impendulo/tool/diff"
+	"github.com/godfried/impendulo/util"
 	"html/template"
 	"path/filepath"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 var funcs = template.FuncMap{
-	"reverse":     reverse,
-	"projectName": projectName,
-	"date":        util.Date,
-	"setBreaks":   setBreaks,
-	"address":     address,
-	"base": filepath.Base,
-	"shortname": shortname,
-	"isCode": isCode,
-	"diff": diff.Diff,
-	"diffHTML": diff.Diff2HTML,	
-	"diffHeader": diff.SetHeader,
+	"reverse":      reverse,
+	"projectName":  projectName,
+	"date":         util.Date,
+	"setBreaks":    setBreaks,
+	"address":      address,
+	"base":         filepath.Base,
+	"shortname":    shortname,
+	"isCode":       isCode,
+	"diff":         diff.Diff,
+	"diffHTML":     diff.Diff2HTML,
+	"diffHeader":   diff.SetHeader,
 	"createHeader": fileHeader,
-	"sum": sum,
+	"sum":          sum,
 }
 
-func fileHeader(file *project.File, num int)string{
-	return file.Name +":"+strconv.Itoa(num)+" "+ util.Date(file.Time)
+func fileHeader(file *project.File, num int) string {
+	return file.Name + ":" + strconv.Itoa(num) + " " + util.Date(file.Time)
 }
 
-
-func sum(vals... int)(ret int){
-	for _, val := range vals{
+func sum(vals ...int) (ret int) {
+	for _, val := range vals {
 		ret += val
 	}
 	return
 }
 
-func isCode(name string)bool{
+func isCode(name string) bool {
 	return strings.ToLower(name) == "code"
 }
 
 func shortname(exec string) string {
 	elements := strings.Split(exec, `.`)
 	num := len(elements)
-	if num < 2{
+	if num < 2 {
 		return exec
 	}
 	return strings.Join(elements[num-2:], `.`)

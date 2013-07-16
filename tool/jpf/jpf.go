@@ -43,12 +43,12 @@ func (this *JPF) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Result
 	}
 	args := []string{this.exec, "-cp", ti.Dir + ":" + this.cp, this.jpfInfo.Executable(), this.jpfPath, ti.Executable(), ti.Dir}
 	stdout, stderr, err := tool.RunCommand(args)
-	if stdout != nil{
+	if stdout != nil {
 		//var jres *JPFResult
 		res, err = NewResult(fileId, stdout)
 		//res = jres
 	} else if stderr != nil && len(stderr) > 0 {
-			err = fmt.Errorf("Could not execute jpf runner: %q.", string(stderr))
-	} 
+		err = fmt.Errorf("Could not execute jpf runner: %q.", string(stderr))
+	}
 	return
 }
