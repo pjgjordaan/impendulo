@@ -6,7 +6,7 @@ import (
 	"reflect"
 )
 
-//File stores a single file's data from a submission.
+//Test stores tests for a project.
 type Test struct {
 	Id        bson.ObjectId "_id"
 	ProjectId bson.ObjectId "projectid"
@@ -18,19 +18,22 @@ type Test struct {
 	Data      []byte        "data"
 }
 
+//Equals
 func (this *Test) Equals(that *Test) bool {
 	return reflect.DeepEqual(this, that)
 }
 
+//TypeName
 func (this *Test) TypeName() string {
 	return "test file"
 }
 
+//String
 func (this *Test) String() string {
 	return "Type: project.Test; Id: " + this.Id.Hex() + "; ProjectId: " + this.ProjectId.Hex() + "; Name: " + this.Name + "; Package: " + this.Package + "; User: " + this.User + "; Time: " + util.Date(this.Time)
 }
 
-//NewFile
+//NewTest
 func NewTest(projectId bson.ObjectId, name, user, pkg string, test, data []byte) *Test {
 	id := bson.NewObjectId()
 	return &Test{id, projectId, name, user, pkg, util.CurMilis(), test, data}

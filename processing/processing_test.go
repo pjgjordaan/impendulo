@@ -3,79 +3,91 @@ package processing
 import (
 	"bytes"
 	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/submission"
+	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/tool/java"
-	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/tool/javac"
 	"labix.org/v2/mgo/bson"
 	"math/rand"
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
 	"time"
+	"fmt"
 )
 
 func TestAddResult(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
-	file := submission.NewFile(bson.NewObjectId(), map[string]interface{}{}, fileData)
-	err := db.AddFile(file)
+	file, err := project.NewFile(bson.NewObjectId(), fileInfo, fileData)
 	if err != nil {
 		t.Error(err)
 	}
-	res := tool.NewResult(file.Id, java.NewJavac("this"), fileData, fileData, nil)
+	err = db.AddFile(file)
+	if err != nil {
+		t.Error(err)
+	}
+	res := javac.NewResult(file.Id, fileData)
 	err = AddResult(res)
 	if err != nil {
 		t.Error(err)
 	}
-	matcher := bson.M{submission.ID: file.Id}
-	dbFile, err := db.GetFile(matcher)
-	if dbFile.Results["javac"] != res.Id {
+	matcher := bson.M{project.ID: file.Id}
+	dbFile, err := db.GetFile(matcher, nil)
+	if dbFile.Results[javac.NAME] != res.Id {
 		t.Error("File not updated")
 	}
-	matcher = bson.M{submission.ID: res.Id}
-	dbRes, err := db.GetResult(matcher)
+	matcher = bson.M{project.ID: res.Id}
+	dbRes, err := db.GetJavacResult(matcher, nil)
 	if !res.Equals(dbRes) {
 		t.Error("Result not added correctly")
 	}
+	fmt.Println("TestAddResult Success")
 }
 
 func TestExtractFile(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
-	s := submission.NewSubmission("Triangle", "user", submission.FILE_MODE, "java")
-	err := db.AddSubmission(s)
+	p := project.NewProject("Triangle", "user", "java")
+	err := db.AddProject(p)
 	if err != nil {
 		t.Error(err)
 	}
-	info := bson.M{submission.TIME: 1000, submission.TYPE: submission.SRC, submission.MOD: 'c', submission.NAME: "Triangle.java", submission.FTYPE: "java", submission.PKG: "triangle", submission.NUM: 100}
-	f := submission.NewFile(s.Id, info, fileData)
-	dir := filepath.Join(os.TempDir(), s.Id.Hex())
-	defer os.RemoveAll(dir)
-	ti, err := ExtractFile(f, dir)
+	s := project.NewSubmission(p.Id, p.User, project.FILE_MODE, 1000)
+	err = db.AddSubmission(s)
 	if err != nil {
 		t.Error(err)
 	}
-	expected := tool.NewTarget("Triangle", "Triangle.java", "java", "triangle", dir)
-	if !expected.Equals(ti) {
+	file, err := project.NewFile(s.Id, fileInfo, fileData)
+	if err != nil {
+		t.Error(err)
+	}
+	proc := NewProcessor(s, make(chan bson.ObjectId))
+	defer os.RemoveAll(proc.rootDir)
+	analyser := &Analyser{proc: proc, file: file}
+	err = analyser.buildTarget()
+	if err != nil {
+		t.Error(err)
+	}
+	expected := tool.NewTarget("Triangle.java", "java", "triangle", proc.srcDir)
+	if !expected.Equals(analyser.target) {
 		t.Error("Targets not equivalent")
 	}
-	file, err := os.Open(filepath.Join(dir, filepath.Join("triangle", "Triangle.java")))
+	stored, err := os.Open(filepath.Join(proc.srcDir, filepath.Join("triangle", "Triangle.java")))
 	if err != nil {
 		t.Error(err)
 	}
 	buff := new(bytes.Buffer)
-	_, err = buff.ReadFrom(file)
+	_, err = buff.ReadFrom(stored)
 	if err != nil {
 		t.Error(err)
 	}
 	if !bytes.Equal(fileData, buff.Bytes()) {
 		t.Error("Data not equivalent")
 	}
+	fmt.Println("TestExtractFile Success")
 }
 
-func TestStore(t *testing.T) {
+/*func TestStore(t *testing.T) {
 	fname := "test0.gob"
 	orig := genMap()
 	defer os.Remove(filepath.Join(util.BaseDir(), fname))
@@ -123,7 +135,7 @@ func TestMonitor(t *testing.T) {
 			t.Error("Map values did not match for submission:", k, v, retrieved[k])
 		}
 	}
-}
+}*/
 
 func genMap() map[bson.ObjectId]bool {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -137,24 +149,34 @@ func genMap() map[bson.ObjectId]bool {
 func TestProcessStored(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
-	sub := submission.NewSubmission("Triangle", "user", submission.FILE_MODE, "java")
-	err := db.AddSubmission(sub)
+	p := project.NewProject("Triangle", "user", "java")
+	err := db.AddProject(p)
 	if err != nil {
 		t.Error(err)
 	}
-	ids := make(map[bson.ObjectId]bool)
+	sub := project.NewSubmission(p.Id, p.User, project.FILE_MODE, 1000)
+	err = db.AddSubmission(sub)
+	if err != nil {
+		t.Error(err)
+	}
+	files := make(map[bson.ObjectId]*project.File)
 	for i := 0; i < 5; i++ {
-		info := bson.M{submission.TIME: 1000 + i, submission.TYPE: submission.SRC, submission.MOD: 'c', submission.NAME: "Triangle.java", submission.FTYPE: "java", submission.PKG: "triangle", submission.NUM: i}
-		f := submission.NewFile(sub.Id, info, fileData)
-		err := db.AddFile(f)
+		info := bson.M{project.TIME: 1000 + i, project.TYPE: project.SRC, project.MOD: 'c', project.NAME: "Triangle.java", project.FTYPE: "java", project.PKG: "triangle", project.NUM: i}
+		file, err := project.NewFile(sub.Id, info, fileData)
 		if err != nil {
 			t.Error(err)
 		}
-		ids[f.Id] = true
+		err = db.AddFile(file)
+		if err != nil {
+			t.Error(err)
+		}
+		file, err = db.GetFile(bson.M{project.ID: file.Id}, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		files[file.Id] = file
 	}
-	subChan := make(chan *submission.Submission)
-	fileChan := make(chan *submission.File)
-	go ProcessStored(sub.Id, subChan, fileChan)
+	go ProcessStored(sub.Id)
 	gotSub := false
 loop:
 	for {
@@ -167,25 +189,28 @@ loop:
 				break loop
 			}
 			gotSub = true
-		case file := <-fileChan:
-			if !ids[file.Id] {
-				t.Error("Unknown id", file.Id)
-			} else {
-				f, err := db.GetFile(bson.M{submission.ID: file.Id})
+		case fileId := <-fileChan:
+			if sent, ok := files[fileId.id]; ok{ 
+				stored, err := db.GetFile(bson.M{project.ID: fileId.id}, nil)
 				if err != nil {
 					t.Error(err)
 				}
-				if !f.Equals(file) {
+				if !sent.Equals(stored) {
 					t.Error("Files not equal")
 				}
-			}
-			delete(ids, file.Id)
+			}else{
+				t.Error("Unknown id", fileId.id)
+			} 
+			delete(files, fileId.id)
 		}
 	}
-	if len(ids) > 0 {
-		t.Error("All files not received", ids)
+	if len(files) > 0 {
+		t.Error("All files not received", files)
 	}
+	fmt.Println("TestProcessStored Success")
 }
+
+var fileInfo = bson.M{project.TIME: 1000, project.TYPE: project.SRC, project.MOD: "c", project.NAME: "Triangle.java", project.FTYPE: "java", project.PKG: "triangle", project.NUM: 1000}
 
 var fileData = []byte(`Ahm Knêma
 Hörr Néhêm

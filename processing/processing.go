@@ -27,28 +27,31 @@ func init() {
 	subChan = make(chan *project.Submission)
 }
 
+//FileId is used to queue new files for processing
 type FileId struct {
 	id    bson.ObjectId
 	subid bson.ObjectId
 }
 
+//AddFile sends a file id to be processed.
 func AddFile(file *project.File) {
 	fileChan <- &FileId{file.Id, file.SubId}
 }
 
+//StartSubmission creates a goroutine to process this submissions files.
 func StartSubmission(sub *project.Submission) {
 	subChan <- sub
 }
 
+//EndSubmission stops this submission's goroutine to.
 func EndSubmission(sub *project.Submission) {
 	subChan <- sub
 }
 
-//Serve spawns new processing routines for each new submission received on subChan.
-//New files are received on fileChan and then sent to the relevant submission process.
-//Incomplete submissions are read from disk and reprocessed using the ProcessStored function.
+//Serve spawns new processing routines for each submission started.
+//Added files are received here and then sent to the relevant submission goroutine.
+//Incomplete submissions are read from disk and reprocessed via ProcessStored.
 func Serve() {
-	// Start handlers
 	go monitor.Listen()
 	go func() {
 		stored := monitor.GetStored()
@@ -80,15 +83,17 @@ func Serve() {
 	}
 }
 
-//ProcessStored processes an incompletely processed submission.
-//It retrieves files in the submission from the db and sends them on fileChan to be processed.
+//ProcessStored processes incompletely processed submissions.
+//It retrieves files in the submission and sends to be processed.
 func ProcessStored(subId bson.ObjectId) {
 	sub, err := db.GetSubmission(bson.M{project.ID: subId}, nil)
 	if err != nil {
 		util.Log(err)
 		return
 	}
-	files, err := db.GetFiles(bson.M{project.SUBID: subId}, bson.M{project.ID: 1, project.SUBID: 1}, project.NUM)
+	matcher := bson.M{project.SUBID: subId, "$or": []interface{}{bson.M{project.TYPE: project.SRC}, bson.M{project.TYPE: project.ARCHIVE}}}
+	selector := bson.M{project.ID: 1, project.SUBID: 1}
+	files, err := db.GetFiles(matcher, selector, project.NUM)
 	if err != nil {
 		util.Log(err)
 		return
@@ -100,26 +105,28 @@ func ProcessStored(subId bson.ObjectId) {
 	EndSubmission(sub)
 }
 
+//Processor is used to process individual submissions.
 type Processor struct {
 	sub     *project.Submission
 	recv    chan bson.ObjectId
 	tests   []*TestRunner
+	rootDir string
+	srcDir string
 	toolDir string
-	srcDir  string
 	jpfPath string
 }
 
 func NewProcessor(sub *project.Submission, recv chan bson.ObjectId) *Processor {
 	dir := filepath.Join(os.TempDir(), sub.Id.Hex())
-	return &Processor{sub: sub, recv: recv, toolDir: filepath.Join(dir, "tools"), srcDir: filepath.Join(dir, "src")}
+	return &Processor{sub: sub, recv: recv, rootDir: dir, srcDir: filepath.Join(dir, "src"), toolDir: filepath.Join(dir, "tools")}
 }
 
-//ProcessSubmission processes a new submission.
-//It listens for incoming files on fileChan and processes them.
+//Process processes a new submission.
+//It listens for incoming files and creates new goroutines to processes them.
 func (this *Processor) Process() {
 	monitor.Busy(this.sub.Id)
 	util.Log("Processing submission", this.sub)
-	//defer os.RemoveAll(this.dir)
+	defer os.RemoveAll(this.rootDir)
 	err := this.Setup()
 	if err != nil {
 		util.Log(err)
@@ -153,6 +160,7 @@ func (this *Processor) Process() {
 	monitor.Done(this.sub.Id)
 }
 
+//Setup sets up the environment needed for this Processor to function correctly.
 func (this *Processor) Setup() error {
 	var err error
 	this.tests, err = SetupTests(this.sub.ProjectId, this.toolDir)
@@ -231,13 +239,14 @@ func (this *Processor) extract(archive *project.File) error {
 	return nil
 }
 
+//Analyser is used to run tools on a file. 
 type Analyser struct {
 	proc   *Processor
 	file   *project.File
 	target *tool.TargetInfo
 }
 
-//Evaluate evaluates a source or compiled file by attempting to run tests and tools on it.
+//Eval evaluates a source or compiled file by attempting to run tests and tools on it.
 func (this *Analyser) Eval() error {
 	err := this.buildTarget()
 	if err != nil {
@@ -263,7 +272,7 @@ func (this *Analyser) Eval() error {
 	return this.RunTools()
 }
 
-//ExtractFile saves a file to filesystem.
+//buildTarget saves a file to filesystem.
 //It returns file info used by tools & tests.
 func (this *Analyser) buildTarget() error {
 	matcher := bson.M{project.ID: this.proc.sub.ProjectId}
@@ -275,7 +284,7 @@ func (this *Analyser) buildTarget() error {
 	return util.SaveFile(this.target.FilePath(), this.file.Data)
 }
 
-//Compile compiles a java source file and saves the results thereof.
+//compile compiles a java source file and saves the results thereof.
 //It returns true if compiled successfully.
 func (this *Analyser) compile() (bool, error) {
 	comp := javac.NewJavac(this.target.Dir)

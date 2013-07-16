@@ -15,16 +15,16 @@ type Result interface {
 	String() string
 }
 
-func NewErrorResult(msg string) *ErrorResult {
-	return &ErrorResult{msg}
+func NewErrorResult(err error) *ErrorResult {
+	return &ErrorResult{err}
 }
 
 type ErrorResult struct {
-	msg string
+	err error
 }
 
 func (this *ErrorResult) String() string {
-	return this.msg
+	return this.err.Error()
 }
 
 func (this *ErrorResult) Name() string {
@@ -45,9 +45,9 @@ func (this *ErrorResult) GetFileId() bson.ObjectId {
 
 func (this *ErrorResult) TemplateArgs(current bool) (string, interface{}) {
 	if current {
-		return "errorCurrent.html", this.msg
+		return "errorCurrent.html", this.err
 	} else {
-		return "errorNext.html", this.msg
+		return "errorNext.html", this.err
 	}
 }
 

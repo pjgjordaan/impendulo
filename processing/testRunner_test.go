@@ -1,10 +1,10 @@
 package processing
 
 import (
-	"github.com/godfried/impendulo/config"
+//	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/submission"
-	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/project"
+//	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"os"
@@ -20,7 +20,7 @@ func TestSetupTests(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	test, err := getTest()
+	test, err := getTest(s.ProjectId)
 	if err != nil {
 		t.Error(err)
 	}
@@ -30,13 +30,13 @@ func TestSetupTests(t *testing.T) {
 	}
 	dir := filepath.Join(os.TempDir(), s.Id.Hex())
 	defer os.RemoveAll(dir)
-	runner := SetupTests(test.Project, test.Lang, dir)
-	if runner == nil {
+	runners, err := SetupTests(test.ProjectId, dir)
+	if runners == nil {
 		t.Error("Could not set up tests properly")
 	}
 
 }
-
+/*
 func TestCompileTest(t *testing.T) {
 	err := config.LoadConfigs("../config.txt")
 	if err != nil {
@@ -64,8 +64,11 @@ func TestCompileTest(t *testing.T) {
 	}
 	dir := filepath.Join(os.TempDir(), f.Id.Hex())
 	defer os.RemoveAll(dir)
-	runner := SetupTests(test.Project, test.Lang, dir)
-	if runner == nil {
+	runners, err := SetupTests(test.ProjectId, dir)
+	if err != nil {
+		t.Error(err)
+	}
+	if runners == nil {
 		t.Error("Could not set up tests properly")
 	}
 	ti, err := ExtractFile(f, dir)
@@ -137,12 +140,14 @@ func TestExecute(t *testing.T) {
 		t.Error(err)
 	}
 }
-
-func getSubmission() *submission.Submission {
-	return submission.NewSubmission("Triangle", "user", submission.FILE_MODE, "java")
+*/
+func getSubmission() *project.Submission {
+	p := project.NewProject("Triangle", "user", "java")
+	db.AddProject(p)
+	return project.NewSubmission(p.Id, p.User, project.FILE_MODE, 1000)
 }
 
-func getTest() (*submission.Test, error) {
+func getTest(pId bson.ObjectId) (*project.Test, error) {
 	testZip, err := util.Zip(map[string][]byte{"testing/EasyTests.java": testData})
 	if err != nil {
 		return nil, err
@@ -151,12 +156,13 @@ func getTest() (*submission.Test, error) {
 	if err != nil {
 		return nil, err
 	}
-	return submission.NewTest("Triangle", "testing", "java", []string{"EasyTests.java"}, testZip, dataZip), nil
+	return project.NewTest(pId, "EasyTests.java", "user", "testing", testZip, dataZip), nil
 }
 
-func getFile(subId bson.ObjectId) *submission.File {
-	info := bson.M{submission.TIME: 1000, submission.TYPE: submission.SRC, submission.MOD: 'c', submission.NAME: "Triangle.java", submission.FTYPE: "java", submission.PKG: "triangle", submission.NUM: 100}
-	return submission.NewFile(subId, info, srcData)
+func getFile(subId bson.ObjectId) *project.File {
+	info := bson.M{project.TIME: 1000, project.TYPE: project.SRC, project.MOD: 'c', project.NAME: "Triangle.java", project.FTYPE: "java", project.PKG: "triangle", project.NUM: 100}
+	file,_ := project.NewFile(subId, info, srcData)
+	return file
 }
 
 var errSrc = []byte(`package triangle;

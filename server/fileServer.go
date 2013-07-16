@@ -184,7 +184,9 @@ func (this *SubmissionHandler) Read() error {
 		if err != nil {
 			return err
 		}
-		processing.AddFile(file)
+		if file.Type == project.SRC || file.Type == project.ARCHIVE{ 
+			processing.AddFile(file)
+		}
 		return nil
 	} else if req == LOGOUT {
 		return io.EOF

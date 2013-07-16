@@ -3,6 +3,7 @@ package util
 import (
 	"fmt"
 	"labix.org/v2/mgo/bson"
+	"strconv"
 )
 
 type MissingError struct {
@@ -33,11 +34,17 @@ func GetString(jobj map[string]interface{}, key string) (string, error) {
 	if !ok {
 		return "", &MissingError{key}
 	}
-	val, ok := ival.(string)
-	if !ok {
-		return "", &CastError{"string", ival}
+	switch ival.(type) {
+	case string:
+		return readString(ival), nil
+	default:
+		return fmt.Sprint(ival), nil
 	}
-	return val, nil
+}
+
+func readString(ival interface{}) (string) {
+	val, _ := ival.(string)
+	return val
 }
 
 //GetInt
@@ -46,11 +53,29 @@ func GetInt(jobj map[string]interface{}, key string) (int, error) {
 	if !ok {
 		return -1, &MissingError{key}
 	}
-	val, ok := ival.(float64)
-	if !ok {
+	switch ival.(type) {
+	case int64:
+		return int(readInt64(ival)), nil
+	case int:
+		return readInt(ival), nil
+	case float64:
+		return int(readFloat64(ival)), nil
+	case string:
+		return strconv.Atoi(readString(ival))	
+	default:
 		return -1, &CastError{"int", ival}
-	}
-	return int(val), nil
+	}	
+	
+}
+
+func readInt(ival interface{}) (int) {
+	val, _ := ival.(int)
+	return val
+}
+
+func readFloat64(ival interface{}) (float64) {
+	val, _ := ival.(float64)
+	return val
 }
 
 //GetInt64
@@ -59,11 +84,23 @@ func GetInt64(jobj map[string]interface{}, key string) (int64, error) {
 	if !ok {
 		return -1, &MissingError{key}
 	}
-	val, ok := ival.(float64)
-	if !ok {
+	switch ival.(type) {
+	case int64:
+		return readInt64(ival), nil
+	case int:
+		return int64(readInt(ival)), nil
+	case float64:
+		return int64(readFloat64(ival)), nil
+	case string:
+		return strconv.ParseInt(readString(ival), 10, 64)
+	default:
 		return -1, &CastError{"int64", ival}
-	}
-	return int64(val), nil
+	}	
+}
+
+func readInt64(ival interface{})(int64){
+	val, _ := ival.(int64)
+	return val
 }
 
 //GetID
@@ -72,11 +109,16 @@ func GetID(jobj map[string]interface{}, key string) (bson.ObjectId, error) {
 	if !ok {
 		return bson.NewObjectId(), &MissingError{key}
 	}
-	val, ok := ival.(bson.ObjectId)
-	if !ok {
-		return bson.NewObjectId(), &CastError{"bson.ObjectId", ival}
+	switch ival.(type) {
+	case bson.ObjectId:
+		return ival.(bson.ObjectId), nil
+	case string:
+		idStr := readString(ival)
+		if bson.IsObjectIdHex(idStr){
+			return bson.ObjectIdHex(idStr), nil
+		}
 	}
-	return val, nil
+	return bson.NewObjectId(), &CastError{"bson.ObjectId", ival}
 }
 
 //GetM
