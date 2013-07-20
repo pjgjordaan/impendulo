@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
-	"reflect"
 )
 
 const NAME = "Javac"
@@ -16,11 +15,7 @@ type JavacResult struct {
 	Data   []byte        "data"
 }
 
-func (this *JavacResult) Equals(that *JavacResult) bool {
-	return reflect.DeepEqual(this, that)
-}
-
-func (this *JavacResult) Name() string {
+func (this *JavacResult) GetName() string {
 	return NAME
 }
 

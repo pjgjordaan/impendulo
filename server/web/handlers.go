@@ -116,7 +116,7 @@ func displayResult(w http.ResponseWriter, req *http.Request, ctx *context.Contex
 		return err
 	}
 	curTemp, curResult := res.TemplateArgs(true)
-	args := map[string]interface{}{"ctx": ctx, "h": true, "files": files, "selected": selected, "resultName": res.Name(), "curFile": curFile, "curResult": curResult}
+	args := map[string]interface{}{"ctx": ctx, "h": true, "files": files, "selected": selected, "resultName": res.GetName(), "curFile": curFile, "curResult": curResult}
 	if selected == len(files)-1 {
 		return T(getNav(ctx), "singleResult.html", curTemp).Execute(w, args)
 	}

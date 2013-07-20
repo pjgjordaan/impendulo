@@ -9,7 +9,6 @@ import (
 )
 
 type JPF struct {
-	exec    string
 	cp      string
 	jpfPath string
 	jpfInfo *tool.TargetInfo
@@ -20,7 +19,7 @@ func NewJPF(jpfDir, configPath string) *JPF {
 	jpfInfo := tool.NewTarget("JPFRunner.java", "java", "runner", jpfDir)
 	pubInfo := tool.NewTarget("ImpenduloPublisher.java", "java", "runner", jpfDir)
 	cp := jpfDir + ":" + config.GetConfig(config.JPF_JAR) + ":" + config.GetConfig(config.RUNJPF_JAR) + ":" + config.GetConfig(config.GSON_JAR)
-	return &JPF{config.GetConfig(config.JAVA), cp, configPath, jpfInfo, pubInfo}
+	return &JPF{cp, configPath, jpfInfo, pubInfo}
 }
 
 func (this *JPF) GetLang() string {
@@ -28,7 +27,7 @@ func (this *JPF) GetLang() string {
 }
 
 func (this *JPF) GetName() string {
-	return tool.JPF
+	return NAME
 }
 
 func (this *JPF) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Result, err error) {
@@ -41,12 +40,10 @@ func (this *JPF) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Result
 	if err != nil {
 		return
 	}
-	args := []string{this.exec, "-cp", ti.Dir + ":" + this.cp, this.jpfInfo.Executable(), this.jpfPath, ti.Executable(), ti.Dir}
-	stdout, stderr, err := tool.RunCommand(args)
+	args := []string{config.GetConfig(config.JAVA), "-cp", ti.Dir + ":" + this.cp, this.jpfInfo.Executable(), this.jpfPath, ti.Executable(), ti.Dir}
+	stdout, stderr, err := tool.RunCommand(args, nil)
 	if stdout != nil {
-		//var jres *JPFResult
 		res, err = NewResult(fileId, stdout)
-		//res = jres
 	} else if stderr != nil && len(stderr) > 0 {
 		err = fmt.Errorf("Could not execute jpf runner: %q.", string(stderr))
 	}

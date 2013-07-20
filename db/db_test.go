@@ -1,12 +1,16 @@
 package db
 
 import (
-	"github.com/godfried/impendulo/submission"
+	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/javac"
+	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/user"
 	"labix.org/v2/mgo/bson"
 	"strconv"
 	"testing"
+	"reflect"
+	"bytes"
 )
 
 func TestSetup(t *testing.T) {
@@ -23,8 +27,11 @@ func TestRemoveFile(t *testing.T) {
 	defer DeleteDB(TEST_DB)
 	s := getSession()
 	defer s.Close()
-	f := submission.NewFile(bson.NewObjectId(), map[string]interface{}{"a": "b"}, fileData)
-	err := AddFile(f)
+	f, err := project.NewFile(bson.NewObjectId(), fileInfo, fileData)
+	if err != nil {
+		t.Error(err)
+	}
+	err = AddFile(f)
 	if err != nil {
 		t.Error(err)
 	}
@@ -33,7 +40,7 @@ func TestRemoveFile(t *testing.T) {
 		t.Error(err)
 	}
 	matcher := bson.M{"_id": f.Id}
-	f, err = GetFile(matcher)
+	f, err = GetFile(matcher, nil)
 	if f != nil || err == nil {
 		t.Error("File not deleted")
 	}
@@ -44,18 +51,21 @@ func TestGetFile(t *testing.T) {
 	defer DeleteDB(TEST_DB)
 	s := getSession()
 	defer s.Close()
-	f := submission.NewFile(bson.NewObjectId(), map[string]interface{}{"a": "b"}, fileData)
-	err := AddFile(f)
+	f, err := project.NewFile(bson.NewObjectId(), fileInfo, fileData)
+	if err != nil {
+		t.Error(err)
+	}
+	err = AddFile(f)
 	if err != nil {
 		t.Error(err)
 	}
 	matcher := bson.M{"_id": f.Id}
-	dbFile, err := GetFile(matcher)
+	dbFile, err := GetFile(matcher, nil)
 	if err != nil {
 		t.Error(err)
 	}
 	if !f.Equals(dbFile) {
-		t.Error("Files not equivalent")
+		t.Error("Files not equivalent", f.String() == dbFile.String(), bytes.Equal(f.Data, dbFile.Data))
 	}
 }
 
@@ -64,17 +74,17 @@ func TestGetSubmission(t *testing.T) {
 	defer DeleteDB(TEST_DB)
 	s := getSession()
 	defer s.Close()
-	sub := submission.NewSubmission("project", "user", submission.FILE_MODE, "java")
+	sub := project.NewSubmission(bson.NewObjectId(), "user", project.FILE_MODE, 1000)
 	err := AddSubmission(sub)
 	if err != nil {
 		t.Error(err)
 	}
 	matcher := bson.M{"_id": sub.Id}
-	dbSub, err := GetSubmission(matcher)
+	dbSub, err := GetSubmission(matcher, nil)
 	if err != nil {
 		t.Error(err)
 	}
-	if !sub.Equals(dbSub) {
+	if !reflect.DeepEqual(sub, dbSub) {
 		t.Error("Submissions not equivalent")
 	}
 }
@@ -84,82 +94,29 @@ func TestGetResult(t *testing.T) {
 	defer DeleteDB(TEST_DB)
 	s := getSession()
 	defer s.Close()
-	res := tool.NewResult(bson.NewObjectId(), bson.NewObjectId(), "dummy", "dummy_w", "dummy_e", fileData, fileData, nil)
-	err := AddResult(res)
-	if err != nil {
-		t.Error(err)
-	}
-	matcher := bson.M{"_id": res.Id}
-	dbRes, err := GetResult(matcher)
-	if err != nil {
-		t.Error(err)
-	}
-	if !res.Equals(dbRes) {
-		t.Error("Results not equivalent")
-	}
-}
-
-func TestGetTool(t *testing.T) {
-	Setup(TEST_CONN)
-	defer DeleteDB(TEST_DB)
-	s := getSession()
-	defer s.Close()
-	fb := &tool.Tool{bson.NewObjectId(), "findbugs", "java", "/home/disco/apps/findbugs-2.0.2/lib/findbugs.jar", "warning_count", "warnings", []string{"java", "-jar"}, []string{"-textui", "-low"}, bson.M{}, tool.PKG_PATH}
-	err := AddTool(fb)
-	if err != nil {
-		t.Error(err)
-	}
-	matcher := bson.M{"_id": fb.Id}
-	dbTool, err := GetTool(matcher)
-	if err != nil {
-		t.Error(err)
-	}
-	if !fb.Equals(dbTool) {
-		t.Error("Tools not equivalent")
-	}
-}
-
-func TestGetTools(t *testing.T) {
-	Setup(TEST_CONN)
-	defer DeleteDB(TEST_DB)
-	s := getSession()
-	defer s.Close()
-	fb := &tool.Tool{bson.NewObjectId(), "findbugs", "java", "/home/disco/apps/findbugs-2.0.2/lib/findbugs.jar", "warning_count", "warnings", []string{"java", "-jar"}, []string{"-textui", "-low"}, bson.M{}, tool.PKG_PATH}
-	javac := &tool.Tool{bson.NewObjectId(), "compile", "java", "javac", "warnings", "errors", []string{}, []string{"-implicit:class"}, bson.M{"-cp": ""}, tool.FILE_PATH}
-	tools := []*tool.Tool{fb, javac}
-	err := AddTool(fb)
-	if err != nil {
-		t.Error(err)
-	}
-	err = AddTool(javac)
-	if err != nil {
-		t.Error(err)
-	}
-	matcher := bson.M{"lang": "java"}
-	dbTools, err := GetTools(matcher)
-	if err != nil {
-		t.Error(err)
-	}
-	for _, t0 := range tools {
-		found := false
-		for _, t1 := range dbTools {
-			if t0.Equals(t1) {
-				found = true
-				break
-			}
+	results := []tool.Result{javac.NewResult(bson.NewObjectId(), fileData), junit.NewResult(bson.NewObjectId(), "Name", fileData)}
+	for _, res := range results{
+		err := AddResult(res)
+		if err != nil {
+			t.Error(err)
 		}
-		if !found {
-			t.Error("No match found", t0)
+		matcher := bson.M{"_id": res.GetId()}
+		dbRes, err := GetResult(res.GetName(), matcher, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		if !reflect.DeepEqual(res, dbRes) {
+			t.Error("Results not equivalent")
 		}
 	}
+	
 }
-
 func TestGetUserById(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
 	s := getSession()
 	defer s.Close()
-	u := user.NewUser("uname", "pword", "salt")
+	u := user.NewUser("uname", "pword")
 	err := AddUser(u)
 	if err != nil {
 		t.Error(err)
@@ -168,7 +125,7 @@ func TestGetUserById(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if !u.Equals(found) {
+	if !reflect.DeepEqual(u, found) {
 		t.Error("Users not equivalent", u, found)
 	}
 }
@@ -178,16 +135,16 @@ func TestGetTest(t *testing.T) {
 	defer DeleteDB(TEST_DB)
 	s := getSession()
 	defer s.Close()
-	test := submission.NewTest("project", "lang", []string{"name0", "name1", "name2"}, testData, fileData)
+	test := project.NewTest(bson.NewObjectId(), "name", "user", "pkg", testData, fileData)
 	err := AddTest(test)
 	if err != nil {
 		t.Error(err)
 	}
-	found, err := GetTest(bson.M{"_id": test.Id})
+	found, err := GetTest(bson.M{"_id": test.Id}, nil)
 	if err != nil {
 		t.Error(err)
 	}
-	if !test.Equals(found) {
+	if !reflect.DeepEqual(test, found) {
 		t.Error("Tests don't match", test, found)
 	}
 }
@@ -198,36 +155,38 @@ func TestCount(t *testing.T) {
 	s := getSession()
 	defer s.Close()
 	num := 100
-	n, err := Count(USERS, bson.M{})
+	n, err := Count(PROJECTS, bson.M{})
 	if err != nil {
 		t.Error(err)
 	}
 	if n != 0 {
-		t.Error("Invalid count, should be 0", n)
+		t.Errorf("Invalid count %q, should be %q",n, 0)
 	}
 	for i := 0; i < num; i++ {
-		var s int = i / 10
-		err = AddUser(user.NewUser("uname"+strconv.Itoa(i), "pword", "salt"+strconv.Itoa(s)))
+		var s int = i/10
+		err = AddProject(project.NewProject("name"+strconv.Itoa(s), "user", "lang"))
 		if err != nil {
 			t.Error(err)
 		}
 	}
-	n, err = Count(USERS, bson.M{})
+	n, err = Count(PROJECTS, bson.M{})
 	if err != nil {
 		t.Error(err)
 	}
-	if n != 100 {
-		t.Error("Invalid count, should be 100", n)
+	if n != num {
+		t.Errorf("Invalid count %q, should be %q",n, num)
 	}
-	n, err = Count(USERS, bson.M{"salt": "salt0"})
+	n, err = Count(PROJECTS, bson.M{"name": "name0"})
 	if err != nil {
 		t.Error(err)
 	}
 	if n != 10 {
-		t.Error("Invalid count, should be 10", n)
+		t.Errorf("Invalid count %q, should be %q",n, 10)
 	}
 
 }
+
+var fileInfo = bson.M{project.TIME: 1000, project.TYPE: project.SRC, project.MOD: "c", project.NAME: "Triangle.java", project.FTYPE: "java", project.PKG: "triangle", project.NUM: 1000}
 
 var fileData = []byte(`[Faust:] "I, Johannes Faust, do call upon thee, Mephistopheles!"
 

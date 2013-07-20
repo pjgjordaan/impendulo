@@ -8,18 +8,16 @@ import (
 	"testing"
 )
 
-var testmap = map[string]interface{}{"string": "2 3", "int": 2, "id": bson.NewObjectId(), "map": bson.M{"a": "b"}, "bytes": []byte("AB"), "strings": []string{"A", "B"}}
+var testmap = map[string]interface{}{"string": "2a 3", "int": 2, "id": bson.NewObjectId(), "map": bson.M{"a": "b"}, "bytes": []byte("AB"), "strings": []string{"A", "B"}}
 
 func TestGetString(t *testing.T) {
 	this := "string"
 	for k, v := range testmap {
 		res, err := GetString(testmap, k)
-		if k == this {
-			if err != nil || res != v {
-				t.Error(err, res, "!=", v)
-			}
-		} else if err == nil {
-			t.Error(errors.New("Error function should not cast"))
+		if err != nil{
+			t.Error(err)
+		} else if k == this  && res != v {
+			t.Error(res, "!=", v)
 		}
 	}
 }

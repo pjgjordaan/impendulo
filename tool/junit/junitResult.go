@@ -3,7 +3,6 @@ package junit
 import (
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
-	"reflect"
 )
 
 const NAME = "JUnit Test"
@@ -16,11 +15,7 @@ type JUnitResult struct {
 	Data     []byte        "data"
 }
 
-func (this *JUnitResult) Equals(that *JUnitResult) bool {
-	return reflect.DeepEqual(this, that)
-}
-
-func (this *JUnitResult) Name() string {
+func (this *JUnitResult) GetName() string {
 	return NAME + " " + this.TestName
 }
 

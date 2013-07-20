@@ -4,7 +4,6 @@ import (
 	"encoding/xml"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
-	"reflect"
 	"strconv"
 )
 
@@ -17,11 +16,7 @@ type JPFResult struct {
 	Data   *JPFReport    "data"
 }
 
-func (this *JPFResult) Equals(that *JPFResult) bool {
-	return reflect.DeepEqual(this, that)
-}
-
-func (this *JPFResult) Name() string {
+func (this *JPFResult) GetName() string {
 	return NAME
 }
 

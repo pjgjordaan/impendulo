@@ -24,7 +24,7 @@ func (this *JUnit) GetLang() string {
 }
 
 func (this *JUnit) GetName() string {
-	return tool.JUNIT
+	return NAME
 }
 
 func (this *JUnit) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (tool.Result, error) {
@@ -33,9 +33,8 @@ func (this *JUnit) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (tool.Result, 
 	if err != nil {
 		return nil, err
 	}
-	target := ti.GetTarget(tool.EXEC_PATH)
-	args := []string{this.java, "-cp", this.cp, "-Ddata.location=" + this.datalocation, this.exec, target}
-	stdout, stderr, err := tool.RunCommand(args)
+	args := []string{this.java, "-cp", this.cp, "-Ddata.location=" + this.datalocation, this.exec, ti.Executable()}
+	stdout, stderr, err := tool.RunCommand(args, nil)
 	if err != nil {
 		return nil, err
 	}

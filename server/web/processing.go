@@ -8,12 +8,7 @@ import (
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/tool/checkstyle"
-	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/tool/javac"
-	"github.com/godfried/impendulo/tool/jpf"
-	"github.com/godfried/impendulo/tool/junit"
-	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"io/ioutil"
@@ -393,21 +388,7 @@ func GetResultData(resultName string, fileId bson.ObjectId) (res tool.Result, er
 			return
 		}
 		matcher = bson.M{project.ID: id}
-		if strings.HasPrefix(javac.NAME, resultName) {
-			res, err = db.GetJavacResult(matcher, selector)
-		} else if strings.HasPrefix(junit.NAME, resultName) {
-			res, err = db.GetJUnitResult(matcher, selector)
-		} else if strings.HasPrefix(jpf.NAME, resultName) {
-			res, err = db.GetJPFResult(matcher, selector)
-		} else if strings.HasPrefix(findbugs.NAME, resultName) {
-			res, err = db.GetFindbugsResult(matcher, selector)
-		} else if strings.HasPrefix(pmd.NAME, resultName) {
-			res, err = db.GetPMDResult(matcher, selector)
-		} else if strings.HasPrefix(checkstyle.NAME, resultName) {
-			res, err = db.GetCheckstyleResult(matcher, selector)
-		} else {
-			err = fmt.Errorf("Unknown result %q.", resultName)
-		}
+		res, err = db.GetResult(resultName, matcher, selector)
 	}
 	return
 }

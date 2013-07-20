@@ -322,7 +322,7 @@ func (this *Analyser) RunTools() error {
 //It updates the associated file's list of results to point to this new result.
 func AddResult(res tool.Result) error {
 	matcher := bson.M{project.ID: res.GetFileId()}
-	change := bson.M{db.SET: bson.M{project.RESULTS + "." + res.Name(): res.GetId()}}
+	change := bson.M{db.SET: bson.M{project.RESULTS + "." + res.GetName(): res.GetId()}}
 	err := db.Update(db.FILES, matcher, change)
 	if err != nil {
 		return err

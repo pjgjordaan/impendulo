@@ -19,15 +19,14 @@ func Diff(orig, change string) (ret string, err error) {
 	}
 	defer os.Remove(origName)
 	args := []string{config.GetConfig(config.DIFF), "-u", origName, "-"}
-	stdout, stderr, _ := tool.RunInputCommand(args, strings.NewReader(change))
-	fmt.Println(string(stdout), string(stderr))
+	stdout, _, _ := tool.RunCommand(args, strings.NewReader(change))
 	ret = string(stdout)
 	return
 }
 
 func Diff2HTML(diff string) (ret template.HTML, err error) {
 	args := []string{config.GetConfig(config.DIFF2HTML)}
-	stdout, stderr, err := tool.RunInputCommand(args, strings.NewReader(diff))
+	stdout, stderr, err := tool.RunCommand(args, strings.NewReader(diff))
 	if stderr != nil && len(stderr) > 0 {
 		err = fmt.Errorf("Could not generate html: %q", string(stderr))
 	}

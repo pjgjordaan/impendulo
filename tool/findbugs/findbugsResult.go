@@ -5,7 +5,6 @@ import (
 	"github.com/godfried/impendulo/util"
 	"html/template"
 	"labix.org/v2/mgo/bson"
-	"reflect"
 )
 
 const NAME = "Findbugs"
@@ -17,11 +16,7 @@ type FindbugsResult struct {
 	Data   *FindbugsReport "data"
 }
 
-func (this *FindbugsResult) Equals(that *FindbugsResult) bool {
-	return reflect.DeepEqual(this, that)
-}
-
-func (this *FindbugsResult) Name() string {
+func (this *FindbugsResult) GetName() string {
 	return NAME
 }
 

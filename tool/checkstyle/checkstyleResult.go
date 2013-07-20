@@ -5,7 +5,6 @@ import (
 	"github.com/godfried/impendulo/util"
 	"html/template"
 	"labix.org/v2/mgo/bson"
-	"reflect"
 )
 
 const NAME = "Checkstyle"
@@ -17,11 +16,7 @@ type CheckstyleResult struct {
 	Data   *CheckstyleReport "data"
 }
 
-func (this *CheckstyleResult) Equals(that *CheckstyleResult) bool {
-	return reflect.DeepEqual(this, that)
-}
-
-func (this *CheckstyleResult) Name() string {
+func (this *CheckstyleResult) GetName() string {
 	return NAME
 }
 

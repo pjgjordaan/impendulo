@@ -22,12 +22,12 @@ func (this *Javac) GetLang() string {
 }
 
 func (this *Javac) GetName() string {
-	return tool.JAVAC
+	return NAME
 }
 
 func (this *Javac) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (tool.Result, error) {
 	args := []string{this.cmd, "-cp", this.cp + ":" + ti.Dir, "-implicit:class", ti.FilePath()}
-	stdout, stderr, err := tool.RunCommand(args)
+	stdout, stderr, err := tool.RunCommand(args, nil)
 	if stderr != nil && len(stderr) > 0 {
 		return NewResult(fileId, stderr), &CompileError{ti.FullName(), string(stderr)}
 	} else if err != nil {

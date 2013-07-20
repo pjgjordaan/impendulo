@@ -3,6 +3,7 @@ package processing
 import (
 	"bytes"
 	"fmt"
+	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
@@ -13,6 +14,7 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+	"reflect"
 )
 
 func TestAddResult(t *testing.T) {
@@ -38,7 +40,7 @@ func TestAddResult(t *testing.T) {
 	}
 	matcher = bson.M{project.ID: res.Id}
 	dbRes, err := db.GetJavacResult(matcher, nil)
-	if !res.Equals(dbRes) {
+	if !reflect.DeepEqual(res, dbRes) {
 		t.Error("Result not added correctly")
 	}
 	fmt.Println("TestAddResult Success")
@@ -69,7 +71,7 @@ func TestExtractFile(t *testing.T) {
 		t.Error(err)
 	}
 	expected := tool.NewTarget("Triangle.java", "java", "triangle", proc.srcDir)
-	if !expected.Equals(analyser.target) {
+	if !reflect.DeepEqual(expected, analyser.target) {
 		t.Error("Targets not equivalent")
 	}
 	stored, err := os.Open(filepath.Join(proc.srcDir, filepath.Join("triangle", "Triangle.java")))
@@ -86,6 +88,43 @@ func TestExtractFile(t *testing.T) {
 	}
 	fmt.Println("TestExtractFile Success")
 }
+
+func TestEval(t *testing.T) {
+	err := config.LoadConfigs("../config.txt")
+	if err != nil {
+		t.Error(err)
+	}
+	db.Setup(db.TEST_CONN)
+	defer db.DeleteDB(db.TEST_DB)
+	p := project.NewProject("Triangle", "user", "java")
+	err = db.AddProject(p)
+	if err != nil {
+		t.Error(err)
+	}
+	s := project.NewSubmission(p.Id, p.User, project.FILE_MODE, 1000)
+	err = db.AddSubmission(s)
+	if err != nil {
+		t.Error(err)
+	}
+	file, err := project.NewFile(s.Id, fileInfo, fileData)
+	if err != nil {
+		t.Error(err)
+	}
+	err = db.AddFile(file)
+	if err != nil {
+		t.Error(err)
+	}
+	proc := NewProcessor(s, make(chan bson.ObjectId))
+	proc.Setup()
+	defer os.RemoveAll(proc.rootDir)
+	analyser := &Analyser{proc: proc, file: file}
+	err = analyser.Eval()
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println("TestEval Success")
+}
+
 
 /*func TestStore(t *testing.T) {
 	fname := "test0.gob"
@@ -182,7 +221,7 @@ loop:
 	for {
 		select {
 		case s := <-subChan:
-			if !sub.Equals(s) {
+			if !reflect.DeepEqual(sub, s) {
 				t.Error("Submissions not equal", sub, s)
 			}
 			if gotSub {
@@ -195,7 +234,7 @@ loop:
 				if err != nil {
 					t.Error(err)
 				}
-				if !sent.Equals(stored) {
+				if !reflect.DeepEqual(sent, stored) {
 					t.Error("Files not equal")
 				}
 			} else {

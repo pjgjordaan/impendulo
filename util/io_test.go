@@ -2,30 +2,10 @@ package util
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"labix.org/v2/mgo/bson"
 	"testing"
 )
-
-func TestReadJSON(t *testing.T) {
-	//This only
-	jmap := map[string]interface{}{"A": "2 3", "B": " Hallo ", "C": "", "D": "''"}
-	marshalled, err := json.Marshal(jmap)
-	if err != nil {
-		t.Error(err)
-	}
-	reader := bytes.NewBuffer(marshalled)
-	res, err := ReadJSON(reader)
-	if err != nil {
-		t.Error(err)
-	}
-	for k, v := range jmap {
-		if res[k] != v {
-			t.Error(res[k], " != ", v)
-		}
-	}
-}
 
 func TestMapStorage(t *testing.T) {
 	id1 := bson.NewObjectId()

@@ -27,7 +27,7 @@ func (this *Checkstyle) GetName() string {
 
 func (this *Checkstyle) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Result, err error) {
 	args := []string{this.java, "-jar", this.cmd, "-f", "xml", "-c", this.configFile, "-r", ti.Dir}
-	stdout, stderr, err := tool.RunCommand(args)
+	stdout, stderr, err := tool.RunCommand(args, nil)
 	if stdout != nil {
 		res, err = NewResult(fileId, stdout)
 	} else if stderr != nil && len(stderr) > 0 {

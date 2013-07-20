@@ -3,7 +3,6 @@ package project
 import (
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
-	"reflect"
 )
 
 type JPFFile struct {
@@ -13,10 +12,6 @@ type JPFFile struct {
 	User      string        "user"
 	Time      int64         "time"
 	Data      []byte        "data"
-}
-
-func (this *JPFFile) Equals(that *JPFFile) bool {
-	return reflect.DeepEqual(this, that)
 }
 
 func (this *JPFFile) TypeName() string {

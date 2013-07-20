@@ -8,37 +8,48 @@ import (
 	"os/exec"
 )
 
-const (
-	JUNIT    = "junit"
-	JAVAC    = "javac"
-	FINDBUGS = "findbugs"
-	LINT4J   = "lint4j"
-	JPF      = "jpf"
-)
-
 type Tool interface {
 	GetName() string
 	GetLang() string
 	Run(fileId bson.ObjectId, target *TargetInfo) (Result, error)
 }
 
-//RunCommand executes a given external command.
-func RunCommand(args []string) ([]byte, []byte, error) {
-	return RunInputCommand(args, nil)
+func RunCommand(args []string, stdin io.Reader) (stdout, stderr []byte, err error) {
+	outBuff, errBuff, err := runCommand(args, stdin)
+	stdout, stderr = outBuff.Bytes(), errBuff.Bytes()
+	return
 }
 
-func RunInputCommand(args []string, stdin io.Reader) ([]byte, []byte, error) {
+func runCommand(args []string, stdin io.Reader) (stdout, stderr bytes.Buffer, err error) {
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdin = stdin
-	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
-	err := cmd.Start()
+	err = cmd.Start()
 	if err != nil {
-		return nil, nil, fmt.Errorf("Encountered error %q executing command %q", err, args)
+		err = &StartError{args, err}
+		return
 	}
 	err = cmd.Wait()
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q executing command %q", err, args)
+		err = &EndError{args,err}
 	}
-	return stdout.Bytes(), stderr.Bytes(), err
+	return
+}
+
+type StartError struct{
+	args []string
+	err error
+}
+
+func (this *StartError) Error()string {
+	return fmt.Sprintf("Encountered startup error %q executing command %q", this.err, this.args)
+}
+
+type EndError struct{
+	args []string
+	err error
+}
+
+func (this *EndError) Error()string{
+	return fmt.Sprintf("Encountered end error %q executing command %q", this.err, this.args)
 }

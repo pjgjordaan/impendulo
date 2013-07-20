@@ -8,6 +8,8 @@ import (
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/tool/pmd"
+	"strings"
+	"fmt"
 )
 
 func GetCheckstyleResult(matcher, selector interface{}) (ret *checkstyle.CheckstyleResult, err error) {
@@ -76,13 +78,21 @@ func GetJavacResult(matcher, selector interface{}) (ret *javac.JavacResult, err 
 	return
 }
 
-func GetResult(matcher, selector interface{}) (ret tool.Result, err error) {
-	session := getSession()
-	defer session.Close()
-	c := session.DB("").C(RESULTS)
-	err = c.Find(matcher).Select(selector).One(&ret)
-	if err != nil {
-		err = &DBGetError{"result", err, matcher}
+func GetResult(name string, matcher, selector interface{}) (ret tool.Result, err error) {
+	if strings.HasPrefix(name, javac.NAME) {
+		ret, err = GetJavacResult(matcher, selector)
+	} else if strings.HasPrefix(name, junit.NAME) {
+		ret, err = GetJUnitResult(matcher, selector)
+	} else if strings.HasPrefix(name, jpf.NAME) {
+		ret, err = GetJPFResult(matcher, selector)
+	} else if strings.HasPrefix(name, findbugs.NAME) {
+		ret, err = GetFindbugsResult(matcher, selector)
+	} else if strings.HasPrefix(name, pmd.NAME) {
+		ret, err = GetPMDResult(matcher, selector)
+	} else if strings.HasPrefix(name, checkstyle.NAME) {
+		ret, err = GetCheckstyleResult(matcher, selector)
+	} else {
+		err = fmt.Errorf("Unknown result %q.", name)
 	}
 	return
 }

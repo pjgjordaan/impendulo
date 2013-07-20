@@ -3,7 +3,6 @@ package project
 import (
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
-	"reflect"
 )
 
 //Submission is used for individual project submissions
@@ -26,10 +25,6 @@ func (this *Submission) TypeName() string {
 
 func (this *Submission) String() string {
 	return "Type: project.Submission; Id: " + this.Id.Hex() + "; ProjectId: " + this.ProjectId.Hex() + "; User: " + this.User + "; Mode: " + this.Mode + "; Time: " + util.Date(this.Time)
-}
-
-func (this *Submission) Equals(that *Submission) bool {
-	return reflect.DeepEqual(this, that)
 }
 
 //NewSubmission

@@ -9,7 +9,7 @@ import (
 type Result interface {
 	TemplateArgs(current bool) (string, interface{})
 	Success() bool
-	Name() string
+	GetName() string
 	GetId() bson.ObjectId
 	GetFileId() bson.ObjectId
 	String() string
@@ -27,7 +27,7 @@ func (this *ErrorResult) String() string {
 	return this.err.Error()
 }
 
-func (this *ErrorResult) Name() string {
+func (this *ErrorResult) GetName() string {
 	return "Error"
 }
 
@@ -61,10 +61,10 @@ type CodeResult struct {
 }
 
 func (this *CodeResult) String() string {
-	return this.Name()
+	return this.GetName()
 }
 
-func (this *CodeResult) Name() string {
+func (this *CodeResult) GetName() string {
 	return "Code"
 }
 

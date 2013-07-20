@@ -3,7 +3,6 @@ package project
 import (
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
-	"reflect"
 )
 
 //Test stores tests for a project.
@@ -16,11 +15,6 @@ type Test struct {
 	Time      int64         "time"
 	Test      []byte        "test"
 	Data      []byte        "data"
-}
-
-//Equals
-func (this *Test) Equals(that *Test) bool {
-	return reflect.DeepEqual(this, that)
 }
 
 //TypeName

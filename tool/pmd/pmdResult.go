@@ -5,7 +5,6 @@ import (
 	"github.com/godfried/impendulo/util"
 	"html/template"
 	"labix.org/v2/mgo/bson"
-	"reflect"
 )
 
 const NAME = "PMD"
@@ -17,11 +16,7 @@ type PMDResult struct {
 	Data   *PMDReport    "data"
 }
 
-func (this *PMDResult) Equals(that *PMDResult) bool {
-	return reflect.DeepEqual(this, that)
-}
-
-func (this *PMDResult) Name() string {
+func (this *PMDResult) GetName() string {
 	return NAME
 }
 

@@ -6,15 +6,17 @@ import (
 )
 
 func TestParseName(t *testing.T) {
-	correctVals := map[string]interface{}{PKG: "za.ac.sun.cs", NAME: "File.java", TIME: int64(123000012312123), NUM: 123, MOD: "c", TYPE: SRC}
+	correctFile := &File{Name: "File.java", Time: int64(123000012312123), Type: SRC, FileType: JAVA, Mod: "Saved", Num: 123, Package: "za.ac.sun.cs"}
 	correct := "za_ac_sun_cs_File.java_123000012312123_123_c"
 	incorrect := "za_ac_sun_cs_File.java_123_c"
-	vals, err := ParseName(correct)
+	recvFile, err := ParseName(correct)
 	if err != nil {
 		t.Error(err)
 	}
-	if !reflect.DeepEqual(correctVals, vals) {
-		t.Error(correctVals, "!=", vals)
+	correctFile.Id = recvFile.Id
+	correctFile.SubId = recvFile.SubId
+	if !reflect.DeepEqual(recvFile, correctFile) {
+		t.Error(recvFile, "!=", correctFile)
 	}
 	_, err = ParseName(incorrect)
 	if err == nil {

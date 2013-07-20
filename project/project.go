@@ -3,7 +3,6 @@ package project
 import (
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
-	"reflect"
 )
 
 type Project struct {
@@ -20,10 +19,6 @@ func (this *Project) TypeName() string {
 
 func (this *Project) String() string {
 	return "Type: project.Project; Id: " + this.Id.Hex() + "; Name: " + this.Name + "; User: " + this.User + "; Lang: " + this.Lang + "; Time: " + util.Date(this.Time)
-}
-
-func (this *Project) Equals(that *Project) bool {
-	return reflect.DeepEqual(this, that)
 }
 
 func NewProject(name, user, lang string) *Project {
