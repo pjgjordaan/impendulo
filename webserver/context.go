@@ -1,13 +1,13 @@
-package context
+package webserver
 
 import (
 	"code.google.com/p/gorilla/sessions"
 	"encoding/gob"
 	"fmt"
 	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/httpbuf"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool/jpf"
+	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/user"
 	"net/http"
 )
@@ -26,9 +26,10 @@ type Context struct {
 
 type BrowseData struct {
 	IsUser bool
-	Uid    string
 	Pid    string
+	Uid    string
 	Sid    string
+	Result string
 }
 
 func (ctx *Context) Close() {
@@ -39,7 +40,7 @@ func (ctx *Context) save() {
 	ctx.Session.Values["browse"] = ctx.Browse
 }
 
-func (ctx *Context) Save(req *http.Request, buff *httpbuf.Buffer) error {
+func (ctx *Context) Save(req *http.Request, buff *HttpBuffer) error {
 	ctx.save()
 	return ctx.Session.Save(req, buff)
 }
@@ -101,6 +102,16 @@ func (ctx *Context) Listeners() ([]*jpf.Listener, error) {
 		ctx.listeners, err = jpf.Listeners()
 	}
 	return ctx.listeners, err
+}
+
+func (ctx *Context) SetResult(req *http.Request){
+	name := req.FormValue("resultname")
+	if name != ""{
+		ctx.Browse.Result = name
+	}
+	if ctx.Browse.Result == ""{
+		ctx.Browse.Result = tool.CODE
+	}
 }
 
 func NewContext(sess *sessions.Session) *Context {

@@ -2,6 +2,7 @@
 {{$curFile := .curFile}}
 {{$selected := .selected}}
 {{$nextIndex := sum $selected 1}}
+{{$results := .results}}
 <ul class="breadcrumb">
   <li><a href="homeview">Home</a><span class="divider">/</span></li>
   {{if .ctx.Browse.IsUser}}
@@ -21,10 +22,9 @@
   {{end}}
 </div>
 <ul class="unstyled">
-  <li><a href="displayresult?filename={{$curFile.Name}}&currentIndex={{$selected}}&nextIndex={{$nextIndex}}&resultname=Code"><h4>Code</h4></a></li>
-  {{range $k,$v := .curFile.Results}}
-  <li><a href="displayresult?filename={{$curFile.Name}}&currentIndex={{$selected}}&nextIndex={{$nextIndex}}&resultname={{$k}}">
-      <h4>{{$k}}</h4>
+  {{range $results}}
+  <li><a href="displayresult?filename={{$curFile.Name}}&currentIndex={{$selected}}&nextIndex={{$nextIndex}}&resultname={{.}}">
+      <h4>{{.}}</h4>
   </a></li>
   {{end}}
 </ul>

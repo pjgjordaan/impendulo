@@ -12,15 +12,6 @@ import (
 	"net"
 )
 
-//SubmissionSpawner is an implementation of HandlerSpawner for SubmissionHandlers.
-type SubmissionSpawner struct {
-}
-
-//Spawn creates a new ConnHandler of type SubmissionHandler.
-func (this *SubmissionSpawner) Spawn() ConnHandler {
-	return &SubmissionHandler{}
-}
-
 //SubmissionHandler is an implementation of ConnHandler used to receive submissions from users of the impendulo system.
 type SubmissionHandler struct {
 	Conn       net.Conn

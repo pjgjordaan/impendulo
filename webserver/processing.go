@@ -1,9 +1,8 @@
-package web
+package webserver
 
 import (
 	"bytes"
 	"fmt"
-	"github.com/godfried/impendulo/context"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
@@ -19,22 +18,15 @@ import (
 	"strings"
 )
 
-func getNav(ctx *context.Context) string {
-	if _, err := ctx.Username(); err != nil {
-		return "outNav.html"
-	}
-	return "inNav.html"
-}
+type processor func(*http.Request, *Context) (string, error)
 
-type processor func(*http.Request, *context.Context) (string, error)
-
-func (p processor) exec(req *http.Request, ctx *context.Context) error {
+func (p processor) exec(req *http.Request, ctx *Context) error {
 	msg, err := p(req, ctx)
 	ctx.AddMessage(msg, err != nil)
 	return err
 }
 
-func doArchive(req *http.Request, ctx *context.Context) (msg string, err error) {
+func doArchive(req *http.Request, ctx *Context) (msg string, err error) {
 	projectId, err := ReadId(req.FormValue("project"))
 	if err != nil {
 		msg = err.Error()
@@ -74,7 +66,7 @@ func doArchive(req *http.Request, ctx *context.Context) (msg string, err error) 
 	return
 }
 
-func doTest(req *http.Request, ctx *context.Context) (msg string, err error) {
+func doTest(req *http.Request, ctx *Context) (msg string, err error) {
 	projectId, err := ReadId(req.FormValue("project"))
 	if err != nil {
 		msg = err.Error()
@@ -124,7 +116,7 @@ func doTest(req *http.Request, ctx *context.Context) (msg string, err error) {
 	return
 }
 
-func doJPF(req *http.Request, ctx *context.Context) (msg string, err error) {
+func doJPF(req *http.Request, ctx *Context) (msg string, err error) {
 	projectId, err := ReadId(req.FormValue("project"))
 	if err != nil {
 		msg = err.Error()
@@ -155,7 +147,7 @@ func doJPF(req *http.Request, ctx *context.Context) (msg string, err error) {
 	return
 }
 
-func doProject(req *http.Request, ctx *context.Context) (msg string, err error) {
+func doProject(req *http.Request, ctx *Context) (msg string, err error) {
 	name, lang := strings.TrimSpace(req.FormValue("name")), strings.TrimSpace(req.FormValue("lang"))
 	if name == "" {
 		err = fmt.Errorf("Invalid project name.")
@@ -182,7 +174,7 @@ func doProject(req *http.Request, ctx *context.Context) (msg string, err error) 
 	return
 }
 
-func doLogin(req *http.Request, ctx *context.Context) (msg string, err error) {
+func doLogin(req *http.Request, ctx *Context) (msg string, err error) {
 	uname, pword := strings.TrimSpace(req.FormValue("username")), strings.TrimSpace(req.FormValue("password"))
 	u, err := db.GetUserById(uname)
 	if err != nil {
@@ -198,7 +190,7 @@ func doLogin(req *http.Request, ctx *context.Context) (msg string, err error) {
 	return
 }
 
-func doRegister(req *http.Request, ctx *context.Context) (msg string, err error) {
+func doRegister(req *http.Request, ctx *Context) (msg string, err error) {
 	uname, pword := strings.TrimSpace(req.FormValue("username")), strings.TrimSpace(req.FormValue("password"))
 	if uname == "" {
 		err = fmt.Errorf("Invalid username.")
@@ -221,7 +213,7 @@ func doRegister(req *http.Request, ctx *context.Context) (msg string, err error)
 	return
 }
 
-func retrieveNames(req *http.Request, ctx *context.Context) (ret []string, msg string, err error) {
+func retrieveNames(req *http.Request, ctx *Context) (ret []string, msg string, err error) {
 	ctx.Browse.Sid = req.FormValue("subid")
 	subId, err := ReadId(ctx.Browse.Sid)
 	if err != nil {
@@ -250,9 +242,7 @@ func getCompileData(files []*project.File) (ret []bool) {
 	return ret
 }
 
-func retrieveFiles(req *http.Request, ctx *context.Context) (ret []*project.File, msg string, err error) {
-	req.ParseForm()
-	fmt.Println(req.Form)
+func retrieveFiles(req *http.Request, ctx *Context) (ret []*project.File, msg string, err error) {
 	name := req.FormValue("filename")
 	if !bson.IsObjectIdHex(ctx.Browse.Sid) {
 		err = fmt.Errorf("Invalid submission id %q.", ctx.Browse.Sid)
@@ -273,7 +263,7 @@ func retrieveFiles(req *http.Request, ctx *context.Context) (ret []*project.File
 }
 
 func getFile(id bson.ObjectId) (file *project.File, msg string, err error) {
-	selector := bson.M{project.NAME: 1, project.ID: 1, project.RESULTS: 1, project.TIME: 1, project.NUM: 1}
+	selector := bson.M{project.NAME: 1, project.ID: 1, project.TIME: 1, project.NUM: 1}
 	file, err = db.GetFile(bson.M{project.ID: id}, selector)
 	if err != nil {
 		msg = fmt.Sprintf("Could not retrieve file.")
@@ -289,8 +279,7 @@ func getNeighbour(req *http.Request, maxSize int) (int, string, error) {
 	return GetInt(req, "nextIndex", maxSize)
 }
 
-func getResult(req *http.Request, fileId bson.ObjectId) (res tool.Result, msg string, err error) {
-	name := req.FormValue("resultname")
+func getResult(name string, fileId bson.ObjectId) (res tool.Result, msg string, err error) {
 	res, err = GetResultData(name, fileId)
 	if err != nil {
 		msg = fmt.Sprintf("Could not retrieve result %q.", name)
@@ -298,7 +287,7 @@ func getResult(req *http.Request, fileId bson.ObjectId) (res tool.Result, msg st
 	return
 }
 
-func retrieveSubmissions(req *http.Request, ctx *context.Context) (subs []*project.Submission, msg string, err error) {
+func retrieveSubmissions(req *http.Request, ctx *Context) (subs []*project.Submission, msg string, err error) {
 	tipe := req.FormValue("type")
 	idStr := req.FormValue("id")
 	if tipe == "project" {

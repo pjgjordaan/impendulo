@@ -84,23 +84,6 @@ func GetPackage(r io.Reader) string {
 	return ""
 }
 
-func GenHTML(dir, name string, data []byte) (string, error) {
-	err := os.MkdirAll(dir, 0777)
-	if err != nil {
-		return "", fmt.Errorf("Encountered error %q while creating directory %q", err, dir)
-	}
-	name = filepath.Join(dir, name+".html")
-	f, err := os.Create(name)
-	if err != nil {
-		return "", fmt.Errorf("Encountered error %q while creating file %q", err, name)
-	}
-	_, err = f.Write(data)
-	if err != nil {
-		return "", fmt.Errorf("Encountered error %q while writing data to %q", err, f)
-	}
-	return "/" + name, nil
-}
-
 type copier struct {
 	dest, src string
 }
@@ -132,4 +115,10 @@ func (this *copier) copyFile(path string, f os.FileInfo, err error) error {
 func Copy(dest, src string) error {
 	c := &copier{dest, src}
 	return filepath.Walk(src, c.copyFile)
+}
+
+
+func Exists(path string)bool{
+	_, err := os.Stat(path)
+	return err == nil
 }

@@ -13,9 +13,4 @@ function unhide (it, box) {
     document.getElementById(it).style.display = check;
 }
 
-window.onload = function () {
-    dp.SyntaxHighlighter.ClipboardSwf = 'static/flash/clipboard.swf';
-    dp.SyntaxHighlighter.HighlightAll('code');
-}
-
     

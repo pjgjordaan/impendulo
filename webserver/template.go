@@ -1,4 +1,4 @@
-package web
+package webserver
 
 import (
 	"fmt"
@@ -25,6 +25,11 @@ var funcs = template.FuncMap{
 	"diffHeader":   diff.SetHeader,
 	"createHeader": fileHeader,
 	"sum":          sum,
+	"equal": equal,
+}
+
+func equal(a, b interface{})bool{
+	return a == b
 }
 
 func fileHeader(file *project.File, num int) string {
@@ -64,14 +69,14 @@ func _setBreaks(val string) string {
 }
 
 var dir = filepath.Join("static", "templates")
-var basicT = []string{filepath.Join(dir, "_base.html"), filepath.Join(dir, "index.html"), filepath.Join(dir, "messages.html")}
+var basicT = []string{filepath.Join(dir, "base.html"), filepath.Join(dir, "index.html"), filepath.Join(dir, "messages.html")}
 
 func T(names ...string) *template.Template {
-	t := template.New("_base.html").Funcs(funcs)
+	t := template.New("base.html").Funcs(funcs)
 	all := make([]string, len(basicT)+len(names))
 	end := copy(all, basicT)
 	for i, name := range names {
-		all[i+end] = filepath.Join(dir, name)
+		all[i+end] = filepath.Join(dir, name+".html")
 	}
 	t = template.Must(t.ParseFiles(all...))
 	return t

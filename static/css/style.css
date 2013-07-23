@@ -114,3 +114,4 @@ h2{
 .plus     { color: green; background: #E7E7E7; }
 .minus    { color: red;   background: #D7D7D7; }
 .only     { color: purple;                     }
+.form-padded{padding:20px 10px 25px;}

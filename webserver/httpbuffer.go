@@ -1,4 +1,4 @@
-package httpbuf
+package webserver
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 
 //Buffer is a type that implements http.ResponseWriter but buffers all the data
 //and headers.
-type Buffer struct {
+type HttpBuffer struct {
 	bytes.Buffer
 	resp    int
 	headers http.Header
@@ -16,31 +16,31 @@ type Buffer struct {
 }
 
 //Header implements the header method of http.ResponseWriter
-func (b *Buffer) Header() http.Header {
-	b.once.Do(func() {
-		b.headers = make(http.Header)
+func (this *HttpBuffer) Header() http.Header {
+	this.once.Do(func() {
+		this.headers = make(http.Header)
 	})
-	return b.headers
+	return this.headers
 }
 
 //WriteHeader implements the WriteHeader method of http.ResponseWriter
-func (b *Buffer) WriteHeader(resp int) {
-	b.resp = resp
+func (this *HttpBuffer) WriteHeader(resp int) {
+	this.resp = resp
 }
 
 //Apply takes an http.ResponseWriter and calls the required methods on it to
 //output the buffered headers, response code, and data. It returns the number
 //of bytes written and any errors flushing.
-func (b *Buffer) Apply(w http.ResponseWriter) (n int, err error) {
-	if len(b.headers) > 0 {
+func (this *HttpBuffer) Apply(w http.ResponseWriter) (n int, err error) {
+	if len(this.headers) > 0 {
 		h := w.Header()
-		for key, val := range b.headers {
+		for key, val := range this.headers {
 			h[key] = val
 		}
 	}
-	if b.resp > 0 {
-		w.WriteHeader(b.resp)
+	if this.resp > 0 {
+		w.WriteHeader(this.resp)
 	}
-	n, err = w.Write(b.Bytes())
+	n, err = w.Write(this.Bytes())
 	return
 }

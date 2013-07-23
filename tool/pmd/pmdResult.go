@@ -34,9 +34,9 @@ func (this *PMDResult) String() string {
 
 func (this *PMDResult) TemplateArgs(current bool) (string, interface{}) {
 	if current {
-		return "pmdCurrent.html", this.Data
+		return "pmdCurrent", this.Data
 	} else {
-		return "pmdNext.html", this.Data
+		return "pmdNext", this.Data
 	}
 }
 

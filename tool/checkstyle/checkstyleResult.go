@@ -34,9 +34,9 @@ func (this *CheckstyleResult) String() string {
 
 func (this *CheckstyleResult) TemplateArgs(current bool) (string, interface{}) {
 	if current {
-		return "checkstyleCurrent.html", this.Data
+		return "checkstyleCurrent", this.Data
 	} else {
-		return "checkstyleNext.html", this.Data
+		return "checkstyleNext", this.Data
 	}
 }
 

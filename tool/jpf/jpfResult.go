@@ -38,9 +38,9 @@ func (this *JPFResult) Success() bool {
 
 func (this *JPFResult) TemplateArgs(current bool) (string, interface{}) {
 	if current {
-		return "jpfCurrent.html", this.Data
+		return "jpfCurrent", this.Data
 	} else {
-		return "jpfNext.html", this.Data
+		return "jpfNext", this.Data
 	}
 }
 

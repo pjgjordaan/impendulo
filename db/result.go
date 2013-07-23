@@ -108,3 +108,7 @@ func AddResult(r tool.Result) (err error) {
 	}
 	return
 }
+
+func GetResultNames() (ret []string) {
+	return []string{tool.CODE, checkstyle.NAME, findbugs.NAME, javac.NAME, jpf.NAME, junit.NAME, pmd.NAME}
+}

@@ -33,9 +33,9 @@ func (this *JUnitResult) String() string {
 
 func (this *JUnitResult) TemplateArgs(current bool) (string, interface{}) {
 	if current {
-		return "junitCurrent.html", string(this.Data)
+		return "junitCurrent", string(this.Data)
 	} else {
-		return "junitNext.html", string(this.Data)
+		return "junitNext", string(this.Data)
 	}
 }
 

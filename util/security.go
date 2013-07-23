@@ -9,6 +9,14 @@ import (
 	"io"
 	"io/ioutil"
 	"path/filepath"
+	"os"
+	"crypto/rsa"
+	"time"
+	"crypto/x509"
+//	"net"
+	"crypto/x509/pkix"
+	"math/big"
+	"encoding/pem"
 )
 
 var authName string = "authentication.key"
@@ -59,4 +67,59 @@ func GenString(size int) string {
 	d := make([]byte, en.EncodedLen(len(b)))
 	en.Encode(d, b)
 	return string(d)
+}
+
+func GenCertificate(certName, keyName string)(err error){
+	priv, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		return
+	}
+	notBefore := time.Now()
+	notAfter := time.Date(2049, 12, 31, 23, 59, 59, 0, time.UTC)
+	template := x509.Certificate{
+		SerialNumber: new(big.Int).SetInt64(1),
+		Subject: pkix.Name{
+			Organization: []string{"Stellenbosch University"},
+		},
+		NotBefore: notBefore,
+		NotAfter:  notAfter,
+
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IsCA : true,
+		SubjectKeyId:	[]byte{1, 2, 3, 4},
+		Version: 2,
+	}/*
+	hosts := []string{"0."}
+	for _, h := range hosts {
+		if ip := net.ParseIP(h); ip != nil {
+			template.IPAddresses = append(template.IPAddresses, ip)
+		} else {
+			template.DNSNames = append(template.DNSNames, h)
+		}
+	}*/
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	if err != nil {
+		return
+	}
+	certOut, err := os.OpenFile(certName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return
+	}
+	defer certOut.Close()
+	err = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	if err != nil {
+		return
+	}
+	keyOut, err := os.OpenFile(keyName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return
+	}
+	defer keyOut.Close()
+	err = pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
+	if err != nil {
+		return
+	}
+	return
 }

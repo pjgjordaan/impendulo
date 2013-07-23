@@ -33,9 +33,9 @@ func (this *JavacResult) String() string {
 
 func (this *JavacResult) TemplateArgs(current bool) (string, interface{}) {
 	if current {
-		return "javacCurrent.html", this
+		return "javacCurrent", this
 	} else {
-		return "javacNext.html", this
+		return "javacNext", this
 	}
 }
 

@@ -22,6 +22,10 @@
     <script language="javascript" src="/static/js/analytics.js"></script>
     <script language="javascript" src="/static/js/popup.js"></script>
     <script language="javascript">
+      window.onload = function () {
+      dp.SyntaxHighlighter.ClipboardSwf = 'static/flash/clipboard.swf';
+      dp.SyntaxHighlighter.HighlightAll('code');
+      }
       $(function(){
       var pager = document.getElementById("filePager");
       var len = 0;

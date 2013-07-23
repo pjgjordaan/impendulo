@@ -34,9 +34,9 @@ func (this *FindbugsResult) String() string {
 
 func (this *FindbugsResult) TemplateArgs(current bool) (string, interface{}) {
 	if current {
-		return "findbugsCurrent.html", this.Data
+		return "findbugsCurrent", this.Data
 	} else {
-		return "findbugsNext.html", this.Data
+		return "findbugsNext", this.Data
 	}
 }
 

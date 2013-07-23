@@ -45,9 +45,9 @@ func (this *ErrorResult) GetFileId() bson.ObjectId {
 
 func (this *ErrorResult) TemplateArgs(current bool) (string, interface{}) {
 	if current {
-		return "errorCurrent.html", this.err
+		return "errorCurrent", this.err
 	} else {
-		return "errorNext.html", this.err
+		return "errorNext", this.err
 	}
 }
 
@@ -65,7 +65,7 @@ func (this *CodeResult) String() string {
 }
 
 func (this *CodeResult) GetName() string {
-	return "Code"
+	return CODE
 }
 
 func (this *CodeResult) Success() bool {
@@ -82,8 +82,10 @@ func (this *CodeResult) GetFileId() bson.ObjectId {
 
 func (this *CodeResult) TemplateArgs(current bool) (string, interface{}) {
 	if current {
-		return "codeCurrent.html", this.data
+		return "codeCurrent", this.data
 	} else {
-		return "codeNext.html", this.data
+		return "codeNext", this.data
 	}
 }
+
+const CODE = "Code"

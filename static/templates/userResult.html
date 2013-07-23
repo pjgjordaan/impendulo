@@ -3,9 +3,9 @@
   <li><a href="homeview">Home</a> <span class="divider">/</span></li>  
   <li class="active">Users</li>
 </ul>
-<ul>
-  {{ range .ctx.Users}}
-  <li><a href="getsubmissions?id={{.Name}}&type=user">{{.Name}}</a></li>
+<ul class="unstyled">
+  {{range .ctx.Users}}
+  <li><a href="getsubmissions?id={{.Name}}&type=user"><h3>{{.Name}}</h3></a></li>
   {{end}}
 </ul>
 {{end}}
