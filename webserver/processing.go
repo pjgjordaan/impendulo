@@ -346,11 +346,11 @@ func GetInt(req *http.Request, name string, maxSize int) (found int, msg string,
 	iStr := req.FormValue(name)
 	found, err = strconv.Atoi(iStr)
 	if err != nil {
-		msg = fmt.Sprintf("Invalid int %q.", iStr)
+		msg = fmt.Sprintf("Invalid int %v.", iStr)
 		return
 	}
 	if found > maxSize {
-		err = fmt.Errorf("Integer size %q too big.", found)
+		err = fmt.Errorf("Integer size %v too big.", found)
 		msg = err.Error()
 	}
 	return
@@ -373,7 +373,7 @@ func GetResultData(resultName string, fileId bson.ObjectId) (res tool.Result, er
 		}
 		id, ok := file.Results[resultName]
 		if !ok {
-			res = tool.NewErrorResult(fmt.Errorf("Could not retrieve result for %q.", resultName))
+			res = tool.NewErrorResult(fmt.Errorf("No result available for %v.", resultName))
 			return
 		}
 		matcher = bson.M{project.ID: id}

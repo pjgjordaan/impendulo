@@ -127,7 +127,11 @@ func (this *Processor) Process() {
 	monitor.Busy(this.sub.Id)
 	util.Log("Processing submission", this.sub)
 	defer os.RemoveAll(this.rootDir)
-	err := this.Setup()
+	err := this.SetupJPF()
+	if err != nil {
+		util.Log(err)
+	}
+	this.tests, err = SetupTests(this.sub.ProjectId, this.toolDir)
 	if err != nil {
 		util.Log(err)
 	}
@@ -135,6 +139,7 @@ func (this *Processor) Process() {
 	files := list.New()
 	receiving, busy := true, false
 	errChan := make(chan error)
+	fmt.Println("receiving")
 	for receiving || busy {
 		select {
 		case fId, receiving = <-this.recv:
@@ -161,13 +166,8 @@ func (this *Processor) Process() {
 }
 
 //Setup sets up the environment needed for this Processor to function correctly.
-func (this *Processor) Setup() error {
-	var err error
-	this.tests, err = SetupTests(this.sub.ProjectId, this.toolDir)
-	if err != nil {
-		return err
-	}
-	err = util.Copy(this.toolDir, config.GetConfig(config.RUNNER_DIR))
+func (this *Processor) SetupJPF() error {
+	err := util.Copy(this.toolDir, config.GetConfig(config.RUNNER_DIR))
 	if err != nil {
 		return err
 	}
@@ -180,6 +180,7 @@ func (this *Processor) Setup() error {
 }
 
 func (this *Processor) goFile(fId bson.ObjectId, errChan chan error) {
+	fmt.Println(fId)
 	file, err := db.GetFile(bson.M{project.ID: fId}, nil)
 	if err == nil {
 		err = this.ProcessFile(file)
@@ -266,10 +267,11 @@ func (this *Analyser) Eval() error {
 	for _, test := range this.proc.tests {
 		err = test.Run(this.file, this.proc.srcDir)
 		if err != nil {
-			return err
+			util.Log(err)
 		}
 	}
-	return this.RunTools()
+	this.RunTools()
+	return nil
 }
 
 //buildTarget saves a file to filesystem.
@@ -293,12 +295,11 @@ func (this *Analyser) compile() (bool, error) {
 	if err != nil && !compileErr {
 		return false, err
 	}
-	util.Log("Compile result", res)
 	return compileErr, AddResult(res)
 }
 
 //RunTools runs all available tools on a file, skipping previously run tools.
-func (this *Analyser) RunTools() error {
+func (this *Analyser) RunTools() {
 	tools := []tool.Tool{findbugs.NewFindBugs(), pmd.NewPMD(),
 		jpf.NewJPF(this.proc.toolDir, this.proc.jpfPath),
 		checkstyle.NewCheckstyle()}
@@ -308,14 +309,14 @@ func (this *Analyser) RunTools() error {
 		}
 		res, err := tool.Run(this.file.Id, this.target)
 		if err != nil {
-			return err
+			util.Log(err)
+			continue
 		}
 		err = AddResult(res)
 		if err != nil {
-			return err
+			util.Log(err)
 		}
 	}
-	return nil
 }
 
 //AddResult adds a tool result to the db.

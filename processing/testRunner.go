@@ -11,31 +11,31 @@ import (
 
 //SetupTests extracts a project's tests from db to filesystem for execution.
 //It creates and returns a new TestRunner for each available test.
-func SetupTests(projectId bson.ObjectId, dir string) ([]*TestRunner, error) {
+func SetupTests(projectId bson.ObjectId, dir string) (ret []*TestRunner, err error) {
 	proj, err := db.GetProject(bson.M{project.ID: projectId}, nil)
 	if err != nil {
-		return nil, err
+		return
 	}
 	tests, err := db.GetTests(bson.M{project.PROJECT_ID: projectId}, nil)
 	if err != nil {
-		return nil, err
+		return
 	}
-	ret := make([]*TestRunner, len(tests))
+	ret = make([]*TestRunner, len(tests))
 	for i, test := range tests {
 		ret[i] = &TestRunner{tool.NewTarget(test.Name, proj.Lang, test.Package, dir)}
 		err = util.SaveFile(ret[i].Info.FilePath(), test.Test)
 		if err != nil {
-			return nil, err
+			return
 		}
 		if len(test.Data) == 0 {
 			continue
 		}
 		err = util.Unzip(dir, test.Data)
 		if err != nil {
-			return nil, err
+			return
 		}
 	}
-	return ret, nil
+	return
 }
 
 //TestRunner is used to run tests on files compiled files.

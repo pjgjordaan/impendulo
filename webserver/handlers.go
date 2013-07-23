@@ -102,29 +102,6 @@ func getFiles(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	}
 	return T(getNav(ctx), "fileResult").Execute(w, map[string]interface{}{"ctx": ctx, "h": true, "names": names})
 }
-/*
-func getResultList(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	files, msg, err := retrieveFiles(req, ctx)
-	if err != nil {
-		ctx.AddMessage(msg, err != nil)
-		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
-		return err
-	}
-	selected, msg, err := getSelected(req, len(files))
-	if err != nil {
-		ctx.AddMessage(msg, err != nil)
-		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
-		return err
-	}
-	curFile, msg, err := getFile(files[selected].Id)
-	if err != nil {
-		ctx.AddMessage(msg, err != nil)
-		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
-		return err
-	}
-	results := db.GetResultNames()
-	return T(getNav(ctx), "resultList").Execute(w, map[string]interface{}{"ctx": ctx, "h": true, "curFile": curFile, "files": files, "selected": selected, "results":results})
-}*/
 
 func displayResult(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	files, msg, err := retrieveFiles(req, ctx)
@@ -174,6 +151,7 @@ func displayResult(w http.ResponseWriter, req *http.Request, ctx *Context) error
 	nextTemp, nextResult := res.TemplateArgs(false)
 	args["nextFile"] = nextFile
 	args["nextResult"] = nextResult
+	args["neighbour"] = neighbour
 	return T(getNav(ctx), "doubleResult", "fileInfo", curTemp, nextTemp).Execute(w, args)
 }
 

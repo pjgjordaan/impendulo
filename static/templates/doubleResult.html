@@ -4,29 +4,44 @@
 {{$resultName := .ctx.Browse.Result}}
 {{$fileName := $curFile.Name}}
 {{$results := .results}}
+{{$selected := .selected}}
+{{$neighbour := .neighbour}}
 <ul class="breadcrumb">
   <li><a href="homeview">Home</a><span class="divider">/</span></li>
   {{if .ctx.Browse.IsUser}}
-  <li><a href="getusers">Users</a><span class="divider"></span></li>
+  <li><a href="getusers">Users</a><span class="divider">/</span></li>
   <li><a href="getsubmissions?id={{.ctx.Browse.Uid}}&type=user">Submissions</a><span class="divider"></span></li>
   {{else}}
-  <li><a href="getprojects">Projects</a><span class="divider"></span></li>
-  <li><a href="getsubmissions?id={{.ctx.Browse.Pid}}&type=project">Submissions</a><span class="divider"></span></li>
+  <li><a href="getprojects">Projects</a><span class="divider">/</span></li>
+  <li><a href="getsubmissions?id={{.ctx.Browse.Pid}}&type=project">Submissions</a><span class="divider">/</span></li>
   {{end}}
-  <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">Snapshots</a><span class="divider"></span></li>
+  <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">Snapshots</a><span class="divider">/</span></li>
   <li class="active">Results</li>
 </ul>
-<h3>{{ $fileName}}</h3>
+<ul class="breadcrumb">
+  {{range $results}}
+  {{if equal . $resultName}}
+  <li class="active">{{$resultName}}<span class="divider"></span></li>
+  {{else}}
+  <li><a href="displayresult?filename={{$curFile.Name}}&currentIndex={{}}&nextIndex={{$neighbour}}&resultname={{.}}">
+      {{.}}
+  </a><span class="divider"></span></li>
+  {{end}}
+  {{end}}
+</ul>
 <div class="row-fluid">
-  <div class="span6">
-    <div id="filePager" files="{{len .files}}" selected="{{.selected}}" class="pagination pagination-right">
+<div class="span4">  
+  <h3>{{ $fileName}}</h3>
+</div>
+  <div class="span5">
+    <div id="filePager" files="{{len .files}}" selected="{{$selected}}" class="pagination pagination-right">
       {{range $index, $file := .files}}
       {{$nextIndex := sum $index 1}}
       <a id="file{{$index}}" href="displayresult?filename={{$fileName}}&currentIndex={{$index}}&nextIndex={{$nextIndex}}"></a>
       {{end}}
     </div>
   </div>
-  <div class="span6">
+  <div class="span3">
     <form class="form-inline form-padded" action="displayresult" method="get">
       <select class="input-mini" name="currentIndex">
 	{{range $index, $file := .files}} 
@@ -53,17 +68,6 @@
     </form>
   </div>
 </div>
-<ul class="breadcrumb">
-  {{range $results}}
-  {{if equal . $resultName}}
-  <li class="active">{{$resultName}}<span class="divider"></li>
-  {{else}}
-  <li><a href="displayresult?filename={{$curFile.Name}}&currentIndex={{$curFile.Num}}&nextIndex={{$nextFile.Num}}&resultname={{.}}">
-      {{.}}
-  </a><span class="divider"></li>
-  {{end}}
-  {{end}}
-</ul>
 {{if isCode $resultName}}
 <div class="accordion" id="codeaccordion">
   <div class="accordion-group">
@@ -92,7 +96,7 @@
     <div id="diff" class="accordion-body collapse">
       <div class="accordion-inner">
 	{{$diff := diff .curResult .nextResult}}
-	{{$cur := sum .selected 1}}
+	{{$cur := sum curFile.Num 1}}
 	{{$currHeader := createHeader $curFile $cur}}
 	{{$next := sum .nextFile.Num 1}}
 	{{$nextHeader := createHeader $nextFile $next}} 

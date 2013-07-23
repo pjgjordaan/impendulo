@@ -1,9 +1,9 @@
 {{ define "navbar" }}
 <div id="navbar" class="row-fluid">
-  <h1>Impendulo</h1>
   <div class="navbar navbar-inverse" style="position: static;">
     <div class="navbar-inner" style="height: auto;">
       <div class="container">
+	<a class="brand" >Impendulo</a>
 	<ul class="nav">
 	  <li {{ if .h }} class="active" {{ end }}><a href="homeview">Home</a></li>
 	  <li {{ if .s }} class="dropdown active" {{else}} class="dropdown" {{end}}>

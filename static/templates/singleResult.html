@@ -3,66 +3,69 @@
 {{$resultName := .ctx.Browse.Result}}
 {{$fileName := $curFile.Name}}
 {{$results := .results}}
+{{$selected := .selected}}
 <ul class="breadcrumb">
   <li><a href="homeview">Home</a><span class="divider">/</span></li>
   {{if .ctx.Browse.IsUser}}
-  <li><a href="getusers">Users</a><span class="divider"></span></li>
-  <li><a href="getsubmissions?id={{.ctx.Browse.Uid}}&type=user">Submissions</a><span class="divider"></span></li>
+  <li><a href="getusers">Users</a><span class="divider">/</span></li>
+  <li><a href="getsubmissions?id={{.ctx.Browse.Uid}}&type=user">Submissions</a><span class="divider">/</span></li>
   {{else}}
   <li><a href="getprojects">Projects</a><span class="divider"></span></li>
-  <li><a href="getsubmissions?id={{.ctx.Browse.Pid}}&type=project">Submissions</a><span class="divider"></span></li>
+  <li><a href="getsubmissions?id={{.ctx.Browse.Pid}}&type=project">Submissions</a><span class="divider">/</span></li>
   {{end}}
-  <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">Snapshots</a><span class="divider"></span></li>
+  <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">Snapshots</a><span class="divider">/</span></li>
   <li class="active">Results</li>
 </ul>
-<h3>{{ $fileName}}</h3>
-<div class="row-fluid">
-  <div class="span6">
-    <div id="filePager" files="{{len .files}}" selected="{{.selected}}" class="pagination pagination-right">
-      {{range $index, $file := .files}}
-      {{$nextIndex := sum $index 1}}
-      <a id="file{{$index}}" href="displayresult?filename={{$fileName}}&currentIndex={{$index}}&nextIndex={{$nextIndex}}"></a>
-      {{end}}
-    </div>
-  </div>
-  <div class="span6">
-    <form class="form-inline form-padded" action="displayresult" method="get">
-      <select class="input-mini" name="currentIndex">
-	{{range $index, $file := .files}} 
-	{{$dispIndex := sum $index 1}}
-	{{if $curFile.Same $file}}
-	<option selected value="{{$index}}">{{$dispIndex}}</option>
-	{{else}}
-	<option value="{{$index}}">{{$dispIndex}}</option>
-	{{end}}
-	{{end}}
-      </select>
-      <select class="input-mini" name="nextIndex">
-	{{range $index, $file := .files}} 
-	{{$dispIndex := sum $index 1}}
-	{{if equal $dispIndex 1}}
-	<option selected value="{{$index}}">{{$dispIndex}}</option>
-	{{else}}
-	<option value="{{$index}}">{{$dispIndex}}</option>
-	{{end}}
-	{{end}}
-      </select>        
-      <input type="hidden" name="filename" value="{{$fileName}}"/>
-      <button type="submit" class="btn">Compare</button>
-    </form>
-  </div>
-</div>
 <ul class="breadcrumb">
   {{range $results}}
   {{if equal . $resultName}}
-  <li class="active">{{$resultName}}<span class="divider"></li>
+  <li class="active">{{$resultName}}<span class="divider"></span></li>
   {{else}}
-  <li><a href="displayresult?filename={{$curFile.Name}}&currentIndex={{$curFile.Num}}&resultname={{.}}">
+  <li><a href="displayresult?filename={{$curFile.Name}}&currentIndex={{$selected}}&resultname={{.}}">
       {{.}}
-    </a><span class="divider"></li>
+    </a><span class="divider"></span></li>
   {{end}}
   {{end}}
 </ul>
+<div class="row-fluid">
+  <div class="span4">
+    <h3>{{ $fileName}}</h3>
+  </div>
+    <div class="span5">
+      <div id="filePager" files="{{len .files}}" selected="{{$selected}}" class="pagination pagination-right">
+	{{range $index, $file := .files}}
+	{{$nextIndex := sum $index 1}}
+	<a id="file{{$index}}" href="displayresult?filename={{$fileName}}&currentIndex={{$index}}&nextIndex={{$nextIndex}}"></a>
+	{{end}}
+      </div>
+    </div>
+    <div class="span3">
+      <form class="form-inline form-padded" action="displayresult" method="get">
+	<select class="input-mini" name="currentIndex">
+	  {{range $index, $file := .files}} 
+	  {{$dispIndex := sum $index 1}}
+	  {{if $curFile.Same $file}}
+	  <option selected value="{{$index}}">{{$dispIndex}}</option>
+	  {{else}}
+	  <option value="{{$index}}">{{$dispIndex}}</option>
+	  {{end}}
+	  {{end}}
+	</select>
+	<select class="input-mini" name="nextIndex">
+	  {{range $index, $file := .files}} 
+	  {{$dispIndex := sum $index 1}}
+	  {{if equal $dispIndex 1}}
+	  <option selected value="{{$index}}">{{$dispIndex}}</option>
+	  {{else}}
+	  <option value="{{$index}}">{{$dispIndex}}</option>
+	  {{end}}
+	  {{end}}
+	</select>        
+	<input type="hidden" name="filename" value="{{$fileName}}"/>
+	<button type="submit" class="btn">Compare</button>
+      </form>
+    </div>
+  </div>
 <h4>{{$resultName}}</h4>
 {{template "fileInfo" $curFile}}
 {{template "currentResult" .curResult}}
