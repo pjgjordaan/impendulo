@@ -3,6 +3,7 @@ package processing
 import (
 	"bytes"
 	"fmt"
+	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
@@ -49,7 +50,7 @@ func TestAddResult(t *testing.T) {
 func TestExtractFile(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
-	p := project.NewProject("Triangle", "user", "java")
+	p := project.NewProject("Triangle", "user", "java", []byte{})
 	err := db.AddProject(p)
 	if err != nil {
 		t.Error(err)
@@ -96,7 +97,7 @@ func TestEval(t *testing.T) {
 	}
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
-	p := project.NewProject("Triangle", "user", "java")
+	p := project.NewProject("Triangle", "user", "java", []byte{})
 	err = db.AddProject(p)
 	if err != nil {
 		t.Error(err)
@@ -115,7 +116,8 @@ func TestEval(t *testing.T) {
 		t.Error(err)
 	}
 	proc := NewProcessor(s, make(chan bson.ObjectId))
-	proc.Setup()
+	proc.SetupJPF()
+	proc.tests = SetupTests(proc.sub.ProjectId, proc.toolDir)
 	defer os.RemoveAll(proc.rootDir)
 	analyser := &Analyser{proc: proc, file: file}
 	err = analyser.Eval()
@@ -128,35 +130,31 @@ func TestEval(t *testing.T) {
 func TestArchive(t *testing.T){
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
-	file, err = os.Open("archiveBytes")
+	file, err := os.Open("archiveBytes")
 	if err != nil{
 		t.Error(err)
 	}
-	bytes, err := util.Read
-	go processing.Serve()
-	p := project.NewProject("Test", "user", "java")
-	err := db.AddProject(p)
+	bytes := util.ReadBytes(file)
+	p := project.NewProject("Test", "user", "java", []byte{})
+	err = db.AddProject(p)
 	if err != nil{
 		t.Error(err)
 	}
 	sub := project.NewSubmission(p.Id, "user", project.ARCHIVE_MODE, util.CurMilis())
+	archive := project.NewArchive(sub.Id, bytes, project.ZIP)
 	err = db.AddSubmission(sub)
 	if err != nil {
 		t.Error(err)
 	}
-	file := project.NewArchive(sub.Id, archiveBytes, project.ZIP)
-	err = db.AddFile(file)
+	err = db.AddFile(archive)
 	if err != nil {
 		t.Error(err)
 	}
-	processing.StartSubmission(sub)
-	fmt.Println("Submission started.")
-	processing.AddFile(file)
-	fmt.Println("file added.")
-	processing.EndSubmission(sub)
-	msg = fmt.Sprintf("Submission successful.")
+	go Serve()
+	StartSubmission(sub)
+	AddFile(archive)
+	EndSubmission(sub)
 	return
-
 }
 
 /*func TestStore(t *testing.T) {
@@ -221,7 +219,7 @@ func genMap() map[bson.ObjectId]bool {
 func TestProcessStored(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
-	p := project.NewProject("Triangle", "user", "java")
+	p := project.NewProject("Triangle", "user", "java", []byte{})
 	err := db.AddProject(p)
 	if err != nil {
 		t.Error(err)

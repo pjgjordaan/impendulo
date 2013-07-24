@@ -1,8 +1,6 @@
 package processing
 
 import (
-	"container/list"
-	"fmt"
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processing/monitor"
@@ -19,32 +17,15 @@ import (
 	"path/filepath"
 )
 
-var fileChan chan *FileId
 var subChan chan *project.Submission
 
 func init() {
-	fileChan = make(chan *FileId)
 	subChan = make(chan *project.Submission)
 }
 
-//FileId is used to queue new files for processing
-type FileId struct {
-	id    bson.ObjectId
-	subid bson.ObjectId
-}
-
-//AddFile sends a file id to be processed.
-func AddFile(file *project.File) {
-	fileChan <- &FileId{file.Id, file.SubId}
-}
-
-//StartSubmission creates a goroutine to process this submissions files.
-func StartSubmission(sub *project.Submission) {
-	subChan <- sub
-}
 
 //EndSubmission stops this submission's goroutine to.
-func EndSubmission(sub *project.Submission) {
+func DoSubmission(sub *project.Submission) {
 	subChan <- sub
 }
 
@@ -52,7 +33,7 @@ func EndSubmission(sub *project.Submission) {
 //Added files are received here and then sent to the relevant submission goroutine.
 //Incomplete submissions are read from disk and reprocessed via ProcessStored.
 func Serve() {
-	go monitor.Listen()
+	//go monitor.Listen()
 	go func() {
 		stored := monitor.GetStored()
 		for subId, busy := range stored {
@@ -61,24 +42,19 @@ func Serve() {
 			}
 		}
 	}()
-	subs := make(map[bson.ObjectId]chan bson.ObjectId)
+	subs := make(map[bson.ObjectId]bool)
 	for {
-		select {
+		select{
 		case sub := <-subChan:
-			if ch, ok := subs[sub.Id]; ok {
-				close(ch)
+			if subs[sub.Id]{
 				delete(subs, sub.Id)
+				//monitor.Done(sub.Id)
 			} else {
-				subs[sub.Id] = make(chan bson.ObjectId)
-				proc := NewProcessor(sub, subs[sub.Id])
+				subs[sub.Id] = true 
+				proc := NewProcessor(sub)
 				go proc.Process()
-			}
-		case fileIds := <-fileChan:
-			if ch, ok := subs[fileIds.subid]; ok {
-				ch <- fileIds.id
-			} else {
-				util.Log(fmt.Errorf("No channel found for submission: %q", fileIds.subid))
-			}
+				//monitor.Busy(sub.Id)
+			} 
 		}
 	}
 }
@@ -91,24 +67,12 @@ func ProcessStored(subId bson.ObjectId) {
 		util.Log(err)
 		return
 	}
-	matcher := bson.M{project.SUBID: subId, "$or": []interface{}{bson.M{project.TYPE: project.SRC}, bson.M{project.TYPE: project.ARCHIVE}}}
-	selector := bson.M{project.ID: 1, project.SUBID: 1}
-	files, err := db.GetFiles(matcher, selector, project.NUM)
-	if err != nil {
-		util.Log(err)
-		return
-	}
-	StartSubmission(sub)
-	for _, file := range files {
-		AddFile(file)
-	}
-	EndSubmission(sub)
+	DoSubmission(sub)
 }
 
 //Processor is used to process individual submissions.
 type Processor struct {
 	sub     *project.Submission
-	recv    chan bson.ObjectId
 	tests   []*TestRunner
 	rootDir string
 	srcDir  string
@@ -116,17 +80,16 @@ type Processor struct {
 	jpfPath string
 }
 
-func NewProcessor(sub *project.Submission, recv chan bson.ObjectId) *Processor {
+func NewProcessor(sub *project.Submission) *Processor {
 	dir := filepath.Join(os.TempDir(), sub.Id.Hex())
-	return &Processor{sub: sub, recv: recv, rootDir: dir, srcDir: filepath.Join(dir, "src"), toolDir: filepath.Join(dir, "tools")}
+	return &Processor{sub: sub, rootDir: dir, srcDir: filepath.Join(dir, "src"), toolDir: filepath.Join(dir, "tools")}
 }
 
 //Process processes a new submission.
 //It listens for incoming files and creates new goroutines to processes them.
 func (this *Processor) Process() {
-	monitor.Busy(this.sub.Id)
 	util.Log("Processing submission", this.sub)
-	//defer os.RemoveAll(this.rootDir)
+	defer os.RemoveAll(this.rootDir)
 	err := this.SetupJPF()
 	if err != nil {
 		util.Log(err)
@@ -135,33 +98,18 @@ func (this *Processor) Process() {
 	if err != nil {
 		util.Log(err)
 	}
-	var fId bson.ObjectId
-	files := list.New()
-	receiving, busy := true, false
-	errChan := make(chan error)
-	for receiving || busy {
-		select {
-		case fId, receiving = <-this.recv:
-			if receiving {
-				files.PushBack(fId)
-				if !busy {
-					go func() { errChan <- nil }()
-				}
-			}
-		case err := <-errChan:
-			busy = false
-			if err != nil {
-				util.Log(err)
-			}
-			if e := files.Front(); e != nil {
-				busy = true
-				fId := files.Remove(e).(bson.ObjectId)
-				go this.goFile(fId, errChan)
-			}
+	files, err := db.GetFiles(bson.M{project.SUBID:this.sub.Id}, bson.M{project.ID:1, project.NUM:1},project.NUM) 
+	if err != nil {
+		util.Log(err)
+	}
+	for _, file := range files{
+		file, err := db.GetFile(bson.M{project.ID: file.Id}, nil)
+		if err != nil {
+			util.Log(err)
 		}
+		err = this.ProcessFile(file)
 	}
 	util.Log("Processed submission", this.sub)
-	monitor.Done(this.sub.Id)
 }
 
 //Setup sets up the environment needed for this Processor to function correctly.
@@ -176,14 +124,6 @@ func (this *Processor) SetupJPF() error {
 	}
 	this.jpfPath = filepath.Join(this.toolDir, jpfFile.Name)
 	return util.SaveFile(this.jpfPath, jpfFile.Data)
-}
-
-func (this *Processor) goFile(fId bson.ObjectId, errChan chan error) {
-	file, err := db.GetFile(bson.M{project.ID: fId}, nil)
-	if err == nil {
-		err = this.ProcessFile(file)
-	}
-	errChan <- err
 }
 
 //ProcessFile processes a file according to its type.

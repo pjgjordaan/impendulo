@@ -36,8 +36,7 @@ func (this *SubmissionHandler) Handle() error {
 	if err != nil {
 		return err
 	}
-	processing.StartSubmission(this.Submission)
-	defer func() { processing.EndSubmission(this.Submission) }()
+	defer func() { processing.DoSubmission(this.Submission) }()
 	for err == nil {
 		err = this.Read()
 	}
@@ -171,14 +170,7 @@ func (this *SubmissionHandler) Read() error {
 		if err != nil {
 			return err
 		}
-		err = db.AddFile(file)
-		if err != nil {
-			return err
-		}
-		if file.Type == project.SRC || file.Type == project.ARCHIVE {
-			processing.AddFile(file)
-		}
-		return nil
+		return db.AddFile(file)
 	} else if req == LOGOUT {
 		return io.EOF
 	}

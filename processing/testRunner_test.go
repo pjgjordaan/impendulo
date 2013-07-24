@@ -143,7 +143,7 @@ func TestExecute(t *testing.T) {
 }
 */
 func getSubmission() *project.Submission {
-	p := project.NewProject("Triangle", "user", "java")
+	p := project.NewProject("Triangle", "user", "java", []byte{})
 	db.AddProject(p)
 	return project.NewSubmission(p.Id, p.User, project.FILE_MODE, 1000)
 }
