@@ -126,7 +126,7 @@ func NewProcessor(sub *project.Submission, recv chan bson.ObjectId) *Processor {
 func (this *Processor) Process() {
 	monitor.Busy(this.sub.Id)
 	util.Log("Processing submission", this.sub)
-	defer os.RemoveAll(this.rootDir)
+	//defer os.RemoveAll(this.rootDir)
 	err := this.SetupJPF()
 	if err != nil {
 		util.Log(err)
@@ -139,7 +139,6 @@ func (this *Processor) Process() {
 	files := list.New()
 	receiving, busy := true, false
 	errChan := make(chan error)
-	fmt.Println("receiving")
 	for receiving || busy {
 		select {
 		case fId, receiving = <-this.recv:
@@ -180,7 +179,6 @@ func (this *Processor) SetupJPF() error {
 }
 
 func (this *Processor) goFile(fId bson.ObjectId, errChan chan error) {
-	fmt.Println(fId)
 	file, err := db.GetFile(bson.M{project.ID: fId}, nil)
 	if err == nil {
 		err = this.ProcessFile(file)
@@ -190,7 +188,6 @@ func (this *Processor) goFile(fId bson.ObjectId, errChan chan error) {
 
 //ProcessFile processes a file according to its type.
 func (this *Processor) ProcessFile(file *project.File) error {
-	util.Log("Processing file", file.Id)
 	switch file.Type {
 	case project.ARCHIVE:
 		err := this.extract(file)
@@ -205,7 +202,6 @@ func (this *Processor) ProcessFile(file *project.File) error {
 			return err
 		}
 	}
-	util.Log("Processed file", file.Id)
 	return nil
 }
 
@@ -253,8 +249,10 @@ func (this *Analyser) Eval() error {
 	if err != nil {
 		return err
 	}
+	util.Log("built ", this.file.Num)
 	var compileErr bool
 	compileErr, err = this.compile()
+	util.Log("compiled ", this.file.Num, err, compileErr)
 	if err != nil {
 		return err
 	} else if compileErr {
@@ -266,11 +264,13 @@ func (this *Analyser) Eval() error {
 	}
 	for _, test := range this.proc.tests {
 		err = test.Run(this.file, this.proc.srcDir)
+		util.Log("tested ", this.file.Num, err)
 		if err != nil {
 			util.Log(err)
 		}
 	}
 	this.RunTools()
+	util.Log("ran tools ", this.file.Num)
 	return nil
 }
 
@@ -316,6 +316,7 @@ func (this *Analyser) RunTools() {
 		if err != nil {
 			util.Log(err)
 		}
+		util.Log("ran ", tool.GetName(), this.file.Num)
 	}
 }
 

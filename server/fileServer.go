@@ -82,7 +82,7 @@ func (this *SubmissionHandler) Login() error {
 	if !util.Validate(u.Password, u.Salt, pword) {
 		return fmt.Errorf("User %q attempted to login with an invalid username or password", this.Submission.User)
 	}
-	projects, err := db.GetProjects(bson.M{}, nil)
+	projects, err := db.GetProjects(nil)
 	if err != nil {
 		return err
 	}

@@ -5,6 +5,7 @@ import (
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/javac"
 	"labix.org/v2/mgo/bson"
+	"fmt"
 )
 
 type JUnit struct {
@@ -27,19 +28,19 @@ func (this *JUnit) GetName() string {
 	return NAME
 }
 
-func (this *JUnit) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (tool.Result, error) {
+func (this *JUnit) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Result, err error) {
 	comp := javac.NewJavac(this.cp)
-	_, err := comp.Run(fileId, ti)
+	_, err = comp.Run(fileId, ti)
 	if err != nil {
-		return nil, err
+		return
 	}
 	args := []string{this.java, "-cp", this.cp, "-Ddata.location=" + this.datalocation, this.exec, ti.Executable()}
 	stdout, stderr, err := tool.RunCommand(args, nil)
-	if err != nil {
-		return nil, err
+	if stdout != nil {
+		res = NewResult(fileId, ti.Name, stdout)
+		err = nil
+	} else if stderr != nil && len(stderr) > 0 {
+		err = fmt.Errorf("Could not run junit: %q.", string(stderr))
 	}
-	if stderr != nil && len(stderr) > 0 {
-		return NewResult(fileId, ti.Name, stderr), nil
-	}
-	return NewResult(fileId, ti.Name, stdout), nil
+	return
 }

@@ -16,6 +16,12 @@
               <li><a href="archiveview">Intlola Archive</a></li>
 	    </ul>
           </li>
+	  <li {{ if .d }} class="dropdown active" {{else}} class="dropdown" {{end}}>
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Download<b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="projectdownloadview">Project Skeleton</a></li>
+	    </ul>
+          </li>
 	</ul>
 	<form class="navbar-form pull-right" action="logout" method="POST">
           <button type="submit" class="btn btn-inverse">Logout</button>

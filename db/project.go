@@ -116,11 +116,11 @@ func GetProject(matcher, selector interface{}) (ret *project.Project, err error)
 }
 
 //GetTest retrieves a test matching the given interface from the active database.
-func GetProjects(matcher, selector interface{}) (ret []*project.Project, err error) {
+	func GetProjects(matcher interface{}) (ret []*project.Project, err error) {
 	session := getSession()
 	defer session.Close()
 	c := session.DB("").C(PROJECTS)
-	err = c.Find(matcher).All(&ret)
+	err = c.Find(matcher).Select(bson.M{project.SKELETON:0}).All(&ret)
 	if err != nil {
 		err = &DBGetError{"projects", err, matcher}
 	}

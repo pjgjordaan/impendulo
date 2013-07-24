@@ -46,11 +46,10 @@ type TestRunner struct {
 //Run runs a test on the current file.
 func (this *TestRunner) Run(f *project.File, srcDir string) error {
 	ju := junit.NewJUnit(srcDir+":"+this.Info.Dir, this.Info.Dir)
-	if _, ok := f.Results[this.Info.Name+"_"+ju.GetName()]; ok {
+	if _, ok := f.Results[this.Info.Name]; ok {
 		return nil
 	}
 	res, err := ju.Run(f.Id, this.Info)
-	util.Log("Test run result", res)
 	if err != nil {
 		return err
 	}

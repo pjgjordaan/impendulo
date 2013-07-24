@@ -69,9 +69,24 @@ func registerView(w http.ResponseWriter, req *http.Request, ctx *Context) (err e
 	return T(getNav(ctx), "registerView").Execute(w, map[string]interface{}{"ctx": ctx, "r": true})
 }
 
+func projectDownloadView(w http.ResponseWriter, req *http.Request, ctx *Context) (err error) {
+	return T(getNav(ctx), "projectDownloadView").Execute(w, map[string]interface{}{"ctx": ctx, "p": true})
+}
+
 func getUsers(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	return T(getNav(ctx), "userResult").Execute(w, map[string]interface{}{"ctx": ctx, "h": true})
 }
+
+func downloadProject(w http.ResponseWriter, req *http.Request, ctx *Context) error {
+	path, err := loadSkeleton(req)
+	if err == nil{
+		http.ServeFile(w, req, path)
+	}else{
+		ctx.AddMessage(err.Error(), true)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+	}
+	return err
+ }
 
 func getProjects(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	return T(getNav(ctx), "projectResult").Execute(w, map[string]interface{}{"ctx": ctx, "h": true})
@@ -130,7 +145,18 @@ func displayResult(w http.ResponseWriter, req *http.Request, ctx *Context) error
 		return err
 	}
 	curTemp, curResult := res.TemplateArgs(true)
-	results := db.GetResultNames()
+	projectId, err := ReadId(ctx.Browse.Pid)
+	if err != nil {
+		ctx.AddMessage("Could not retrieve project identifier.", true)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
+	}
+	results, err := db.GetResultNames(projectId)
+	if err != nil {
+		ctx.AddMessage("Could not retrieve results.", true)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
+	}
 	args := map[string]interface{}{"ctx": ctx, "h": true, "files": files, "selected": selected, "resultName": res.GetName(), "curFile": curFile, "curResult": curResult, "results": results}
 	neighbour, _, err := getNeighbour(req, len(files)-1)
 	if err != nil {

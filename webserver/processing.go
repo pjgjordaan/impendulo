@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"path/filepath"
 )
 
 type processor func(*http.Request, *Context) (string, error)
@@ -164,7 +165,17 @@ func doProject(req *http.Request, ctx *Context) (msg string, err error) {
 		msg = err.Error()
 		return
 	}
-	p := project.NewProject(name, username, lang)
+	skeletonFile, skeletonHeader, err := req.FormFile("skeleton")
+	if err != nil {
+		msg = fmt.Sprintf("Error loading project skeleton.")
+		return
+	}
+	skeletonBytes, err := ioutil.ReadAll(skeletonFile)
+	if err != nil {
+		msg = fmt.Sprintf("Error reading project skeleton %q.", skeletonHeader.Filename)
+		return
+	}
+	p := project.NewProject(name, username, lang, skeletonBytes)
 	err = db.AddProject(p)
 	if err != nil {
 		msg = fmt.Sprintf("Error adding project %q.", name)
@@ -332,6 +343,26 @@ func projectName(idStr string) (name string, err error) {
 	name = proj.Name
 	return
 }
+
+
+func loadSkeleton(req *http.Request) (path string, err error) {
+	idStr := req.FormValue("project")
+	projectId, err := ReadId(idStr)
+	if err != nil {
+		return
+	}
+	path = filepath.Join(util.BaseDir(), "skeletons", idStr+".zip")
+	if util.Exists(path){
+		return
+	}
+	p, err := db.GetProject(bson.M{project.ID:projectId}, nil)
+	if err != nil {
+		return
+	}
+	err = util.SaveFile(path, p.Skeleton)
+	return
+}
+
 
 func ReadId(idStr string) (ret bson.ObjectId, err error) {
 	if !bson.IsObjectIdHex(idStr) {

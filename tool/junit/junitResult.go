@@ -16,7 +16,7 @@ type JUnitResult struct {
 }
 
 func (this *JUnitResult) GetName() string {
-	return NAME + " " + this.TestName
+	return this.TestName
 }
 
 func (this *JUnitResult) GetId() bson.ObjectId {

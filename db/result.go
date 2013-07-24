@@ -1,6 +1,7 @@
 package db
 
 import (
+	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/findbugs"
@@ -10,6 +11,7 @@ import (
 	"github.com/godfried/impendulo/tool/pmd"
 	"strings"
 	"fmt"
+	"labix.org/v2/mgo/bson"
 )
 
 func GetCheckstyleResult(matcher, selector interface{}) (ret *checkstyle.CheckstyleResult, err error) {
@@ -79,20 +81,22 @@ func GetJavacResult(matcher, selector interface{}) (ret *javac.JavacResult, err 
 }
 
 func GetResult(name string, matcher, selector interface{}) (ret tool.Result, err error) {
-	if strings.HasPrefix(name, javac.NAME) {
+	switch name{
+	case javac.NAME:
 		ret, err = GetJavacResult(matcher, selector)
-	} else if strings.HasPrefix(name, junit.NAME) {
-		ret, err = GetJUnitResult(matcher, selector)
-	} else if strings.HasPrefix(name, jpf.NAME) {
+	case jpf.NAME:
 		ret, err = GetJPFResult(matcher, selector)
-	} else if strings.HasPrefix(name, findbugs.NAME) {
+	case findbugs.NAME:
 		ret, err = GetFindbugsResult(matcher, selector)
-	} else if strings.HasPrefix(name, pmd.NAME) {
+	case pmd.NAME:
 		ret, err = GetPMDResult(matcher, selector)
-	} else if strings.HasPrefix(name, checkstyle.NAME) {
+	case checkstyle.NAME:
 		ret, err = GetCheckstyleResult(matcher, selector)
-	} else {
-		err = fmt.Errorf("Unknown result %q.", name)
+	default:
+		ret, err = GetJUnitResult(matcher, selector)
+		if err != nil{
+			err = fmt.Errorf("Unknown result %q.", name)
+		}
 	}
 	return
 }
@@ -109,6 +113,15 @@ func AddResult(r tool.Result) (err error) {
 	return
 }
 
-func GetResultNames() (ret []string) {
-	return []string{tool.CODE, checkstyle.NAME, findbugs.NAME, javac.NAME, jpf.NAME, junit.NAME, pmd.NAME}
+func GetResultNames(projectId bson.ObjectId) (ret []string, err error) {
+	tests, err := GetTests(bson.M{project.PROJECT_ID: projectId}, bson.M{project.NAME:1})
+	if err != nil{
+		return
+	}
+	ret = make([]string, len(tests))
+	for i, test := range tests{
+		ret[i] = strings.Split(test.Name, ".")[0]
+	}
+	ret = append(ret, []string{tool.CODE, checkstyle.NAME, findbugs.NAME, javac.NAME, jpf.NAME, pmd.NAME}...) 
+	return 
 }

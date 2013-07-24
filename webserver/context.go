@@ -83,7 +83,7 @@ func (ctx *Context) AddUser(user string) {
 func (ctx *Context) Projects() ([]*project.Project, error) {
 	var err error
 	if ctx.projects == nil {
-		ctx.projects, err = db.GetProjects(nil, nil)
+		ctx.projects, err = db.GetProjects(nil)
 	}
 	return ctx.projects, err
 }

@@ -125,6 +125,39 @@ func TestEval(t *testing.T) {
 	fmt.Println("TestEval Success")
 }
 
+func TestArchive(t *testing.T){
+	db.Setup(db.TEST_CONN)
+	defer db.DeleteDB(db.TEST_DB)
+	file, err = os.Open("archiveBytes")
+	if err != nil{
+		t.Error(err)
+	}
+	bytes, err := util.Read
+	go processing.Serve()
+	p := project.NewProject("Test", "user", "java")
+	err := db.AddProject(p)
+	if err != nil{
+		t.Error(err)
+	}
+	sub := project.NewSubmission(p.Id, "user", project.ARCHIVE_MODE, util.CurMilis())
+	err = db.AddSubmission(sub)
+	if err != nil {
+		t.Error(err)
+	}
+	file := project.NewArchive(sub.Id, archiveBytes, project.ZIP)
+	err = db.AddFile(file)
+	if err != nil {
+		t.Error(err)
+	}
+	processing.StartSubmission(sub)
+	fmt.Println("Submission started.")
+	processing.AddFile(file)
+	fmt.Println("file added.")
+	processing.EndSubmission(sub)
+	msg = fmt.Sprintf("Submission successful.")
+	return
+
+}
 
 /*func TestStore(t *testing.T) {
 	fname := "test0.gob"

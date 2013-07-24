@@ -31,6 +31,10 @@ func (this *JPF) GetName() string {
 }
 
 func (this *JPF) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Result, err error) {
+	if this.jpfPath == ""{
+		err = fmt.Errorf("No jpf configuration file available.")
+		return
+	}
 	comp := javac.NewJavac(this.cp)
 	_, err = comp.Run(fileId, this.pubInfo)
 	if err != nil {

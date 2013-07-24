@@ -9,7 +9,6 @@ import (
 	"github.com/godfried/impendulo/webserver"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
-	"runtime"
 )
 
 //Flag variables for setting ports to listen on, users file to process and the mode to run in.
@@ -49,7 +48,6 @@ func AddUsers() error {
 //Run starts a routine for processing snapshot submissions as well as a routine for receiving project tests.
 //An instance of our tcp snapshot server is then launched.
 func Run() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
 	db.Setup(db.DEFAULT_CONN)
 	go server.Run(FilePort, new(server.SubmissionHandler))
 	go webserver.Run()

@@ -37,4 +37,5 @@ const (
 	EMPTY        = "empty"
 	HTML         = "html"
 	FILEID       = "fileid"
+	SKELETON = "skeleton"
 )
