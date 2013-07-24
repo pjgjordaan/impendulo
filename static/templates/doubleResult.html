@@ -23,7 +23,7 @@
   {{if equal . $resultName}}
   <li class="active">{{$resultName}}<span class="divider"></span></li>
   {{else}}
-  <li><a href="displayresult?filename={{$curFile.Name}}&currentIndex={{}}&nextIndex={{$neighbour}}&resultname={{.}}">
+  <li><a href="displayresult?filename={{$curFile.Name}}&currentIndex={{$selected}}&nextIndex={{$neighbour}}&resultname={{.}}">
       {{.}}
   </a><span class="divider"></span></li>
   {{end}}
@@ -96,9 +96,9 @@
     <div id="diff" class="accordion-body collapse">
       <div class="accordion-inner">
 	{{$diff := diff .curResult .nextResult}}
-	{{$cur := sum curFile.Num 1}}
+	{{$cur := sum $curFile.Num 1}}
 	{{$currHeader := createHeader $curFile $cur}}
-	{{$next := sum .nextFile.Num 1}}
+	{{$next := sum $nextFile.Num 1}}
 	{{$nextHeader := createHeader $nextFile $next}} 
 	{{$diff := diffHeader $diff $currHeader $nextHeader}}
 	{{diffHTML $diff}}
