@@ -53,6 +53,10 @@ func testView(w http.ResponseWriter, req *http.Request, ctx *Context) (err error
 	return T(getNav(ctx), "testView").Execute(w, map[string]interface{}{"ctx": ctx, "s": true})
 }
 
+func skeletonView(w http.ResponseWriter, req *http.Request, ctx *Context) (err error) {
+	return T(getNav(ctx), "skeletonView").Execute(w, map[string]interface{}{"ctx": ctx, "s": true})
+}
+
 func jpfFileView(w http.ResponseWriter, req *http.Request, ctx *Context) (err error) {
 	return T(getNav(ctx), "jpfFileView").Execute(w, map[string]interface{}{"ctx": ctx, "s": true})
 }
@@ -218,6 +222,12 @@ func addJPF(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 func addProject(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	err := processor(doProject).exec(req, ctx)
 	http.Redirect(w, req, reverse("projectview"), http.StatusSeeOther)
+	return err
+}
+
+func changeSkeleton(w http.ResponseWriter, req *http.Request, ctx *Context) error {
+	err := processor(doSkeleton).exec(req, ctx)
+	http.Redirect(w, req, reverse("skeletonview"), http.StatusSeeOther)
 	return err
 }
 

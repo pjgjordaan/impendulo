@@ -12,10 +12,19 @@ import (
 	"net"
 )
 
+//SubmissionSpawner is an implementation of HandlerSpawner for SubmissionHandlers.
+type SubmissionSpawner struct {}
+
+//Spawn creates a new ConnHandler of type SubmissionHandler.
+func (this *SubmissionSpawner) Spawn() ConnHandler {
+	return &SubmissionHandler{}
+}
+
 //SubmissionHandler is an implementation of ConnHandler used to receive submissions from users of the impendulo system.
 type SubmissionHandler struct {
 	Conn       net.Conn
 	Submission *project.Submission
+	fileCount int
 }
 
 //Start sets the connection, launches the Handle method and ends the session when it returns.
@@ -36,7 +45,7 @@ func (this *SubmissionHandler) Handle() error {
 	if err != nil {
 		return err
 	}
-	defer func() { processing.DoSubmission(this.Submission) }()
+	defer func() { processing.DoSubmission(this.Submission.Id) }()
 	for err == nil {
 		err = this.Read()
 	}
@@ -121,6 +130,7 @@ func (this *SubmissionHandler) createSubmission(subInfo map[string]interface{}) 
 	if err != nil {
 		return err
 	}
+	this.fileCount = 0
 	return util.WriteJson(this.Conn, this.Submission)
 }
 
@@ -135,11 +145,11 @@ func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{}
 	if err != nil {
 		return err
 	}
-	count, err := db.Count(db.FILES, bson.M{project.SUBID: this.Submission.Id})
+	this.fileCount, err = db.Count(db.FILES, bson.M{project.SUBID: this.Submission.Id})
 	if err != nil {
 		return err
 	}
-	return util.WriteJson(this.Conn, count)
+	return util.WriteJson(this.Conn, this.fileCount)
 }
 
 //Read reads Files from the connection and sends them for processing.
@@ -166,6 +176,8 @@ func (this *SubmissionHandler) Read() error {
 			return err
 		}
 		delete(requestInfo, REQ)
+		requestInfo[project.NUM] = this.fileCount
+		this.fileCount ++
 		file, err := project.NewFile(this.Submission.Id, requestInfo, buffer)
 		if err != nil {
 			return err

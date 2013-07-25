@@ -2,7 +2,6 @@ package processing
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
@@ -44,7 +43,6 @@ func TestAddResult(t *testing.T) {
 	if !reflect.DeepEqual(res, dbRes) {
 		t.Error("Result not added correctly")
 	}
-	fmt.Println("TestAddResult Success")
 }
 
 func TestExtractFile(t *testing.T) {
@@ -64,7 +62,7 @@ func TestExtractFile(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	proc := NewProcessor(s, make(chan bson.ObjectId))
+	proc, _ := NewProcessor(s.Id)
 	defer os.RemoveAll(proc.rootDir)
 	analyser := &Analyser{proc: proc, file: file}
 	err = analyser.buildTarget()
@@ -87,7 +85,6 @@ func TestExtractFile(t *testing.T) {
 	if !bytes.Equal(fileData, buff.Bytes()) {
 		t.Error("Data not equivalent")
 	}
-	fmt.Println("TestExtractFile Success")
 }
 
 func TestEval(t *testing.T) {
@@ -115,22 +112,21 @@ func TestEval(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	proc := NewProcessor(s, make(chan bson.ObjectId))
+	proc, _ := NewProcessor(s.Id)
 	proc.SetupJPF()
-	proc.tests = SetupTests(proc.sub.ProjectId, proc.toolDir)
+	proc.tests, _ = SetupTests(proc.sub.ProjectId, proc.toolDir)
 	defer os.RemoveAll(proc.rootDir)
 	analyser := &Analyser{proc: proc, file: file}
 	err = analyser.Eval()
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Println("TestEval Success")
 }
 
 func TestArchive(t *testing.T){
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
-	file, err := os.Open("archiveBytes")
+	file, err := os.Open("testArchive.zip")
 	if err != nil{
 		t.Error(err)
 	}
@@ -140,20 +136,30 @@ func TestArchive(t *testing.T){
 	if err != nil{
 		t.Error(err)
 	}
-	sub := project.NewSubmission(p.Id, "user", project.ARCHIVE_MODE, util.CurMilis())
-	archive := project.NewArchive(sub.Id, bytes, project.ZIP)
-	err = db.AddSubmission(sub)
-	if err != nil {
-		t.Error(err)
+	n := 50
+	subs := make([]*project.Submission, n)
+	archives := make([]*project.File, n)
+	for i, _ := range subs{
+		sub := project.NewSubmission(p.Id, "user", project.ARCHIVE_MODE, util.CurMilis())
+		archive := project.NewArchive(sub.Id, bytes, project.ZIP)
+		err = db.AddSubmission(sub)
+		if err != nil {
+			t.Error(err)
+		}
+		err = db.AddFile(archive)
+		if err != nil {
+			t.Error(err)
+		}
+		subs[i] = sub
+		archives[i] = archive
 	}
-	err = db.AddFile(archive)
-	if err != nil {
-		t.Error(err)
-	}
-	go Serve()
-	StartSubmission(sub)
-	AddFile(archive)
-	EndSubmission(sub)
+	go func(){
+		for _, sub := range subs{
+			DoSubmission(sub.Id)
+		}
+		Stop()
+	}()
+	Serve()
 	return
 }
 
@@ -214,70 +220,6 @@ func genMap() map[bson.ObjectId]bool {
 		idMap[bson.NewObjectId()] = r.Float64() > 0.5
 	}
 	return idMap
-}
-
-func TestProcessStored(t *testing.T) {
-	db.Setup(db.TEST_CONN)
-	defer db.DeleteDB(db.TEST_DB)
-	p := project.NewProject("Triangle", "user", "java", []byte{})
-	err := db.AddProject(p)
-	if err != nil {
-		t.Error(err)
-	}
-	sub := project.NewSubmission(p.Id, p.User, project.FILE_MODE, 1000)
-	err = db.AddSubmission(sub)
-	if err != nil {
-		t.Error(err)
-	}
-	files := make(map[bson.ObjectId]*project.File)
-	for i := 0; i < 5; i++ {
-		info := bson.M{project.TIME: 1000 + i, project.TYPE: project.SRC, project.MOD: 'c', project.NAME: "Triangle.java", project.FTYPE: "java", project.PKG: "triangle", project.NUM: i}
-		file, err := project.NewFile(sub.Id, info, fileData)
-		if err != nil {
-			t.Error(err)
-		}
-		err = db.AddFile(file)
-		if err != nil {
-			t.Error(err)
-		}
-		file, err = db.GetFile(bson.M{project.ID: file.Id}, nil)
-		if err != nil {
-			t.Error(err)
-		}
-		files[file.Id] = file
-	}
-	go ProcessStored(sub.Id)
-	gotSub := false
-loop:
-	for {
-		select {
-		case s := <-subChan:
-			if !reflect.DeepEqual(sub, s) {
-				t.Error("Submissions not equal", sub, s)
-			}
-			if gotSub {
-				break loop
-			}
-			gotSub = true
-		case fileId := <-fileChan:
-			if sent, ok := files[fileId.id]; ok {
-				stored, err := db.GetFile(bson.M{project.ID: fileId.id}, nil)
-				if err != nil {
-					t.Error(err)
-				}
-				if !reflect.DeepEqual(sent, stored) {
-					t.Error("Files not equal")
-				}
-			} else {
-				t.Error("Unknown id", fileId.id)
-			}
-			delete(files, fileId.id)
-		}
-	}
-	if len(files) > 0 {
-		t.Error("All files not received", files)
-	}
-	fmt.Println("TestProcessStored Success")
 }
 
 var fileInfo = bson.M{project.TIME: 1000, project.TYPE: project.SRC, project.MOD: "c", project.NAME: "Triangle.java", project.FTYPE: "java", project.PKG: "triangle", project.NUM: 1000}

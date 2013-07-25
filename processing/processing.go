@@ -1,9 +1,9 @@
 package processing
 
 import (
+	"container/list"
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/processing/monitor"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/checkstyle"
@@ -17,57 +17,53 @@ import (
 	"path/filepath"
 )
 
-var subChan chan *project.Submission
+var subChan chan bson.ObjectId
+var doneChan chan interface{}
 
 func init() {
-	subChan = make(chan *project.Submission)
+	subChan = make(chan bson.ObjectId)
+	doneChan = make(chan interface{})
 }
 
 
 //EndSubmission stops this submission's goroutine to.
-func DoSubmission(sub *project.Submission) {
-	subChan <- sub
+func DoSubmission(subId bson.ObjectId) {
+	subChan <- subId
 }
+
+func Stop(){
+	type empty struct{}
+	doneChan <- empty{}
+}
+
+const MAX_PROCS = 20
 
 //Serve spawns new processing routines for each submission started.
 //Added files are received here and then sent to the relevant submission goroutine.
 //Incomplete submissions are read from disk and reprocessed via ProcessStored.
 func Serve() {
-	//go monitor.Listen()
-	go func() {
-		stored := monitor.GetStored()
-		for subId, busy := range stored {
-			if busy {
-				go ProcessStored(subId)
-			}
-		}
-	}()
-	subs := make(map[bson.ObjectId]bool)
+	subs := list.New()
+	busy := 0
 	for {
+		if busy <  MAX_PROCS && subs.Len() > 0{
+			subId := subs.Remove(subs.Front()).(bson.ObjectId)
+			proc, err := NewProcessor(subId)
+			if err != nil{
+				util.Log(err)
+			} else{
+				go proc.Process(doneChan)
+				busy ++
+			}
+		} else if busy < 0{
+			break
+		}
 		select{
-		case sub := <-subChan:
-			if subs[sub.Id]{
-				delete(subs, sub.Id)
-				//monitor.Done(sub.Id)
-			} else {
-				subs[sub.Id] = true 
-				proc := NewProcessor(sub)
-				go proc.Process()
-				//monitor.Busy(sub.Id)
-			} 
+		case subId := <-subChan:
+			subs.PushBack(subId)
+		case _ = <-doneChan:
+			busy --
 		}
 	}
-}
-
-//ProcessStored processes incompletely processed submissions.
-//It retrieves files in the submission and sends to be processed.
-func ProcessStored(subId bson.ObjectId) {
-	sub, err := db.GetSubmission(bson.M{project.ID: subId}, nil)
-	if err != nil {
-		util.Log(err)
-		return
-	}
-	DoSubmission(sub)
 }
 
 //Processor is used to process individual submissions.
@@ -80,14 +76,19 @@ type Processor struct {
 	jpfPath string
 }
 
-func NewProcessor(sub *project.Submission) *Processor {
+func NewProcessor(subId bson.ObjectId)(proc *Processor, err error) {
+	sub, err := db.GetSubmission(bson.M{project.ID:subId}, nil)
+	if err != nil{
+		return
+	}
 	dir := filepath.Join(os.TempDir(), sub.Id.Hex())
-	return &Processor{sub: sub, rootDir: dir, srcDir: filepath.Join(dir, "src"), toolDir: filepath.Join(dir, "tools")}
+	proc = &Processor{sub: sub, rootDir: dir, srcDir: filepath.Join(dir, "src"), toolDir: filepath.Join(dir, "tools")}
+	return
 }
 
 //Process processes a new submission.
 //It listens for incoming files and creates new goroutines to processes them.
-func (this *Processor) Process() {
+func (this *Processor) Process(doneChan chan interface{}) {
 	util.Log("Processing submission", this.sub)
 	defer os.RemoveAll(this.rootDir)
 	err := this.SetupJPF()
@@ -110,6 +111,7 @@ func (this *Processor) Process() {
 		err = this.ProcessFile(file)
 	}
 	util.Log("Processed submission", this.sub)
+	Stop()
 }
 
 //Setup sets up the environment needed for this Processor to function correctly.
@@ -189,10 +191,8 @@ func (this *Analyser) Eval() error {
 	if err != nil {
 		return err
 	}
-	util.Log("built ", this.file.Num)
 	var compileErr bool
 	compileErr, err = this.compile()
-	util.Log("compiled ", this.file.Num, err, compileErr)
 	if err != nil {
 		return err
 	} else if compileErr {
@@ -204,13 +204,11 @@ func (this *Analyser) Eval() error {
 	}
 	for _, test := range this.proc.tests {
 		err = test.Run(this.file, this.proc.srcDir)
-		util.Log("tested ", this.file.Num, err)
 		if err != nil {
 			util.Log(err)
 		}
 	}
 	this.RunTools()
-	util.Log("ran tools ", this.file.Num)
 	return nil
 }
 
@@ -256,7 +254,6 @@ func (this *Analyser) RunTools() {
 		if err != nil {
 			util.Log(err)
 		}
-		util.Log("ran ", tool.GetName(), this.file.Num)
 	}
 }
 

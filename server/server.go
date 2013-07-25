@@ -19,7 +19,7 @@ const (
 
 //Run is used to listen for new tcp connections and spawn a new goroutine for each connection.
 //Each goroutine launched will handle its connection and its type is determined by HandlerSpawner.
-func Run(port string, handler ConnHandler) {
+func Run(port string, spawner HandlerSpawner) {
 	netListen, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		util.Log(fmt.Errorf("Encountered error %q when listening on port %q", err, port))
@@ -31,9 +31,14 @@ func Run(port string, handler ConnHandler) {
 		if err != nil {
 			util.Log(fmt.Errorf("Encountered error %q when accepting connection", err))
 		} else {
+			handler := spawner.Spawn()
 			go handler.Start(conn)
 		}
 	}
+}
+
+type HandlerSpawner interface {
+	Spawn() ConnHandler
 }
 
 //ConnHandler is an interface with basic methods for handling connections.

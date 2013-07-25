@@ -49,7 +49,7 @@ func AddUsers() error {
 //An instance of our tcp snapshot server is then launched.
 func Run() {
 	db.Setup(db.DEFAULT_CONN)
-	go server.Run(FilePort, new(server.SubmissionHandler))
+	go server.Run(FilePort, new(server.SubmissionSpawner))
 	go webserver.Run()
 	processing.Serve()
 

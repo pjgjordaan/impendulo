@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"path/filepath"
+	"time"
 )
 
 type processor func(*http.Request, *Context) (string, error)
@@ -60,10 +61,35 @@ func doArchive(req *http.Request, ctx *Context) (msg string, err error) {
 		msg = fmt.Sprintf("Could not create file.")
 		return
 	}
-	processing.DoSubmission(sub)
+	processing.DoSubmission(sub.Id)
 	msg = fmt.Sprintf("Submission successful.")
 	return
 }
+
+func doSkeleton(req *http.Request, ctx *Context) (msg string, err error) {
+	projectId, err := ReadId(req.FormValue("project"))
+	if err != nil {
+		msg = err.Error()
+		return
+	}
+	skeletonFile, skeletonHeader, err := req.FormFile("skeleton")
+	if err != nil {
+		msg = fmt.Sprintf("Error loading skeleton file.")
+		return
+	}
+	skeletonBytes, err := ioutil.ReadAll(skeletonFile)
+	if err != nil {
+		msg = fmt.Sprintf("Error reading skeleton file %q.", skeletonHeader.Filename)
+		return
+	}
+	err = db.Update(db.PROJECTS, bson.M{project.ID: projectId}, bson.M{"$set": bson.M{project.SKELETON: skeletonBytes}})
+	if err != nil {
+		msg = fmt.Sprintf("Error reading updating project with skeleton %q.", skeletonHeader.Filename)
+	}
+	msg = fmt.Sprintf("Successfully added skeleton %q.", skeletonHeader.Filename)
+	return
+}
+
 
 func doTest(req *http.Request, ctx *Context) (msg string, err error) {
 	projectId, err := ReadId(req.FormValue("project"))
@@ -349,7 +375,8 @@ func loadSkeleton(req *http.Request) (path string, err error) {
 	if err != nil {
 		return
 	}
-	path = filepath.Join(util.BaseDir(), "skeletons", idStr+".zip")
+	name := strconv.FormatInt(time.Now().Unix(), 10)
+	path = filepath.Join(util.BaseDir(), "skeletons", idStr, name+".zip")
 	if util.Exists(path){
 		return
 	}
