@@ -1,12 +1,6 @@
 {{ define "view" }}
-<h3>Submit JPF Configuration File</h3>
+<h3>Change JPF Configuration File</h3>
 <form class="form-horizontal" action="addjpf" method="post" enctype="multipart/form-data">
-  <div class="control-group">
-    <label class="control-label" for="jpf">JPF Configuration File</label>
-    <div class="controls">
-      <input name="jpf" type="file" id="jpf">
-    </div>
-  </div>
   <div class="control-group">
     <label class="control-label" for="project">Project</label>
     <div class="controls">
@@ -18,8 +12,14 @@
     </div>
   </div>
   <div class="control-group">
+    <label class="control-label" for="jpf">JPF Configuration File</label>
     <div class="controls">
-      <button type="submit" class="btn btn-inverse">Add Test</button>
+      <input name="jpf" type="file" id="jpf">
+    </div>
+  </div>
+  <div class="control-group">
+    <div class="controls">
+      <button type="submit" class="btn btn-inverse">Submit</button>
     </div>
   </div>
 </form>

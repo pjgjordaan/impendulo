@@ -15,26 +15,42 @@ import (
 	"labix.org/v2/mgo/bson"
 	"os"
 	"path/filepath"
+	"fmt"
 )
 
 var subChan chan bson.ObjectId
-var doneChan chan interface{}
+var fileChan chan *ids
 
 func init() {
 	subChan = make(chan bson.ObjectId)
-	doneChan = make(chan interface{})
+	fileChan = make(chan *ids)
 }
 
 
+type ids struct {
+	fileId bson.ObjectId
+	subId bson.ObjectId
+}
+
+//AddFile sends a file id to be processed.
+func AddFile(file *project.File) {
+	fileChan <- &ids{file.Id, file.SubId}
+}
+
 //EndSubmission stops this submission's goroutine to.
-func DoSubmission(subId bson.ObjectId) {
+func StartSubmission(subId bson.ObjectId) {
 	subChan <- subId
 }
 
-func Stop(){
-	type empty struct{}
-	doneChan <- empty{}
+func EndSubmission(subId bson.ObjectId) {
+	subChan <- subId
 }
+
+func None() interface{}{
+	type e struct{}
+	return e{}
+}	
+
 
 const MAX_PROCS = 20
 
@@ -42,26 +58,73 @@ const MAX_PROCS = 20
 //Added files are received here and then sent to the relevant submission goroutine.
 //Incomplete submissions are read from disk and reprocessed via ProcessStored.
 func Serve() {
+	helpers := make(map[bson.ObjectId]*ProcHelper)
 	subs := list.New()
 	busy := 0
 	for {
 		if busy <  MAX_PROCS && subs.Len() > 0{
 			subId := subs.Remove(subs.Front()).(bson.ObjectId)
-			proc, err := NewProcessor(subId)
-			if err != nil{
-				util.Log(err)
-			} else{
-				go proc.Process(doneChan)
-				busy ++
-			}
+			helpers[subId] = NewProcHelper(subId)
+			go helpers[subId].Handle()
+			busy ++
 		} else if busy < 0{
 			break
 		}
 		select{
 		case subId := <-subChan:
-			subs.PushBack(subId)
-		case _ = <-doneChan:
-			busy --
+			if helper, ok := helpers[subId]; ok{
+				helper.doneChan <- None()
+			} else{
+				subs.PushBack(subId)
+			}
+		case ids := <- fileChan:
+			if helper, ok := helpers[ids.subId]; ok{
+				helper.serveChan <- ids.fileId
+			} else{
+				util.Log(fmt.Errorf("No submission %q found for file %q", ids.subId, ids.fileId))
+			}
+		}
+	}
+}
+
+func NewProcHelper(subId bson.ObjectId) *ProcHelper{
+	return &ProcHelper{subId, make(chan bson.ObjectId), make(chan interface{})}
+}
+
+type ProcHelper struct{
+	subId bson.ObjectId
+	serveChan chan bson.ObjectId
+	doneChan chan interface{}
+}
+
+func (this *ProcHelper) Handle(){
+	procChan := make(chan bson.ObjectId)
+	stopChan := make(chan interface{})
+	proc, err := NewProcessor(this.subId)
+	if err != nil{
+		util.Log(err)
+	}
+	go proc.Process(procChan, stopChan)
+	files := list.New()
+	busy, done := false, false
+	for{
+		if !busy{
+			if files.Len() > 0{
+				fId := files.Remove(files.Front()).(bson.ObjectId)
+				procChan <- fId
+				busy = true
+			} else if done{
+				stopChan <- None()
+				return
+			}
+		}
+		select{
+		case fId := <- this.serveChan:
+			files.PushBack(fId)
+		case <- procChan:
+			busy = false
+		case <- this.doneChan:
+			done = true
 		}
 	}
 }
@@ -88,7 +151,7 @@ func NewProcessor(subId bson.ObjectId)(proc *Processor, err error) {
 
 //Process processes a new submission.
 //It listens for incoming files and creates new goroutines to processes them.
-func (this *Processor) Process(doneChan chan interface{}) {
+func (this *Processor) Process(fileChan chan bson.ObjectId, doneChan chan interface{}) {
 	util.Log("Processing submission", this.sub)
 	defer os.RemoveAll(this.rootDir)
 	err := this.SetupJPF()
@@ -99,19 +162,29 @@ func (this *Processor) Process(doneChan chan interface{}) {
 	if err != nil {
 		util.Log(err)
 	}
-	files, err := db.GetFiles(bson.M{project.SUBID:this.sub.Id}, bson.M{project.ID:1, project.NUM:1},project.NUM) 
+	/*files, err := db.GetFiles(bson.M{project.SUBID:this.sub.Id}, bson.M{project.ID:1, project.NUM:1},project.NUM) 
 	if err != nil {
 		util.Log(err)
-	}
-	for _, file := range files{
-		file, err := db.GetFile(bson.M{project.ID: file.Id}, nil)
-		if err != nil {
-			util.Log(err)
+	}*/
+	for {// _, file := range files{
+		select{
+		case fId := <- fileChan:
+			file, err := db.GetFile(bson.M{project.ID: fId}, nil)
+			if err != nil {
+				util.Log(err)
+			}
+			fmt.Println("processing file", file)
+			err = this.ProcessFile(file)
+			fmt.Println("processed file", file, err)
+			if err != nil {
+				util.Log(err)
+			}
+			fileChan <- fId
+		case <- doneChan:
+			break
 		}
-		err = this.ProcessFile(file)
 	}
 	util.Log("Processed submission", this.sub)
-	Stop()
 }
 
 //Setup sets up the environment needed for this Processor to function correctly.

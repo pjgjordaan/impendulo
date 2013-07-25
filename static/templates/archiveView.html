@@ -2,12 +2,6 @@
 <h3>Submit Intlola Archive</h3>
 <form class="form-horizontal" action="submitarchive" method="post" enctype="multipart/form-data">
   <div class="control-group">
-    <label class="control-label" for="archive">Recorded Archive</label>
-    <div class="controls">
-      <input type="file" id="archive" name="archive">
-    </div>
-  </div>
-  <div class="control-group">
     <label class="control-label" for="project">Project</label>
     <div class="controls">
       <select name="project" id="project">
@@ -15,6 +9,12 @@
 	<option value={{.Id.Hex}}>{{.Name}}</option>
 	{{end}}
       </select>
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label" for="archive">Recorded Archive</label>
+    <div class="controls">
+      <input type="file" id="archive" name="archive">
     </div>
   </div>
   <div class="control-group">

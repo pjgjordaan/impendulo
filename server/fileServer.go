@@ -45,7 +45,8 @@ func (this *SubmissionHandler) Handle() error {
 	if err != nil {
 		return err
 	}
-	defer func() { processing.DoSubmission(this.Submission.Id) }()
+	processing.StartSubmission(this.Submission.Id)
+	defer func() { processing.EndSubmission(this.Submission.Id) }()
 	for err == nil {
 		err = this.Read()
 	}
@@ -153,40 +154,48 @@ func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{}
 }
 
 //Read reads Files from the connection and sends them for processing.
-func (this *SubmissionHandler) Read() error {
+func (this *SubmissionHandler) Read() (err error) {
 	requestInfo, err := util.ReadJson(this.Conn)
 	if err != nil {
-		return err
+		return
 	}
 	req, err := util.GetString(requestInfo, REQ)
 	if err != nil {
-		return err
+		return
 	}
 	if req == SEND {
 		_, err = this.Conn.Write([]byte(OK))
 		if err != nil {
-			return err
+			return
 		}
-		buffer, err := util.ReadData(this.Conn)
+		var buffer []byte
+		buffer, err = util.ReadData(this.Conn)
 		if err != nil {
-			return err
+			return
 		}
 		_, err = this.Conn.Write([]byte(OK))
 		if err != nil {
-			return err
+			return
 		}
 		delete(requestInfo, REQ)
 		requestInfo[project.NUM] = this.fileCount
 		this.fileCount ++
-		file, err := project.NewFile(this.Submission.Id, requestInfo, buffer)
+		var file *project.File
+		file, err = project.NewFile(this.Submission.Id, requestInfo, buffer)
 		if err != nil {
-			return err
+			return
 		}
-		return db.AddFile(file)
+		err = db.AddFile(file)
+		if err != nil {
+			return
+		}
+		processing.AddFile(file)
 	} else if req == LOGOUT {
-		return io.EOF
+		err = io.EOF
+	} else{
+		err = fmt.Errorf("Unknown request %q", req)
 	}
-	return fmt.Errorf("Unknown request %q", req)
+	return
 }
 
 //End ends a session and reports any errors to the user.

@@ -61,7 +61,9 @@ func doArchive(req *http.Request, ctx *Context) (msg string, err error) {
 		msg = fmt.Sprintf("Could not create file.")
 		return
 	}
-	processing.DoSubmission(sub.Id)
+	processing.StartSubmission(sub.Id)
+	processing.AddFile(file)
+	processing.EndSubmission(sub.Id)
 	msg = fmt.Sprintf("Submission successful.")
 	return
 }

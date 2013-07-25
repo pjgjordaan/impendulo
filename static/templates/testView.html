@@ -1,6 +1,16 @@
 {{ define "view" }}
-<h3>Submit Project Tests</h3>
+<h3>Add Project Tests</h3>
 <form class="form-horizontal" action="addtest" method="post" enctype="multipart/form-data">
+  <div class="control-group">
+    <label class="control-label" for="project">Project</label>
+    <div class="controls">
+      <select name="project" id="project">
+	{{ range .ctx.Projects}}
+	<option value={{.Id.Hex}}>{{.Name}}</option>
+	{{end}}
+      </select>
+    </div>
+  </div>
   <div class="control-group">
     <label class="control-label" for="test">Test File</label>
     <div class="controls">
@@ -20,18 +30,8 @@
     </div>
   </div>
   <div class="control-group">
-    <label class="control-label" for="project">Project</label>
     <div class="controls">
-      <select name="project" id="project">
-	{{ range .ctx.Projects}}
-	<option value={{.Id.Hex}}>{{.Name}}</option>
-	{{end}}
-      </select>
-    </div>
-  </div>
-  <div class="control-group">
-    <div class="controls">
-      <button type="submit" class="btn btn-inverse">Add Test</button>
+      <button type="submit" class="btn btn-inverse">Submit</button>
     </div>
   </div>
 </form>
