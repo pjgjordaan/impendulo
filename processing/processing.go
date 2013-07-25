@@ -162,26 +162,21 @@ func (this *Processor) Process(fileChan chan bson.ObjectId, doneChan chan interf
 	if err != nil {
 		util.Log(err)
 	}
-	/*files, err := db.GetFiles(bson.M{project.SUBID:this.sub.Id}, bson.M{project.ID:1, project.NUM:1},project.NUM) 
-	if err != nil {
-		util.Log(err)
-	}*/
-	for {// _, file := range files{
+outer:
+	for {
 		select{
 		case fId := <- fileChan:
 			file, err := db.GetFile(bson.M{project.ID: fId}, nil)
 			if err != nil {
 				util.Log(err)
 			}
-			fmt.Println("processing file", file)
 			err = this.ProcessFile(file)
-			fmt.Println("processed file", file, err)
 			if err != nil {
 				util.Log(err)
 			}
 			fileChan <- fId
 		case <- doneChan:
-			break
+			break outer
 		}
 	}
 	util.Log("Processed submission", this.sub)
