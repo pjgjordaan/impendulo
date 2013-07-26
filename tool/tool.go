@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"time"
 	"errors"
+	"strings"
 )
 
 type Tool interface {
@@ -16,25 +17,29 @@ type Tool interface {
 	Run(fileId bson.ObjectId, target *TargetInfo) (Result, error)
 }
 
-func RunCommand(args []string, stdin io.Reader) (stdout, stderr []byte, err error) {
-	res := runCommand(args, stdin)
-	stdout, stderr, err = res.stdout.Bytes(), res.stderr.Bytes(), res.err
-	return
+type ExecResult struct{
+	StdOut, StdErr []byte
+	Err error
 }
 
-type execResult struct{
-	stdout, stderr bytes.Buffer
-	err error
+
+func (this *ExecResult) HasStdErr()bool{
+	return this.StdErr != nil && len(this.StdErr) > 0
 }
 
-func runCommand(args []string, stdin io.Reader) (res *execResult) {
-	res = new(execResult)
+func (this *ExecResult) HasStdOut()bool{
+	return this.StdOut != nil && len(strings.TrimSpace(string(this.StdOut))) > 0
+}
+
+func RunCommand(args []string, stdin io.Reader) (res *ExecResult) {
+	res = new(ExecResult)
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdin = stdin
-	cmd.Stdout, cmd.Stderr = &res.stdout, &res.stderr
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	err := cmd.Start()
 	if err != nil {
-		res.err = &StartError{args, err}
+		res.Err = &StartError{args, err}
 		return
 	}
 	doneChan := make(chan error)
@@ -42,14 +47,15 @@ func runCommand(args []string, stdin io.Reader) (res *execResult) {
 	select {
 	case err := <-doneChan:
 		if err != nil {
-			res.err = &EndError{args,err}
+			res.Err = &EndError{args,err}
 		}
 	case <-time.After(2 * time.Minute):
 		cmd.Process.Kill()
-		res.stdout.WriteString("\nCommand timed out.")
-		res.stderr.WriteString("\nCommand timed out.")
-		res.err = &EndError{args,errors.New("Command timed out.")}
+		stdout.WriteString("\nCommand timed out.")
+		stderr.WriteString("\nCommand timed out.")
+		res.Err = &EndError{args,errors.New("Command timed out.")}
 	}
+	res.StdOut, res.StdErr = stdout.Bytes(), stderr.Bytes() 
 	return	
 }
 

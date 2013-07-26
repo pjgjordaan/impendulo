@@ -327,7 +327,9 @@ func (this *Analyser) RunTools() {
 			util.Log(err)
 			continue
 		}
-		err = AddResult(res)
+		if res != nil{
+			err = AddResult(res)
+		}
 		if err != nil {
 			util.Log(err)
 		}

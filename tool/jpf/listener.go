@@ -43,13 +43,13 @@ func FindListeners() (found []byte, err error) {
 		return
 	}
 	args := []string{config.GetConfig(config.JAVA), "-cp", cp, target.Executable()}
-	found, stderr, err := tool.RunCommand(args, nil)
-	if err != nil {
-		return
-	} else if stderr != nil && len(stderr) > 0 {
-		err = fmt.Errorf("Could not run listener finder: %q.", string(stderr))
-		return
-	}
+	execRes := tool.RunCommand(args, nil)
+	if execRes.Err != nil {
+		err = execRes.Err
+	} else if execRes.HasStdErr() {
+		err = fmt.Errorf("Could not run listener finder: %q.", string(execRes.StdErr))
+	} 
+	found = execRes.StdOut
 	return
 }
 

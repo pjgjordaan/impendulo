@@ -35,12 +35,13 @@ func (this *JUnit) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Resu
 		return
 	}
 	args := []string{this.java, "-cp", this.cp, "-Ddata.location=" + this.datalocation, this.exec, ti.Executable()}
-	stdout, stderr, err := tool.RunCommand(args, nil)
-	if stdout != nil {
-		res = NewResult(fileId, ti.Name, stdout)
-		err = nil
-	} else if stderr != nil && len(stderr) > 0 {
-		err = fmt.Errorf("Could not run junit: %q.", string(stderr))
+	execRes := tool.RunCommand(args, nil)
+	if execRes.HasStdOut() {
+		res = NewResult(fileId, ti.Name, execRes.StdOut)
+	} else if execRes.HasStdErr() {
+		err = fmt.Errorf("Could not run junit: %q.", string(execRes.StdErr))
+	} else{
+		err = execRes.Err
 	}
 	return
 }

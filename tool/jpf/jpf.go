@@ -45,11 +45,13 @@ func (this *JPF) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Result
 		return
 	}
 	args := []string{config.GetConfig(config.JAVA), "-cp", ti.Dir + ":" + this.cp, this.jpfInfo.Executable(), this.jpfPath, ti.Executable(), ti.Dir}
-	stdout, stderr, err := tool.RunCommand(args, nil)
-	if stdout != nil {
-		res, err = NewResult(fileId, stdout)
-	} else if stderr != nil && len(stderr) > 0 {
-		err = fmt.Errorf("Could not execute jpf runner: %q.", string(stderr))
+	execRes := tool.RunCommand(args, nil)
+	if execRes.HasStdOut() {
+		res, err = NewResult(fileId, execRes.StdOut)
+	} else if execRes.HasStdErr() {
+		err = fmt.Errorf("Could not execute jpf runner: %q.", string(execRes.StdErr))
+	} else{
+		err = execRes.Err
 	}
 	return
 }

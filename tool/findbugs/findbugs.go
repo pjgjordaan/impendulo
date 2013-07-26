@@ -25,11 +25,13 @@ func (this *FindBugs) GetName() string {
 
 func (this *FindBugs) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Result, err error) {
 	args :=  []string{config.GetConfig(config.JAVA), "-jar", this.cmd, "-textui", "-low", "-xml:withMessages", ti.PackagePath()}
-	stdout, stderr, err := tool.RunCommand(args, nil)
-	if stdout != nil {
-		res, err = NewResult(fileId, stdout)
-	} else if stderr != nil && len(stderr) > 0 {
-		err = fmt.Errorf("Could not run findbugs: %q.", string(stderr))
+	execRes := tool.RunCommand(args, nil)
+	if execRes.HasStdOut() {
+		res, err = NewResult(fileId, execRes.StdOut)
+	} else if execRes.HasStdErr() {
+		err = fmt.Errorf("Could not run findbugs: %q.", string(execRes.StdErr))
+	} else {
+		err = execRes.Err
 	}
 	return
 }
