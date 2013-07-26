@@ -92,6 +92,11 @@ func Update(col string, matcher, change interface{}) (err error) {
 	return
 }
 
+func Contains(col string, matcher interface{}) (bool) {
+	n, err := Count(col, matcher)
+	return err == nil && n > 0
+}
+
 func Count(col string, matcher interface{}) (n int, err error) {
 	session := getSession()
 	defer session.Close()
@@ -100,5 +105,5 @@ func Count(col string, matcher interface{}) (n int, err error) {
 	if err != nil {
 		err = &DBGetError{col + " count", err, matcher}
 	}
-	return n, nil
+	return
 }

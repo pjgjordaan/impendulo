@@ -23,7 +23,7 @@ func SetupTests(projectId bson.ObjectId, dir string) (ret []*TestRunner, err err
 	ret = make([]*TestRunner, len(tests))
 	for i, test := range tests {
 		ret[i] = &TestRunner{tool.NewTarget(test.Name, proj.Lang, test.Package, dir)}
-		err = util.SaveFile(ret[i].Info.FilePath(), test.Test)
+		err = util.SaveFile(ret[i].FilePath(), test.Test)
 		if err != nil {
 			return
 		}
@@ -40,16 +40,16 @@ func SetupTests(projectId bson.ObjectId, dir string) (ret []*TestRunner, err err
 
 //TestRunner is used to run tests on files compiled files.
 type TestRunner struct {
-	Info *tool.TargetInfo
+	*tool.TargetInfo
 }
 
 //Run runs a test on the current file.
 func (this *TestRunner) Run(f *project.File, srcDir string) error {
-	ju := junit.NewJUnit(srcDir+":"+this.Info.Dir, this.Info.Dir)
-	if _, ok := f.Results[this.Info.Name]; ok {
+	ju := junit.NewJUnit(srcDir+":"+this.Dir, this.Dir)
+	if _, ok := f.Results[this.Name]; ok {
 		return nil
 	}
-	res, err := ju.Run(f.Id, this.Info)
+	res, err := ju.Run(f.Id, this.TargetInfo)
 	if err != nil {
 		return err
 	}

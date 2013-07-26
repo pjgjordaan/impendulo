@@ -52,7 +52,7 @@ func None() interface{}{
 }	
 
 
-const MAX_PROCS = 20
+const MAX_PROCS = 10
 
 //Serve spawns new processing routines for each submission started.
 //Added files are received here and then sent to the relevant submission goroutine.
@@ -169,10 +169,11 @@ outer:
 			file, err := db.GetFile(bson.M{project.ID: fId}, nil)
 			if err != nil {
 				util.Log(err)
-			}
-			err = this.ProcessFile(file)
-			if err != nil {
-				util.Log(err)
+			} else{
+				err = this.ProcessFile(file)
+				if err != nil {
+					util.Log(err)
+				}
 			}
 			fileChan <- fId
 		case <- doneChan:
@@ -197,22 +198,17 @@ func (this *Processor) SetupJPF() error {
 }
 
 //ProcessFile processes a file according to its type.
-func (this *Processor) ProcessFile(file *project.File) error {
+	func (this *Processor) ProcessFile(file *project.File)(err error) {
+	util.Log("Processing file:", file)
 	switch file.Type {
 	case project.ARCHIVE:
-		err := this.extract(file)
-		if err != nil {
-			return err
-		}
-		db.RemoveFileByID(file.Id)
+		err = this.extract(file)
 	case project.SRC:
 		analyser := &Analyser{proc: this, file: file}
-		err := analyser.Eval()
-		if err != nil {
-			return err
-		}
+		err = analyser.Eval()
 	}
-	return nil
+	util.Log("Processed file:", file, err)
+	return
 }
 
 //ProcessArchive extracts files from an archive and processes them.
@@ -224,23 +220,36 @@ func (this *Processor) extract(archive *project.File) error {
 	for name, data := range files {
 		file, err := project.ParseName(name)
 		if err != nil {
-			return err
+			util.Log(err)
+			continue
 		}
 		matcher := bson.M{project.SUBID: archive.SubId, project.NUM: file.Num}
-		foundFile, err := db.GetFile(matcher, nil)
-		if err != nil {
+		if !db.Contains(db.FILES, matcher) {
 			file.SubId = archive.SubId
 			file.Data = data
 			err = db.AddFile(file)
 			if err != nil {
-				return err
+				util.Log(err)
 			}
-		} else {
-			file = foundFile
+		} 
+	}
+	err = db.RemoveFileByID(archive.Id)
+	if err != nil {
+		return err
+	}
+	fIds, err := db.GetFiles(bson.M{project.SUBID: archive.SubId}, bson.M{project.NUM: 1,project.ID:1}, project.NUM) 
+	if err != nil {
+		return err
+	}
+	for _, fId := range fIds{
+		file, err := db.GetFile(bson.M{project.ID: fId.Id}, nil)
+		if err != nil {
+			util.Log(err)
+			continue
 		}
 		err = this.ProcessFile(file)
 		if err != nil {
-			return err
+			util.Log(err)
 		}
 	}
 	return nil

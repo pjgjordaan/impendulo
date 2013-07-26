@@ -34,6 +34,12 @@ func doArchive(req *http.Request, ctx *Context) (msg string, err error) {
 		msg = err.Error()
 		return
 	}
+	userName := req.FormValue("user")
+	if !db.Contains(db.USERS, bson.M{user.ID: userName}) {
+		err = fmt.Errorf("User %q not found.", userName)
+		msg = err.Error()
+		return
+	}
 	archiveFile, archiveHeader, err := req.FormFile("archive")
 	if err != nil {
 		msg = fmt.Sprintf("Error loading archive file.")
@@ -44,12 +50,7 @@ func doArchive(req *http.Request, ctx *Context) (msg string, err error) {
 		msg = fmt.Sprintf("Error reading archive file %q.", archiveHeader.Filename)
 		return
 	}
-	username, err := ctx.Username()
-	if err != nil {
-		msg = err.Error()
-		return
-	}
-	sub := project.NewSubmission(projectId, username, project.ARCHIVE_MODE, util.CurMilis())
+	sub := project.NewSubmission(projectId, userName, project.ARCHIVE_MODE, util.CurMilis())
 	err = db.AddSubmission(sub)
 	if err != nil {
 		msg = fmt.Sprintf("Could not create submission.")

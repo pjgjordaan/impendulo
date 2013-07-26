@@ -6,6 +6,8 @@ import (
 	"io"
 	"labix.org/v2/mgo/bson"
 	"os/exec"
+	"time"
+	"errors"
 )
 
 type Tool interface {
@@ -15,25 +17,40 @@ type Tool interface {
 }
 
 func RunCommand(args []string, stdin io.Reader) (stdout, stderr []byte, err error) {
-	outBuff, errBuff, err := runCommand(args, stdin)
-	stdout, stderr = outBuff.Bytes(), errBuff.Bytes()
+	res := runCommand(args, stdin)
+	stdout, stderr, err = res.stdout.Bytes(), res.stderr.Bytes(), res.err
 	return
 }
 
-func runCommand(args []string, stdin io.Reader) (stdout, stderr bytes.Buffer, err error) {
+type execResult struct{
+	stdout, stderr bytes.Buffer
+	err error
+}
+
+func runCommand(args []string, stdin io.Reader) (res *execResult) {
+	res = new(execResult)
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdin = stdin
-	cmd.Stdout, cmd.Stderr = &stdout, &stderr
-	err = cmd.Start()
+	cmd.Stdout, cmd.Stderr = &res.stdout, &res.stderr
+	err := cmd.Start()
 	if err != nil {
-		err = &StartError{args, err}
+		res.err = &StartError{args, err}
 		return
 	}
-	err = cmd.Wait()
-	if err != nil {
-		err = &EndError{args,err}
+	doneChan := make(chan error)
+	go func(){doneChan <- cmd.Wait()}() 
+	select {
+	case err := <-doneChan:
+		if err != nil {
+			res.err = &EndError{args,err}
+		}
+	case <-time.After(2 * time.Minute):
+		cmd.Process.Kill()
+		res.stdout.WriteString("\nCommand timed out.")
+		res.stderr.WriteString("\nCommand timed out.")
+		res.err = &EndError{args,errors.New("Command timed out.")}
 	}
-	return
+	return	
 }
 
 type StartError struct{

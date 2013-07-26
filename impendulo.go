@@ -22,6 +22,7 @@ func init() {
 
 func main() {
 	flag.Parse()
+	util.SetConsoleLogging(true)
 	err := config.LoadConfigs(ConfigFile)
 	if err != nil {
 		panic(err)
