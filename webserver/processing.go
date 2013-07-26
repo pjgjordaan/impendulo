@@ -263,6 +263,15 @@ func retrieveNames(req *http.Request, ctx *Context) (ret []string, msg string, e
 	if err != nil {
 		msg = fmt.Sprintf("Could not retrieve filenames for submission.")
 	}
+	if ctx.Browse.IsUser {
+		var sub *project.Submission
+		sub, err = db.GetSubmission(bson.M{project.ID: subId}, bson.M{project.PROJECT_ID: 1})
+		if err != nil {
+			msg = fmt.Sprintf("Could not retrieve project.")
+		} else{
+			ctx.Browse.Pid = sub.ProjectId.Hex()
+		}
+	}
 	return
 }
 
