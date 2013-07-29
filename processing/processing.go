@@ -18,32 +18,31 @@ import (
 	"fmt"
 )
 
-var subChan chan bson.ObjectId
-var fileChan chan *ids
+var idChan chan *ids
 
 func init() {
-	subChan = make(chan bson.ObjectId)
-	fileChan = make(chan *ids)
+	idChan = make(chan *ids)
 }
 
 
 type ids struct {
 	fileId bson.ObjectId
 	subId bson.ObjectId
+	isFile bool
 }
 
 //AddFile sends a file id to be processed.
 func AddFile(file *project.File) {
-	fileChan <- &ids{file.Id, file.SubId}
+	idChan <- &ids{file.Id, file.SubId, true}
 }
 
 //EndSubmission stops this submission's goroutine to.
 func StartSubmission(subId bson.ObjectId) {
-	subChan <- subId
+	idChan <- &ids{subId: subId, isFile: false}
 }
 
 func EndSubmission(subId bson.ObjectId) {
-	subChan <- subId
+	idChan <- &ids{subId: subId, isFile: false}
 }
 
 func None() interface{}{
@@ -59,29 +58,36 @@ const MAX_PROCS = 10
 //Incomplete submissions are read from disk and reprocessed via ProcessStored.
 func Serve() {
 	helpers := make(map[bson.ObjectId]*ProcHelper)
-	subs := list.New()
+	fileQueue := make(map[bson.ObjectId]*list.List)
+	subQueue := list.New()
 	busy := 0
 	for {
-		if busy <  MAX_PROCS && subs.Len() > 0{
-			subId := subs.Remove(subs.Front()).(bson.ObjectId)
+		if busy <  MAX_PROCS && subQueue.Len() > 0{
+			subId := subQueue.Remove(subQueue.Front()).(bson.ObjectId)
 			helpers[subId] = NewProcHelper(subId)
-			go helpers[subId].Handle()
+			go helpers[subId].Handle(fileQueue[subId])
 			busy ++
+			delete(fileQueue, subId)
 		} else if busy < 0{
 			break
 		}
 		select{
-		case subId := <-subChan:
-			if helper, ok := helpers[subId]; ok{
-				helper.doneChan <- None()
+		case ids := <-idChan:
+			if ids.isFile{
+				if helper, ok := helpers[ids.subId]; ok{
+					helper.serveChan <- ids.fileId
+				} else if queue, ok := fileQueue[ids.subId]; ok{
+					queue.PushBack(ids.fileId)
+				} else{
+					util.Log(fmt.Errorf("No submission %q found for file %q.", ids.subId, ids.fileId))
+				} 
 			} else{
-				subs.PushBack(subId)
-			}
-		case ids := <- fileChan:
-			if helper, ok := helpers[ids.subId]; ok{
-				helper.serveChan <- ids.fileId
-			} else{
-				util.Log(fmt.Errorf("No submission %q found for file %q", ids.subId, ids.fileId))
+				if helper, ok := helpers[ids.subId]; ok{
+					helper.doneChan <- None()
+				} else{
+					subQueue.PushBack(ids.subId)
+					fileQueue[ids.subId] = list.New()
+				}
 			}
 		}
 	}
@@ -97,7 +103,7 @@ type ProcHelper struct{
 	doneChan chan interface{}
 }
 
-func (this *ProcHelper) Handle(){
+func (this *ProcHelper) Handle(files *list.List){
 	procChan := make(chan bson.ObjectId)
 	stopChan := make(chan interface{})
 	proc, err := NewProcessor(this.subId)
@@ -105,7 +111,6 @@ func (this *ProcHelper) Handle(){
 		util.Log(err)
 	}
 	go proc.Process(procChan, stopChan)
-	files := list.New()
 	busy, done := false, false
 	for{
 		if !busy{

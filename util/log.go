@@ -31,8 +31,11 @@ func init() {
 	}
 }
 
-func SetConsoleLogging(enable bool){
+func SetErrorConsoleLogging(enable bool){
 	errLogger.console = enable
+}
+
+func SetInfoConsoleLoggin(enable bool){
 	infoLogger.console = enable
 }
 
