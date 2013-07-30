@@ -261,7 +261,7 @@ func (this *Processor) extract(archive *project.File) error {
 			}
 		}
 	}
-	err = db.RemoveFileByID(archive.Id)
+	err = db.RemoveFileById(archive.Id)
 	if err != nil {
 		return err
 	}

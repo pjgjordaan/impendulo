@@ -30,6 +30,7 @@ type BrowseData struct {
 	Uid    string
 	Sid    string
 	Result string
+	View string
 }
 
 func (ctx *Context) Close() {
@@ -43,6 +44,10 @@ func (ctx *Context) save() {
 func (ctx *Context) Save(req *http.Request, buff *HttpBuffer) error {
 	ctx.save()
 	return ctx.Session.Save(req, buff)
+}
+
+func (ctx *Context) IsView(name string) bool {
+	return ctx.Browse.View == name
 }
 
 func (ctx *Context) LoggedIn() bool {

@@ -5,8 +5,8 @@
       <div class="container">
 	<a class="brand" >Impendulo</a>
 	<ul class="nav">
-	  <li {{ if .h }} class="active" {{ end }}><a href="homeview">Home</a></li>
-	  <li {{ if .s }} class="dropdown active" {{else}} class="dropdown" {{end}}>
+	  <li {{ if (.ctx.IsView "home") }} class="active" {{ end }}><a href="homeview">Home</a></li>
+	  <li {{ if (.ctx.IsView "submit") }} class="dropdown active" {{else}} class="dropdown" {{end}}>
             <a href="#" class="dropdown-toggle" data-toggle="dropdown">Submit<b class="caret"></b></a>
             <ul class="dropdown-menu">
               <li><a href="projectview">Project</a></li>
@@ -16,10 +16,17 @@
 	      <li><a href="archiveview">Intlola Archive</a></li>
 	    </ul>
           </li>
-	  <li {{ if .d }} class="dropdown active" {{else}} class="dropdown" {{end}}>
+	  <li {{ if (.ctx.IsView "download") }} class="dropdown active" {{else}} class="dropdown" {{end}}>
             <a href="#" class="dropdown-toggle" data-toggle="dropdown">Download<b class="caret"></b></a>
             <ul class="dropdown-menu">
               <li><a href="projectdownloadview">Project Skeleton</a></li>
+	    </ul>
+          </li>
+	  <li {{ if (.ctx.IsView "delete") }} class="dropdown active" {{else}} class="dropdown" {{end}}>
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Delete<b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="projectdeleteview">Projects</a></li>
+	      <li><a href="userdeleteview">Users</a></li>
 	    </ul>
           </li>
 	</ul>

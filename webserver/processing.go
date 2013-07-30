@@ -87,7 +87,7 @@ func doSkeleton(req *http.Request, ctx *Context) (msg string, err error) {
 	}
 	err = db.Update(db.PROJECTS, bson.M{project.ID: projectId}, bson.M{"$set": bson.M{project.SKELETON: skeletonBytes}})
 	if err != nil {
-		msg = fmt.Sprintf("Error reading updating project with skeleton %q.", skeletonHeader.Filename)
+		msg = fmt.Sprintf("Error updating project with skeleton %q.", skeletonHeader.Filename)
 	}
 	msg = fmt.Sprintf("Successfully added skeleton %q.", skeletonHeader.Filename)
 	return
@@ -247,6 +247,30 @@ func doRegister(req *http.Request, ctx *Context) (msg string, err error) {
 	}
 	ctx.AddUser(uname)
 	msg = fmt.Sprintf("Successfully registered as %q.", uname)
+	return
+}
+
+func doDeleteProject(req *http.Request, ctx *Context) (msg string, err error) {
+	projectId, err := ReadId(req.FormValue("project"))
+	if err != nil {
+		msg = err.Error()
+		return
+	}
+	err = db.RemoveProjectById(projectId)
+	if err != nil {
+		msg = "Error deleting project."
+	}
+	msg = "Successfully deleted project."
+	return
+}
+
+func doDeleteUser(req *http.Request, ctx *Context) (msg string, err error) {
+	uname := req.FormValue("user")
+	err = db.RemoveUserById(uname)
+	if err != nil {
+		msg = "Error deleting user."
+	}
+	msg = "Successfully deleted user."
 	return
 }
 

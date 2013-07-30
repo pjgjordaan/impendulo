@@ -146,3 +146,17 @@ func GetResultNames(projectId bson.ObjectId) (ret []string, err error) {
 	ret = append(ret, []string{tool.CODE, checkstyle.NAME, findbugs.NAME, javac.NAME, jpf.NAME, pmd.NAME}...)
 	return
 }
+
+func RemoveResultById(id interface{}) (err error) {
+	session, err := getSession()
+	if err != nil {
+		return
+	}
+	defer session.Close()
+	c := session.DB("").C(RESULTS)
+	err = c.RemoveId(id)
+	if err != nil {
+		err = &DBRemoveError{"result", err, id}
+	}
+	return
+}

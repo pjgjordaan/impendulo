@@ -237,7 +237,17 @@ func AddProject(p *project.Project) (err error) {
 }
 
 //RemoveFileById removes a file matching the given id from the active database.
-func RemoveFileByID(id interface{}) (err error) {
+func RemoveFileById(id interface{}) (err error) {
+	file, err := GetFile(bson.M{project.ID: id}, bson.M{project.RESULTS: 1})
+	if err != nil {
+		return
+	}
+	for _, resId := range file.Results{
+		err = RemoveResultById(resId)
+		if err != nil {
+			return
+		}
+	}
 	session, err := getSession()
 	if err != nil {
 		return
@@ -247,6 +257,96 @@ func RemoveFileByID(id interface{}) (err error) {
 	err = c.RemoveId(id)
 	if err != nil {
 		err = &DBRemoveError{"file", err, id}
+	}
+	return
+}
+
+func RemoveSubmissionById(id interface{}) (err error) {
+	files, err := GetFiles(bson.M{project.SUBID: id}, bson.M{project.ID: 1}, "") 
+	if err != nil {
+		return
+	}
+	for _, file := range files{
+		err = RemoveFileById(file.Id)
+		if err != nil {
+			return
+		}
+	} 
+	session, err := getSession()
+	if err != nil {
+		return
+	}
+	defer session.Close()	
+	c := session.DB("").C(SUBMISSIONS)
+	err = c.RemoveId(id)
+	if err != nil {
+		err = &DBRemoveError{"submission", err, id}
+	}
+	return
+}
+
+func RemoveJPFById(id interface{}) (err error) {
+	session, err := getSession()
+	if err != nil {
+		return
+	}
+	defer session.Close()	
+	c := session.DB("").C(JPF)
+	err = c.RemoveId(id)
+	if err != nil {
+		err = &DBRemoveError{"jpf", err, id}
+	}
+	return
+}
+
+func RemoveTestById(id interface{}) (err error) {
+	session, err := getSession()
+	if err != nil {
+		return
+	}
+	defer session.Close()	
+	c := session.DB("").C(TESTS)
+	err = c.RemoveId(id)
+	if err != nil {
+		err = &DBRemoveError{"test", err, id}
+	}
+	return
+}
+
+func RemoveProjectById(id interface{}) (err error) {
+	subs, err := GetSubmissions(bson.M{project.PROJECT_ID: id}, bson.M{project.ID: 1}) 
+	if err != nil {
+		return
+	}
+	for _, sub := range subs{
+		err = RemoveSubmissionById(sub.Id)
+		if err != nil {
+			return
+		}
+	}
+	tests, err := GetTests(bson.M{project.PROJECT_ID: id}, bson.M{project.ID: 1}) 
+	if err != nil {
+		return
+	}
+	for _, test := range tests{
+		err = RemoveTestById(test.Id)
+		if err != nil {
+			return
+		}
+	} 
+	jpfConfig, err := GetJPF(bson.M{project.PROJECT_ID: id}, bson.M{project.ID: 1}) 
+	if err == nil {
+		RemoveJPFById(jpfConfig.Id)
+	}
+	session, err := getSession()
+	if err != nil {
+		return
+	}
+	defer session.Close()
+	c := session.DB("").C(PROJECTS)
+	err = c.RemoveId(id)
+	if err != nil {
+		err = &DBRemoveError{"project", err, id}
 	}
 	return
 }

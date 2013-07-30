@@ -1,0 +1,20 @@
+{{ define "view" }}
+<h3>Delete Projects</h3>
+<form class="form-horizontal" action="deleteproject" method="post">
+  <div class="control-group">
+    <label class="control-label" for="project">Project</label>
+    <div class="controls">
+      <select name="project" id="project">
+	{{ range .ctx.Projects}}
+	<option value={{.Id.Hex}}>{{.Name}}</option>
+	{{end}}
+      </select>
+    </div>
+  </div>
+  <div class="control-group">
+    <div class="controls">
+      <button type="submit" class="btn btn-inverse">Submit</button>
+    </div>
+  </div>
+</form>
+{{ end }}

@@ -41,44 +41,65 @@ func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func homeView(w http.ResponseWriter, req *http.Request, ctx *Context) (err error) {
-	return T(getNav(ctx), "homeView").Execute(w, map[string]interface{}{"ctx": ctx, "h": true})
+	ctx.Browse.View = "home"
+	return T(getNav(ctx), "homeView").Execute(w, map[string]interface{}{"ctx": ctx})
 }
 
 func projectView(w http.ResponseWriter, req *http.Request, ctx *Context) (err error) {
 	langs := []string{"Java"}
-	return T(getNav(ctx), "projectView").Execute(w, map[string]interface{}{"ctx": ctx, "s": true, "langs": langs})
+	ctx.Browse.View = "submit"
+	return T(getNav(ctx), "projectView").Execute(w, map[string]interface{}{"ctx": ctx, "langs": langs})
 }
 
 func testView(w http.ResponseWriter, req *http.Request, ctx *Context) (err error) {
-	return T(getNav(ctx), "testView").Execute(w, map[string]interface{}{"ctx": ctx, "s": true})
+	ctx.Browse.View = "submit"
+	return T(getNav(ctx), "testView").Execute(w, map[string]interface{}{"ctx": ctx})
 }
 
 func skeletonView(w http.ResponseWriter, req *http.Request, ctx *Context) (err error) {
-	return T(getNav(ctx), "skeletonView").Execute(w, map[string]interface{}{"ctx": ctx, "s": true})
+	ctx.Browse.View = "submit"
+	return T(getNav(ctx), "skeletonView").Execute(w, map[string]interface{}{"ctx": ctx})
 }
 
 func jpfFileView(w http.ResponseWriter, req *http.Request, ctx *Context) (err error) {
-	return T(getNav(ctx), "jpfFileView").Execute(w, map[string]interface{}{"ctx": ctx, "s": true})
+	ctx.Browse.View = "submit"
+	return T(getNav(ctx), "jpfFileView").Execute(w, map[string]interface{}{"ctx": ctx})
 }
 
 func jpfConfigView(w http.ResponseWriter, req *http.Request, ctx *Context) (err error) {
-	return T(getNav(ctx), "jpfConfigView").Execute(w, map[string]interface{}{"ctx": ctx, "s": true})
+	ctx.Browse.View = "submit"
+	return T(getNav(ctx), "jpfConfigView").Execute(w, map[string]interface{}{"ctx": ctx})
 }
 
 func archiveView(w http.ResponseWriter, req *http.Request, ctx *Context) (err error) {
-	return T(getNav(ctx), "archiveView").Execute(w, map[string]interface{}{"ctx": ctx, "s": true})
+	ctx.Browse.View = "submit"
+	return T(getNav(ctx), "archiveView").Execute(w, map[string]interface{}{"ctx": ctx})
 }
 
 func registerView(w http.ResponseWriter, req *http.Request, ctx *Context) (err error) {
-	return T(getNav(ctx), "registerView").Execute(w, map[string]interface{}{"ctx": ctx, "r": true})
+	ctx.Browse.View = "register"
+	return T(getNav(ctx), "registerView").Execute(w, map[string]interface{}{"ctx": ctx})
 }
 
 func projectDownloadView(w http.ResponseWriter, req *http.Request, ctx *Context) (err error) {
-	return T(getNav(ctx), "projectDownloadView").Execute(w, map[string]interface{}{"ctx": ctx, "p": true})
+	ctx.Browse.View = "download"
+	return T(getNav(ctx), "projectDownloadView").Execute(w, map[string]interface{}{"ctx": ctx})
+}
+
+
+func projectDeleteView(w http.ResponseWriter, req *http.Request, ctx *Context) (err error) {
+	ctx.Browse.View = "delete"
+	return T(getNav(ctx), "projectDeleteView").Execute(w, map[string]interface{}{"ctx": ctx})
+}
+
+func userDeleteView(w http.ResponseWriter, req *http.Request, ctx *Context) (err error) {
+	ctx.Browse.View = "delete"
+	return T(getNav(ctx), "userDeleteView").Execute(w, map[string]interface{}{"ctx": ctx})
 }
 
 func getUsers(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	return T(getNav(ctx), "userResult").Execute(w, map[string]interface{}{"ctx": ctx, "h": true})
+	ctx.Browse.View = "home"
+	return T(getNav(ctx), "userResult").Execute(w, map[string]interface{}{"ctx": ctx})
 }
 
 func downloadProject(w http.ResponseWriter, req *http.Request, ctx *Context) error {
@@ -93,7 +114,8 @@ func downloadProject(w http.ResponseWriter, req *http.Request, ctx *Context) err
 }
 
 func getProjects(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	return T(getNav(ctx), "projectResult").Execute(w, map[string]interface{}{"ctx": ctx, "h": true})
+	ctx.Browse.View = "home"
+	return T(getNav(ctx), "projectResult").Execute(w, map[string]interface{}{"ctx": ctx})
 }
 
 func getSubmissions(w http.ResponseWriter, req *http.Request, ctx *Context) error {
@@ -109,7 +131,8 @@ func getSubmissions(w http.ResponseWriter, req *http.Request, ctx *Context) erro
 	} else {
 		temp = "projectSubmissionResult"
 	}
-	return T(getNav(ctx), temp).Execute(w, map[string]interface{}{"ctx": ctx, "h": true, "subRes": subs})
+	ctx.Browse.View = "home"
+	return T(getNav(ctx), temp).Execute(w, map[string]interface{}{"ctx": ctx, "subRes": subs})
 }
 
 func getFiles(w http.ResponseWriter, req *http.Request, ctx *Context) error {
@@ -119,7 +142,8 @@ func getFiles(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 		return err
 	}
-	return T(getNav(ctx), "fileResult").Execute(w, map[string]interface{}{"ctx": ctx, "h": true, "names": names})
+	ctx.Browse.View = "home"
+	return T(getNav(ctx), "fileResult").Execute(w, map[string]interface{}{"ctx": ctx, "names": names})
 }
 
 func displayResult(w http.ResponseWriter, req *http.Request, ctx *Context) error {
@@ -161,7 +185,8 @@ func displayResult(w http.ResponseWriter, req *http.Request, ctx *Context) error
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 		return err
 	}
-	args := map[string]interface{}{"ctx": ctx, "h": true, "files": files, "selected": selected, "resultName": res.GetName(), "curFile": curFile, "curResult": curResult, "results": results}
+	ctx.Browse.View = "home"
+	args := map[string]interface{}{"ctx": ctx, "files": files, "selected": selected, "resultName": res.GetName(), "curFile": curFile, "curResult": curResult, "results": results}
 	neighbour, _, err := getNeighbour(req, len(files)-1)
 	if err != nil {
 		return T(getNav(ctx), "singleResult", "fileInfo", curTemp).Execute(w, args)
@@ -234,5 +259,17 @@ func changeSkeleton(w http.ResponseWriter, req *http.Request, ctx *Context) erro
 func submitArchive(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	err := processor(doArchive).exec(req, ctx)
 	http.Redirect(w, req, reverse("archiveview"), http.StatusSeeOther)
+	return err
+}
+
+func deleteProject(w http.ResponseWriter, req *http.Request, ctx *Context) error {
+	err := processor(doDeleteProject).exec(req, ctx)
+	http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+	return err
+}
+
+func deleteUser(w http.ResponseWriter, req *http.Request, ctx *Context) error {
+	err := processor(doDeleteUser).exec(req, ctx)
+	http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 	return err
 }

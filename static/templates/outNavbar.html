@@ -4,8 +4,8 @@
       <div class="navbar-inner" style="height: auto;">
 	<a class="brand" >Impendulo</a>
 	<ul class="nav">
-	  <li {{ if .h }} class="active" {{ end }}><a href="homeview">Home</a></li>
-	  <li {{ if .r }} class="active" {{ end }}><a href="registerview">Register</a></li>
+	  <li {{ if (.ctx.IsView "home") }} class="active" {{ end }}><a href="homeview">Home</a></li>
+	  <li {{ if (.ctx.IsView "register")  }} class="active" {{ end }}><a href="registerview">Register</a></li>
 	</ul>
 	<form class="navbar-form pull-right" action="login" method="POST">
           <input class="span2" type="text" placeholder="Username" name="username">
