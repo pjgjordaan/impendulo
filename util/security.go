@@ -3,20 +3,20 @@ package util
 import (
 	"code.google.com/p/gorilla/securecookie"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha1"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"io"
 	"io/ioutil"
-	"path/filepath"
 	"os"
-	"crypto/rsa"
+	"path/filepath"
 	"time"
-	"crypto/x509"
-//	"net"
+	//	"net"
 	"crypto/x509/pkix"
-	"math/big"
 	"encoding/pem"
+	"math/big"
 )
 
 var authName string = "authentication.key"
@@ -69,7 +69,7 @@ func GenString(size int) string {
 	return string(d)
 }
 
-func GenCertificate(certName, keyName string)(err error){
+func GenCertificate(certName, keyName string) (err error) {
 	priv, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
 		return
@@ -87,18 +87,18 @@ func GenCertificate(certName, keyName string)(err error){
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
-		IsCA : true,
-		SubjectKeyId:	[]byte{1, 2, 3, 4},
-		Version: 2,
-	}/*
-	hosts := []string{"0."}
-	for _, h := range hosts {
-		if ip := net.ParseIP(h); ip != nil {
-			template.IPAddresses = append(template.IPAddresses, ip)
-		} else {
-			template.DNSNames = append(template.DNSNames, h)
-		}
-	}*/
+		IsCA:         true,
+		SubjectKeyId: []byte{1, 2, 3, 4},
+		Version:      2,
+	} /*
+		hosts := []string{"0."}
+		for _, h := range hosts {
+			if ip := net.ParseIP(h); ip != nil {
+				template.IPAddresses = append(template.IPAddresses, ip)
+			} else {
+				template.DNSNames = append(template.DNSNames, h)
+			}
+		}*/
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
 	if err != nil {
 		return

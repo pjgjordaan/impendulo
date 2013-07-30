@@ -29,7 +29,7 @@ func Diff2HTML(diff string) (ret template.HTML, err error) {
 	execRes := tool.RunCommand(args, strings.NewReader(diff))
 	if execRes.HasStdErr() {
 		err = fmt.Errorf("Could not generate html: %q", string(execRes.StdErr))
-	} else if execRes.Err != nil{
+	} else if execRes.Err != nil {
 		err = execRes.Err
 	}
 	ret = template.HTML(string(execRes.StdOut))

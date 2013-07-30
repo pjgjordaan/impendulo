@@ -32,7 +32,7 @@ func (this *Checkstyle) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool
 		res, err = NewResult(fileId, execRes.StdOut)
 	} else if execRes.HasStdErr() {
 		err = fmt.Errorf("Could not run checkstyle: %q.", string(execRes.StdErr))
-	} else{
+	} else {
 		err = execRes.Err
 	}
 	return

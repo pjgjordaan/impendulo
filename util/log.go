@@ -31,18 +31,18 @@ func init() {
 	}
 }
 
-func SetErrorConsoleLogging(enable bool){
+func SetErrorConsoleLogging(enable bool) {
 	errLogger.console = enable
 }
 
-func SetInfoConsoleLogging(enable bool){
+func SetInfoConsoleLogging(enable bool) {
 	infoLogger.console = enable
 }
 
 //SyncLogger allows for concurrent logging.
 type SyncLogger struct {
-	logger *log.Logger
-	lock   *sync.Mutex
+	logger  *log.Logger
+	lock    *sync.Mutex
 	console bool
 }
 
@@ -50,7 +50,7 @@ type SyncLogger struct {
 func (this SyncLogger) Log(vals ...interface{}) {
 	this.lock.Lock()
 	this.logger.Print(vals)
-	if this.console{
+	if this.console {
 		fmt.Println(vals)
 	}
 	this.lock.Unlock()

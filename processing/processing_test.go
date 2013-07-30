@@ -2,19 +2,19 @@ package processing
 
 import (
 	"bytes"
-	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/javac"
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"math/rand"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
-	"reflect"
 )
 
 func TestAddResult(t *testing.T) {
@@ -123,23 +123,23 @@ func TestEval(t *testing.T) {
 	}
 }
 
-func TestArchive(t *testing.T){
+func TestArchive(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
 	file, err := os.Open("testArchive.zip")
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	bytes := util.ReadBytes(file)
 	p := project.NewProject("Test", "user", "java", []byte{})
 	err = db.AddProject(p)
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	n := 50
 	subs := make([]*project.Submission, n)
 	archives := make([]*project.File, n)
-	for i, _ := range subs{
+	for i, _ := range subs {
 		sub := project.NewSubmission(p.Id, "user", project.ARCHIVE_MODE, util.CurMilis())
 		archive := project.NewArchive(sub.Id, bytes, project.ZIP)
 		err = db.AddSubmission(sub)
@@ -153,8 +153,8 @@ func TestArchive(t *testing.T){
 		subs[i] = sub
 		archives[i] = archive
 	}
-	go func(){
-		for _, sub := range subs{
+	go func() {
+		for _, sub := range subs {
 			DoSubmission(sub.Id)
 		}
 		Stop()

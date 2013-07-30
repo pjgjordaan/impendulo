@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/checkstyle"
@@ -9,9 +10,8 @@ import (
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/tool/pmd"
-	"strings"
-	"fmt"
 	"labix.org/v2/mgo/bson"
+	"strings"
 )
 
 func GetCheckstyleResult(matcher, selector interface{}) (ret *checkstyle.CheckstyleResult, err error) {
@@ -99,7 +99,7 @@ func GetJavacResult(matcher, selector interface{}) (ret *javac.JavacResult, err 
 }
 
 func GetResult(name string, matcher, selector interface{}) (ret tool.Result, err error) {
-	switch name{
+	switch name {
 	case javac.NAME:
 		ret, err = GetJavacResult(matcher, selector)
 	case jpf.NAME:
@@ -112,7 +112,7 @@ func GetResult(name string, matcher, selector interface{}) (ret tool.Result, err
 		ret, err = GetCheckstyleResult(matcher, selector)
 	default:
 		ret, err = GetJUnitResult(matcher, selector)
-		if err != nil{
+		if err != nil {
 			err = fmt.Errorf("Unknown result %q.", name)
 		}
 	}
@@ -135,14 +135,14 @@ func AddResult(r tool.Result) (err error) {
 }
 
 func GetResultNames(projectId bson.ObjectId) (ret []string, err error) {
-	tests, err := GetTests(bson.M{project.PROJECT_ID: projectId}, bson.M{project.NAME:1})
-	if err != nil{
+	tests, err := GetTests(bson.M{project.PROJECT_ID: projectId}, bson.M{project.NAME: 1})
+	if err != nil {
 		return
 	}
 	ret = make([]string, len(tests))
-	for i, test := range tests{
+	for i, test := range tests {
 		ret[i] = strings.Split(test.Name, ".")[0]
 	}
-	ret = append(ret, []string{tool.CODE, checkstyle.NAME, findbugs.NAME, javac.NAME, jpf.NAME, pmd.NAME}...) 
-	return 
+	ret = append(ret, []string{tool.CODE, checkstyle.NAME, findbugs.NAME, javac.NAME, jpf.NAME, pmd.NAME}...)
+	return
 }

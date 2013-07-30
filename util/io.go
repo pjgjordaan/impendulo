@@ -117,8 +117,7 @@ func Copy(dest, src string) error {
 	return filepath.Walk(src, c.copyFile)
 }
 
-
-func Exists(path string)bool{
+func Exists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }

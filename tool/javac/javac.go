@@ -32,7 +32,7 @@ func (this *Javac) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Resu
 		err = &CompileError{ti.FullName(), string(execRes.StdErr)}
 	} else if execRes.Err != nil {
 		err = execRes.Err
-	} else{
+	} else {
 		if !execRes.HasStdOut() {
 			execRes.StdOut = []byte("Compiled successfully")
 		}

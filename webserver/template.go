@@ -25,10 +25,10 @@ var funcs = template.FuncMap{
 	"diffHeader":   diff.SetHeader,
 	"createHeader": fileHeader,
 	"sum":          sum,
-	"equal": equal,
+	"equal":        equal,
 }
 
-func equal(a, b interface{})bool{
+func equal(a, b interface{}) bool {
 	return a == b
 }
 

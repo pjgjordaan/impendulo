@@ -1,10 +1,10 @@
 package webserver
 
 import (
-	"net/http"
 	"code.google.com/p/gorilla/sessions"
-	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/util"
+	"net/http"
 )
 
 var store sessions.Store
@@ -83,14 +83,14 @@ func getUsers(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 
 func downloadProject(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	path, err := loadSkeleton(req)
-	if err == nil{
+	if err == nil {
 		http.ServeFile(w, req, path)
-	}else{
+	} else {
 		ctx.AddMessage(err.Error(), true)
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 	}
 	return err
- }
+}
 
 func getProjects(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	return T(getNav(ctx), "projectResult").Execute(w, map[string]interface{}{"ctx": ctx, "h": true})

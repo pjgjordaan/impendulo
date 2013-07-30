@@ -6,12 +6,12 @@ import (
 )
 
 type Project struct {
-	Id   bson.ObjectId "_id"
-	Name string        "name"
-	User string        "user"
-	Lang string        "lang"
-	Time int64         "time"
-	Skeleton []byte "skeleton"
+	Id       bson.ObjectId "_id"
+	Name     string        "name"
+	User     string        "user"
+	Lang     string        "lang"
+	Time     int64         "time"
+	Skeleton []byte        "skeleton"
 }
 
 func (this *Project) TypeName() string {

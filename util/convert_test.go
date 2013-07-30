@@ -14,9 +14,9 @@ func TestGetString(t *testing.T) {
 	this := "string"
 	for k, v := range testmap {
 		res, err := GetString(testmap, k)
-		if err != nil{
+		if err != nil {
 			t.Error(err)
-		} else if k == this  && res != v {
+		} else if k == this && res != v {
 			t.Error(res, "!=", v)
 		}
 	}

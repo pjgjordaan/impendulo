@@ -3,9 +3,9 @@ package webserver
 import (
 	"code.google.com/p/gorilla/pat"
 	"fmt"
+	"github.com/godfried/impendulo/util"
 	"net/http"
 	"path/filepath"
-	"github.com/godfried/impendulo/util"
 )
 
 var router *pat.Router
@@ -56,9 +56,9 @@ func reverse(name string, things ...interface{}) string {
 func RunTLS() {
 	cert := filepath.Join(util.BaseDir(), "cert.pem")
 	key := filepath.Join(util.BaseDir(), "key.pem")
-	if !util.Exists(cert) || !util.Exists(key){
+	if !util.Exists(cert) || !util.Exists(key) {
 		err := util.GenCertificate(cert, key)
-		if err != nil{
+		if err != nil {
 			util.Log(err)
 		}
 	}
@@ -67,7 +67,7 @@ func RunTLS() {
 	}
 }
 
-func Run(){
+func Run() {
 	if err := http.ListenAndServe(":8080", router); err != nil {
 		util.Log(err)
 	}

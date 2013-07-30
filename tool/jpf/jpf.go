@@ -31,7 +31,7 @@ func (this *JPF) GetName() string {
 }
 
 func (this *JPF) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Result, err error) {
-	if this.jpfPath == ""{
+	if this.jpfPath == "" {
 		err = fmt.Errorf("No jpf configuration file available.")
 		return
 	}
@@ -50,7 +50,7 @@ func (this *JPF) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Result
 		res, err = NewResult(fileId, execRes.StdOut)
 	} else if execRes.HasStdErr() {
 		err = fmt.Errorf("Could not execute jpf runner: %q.", string(execRes.StdErr))
-	} else{
+	} else {
 		err = execRes.Err
 	}
 	return

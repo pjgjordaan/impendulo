@@ -13,7 +13,7 @@ import (
 )
 
 //SubmissionSpawner is an implementation of HandlerSpawner for SubmissionHandlers.
-type SubmissionSpawner struct {}
+type SubmissionSpawner struct{}
 
 //Spawn creates a new ConnHandler of type SubmissionHandler.
 func (this *SubmissionSpawner) Spawn() ConnHandler {
@@ -24,7 +24,7 @@ func (this *SubmissionSpawner) Spawn() ConnHandler {
 type SubmissionHandler struct {
 	Conn       net.Conn
 	Submission *project.Submission
-	fileCount int
+	fileCount  int
 }
 
 //Start sets the connection, launches the Handle method and ends the session when it returns.
@@ -179,7 +179,7 @@ func (this *SubmissionHandler) Read() (err error) {
 		}
 		delete(requestInfo, REQ)
 		requestInfo[project.NUM] = this.fileCount
-		this.fileCount ++
+		this.fileCount++
 		var file *project.File
 		file, err = project.NewFile(this.Submission.Id, requestInfo, buffer)
 		if err != nil {
@@ -192,7 +192,7 @@ func (this *SubmissionHandler) Read() (err error) {
 		processing.AddFile(file)
 	} else if req == LOGOUT {
 		err = io.EOF
-	} else{
+	} else {
 		err = fmt.Errorf("Unknown request %q", req)
 	}
 	return

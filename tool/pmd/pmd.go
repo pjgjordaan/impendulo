@@ -28,11 +28,11 @@ const RULES = `java-basic,java-braces,java-clone,java-codesize,java-comments,jav
 func (this *PMD) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Result, err error) {
 	args := []string{this.cmd, config.PMD, "-f", "xml", "-stress", "-shortnames", "-rulesets", RULES, "-dir", ti.Dir}
 	execRes := tool.RunCommand(args, nil)
-	if execRes.HasStdOut(){
+	if execRes.HasStdOut() {
 		res, err = NewResult(fileId, execRes.StdOut)
 	} else if execRes.HasStdErr() {
 		err = fmt.Errorf("Could not run pmd: %q.", string(execRes.StdErr))
-	} else{
+	} else {
 		err = execRes.Err
 	}
 	return

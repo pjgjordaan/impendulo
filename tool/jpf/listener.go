@@ -48,7 +48,7 @@ func FindListeners() (found []byte, err error) {
 		err = execRes.Err
 	} else if execRes.HasStdErr() {
 		err = fmt.Errorf("Could not run listener finder: %q.", string(execRes.StdErr))
-	} 
+	}
 	found = execRes.StdOut
 	return
 }

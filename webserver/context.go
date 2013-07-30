@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/user"
 	"net/http"
 )
@@ -104,12 +104,12 @@ func (ctx *Context) Listeners() ([]*jpf.Listener, error) {
 	return ctx.listeners, err
 }
 
-func (ctx *Context) SetResult(req *http.Request){
+func (ctx *Context) SetResult(req *http.Request) {
 	name := req.FormValue("resultname")
-	if name != ""{
+	if name != "" {
 		ctx.Browse.Result = name
 	}
-	if ctx.Browse.Result == ""{
+	if ctx.Browse.Result == "" {
 		ctx.Browse.Result = tool.CODE
 	}
 }

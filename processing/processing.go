@@ -2,6 +2,7 @@ package processing
 
 import (
 	"container/list"
+	"fmt"
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
@@ -15,7 +16,6 @@ import (
 	"labix.org/v2/mgo/bson"
 	"os"
 	"path/filepath"
-	"fmt"
 )
 
 var idChan chan *ids
@@ -26,10 +26,9 @@ func init() {
 	processedChan = make(chan interface{})
 }
 
-
 type ids struct {
 	fileId bson.ObjectId
-	subId bson.ObjectId
+	subId  bson.ObjectId
 	isFile bool
 }
 
@@ -47,20 +46,18 @@ func EndSubmission(subId bson.ObjectId) {
 	idChan <- &ids{subId: subId, isFile: false}
 }
 
-
 func submissionProcessed() {
 	processedChan <- None()
 }
 
-func Shutdown(){
+func Shutdown() {
 	processedChan <- None()
 }
 
-func None() interface{}{
+func None() interface{} {
 	type e struct{}
 	return e{}
-}	
-
+}
 
 //Serve spawns new processing routines for each submission started.
 //Added files are received here and then sent to the relevant submission goroutine.
@@ -71,90 +68,90 @@ func Serve(maxProcs int) {
 	subQueue := list.New()
 	busy := 0
 	for {
-		if busy <  maxProcs && subQueue.Len() > 0{
+		if busy < maxProcs && subQueue.Len() > 0 {
 			subId := subQueue.Remove(subQueue.Front()).(bson.ObjectId)
 			fQueue := fileQueues[subId]
 			delete(fileQueues, subId)
-			busy ++
+			busy++
 			go helpers[subId].Handle(fQueue)
-		} else if busy < 0{
+		} else if busy < 0 {
 			break
 		}
-		select{
+		select {
 		case ids := <-idChan:
-			if ids.isFile{
-				if helper, ok := helpers[ids.subId]; ok{
-					if helper.started{
+			if ids.isFile {
+				if helper, ok := helpers[ids.subId]; ok {
+					if helper.started {
 						helper.serveChan <- ids.fileId
-					} else{
+					} else {
 						fileQueues[ids.subId].PushBack(ids.fileId)
 					}
-				} else{
+				} else {
 					util.Log(fmt.Errorf("No submission %q found for file %q.", ids.subId, ids.fileId))
-				} 
-			} else{
-				if helper, ok := helpers[ids.subId]; ok{
+				}
+			} else {
+				if helper, ok := helpers[ids.subId]; ok {
 					helper.SetDone()
-				} else{
+				} else {
 					subQueue.PushBack(ids.subId)
 					helpers[ids.subId] = NewProcHelper(ids.subId)
 					fileQueues[ids.subId] = list.New()
 				}
 			}
-		case <- processedChan:
-			busy --
+		case <-processedChan:
+			busy--
 		}
 	}
 }
 
-func NewProcHelper(subId bson.ObjectId) *ProcHelper{
+func NewProcHelper(subId bson.ObjectId) *ProcHelper {
 	return &ProcHelper{subId, make(chan bson.ObjectId), make(chan interface{}), false, false}
 }
 
-type ProcHelper struct{
-	subId bson.ObjectId
+type ProcHelper struct {
+	subId     bson.ObjectId
 	serveChan chan bson.ObjectId
-	doneChan chan interface{}
-	started bool
-	done bool
+	doneChan  chan interface{}
+	started   bool
+	done      bool
 }
 
-func (this *ProcHelper) SetDone(){
-	if this.started{
+func (this *ProcHelper) SetDone() {
+	if this.started {
 		this.doneChan <- None()
-	} else{
+	} else {
 		this.done = true
 	}
 }
 
-func (this *ProcHelper) Handle(fileQueue *list.List){
+func (this *ProcHelper) Handle(fileQueue *list.List) {
 	this.started = true
 	procChan := make(chan bson.ObjectId)
 	stopChan := make(chan interface{})
 	proc, err := NewProcessor(this.subId)
-	if err != nil{
+	if err != nil {
 		util.Log(err)
 	}
 	go proc.Process(procChan, stopChan)
 	busy := false
-	for{
-		if !busy{
-			if fileQueue.Len() > 0{
+	for {
+		if !busy {
+			if fileQueue.Len() > 0 {
 				fId := fileQueue.Remove(fileQueue.Front()).(bson.ObjectId)
 				procChan <- fId
 				busy = true
-			} else if this.done{
+			} else if this.done {
 				stopChan <- None()
 				submissionProcessed()
 				return
 			}
 		}
-		select{
-		case fId := <- this.serveChan:
+		select {
+		case fId := <-this.serveChan:
 			fileQueue.PushBack(fId)
-		case <- procChan:
+		case <-procChan:
 			busy = false
-		case <- this.doneChan:
+		case <-this.doneChan:
 			this.done = true
 		}
 	}
@@ -170,9 +167,9 @@ type Processor struct {
 	jpfPath string
 }
 
-func NewProcessor(subId bson.ObjectId)(proc *Processor, err error) {
-	sub, err := db.GetSubmission(bson.M{project.ID:subId}, nil)
-	if err != nil{
+func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
+	sub, err := db.GetSubmission(bson.M{project.ID: subId}, nil)
+	if err != nil {
 		return
 	}
 	dir := filepath.Join(os.TempDir(), sub.Id.Hex())
@@ -195,19 +192,19 @@ func (this *Processor) Process(fileChan chan bson.ObjectId, doneChan chan interf
 	}
 outer:
 	for {
-		select{
-		case fId := <- fileChan:
+		select {
+		case fId := <-fileChan:
 			file, err := db.GetFile(bson.M{project.ID: fId}, nil)
 			if err != nil {
 				util.Log(err)
-			} else{
+			} else {
 				err = this.ProcessFile(file)
 				if err != nil {
 					util.Log(err)
 				}
 			}
 			fileChan <- fId
-		case <- doneChan:
+		case <-doneChan:
 			break outer
 		}
 	}
@@ -229,7 +226,7 @@ func (this *Processor) SetupJPF() error {
 }
 
 //ProcessFile processes a file according to its type.
-func (this *Processor) ProcessFile(file *project.File)(err error) {
+func (this *Processor) ProcessFile(file *project.File) (err error) {
 	util.Log("Processing file:", file)
 	switch file.Type {
 	case project.ARCHIVE:
@@ -262,17 +259,17 @@ func (this *Processor) extract(archive *project.File) error {
 			if err != nil {
 				util.Log(err)
 			}
-		} 
+		}
 	}
 	err = db.RemoveFileByID(archive.Id)
 	if err != nil {
 		return err
 	}
-	fIds, err := db.GetFiles(bson.M{project.SUBID: archive.SubId}, bson.M{project.NUM: 1,project.ID:1}, project.NUM) 
+	fIds, err := db.GetFiles(bson.M{project.SUBID: archive.SubId}, bson.M{project.NUM: 1, project.ID: 1}, project.NUM)
 	if err != nil {
 		return err
 	}
-	for _, fId := range fIds{
+	for _, fId := range fIds {
 		file, err := db.GetFile(bson.M{project.ID: fId.Id}, nil)
 		if err != nil {
 			util.Log(err)
@@ -358,7 +355,7 @@ func (this *Analyser) RunTools() {
 			util.Log(err)
 			continue
 		}
-		if res != nil{
+		if res != nil {
 			err = AddResult(res)
 		}
 		if err != nil {

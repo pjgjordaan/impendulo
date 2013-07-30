@@ -1,13 +1,13 @@
 package project
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"reflect"
 	"strconv"
 	"strings"
-	"bytes"
 )
 
 //File stores a single file's data from a submission.
@@ -53,10 +53,10 @@ func (this *File) SetMod(mod string) {
 }
 
 func (this *File) Equals(that *File) bool {
-	if reflect.DeepEqual(this, that){
+	if reflect.DeepEqual(this, that) {
 		return true
 	}
-	return that != nil && this.String() == that.String() && bytes.Equal(this.Data, that.Data) 
+	return that != nil && this.String() == that.String() && bytes.Equal(this.Data, that.Data)
 }
 
 func (this *File) Same(that *File) bool {

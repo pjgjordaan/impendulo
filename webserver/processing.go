@@ -14,9 +14,9 @@ import (
 	"labix.org/v2/mgo/bson"
 	"mime/multipart"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
-	"path/filepath"
 	"time"
 )
 
@@ -92,7 +92,6 @@ func doSkeleton(req *http.Request, ctx *Context) (msg string, err error) {
 	msg = fmt.Sprintf("Successfully added skeleton %q.", skeletonHeader.Filename)
 	return
 }
-
 
 func doTest(req *http.Request, ctx *Context) (msg string, err error) {
 	projectId, err := ReadId(req.FormValue("project"))
@@ -268,7 +267,7 @@ func retrieveNames(req *http.Request, ctx *Context) (ret []string, msg string, e
 		sub, err = db.GetSubmission(bson.M{project.ID: subId}, bson.M{project.PROJECT_ID: 1})
 		if err != nil {
 			msg = fmt.Sprintf("Could not retrieve project.")
-		} else{
+		} else {
 			ctx.Browse.Pid = sub.ProjectId.Hex()
 		}
 	}
@@ -380,7 +379,6 @@ func projectName(idStr string) (name string, err error) {
 	return
 }
 
-
 func loadSkeleton(req *http.Request) (path string, err error) {
 	idStr := req.FormValue("project")
 	projectId, err := ReadId(idStr)
@@ -389,17 +387,16 @@ func loadSkeleton(req *http.Request) (path string, err error) {
 	}
 	name := strconv.FormatInt(time.Now().Unix(), 10)
 	path = filepath.Join(util.BaseDir(), "skeletons", idStr, name+".zip")
-	if util.Exists(path){
+	if util.Exists(path) {
 		return
 	}
-	p, err := db.GetProject(bson.M{project.ID:projectId}, nil)
+	p, err := db.GetProject(bson.M{project.ID: projectId}, nil)
 	if err != nil {
 		return
 	}
 	err = util.SaveFile(path, p.Skeleton)
 	return
 }
-
 
 func ReadId(idStr string) (ret bson.ObjectId, err error) {
 	if !bson.IsObjectIdHex(idStr) {

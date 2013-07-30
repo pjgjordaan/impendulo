@@ -1,16 +1,16 @@
 package db
 
 import (
+	"bytes"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/user"
 	"labix.org/v2/mgo/bson"
+	"reflect"
 	"strconv"
 	"testing"
-	"reflect"
-	"bytes"
 )
 
 func TestSetup(t *testing.T) {
@@ -95,7 +95,7 @@ func TestGetResult(t *testing.T) {
 	s := getSession()
 	defer s.Close()
 	results := []tool.Result{javac.NewResult(bson.NewObjectId(), fileData), junit.NewResult(bson.NewObjectId(), "Name", fileData)}
-	for _, res := range results{
+	for _, res := range results {
 		err := AddResult(res)
 		if err != nil {
 			t.Error(err)
@@ -109,7 +109,7 @@ func TestGetResult(t *testing.T) {
 			t.Error("Results not equivalent")
 		}
 	}
-	
+
 }
 func TestGetUserById(t *testing.T) {
 	Setup(TEST_CONN)
@@ -160,10 +160,10 @@ func TestCount(t *testing.T) {
 		t.Error(err)
 	}
 	if n != 0 {
-		t.Errorf("Invalid count %q, should be %q",n, 0)
+		t.Errorf("Invalid count %q, should be %q", n, 0)
 	}
 	for i := 0; i < num; i++ {
-		var s int = i/10
+		var s int = i / 10
 		err = AddProject(project.NewProject("name"+strconv.Itoa(s), "user", "lang"))
 		if err != nil {
 			t.Error(err)
@@ -174,14 +174,14 @@ func TestCount(t *testing.T) {
 		t.Error(err)
 	}
 	if n != num {
-		t.Errorf("Invalid count %q, should be %q",n, num)
+		t.Errorf("Invalid count %q, should be %q", n, num)
 	}
 	n, err = Count(PROJECTS, bson.M{"name": "name0"})
 	if err != nil {
 		t.Error(err)
 	}
 	if n != 10 {
-		t.Errorf("Invalid count %q, should be %q",n, 10)
+		t.Errorf("Invalid count %q, should be %q", n, 10)
 	}
 
 }

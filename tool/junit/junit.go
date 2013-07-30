@@ -1,11 +1,11 @@
 package junit
 
 import (
+	"fmt"
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/javac"
 	"labix.org/v2/mgo/bson"
-	"fmt"
 )
 
 type JUnit struct {
@@ -40,7 +40,7 @@ func (this *JUnit) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Resu
 		res = NewResult(fileId, ti.Name, execRes.StdOut)
 	} else if execRes.HasStdErr() {
 		err = fmt.Errorf("Could not run junit: %q.", string(execRes.StdErr))
-	} else{
+	} else {
 		err = execRes.Err
 	}
 	return

@@ -17,24 +17,24 @@ func TestReadBytes(t *testing.T) {
 	}
 }
 
-func TestReadData(t *testing.T){
-	tests := map[string][]byte{file1:[]byte(file1),file2+"eof":[]byte(file2), file3:[]byte(file3)}
-	for k,v := range tests{
+func TestReadData(t *testing.T) {
+	tests := map[string][]byte{file1: []byte(file1), file2 + "eof": []byte(file2), file3: []byte(file3)}
+	for k, v := range tests {
 		data, err := ReadData(strings.NewReader(k))
-		if err != nil{
+		if err != nil {
 			t.Error(err)
 		}
-		if !bytes.Equal(v, data){
+		if !bytes.Equal(v, data) {
 			t.Error(fmt.Sprintf("Expected package %q but got %q.", v, data))
 		}
 	}
 }
 
 func TestGetPackage(t *testing.T) {
-	tests := map[string]string{"package pkg.p.s;":"pkg.p.s",file1:"java.io",file2:"za.ac.sun.cs.intlola.file", file3:""}
-	for k,v := range tests{
+	tests := map[string]string{"package pkg.p.s;": "pkg.p.s", file1: "java.io", file2: "za.ac.sun.cs.intlola.file", file3: ""}
+	for k, v := range tests {
 		pkg := GetPackage(strings.NewReader(k))
-		if v != pkg{
+		if v != pkg {
 			t.Error(fmt.Sprintf("Expected package %q but got %q.", v, pkg))
 		}
 	}

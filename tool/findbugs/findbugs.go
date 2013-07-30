@@ -24,7 +24,7 @@ func (this *FindBugs) GetName() string {
 }
 
 func (this *FindBugs) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Result, err error) {
-	args :=  []string{config.GetConfig(config.JAVA), "-jar", this.cmd, "-textui", "-low", "-xml:withMessages", ti.PackagePath()}
+	args := []string{config.GetConfig(config.JAVA), "-jar", this.cmd, "-textui", "-low", "-xml:withMessages", ti.PackagePath()}
 	execRes := tool.RunCommand(args, nil)
 	if execRes.HasStdOut() {
 		res, err = NewResult(fileId, execRes.StdOut)

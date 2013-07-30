@@ -7,7 +7,7 @@ import (
 
 //TargetInfo stores information about the target file.
 type TargetInfo struct {
-	Name string
+	Name    string
 	Lang    string
 	Package string
 	Ext     string

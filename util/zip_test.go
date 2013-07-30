@@ -1,10 +1,11 @@
 package util
 
-import(
+import (
+	"bytes"
+	"errors"
 	"testing"
-"errors"
-"bytes"
 )
+
 func TestZip(t *testing.T) {
 	files := map[string][]byte{"readme.txt": []byte("This archive contains some text files."), "gopher.txt": []byte("Gopher names:\nGeorge\nGeoffrey\nGonzo"), "todo.txt": []byte("Get animal handling licence.\nWrite more examples.")}
 	zipped, err := Zip(files)

@@ -23,13 +23,13 @@ const (
 var activeSession *mgo.Session
 var dbLock *sync.Mutex
 
-func init(){
+func init() {
 	dbLock = new(sync.Mutex)
 }
 
 //Setup creates a mongodb session.
 //This must be called before using any other db functions.
-	func Setup(conn string)(err error) {
+func Setup(conn string) (err error) {
 	dbLock.Lock()
 	activeSession, err = mgo.Dial(conn)
 	dbLock.Unlock()
@@ -41,7 +41,7 @@ func getSession() (s *mgo.Session, err error) {
 	dbLock.Lock()
 	if activeSession == nil {
 		err = fmt.Errorf("Could not retrieve session.")
-	} else{
+	} else {
 		s = activeSession.Clone()
 	}
 	dbLock.Unlock()
@@ -80,7 +80,7 @@ func Update(col string, matcher, change interface{}) (err error) {
 	return
 }
 
-func Contains(col string, matcher interface{}) (bool) {
+func Contains(col string, matcher interface{}) bool {
 	n, err := Count(col, matcher)
 	return err == nil && n > 0
 }
