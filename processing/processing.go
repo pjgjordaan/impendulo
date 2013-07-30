@@ -19,9 +19,11 @@ import (
 )
 
 var idChan chan *ids
+var processedChan chan interface{}
 
 func init() {
 	idChan = make(chan *ids)
+	processedChan = make(chan interface{})
 }
 
 
@@ -45,29 +47,36 @@ func EndSubmission(subId bson.ObjectId) {
 	idChan <- &ids{subId: subId, isFile: false}
 }
 
+
+func submissionProcessed() {
+	processedChan <- None()
+}
+
+func Shutdown(){
+	processedChan <- None()
+}
+
 func None() interface{}{
 	type e struct{}
 	return e{}
 }	
 
 
-const MAX_PROCS = 10
-
 //Serve spawns new processing routines for each submission started.
 //Added files are received here and then sent to the relevant submission goroutine.
 //Incomplete submissions are read from disk and reprocessed via ProcessStored.
-func Serve() {
+func Serve(maxProcs int) {
 	helpers := make(map[bson.ObjectId]*ProcHelper)
-	fileQueue := make(map[bson.ObjectId]*list.List)
+	fileQueues := make(map[bson.ObjectId]*list.List)
 	subQueue := list.New()
 	busy := 0
 	for {
-		if busy <  MAX_PROCS && subQueue.Len() > 0{
+		if busy <  maxProcs && subQueue.Len() > 0{
 			subId := subQueue.Remove(subQueue.Front()).(bson.ObjectId)
-			helpers[subId] = NewProcHelper(subId)
-			go helpers[subId].Handle(fileQueue[subId])
+			fQueue := fileQueues[subId]
+			delete(fileQueues, subId)
 			busy ++
-			delete(fileQueue, subId)
+			go helpers[subId].Handle(fQueue)
 		} else if busy < 0{
 			break
 		}
@@ -75,35 +84,51 @@ func Serve() {
 		case ids := <-idChan:
 			if ids.isFile{
 				if helper, ok := helpers[ids.subId]; ok{
-					helper.serveChan <- ids.fileId
-				} else if queue, ok := fileQueue[ids.subId]; ok{
-					queue.PushBack(ids.fileId)
+					if helper.started{
+						helper.serveChan <- ids.fileId
+					} else{
+						fileQueues[ids.subId].PushBack(ids.fileId)
+					}
 				} else{
 					util.Log(fmt.Errorf("No submission %q found for file %q.", ids.subId, ids.fileId))
 				} 
 			} else{
 				if helper, ok := helpers[ids.subId]; ok{
-					helper.doneChan <- None()
+					helper.SetDone()
 				} else{
 					subQueue.PushBack(ids.subId)
-					fileQueue[ids.subId] = list.New()
+					helpers[ids.subId] = NewProcHelper(ids.subId)
+					fileQueues[ids.subId] = list.New()
 				}
 			}
+		case <- processedChan:
+			busy --
 		}
 	}
 }
 
 func NewProcHelper(subId bson.ObjectId) *ProcHelper{
-	return &ProcHelper{subId, make(chan bson.ObjectId), make(chan interface{})}
+	return &ProcHelper{subId, make(chan bson.ObjectId), make(chan interface{}), false, false}
 }
 
 type ProcHelper struct{
 	subId bson.ObjectId
 	serveChan chan bson.ObjectId
 	doneChan chan interface{}
+	started bool
+	done bool
 }
 
-func (this *ProcHelper) Handle(files *list.List){
+func (this *ProcHelper) SetDone(){
+	if this.started{
+		this.doneChan <- None()
+	} else{
+		this.done = true
+	}
+}
+
+func (this *ProcHelper) Handle(fileQueue *list.List){
+	this.started = true
 	procChan := make(chan bson.ObjectId)
 	stopChan := make(chan interface{})
 	proc, err := NewProcessor(this.subId)
@@ -111,25 +136,26 @@ func (this *ProcHelper) Handle(files *list.List){
 		util.Log(err)
 	}
 	go proc.Process(procChan, stopChan)
-	busy, done := false, false
+	busy := false
 	for{
 		if !busy{
-			if files.Len() > 0{
-				fId := files.Remove(files.Front()).(bson.ObjectId)
+			if fileQueue.Len() > 0{
+				fId := fileQueue.Remove(fileQueue.Front()).(bson.ObjectId)
 				procChan <- fId
 				busy = true
-			} else if done{
+			} else if this.done{
 				stopChan <- None()
+				submissionProcessed()
 				return
 			}
 		}
 		select{
 		case fId := <- this.serveChan:
-			files.PushBack(fId)
+			fileQueue.PushBack(fId)
 		case <- procChan:
 			busy = false
 		case <- this.doneChan:
-			done = true
+			this.done = true
 		}
 	}
 }
@@ -203,7 +229,7 @@ func (this *Processor) SetupJPF() error {
 }
 
 //ProcessFile processes a file according to its type.
-	func (this *Processor) ProcessFile(file *project.File)(err error) {
+func (this *Processor) ProcessFile(file *project.File)(err error) {
 	util.Log("Processing file:", file)
 	switch file.Type {
 	case project.ARCHIVE:

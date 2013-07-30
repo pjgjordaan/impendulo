@@ -8,7 +8,10 @@ import (
 
 //GetUserById retrieves a user matching the given id from the active database.
 func GetUserById(id interface{}) (ret *user.User, err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	c := session.DB("").C(USERS)
 	err = c.FindId(id).One(&ret)
@@ -20,7 +23,10 @@ func GetUserById(id interface{}) (ret *user.User, err error) {
 
 //GetUsers retrieves a user matching the given id from the active database.
 func GetUsers(matcher interface{}) (ret []*user.User, err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	c := session.DB("").C(USERS)
 	err = c.Find(matcher).Select(bson.M{user.ID: 1}).All(&ret)
@@ -32,7 +38,10 @@ func GetUsers(matcher interface{}) (ret []*user.User, err error) {
 
 //AddUser adds a new user to the active database.
 func AddUser(u *user.User) (err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	c := session.DB("").C(USERS)
 	err = c.Insert(u)
@@ -44,7 +53,10 @@ func AddUser(u *user.User) (err error) {
 
 //AddUsers adds new users to the active database.
 func AddUsers(users ...*user.User) (err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	c := session.DB("").C(USERS)
 	err = c.Insert(users)

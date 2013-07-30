@@ -35,7 +35,7 @@ func SetErrorConsoleLogging(enable bool){
 	errLogger.console = enable
 }
 
-func SetInfoConsoleLoggin(enable bool){
+func SetInfoConsoleLogging(enable bool){
 	infoLogger.console = enable
 }
 

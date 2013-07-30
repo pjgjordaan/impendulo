@@ -11,6 +11,12 @@ import (
 	"strings"
 )
 
+var timeLimit = 10 * time.Minute
+
+func SetTimeout(minutes int){
+	timeLimit = time.Duration(minutes) * time.Minute
+} 
+
 type Tool interface {
 	GetName() string
 	GetLang() string
@@ -49,7 +55,7 @@ func RunCommand(args []string, stdin io.Reader) (res *ExecResult) {
 		if err != nil {
 			res.Err = &EndError{args,err}
 		}
-	case <-time.After(2 * time.Minute):
+	case <-time.After(timeLimit):
 		cmd.Process.Kill()
 		stdout.WriteString("\nCommand timed out.")
 		stderr.WriteString("\nCommand timed out.")

@@ -9,49 +9,108 @@ import (
 	"github.com/godfried/impendulo/webserver"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/tool"
+	"fmt"
 )
 
 //Flag variables for setting ports to listen on, users file to process and the mode to run in.
-var FilePort, TestPort, UsersFile, ConfigFile string
+var Port, UsersFile, ConfigFile string
+var Web, Receiver, Processor, ConsoleErrors, ConsoleInfo bool
+var MaxProcs, Timeout int
 
 func init() {
-	flag.StringVar(&FilePort, "fp", "8010", "Specify the port to listen on for files.")
+	fmt.Sprint()
+	flag.IntVar(&Timeout, "t", 10, "Specify the time limit for a tool to run in, in minutes (default 10).")
+	flag.IntVar(&MaxProcs, "mp", 10, "Specify the maximum number of goroutines to run when processing submissions (default 10).")
+	flag.BoolVar(&ConsoleErrors, "e", false, "Specify whether to log errors to console (default false).")
+	flag.BoolVar(&ConsoleInfo, "i", false, "Specify whether to log info to console (default false).")
+	flag.BoolVar(&Web, "w", true, "Specify whether to run the webserver (default true).")
+	flag.BoolVar(&Receiver, "r", true, "Specify whether to run the Intlola file receiver (default true).")
+	flag.BoolVar(&Processor, "s", true, "Specify whether to run the Intlola file processor (default true).")	
+	flag.StringVar(&Port, "p", "8010", "Specify the port to listen on for files.")
 	flag.StringVar(&UsersFile, "u", "", "Specify a file with new users.")
 	flag.StringVar(&ConfigFile, "c", "config.txt", "Specify a configuration file.")
 }
 
 func main() {
 	flag.Parse()
-	util.SetErrorConsoleLogging(true)
+	util.SetErrorConsoleLogging(ConsoleErrors)
+	util.SetInfoConsoleLogging(ConsoleInfo)
+	tool.SetTimeout(Timeout)
 	err := config.LoadConfigs(ConfigFile)
 	if err != nil {
-		panic(err)
+		util.Log(err)
+		return
 	}
 	if UsersFile != "" {
-		err := AddUsers()
-		if err != nil {
-			util.Log(err)
-		}
+		AddUsers()
 	}
-	Run()
+	if Web{
+		RunWebServer(Receiver || Processor) 
+	}
+	if Processor{
+		RunFileProcessor(Receiver)
+	}
+	if Receiver{
+		RunFileReceiver(false)
+	}
 }
 
 //AddUsers adds users from a text file to the database.
-func AddUsers() error {
+func AddUsers() {
 	users, err := user.ReadUsers(UsersFile)
 	if err != nil {
-		return err
+		util.Log(err)
+		return
 	}
-	db.Setup(db.DEFAULT_CONN)
-	return db.AddUsers(users...)
-}
-
-//Run starts a routine for processing snapshot submissions as well as a routine for receiving project tests.
-//An instance of our tcp snapshot server is then launched.
-func Run() {
-	db.Setup(db.DEFAULT_CONN)
-	go server.Run(FilePort, new(server.SubmissionSpawner))
-	go webserver.Run()
-	processing.Serve()
+	err = db.Setup(db.DEFAULT_CONN)
+	if err != nil {
+		util.Log(err)
+		return
+	}
+	err = db.AddUsers(users...)
+	if err != nil {
+		util.Log(err)
+	}
 
 }
+
+func RunWebServer(inRoutine bool){
+	err := db.Setup(db.DEFAULT_CONN)
+	if err != nil {
+		util.Log(err)
+	} else{
+		if inRoutine{
+			go webserver.Run()
+		}else{
+			webserver.Run()
+		}
+	}
+}
+
+func RunFileReceiver(inRoutine bool){
+	err := db.Setup(db.DEFAULT_CONN)
+	if err != nil {
+		util.Log(err)
+	} else{
+		if inRoutine{
+			go server.Run(Port, new(server.SubmissionSpawner))
+		}else{
+			server.Run(Port, new(server.SubmissionSpawner))
+		}
+	}
+}
+
+func RunFileProcessor(inRoutine bool){
+	err := db.Setup(db.DEFAULT_CONN)
+	if err != nil {
+		util.Log(err)
+	} else{
+		if inRoutine{
+			go processing.Serve(MaxProcs)
+		}else{
+			processing.Serve(MaxProcs)
+		}
+	}
+}
+

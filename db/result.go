@@ -15,7 +15,10 @@ import (
 )
 
 func GetCheckstyleResult(matcher, selector interface{}) (ret *checkstyle.CheckstyleResult, err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	c := session.DB("").C(RESULTS)
 	err = c.Find(matcher).Select(selector).One(&ret)
@@ -26,7 +29,10 @@ func GetCheckstyleResult(matcher, selector interface{}) (ret *checkstyle.Checkst
 }
 
 func GetPMDResult(matcher, selector interface{}) (ret *pmd.PMDResult, err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	c := session.DB("").C(RESULTS)
 	err = c.Find(matcher).Select(selector).One(&ret)
@@ -37,7 +43,10 @@ func GetPMDResult(matcher, selector interface{}) (ret *pmd.PMDResult, err error)
 }
 
 func GetFindbugsResult(matcher, selector interface{}) (ret *findbugs.FindbugsResult, err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	c := session.DB("").C(RESULTS)
 	err = c.Find(matcher).Select(selector).One(&ret)
@@ -48,7 +57,10 @@ func GetFindbugsResult(matcher, selector interface{}) (ret *findbugs.FindbugsRes
 }
 
 func GetJPFResult(matcher, selector interface{}) (ret *jpf.JPFResult, err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	c := session.DB("").C(RESULTS)
 	err = c.Find(matcher).Select(selector).One(&ret)
@@ -59,7 +71,10 @@ func GetJPFResult(matcher, selector interface{}) (ret *jpf.JPFResult, err error)
 }
 
 func GetJUnitResult(matcher, selector interface{}) (ret *junit.JUnitResult, err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	c := session.DB("").C(RESULTS)
 	err = c.Find(matcher).Select(selector).One(&ret)
@@ -70,7 +85,10 @@ func GetJUnitResult(matcher, selector interface{}) (ret *junit.JUnitResult, err 
 }
 
 func GetJavacResult(matcher, selector interface{}) (ret *javac.JavacResult, err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	c := session.DB("").C(RESULTS)
 	err = c.Find(matcher).Select(selector).One(&ret)
@@ -103,7 +121,10 @@ func GetResult(name string, matcher, selector interface{}) (ret tool.Result, err
 
 //AddResult adds a new result to the active database.
 func AddResult(r tool.Result) (err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	col := session.DB("").C(RESULTS)
 	err = col.Insert(r)

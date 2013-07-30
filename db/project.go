@@ -7,7 +7,10 @@ import (
 
 //GetFile retrieves a file matching the given interface from the active database.
 func GetFile(matcher, selector interface{}) (ret *project.File, err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	c := session.DB("").C(FILES)
 	err = c.Find(matcher).Select(selector).One(&ret)
@@ -19,7 +22,10 @@ func GetFile(matcher, selector interface{}) (ret *project.File, err error) {
 
 //GetFiles retrieves files matching the given interface from the active database.
 func GetFiles(matcher, selector interface{}, sort string) (ret []*project.File, err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	c := session.DB("").C(FILES)
 	q := c.Find(matcher)
@@ -34,7 +40,10 @@ func GetFiles(matcher, selector interface{}, sort string) (ret []*project.File, 
 }
 
 func GetFileNames(matcher interface{}) (ret []string, err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	c := session.DB("").C(FILES)
 	err = c.Find(matcher).Distinct(project.NAME, &ret)
@@ -46,7 +55,10 @@ func GetFileNames(matcher interface{}) (ret []string, err error) {
 
 //GetSubmission retrieves a submission matching the given interface from the active database.
 func GetSubmission(matcher, selector interface{}) (ret *project.Submission, err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	c := session.DB("").C(SUBMISSIONS)
 	err = c.Find(matcher).Select(selector).One(&ret)
@@ -58,7 +70,10 @@ func GetSubmission(matcher, selector interface{}) (ret *project.Submission, err 
 
 //GetSubmission retrieves submissions matching the given interface from the active database.
 func GetSubmissions(matcher, selector interface{}) (ret []*project.Submission, err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	c := session.DB("").C(SUBMISSIONS)
 	err = c.Find(matcher).Select(selector).All(&ret)
@@ -70,7 +85,10 @@ func GetSubmissions(matcher, selector interface{}) (ret []*project.Submission, e
 
 //GetTest retrieves a test matching the given interface from the active database.
 func GetTest(matcher, selector interface{}) (ret *project.Test, err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	c := session.DB("").C(TESTS)
 	err = c.Find(matcher).Select(selector).One(&ret)
@@ -82,7 +100,10 @@ func GetTest(matcher, selector interface{}) (ret *project.Test, err error) {
 
 //GetTest retrieves a test matching the given interface from the active database.
 func GetTests(matcher, selector interface{}) (ret []*project.Test, err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	c := session.DB("").C(TESTS)
 	err = c.Find(matcher).Select(selector).All(&ret)
@@ -93,7 +114,10 @@ func GetTests(matcher, selector interface{}) (ret []*project.Test, err error) {
 }
 
 func GetJPF(matcher, selector interface{}) (ret *project.JPFFile, err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	c := session.DB("").C(JPF)
 	err = c.Find(matcher).Select(selector).One(&ret)
@@ -105,7 +129,10 @@ func GetJPF(matcher, selector interface{}) (ret *project.JPFFile, err error) {
 
 //GetTest retrieves a test matching the given interface from the active database.
 func GetProject(matcher, selector interface{}) (ret *project.Project, err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	c := session.DB("").C(PROJECTS)
 	err = c.Find(matcher).Select(selector).One(&ret)
@@ -117,7 +144,10 @@ func GetProject(matcher, selector interface{}) (ret *project.Project, err error)
 
 //GetTest retrieves a test matching the given interface from the active database.
 	func GetProjects(matcher interface{}) (ret []*project.Project, err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	c := session.DB("").C(PROJECTS)
 	err = c.Find(matcher).Select(bson.M{project.SKELETON:0}).All(&ret)
@@ -129,7 +159,10 @@ func GetProject(matcher, selector interface{}) (ret *project.Project, err error)
 
 //AddFile adds a new file to the active database.
 func AddFile(f *project.File) (err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	col := session.DB("").C(FILES)
 	err = col.Insert(f)
@@ -141,11 +174,14 @@ func AddFile(f *project.File) (err error) {
 
 //AddFile adds a new file to the active database.
 func AddTest(t *project.Test) error {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return err
+	}
 	defer session.Close()
 	col := session.DB("").C(TESTS)
 	matcher := bson.M{project.PROJECT_ID: t.ProjectId}
-	_, err := col.RemoveAll(matcher)
+	_, err = col.RemoveAll(matcher)
 	if err != nil {
 		err = &DBRemoveError{"test files", err, matcher}
 	}
@@ -157,11 +193,14 @@ func AddTest(t *project.Test) error {
 }
 
 func AddJPF(jpf *project.JPFFile) error {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return err
+	}
 	defer session.Close()
 	col := session.DB("").C(JPF)
 	matcher := bson.M{project.PROJECT_ID: jpf.ProjectId}
-	_, err := col.RemoveAll(matcher)
+	_, err = col.RemoveAll(matcher)
 	if err != nil {
 		err = &DBRemoveError{"jpf config files", err, matcher}
 	}
@@ -174,7 +213,10 @@ func AddJPF(jpf *project.JPFFile) error {
 
 //AddSubmission adds a new submission to the active database.
 func AddSubmission(s *project.Submission) (err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	col := session.DB("").C(SUBMISSIONS)
 	err = col.Insert(s)
@@ -186,7 +228,10 @@ func AddSubmission(s *project.Submission) (err error) {
 
 //AddSubmission adds a new submission to the active database.
 func AddProject(p *project.Project) (err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	col := session.DB("").C(PROJECTS)
 	err = col.Insert(p)
@@ -198,7 +243,10 @@ func AddProject(p *project.Project) (err error) {
 
 //RemoveFileById removes a file matching the given id from the active database.
 func RemoveFileByID(id interface{}) (err error) {
-	session := getSession()
+	session, err := getSession()
+	if err != nil {
+		return
+	}
 	defer session.Close()
 	c := session.DB("").C(FILES)
 	err = c.RemoveId(id)
