@@ -1,5 +1,7 @@
 junit_exec = org.junit.runner.JUnitCore
 junit_jar = /usr/share/java/junit4.jar
+ant = /usr/share/java/ant.jar
+ant_junit = /usr/share/java/ant-junit.jar
 java = /usr/bin/java
 javac = /usr/bin/javac
 findbugs = /home/godfried/applications/findbugs-2.0.2/lib/findbugs.jar
@@ -9,6 +11,7 @@ runjpf_jar = /home/godfried/dev/java/jpf/jpf-core/build/RunJPF.jar
 gson_jar = /home/godfried/dev/go/src/github.com/godfried/impendulo/tool/jpf/lib/gson-2.2.4.jar
 jpf_home = /home/godfried/dev/java/jpf/jpf-core
 runner_dir = /home/godfried/dev/go/src/github.com/godfried/impendulo/tool/jpf/runner
+testing_dir = /home/godfried/dev/go/src/github.com/godfried/impendulo/tool/junit/testing
 listener_dir = /home/godfried/dev/go/src/github.com/godfried/impendulo/tool/jpf/src
 pmd = /home/godfried/applications/pmd-bin-5.0.4/bin/run.sh
 checkstyle = /home/godfried/applications/checkstyle-5.6/checkstyle-5.6-all.jar

@@ -9,15 +9,15 @@ import (
 )
 
 type JUnit struct {
-	java         string
-	exec         string
 	cp           string
 	datalocation string
+	runnerInfo *tool.TargetInfo
 }
 
-func NewJUnit(cp, datalocation string) *JUnit {
-	cp += ":" + config.GetConfig(config.JUNIT_JAR)
-	return &JUnit{config.GetConfig(config.JAVA), config.GetConfig(config.JUNIT_EXEC), cp, datalocation}
+func NewJUnit(testDir, cp, datalocation string) *JUnit {
+	runnerInfo := tool.NewTarget("TestRunner.java", "java", "testing", testDir)
+	cp += ":" + config.GetConfig(config.JUNIT_JAR) + ":" + config.GetConfig(config.ANT_JUNIT) + ":" + config.GetConfig(config.ANT)
+	return &JUnit{cp, datalocation, runnerInfo}
 }
 
 func (this *JUnit) GetLang() string {
@@ -34,10 +34,14 @@ func (this *JUnit) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Resu
 	if err != nil {
 		return
 	}
-	args := []string{this.java, "-cp", this.cp, "-Ddata.location=" + this.datalocation, this.exec, ti.Executable()}
+	_, err = comp.Run(fileId, this.runnerInfo)
+	if err != nil {
+		return
+	}
+	args := []string{config.GetConfig(config.JAVA), "-cp", this.cp, this.runnerInfo.Executable(), ti.Executable(), this.datalocation}
 	execRes := tool.RunCommand(args, nil)
 	if execRes.HasStdOut() {
-		res = NewResult(fileId, ti.Name, execRes.StdOut)
+		res, err = NewResult(fileId, ti.Name, execRes.StdOut)
 	} else if execRes.HasStdErr() {
 		err = fmt.Errorf("Could not run junit: %q.", string(execRes.StdErr))
 	} else {

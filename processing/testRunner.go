@@ -1,6 +1,7 @@
 package processing
 
 import (
+	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
@@ -35,6 +36,7 @@ func SetupTests(projectId bson.ObjectId, dir string) (ret []*TestRunner, err err
 			return
 		}
 	}
+	err = util.Copy(dir, config.GetConfig(config.TESTING_DIR))
 	return
 }
 
@@ -45,7 +47,7 @@ type TestRunner struct {
 
 //Run runs a test on the current file.
 func (this *TestRunner) Run(f *project.File, srcDir string) error {
-	ju := junit.NewJUnit(srcDir+":"+this.Dir, this.Dir)
+	ju := junit.NewJUnit(this.Dir, srcDir+":"+this.Dir, this.Dir)
 	if _, ok := f.Results[this.Name]; ok {
 		return nil
 	}
