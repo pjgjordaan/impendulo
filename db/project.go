@@ -180,11 +180,6 @@ func AddTest(t *project.Test) error {
 	}
 	defer session.Close()
 	col := session.DB("").C(TESTS)
-	matcher := bson.M{project.PROJECT_ID: t.ProjectId}
-	_, err = col.RemoveAll(matcher)
-	if err != nil {
-		err = &DBRemoveError{"test files", err, matcher}
-	}
 	err = col.Insert(t)
 	if err != nil {
 		err = &DBAddError{t.String(), err}
