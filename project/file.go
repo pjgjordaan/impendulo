@@ -63,6 +63,11 @@ func (this *File) Same(that *File) bool {
 	return this.Id == that.Id
 }
 
+
+func (this *File) CanProcess() bool {
+	return this.Type == SRC || this.Type == ARCHIVE
+}
+
 //NewFile
 func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) (file *File, err error) {
 	id := bson.NewObjectId()
@@ -74,6 +79,9 @@ func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) (fil
 	}
 	file.FileType, err = util.GetString(info, FTYPE)
 	if err != nil && util.IsCastError(err) {
+		return
+	}
+	if file.Type == ARCHIVE{
 		return
 	}
 	//Essential fields

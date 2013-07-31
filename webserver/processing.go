@@ -63,7 +63,7 @@ func doArchive(req *http.Request, ctx *Context) (msg string, err error) {
 		return
 	}
 	processing.StartSubmission(sub.Id)
-	processing.AddFile(file)
+	processing.AddFile(file)	
 	processing.EndSubmission(sub.Id)
 	msg = fmt.Sprintf("Submission successful.")
 	return

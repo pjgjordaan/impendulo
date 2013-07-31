@@ -34,7 +34,9 @@ type ids struct {
 
 //AddFile sends a file id to be processed.
 func AddFile(file *project.File) {
-	idChan <- &ids{file.Id, file.SubId, true}
+	if file.CanProcess(){
+		idChan <- &ids{file.Id, file.SubId, true}
+	}
 }
 
 //EndSubmission stops this submission's goroutine to.
@@ -251,7 +253,7 @@ func (this *Processor) extract(archive *project.File) error {
 			util.Log(err)
 			continue
 		}
-		matcher := bson.M{project.SUBID: archive.SubId, project.NUM: file.Num}
+		matcher := bson.M{project.SUBID: archive.SubId, project.TIME: file.Time}
 		if !db.Contains(db.FILES, matcher) {
 			file.SubId = archive.SubId
 			file.Data = data
@@ -259,7 +261,7 @@ func (this *Processor) extract(archive *project.File) error {
 			if err != nil {
 				util.Log(err)
 			}
-		}
+		} 
 	}
 	err = db.RemoveFileById(archive.Id)
 	if err != nil {
