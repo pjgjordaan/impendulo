@@ -28,7 +28,7 @@ func (this *JUnit) GetName() string {
 	return NAME
 }
 
-func (this *JUnit) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Result, err error) {
+func (this *JUnit) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	comp := javac.NewJavac(this.cp)
 	_, err = comp.Run(fileId, ti)
 	if err != nil {

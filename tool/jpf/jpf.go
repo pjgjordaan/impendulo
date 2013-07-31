@@ -30,7 +30,7 @@ func (this *JPF) GetName() string {
 	return NAME
 }
 
-func (this *JPF) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Result, err error) {
+func (this *JPF) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	if this.jpfPath == "" {
 		err = fmt.Errorf("No jpf configuration file available.")
 		return

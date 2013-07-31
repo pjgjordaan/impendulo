@@ -349,7 +349,7 @@ func getNeighbour(req *http.Request, maxSize int) (int, string, error) {
 	return GetInt(req, "nextIndex", maxSize)
 }
 
-func getResult(name string, fileId bson.ObjectId) (res tool.Result, msg string, err error) {
+func getResult(name string, fileId bson.ObjectId) (res tool.DisplayResult, msg string, err error) {
 	res, err = GetResultData(name, fileId)
 	if err != nil {
 		msg = fmt.Sprintf("Could not retrieve result %q.", name)
@@ -445,16 +445,30 @@ func GetInt(req *http.Request, name string, maxSize int) (found int, msg string,
 	return
 }
 
-func GetResultData(resultName string, fileId bson.ObjectId) (res tool.Result, err error) {
+func GetResultData(resultName string, fileId bson.ObjectId) (res tool.DisplayResult, err error) {
 	var file *project.File
-	selector := bson.M{project.DATA: 1}
+	dataSelector := bson.M{project.DATA: 1}
 	matcher := bson.M{project.ID: fileId}
-	if strings.ToLower(resultName) == "code" {
-		file, err = db.GetFile(matcher, selector)
+	if resultName == tool.CODE {
+		file, err = db.GetFile(matcher, dataSelector)
 		if err != nil {
 			return
 		}
 		res = tool.NewCodeResult(fileId, file.Data)
+	} else if resultName == tool.SUMMARY {
+		file, err = db.GetFile(matcher, bson.M{project.RESULTS: 1})
+		if err != nil {
+			return
+		}
+		res = tool.NewSummaryResult()
+		for name, resid := range file.Results{
+			var currentRes tool.ToolResult
+			currentRes, err = db.GetToolResult(name, bson.M{project.ID: resid},nil) 
+			if err != nil {
+				return
+			}
+			res.(*tool.SummaryResult).AddSummary(currentRes)
+		}
 	} else {
 		file, err = db.GetFile(matcher, bson.M{project.RESULTS: 1})
 		if err != nil {
@@ -462,11 +476,11 @@ func GetResultData(resultName string, fileId bson.ObjectId) (res tool.Result, er
 		}
 		id, ok := file.Results[resultName]
 		if !ok {
-			res = tool.NewErrorResult(fmt.Errorf("No result available for %v.", resultName))
+			res = tool.NewErrorResult(fileId, fmt.Errorf("No result available for %v.", resultName))
 			return
 		}
 		matcher = bson.M{project.ID: id}
-		res, err = db.GetResult(resultName, matcher, selector)
+		res, err = db.GetDisplayResult(resultName, matcher, dataSelector)
 	}
 	return
 }

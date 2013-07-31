@@ -1,8 +1,10 @@
 package jpf
 
 import (
+	"fmt"
 	"encoding/xml"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
 	"strconv"
 )
@@ -28,8 +30,9 @@ func (this *JPFResult) GetFileId() bson.ObjectId {
 	return this.FileId
 }
 
-func (this *JPFResult) String() string {
-	return "Type: tool.jpf.JPFResult; Id: " + this.Id.Hex() + "; FileId: " + this.FileId.Hex() + "; Time: " + util.Date(this.Time)
+func (this *JPFResult) GetSummary() *tool.Summary {
+	body := fmt.Sprintf("Result: %s \n Errors: %d", this.Data.Result.Findings, len(this.Data.Result.Errors))
+	return &tool.Summary{this.GetName(), body}
 }
 
 func (this *JPFResult) Success() bool {

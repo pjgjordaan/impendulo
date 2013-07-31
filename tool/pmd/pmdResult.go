@@ -3,6 +3,8 @@ package pmd
 import (
 	"encoding/xml"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/tool"
+	"fmt"
 	"html/template"
 	"labix.org/v2/mgo/bson"
 )
@@ -28,8 +30,9 @@ func (this *PMDResult) GetFileId() bson.ObjectId {
 	return this.FileId
 }
 
-func (this *PMDResult) String() string {
-	return "Type: tool.java.PMDResult; Id: " + this.Id.Hex() + "; FileId: " + this.FileId.Hex() + "; Time: " + util.Date(this.Time)
+func (this *PMDResult) GetSummary() *tool.Summary {
+	body := fmt.Sprintf("Errors: %d", this.Data.Errors)
+	return &tool.Summary{this.GetName(), body}
 }
 
 func (this *PMDResult) TemplateArgs(current bool) (string, interface{}) {
@@ -55,6 +58,10 @@ func genReport(id bson.ObjectId, data []byte) (res *PMDReport, err error) {
 		return
 	}
 	res.Id = id
+	res.Errors = 0
+	for _, f := range res.Files{
+		res.Errors += len(f.Violations)
+	}
 	return
 }
 
@@ -62,6 +69,7 @@ type PMDReport struct {
 	Id      bson.ObjectId
 	Version string  `xml:"version,attr"`
 	Files   []*File `xml:"file"`
+	Errors int
 }
 type File struct {
 	Name       string       `xml:"name,attr"`

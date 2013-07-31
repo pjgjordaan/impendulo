@@ -3,6 +3,7 @@ package javac
 import (
 	"bytes"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -27,8 +28,14 @@ func (this *JavacResult) GetFileId() bson.ObjectId {
 	return this.FileId
 }
 
-func (this *JavacResult) String() string {
-	return "Type: tool.java.JavacResult; Id: " + this.Id.Hex() + "; FileId: " + this.FileId.Hex() + "; Time: " + util.Date(this.Time)
+func (this *JavacResult) GetSummary() *tool.Summary {
+	var body string
+	if this.Success(){
+		body = "Compiled successfully."
+	} else{
+		body = "No compile."
+	}
+	return &tool.Summary{this.GetName(), body}
 }
 
 func (this *JavacResult) TemplateArgs(current bool) (string, interface{}) {

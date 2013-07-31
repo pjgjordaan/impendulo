@@ -3,8 +3,10 @@ package findbugs
 import (
 	"encoding/xml"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/tool"
 	"html/template"
 	"labix.org/v2/mgo/bson"
+	"fmt"
 )
 
 const NAME = "Findbugs"
@@ -28,9 +30,11 @@ func (this *FindbugsResult) GetFileId() bson.ObjectId {
 	return this.FileId
 }
 
-func (this *FindbugsResult) String() string {
-	return "Type: tool.java.FindbugsResult; Id: " + this.Id.Hex() + "; FileId: " + this.FileId.Hex() + "; Time: " + util.Date(this.Time)
+func (this *FindbugsResult) GetSummary() *tool.Summary {
+	body := fmt.Sprintf("Bugs: %d", this.Data.Summary.BugCount)
+	return &tool.Summary{this.GetName(), body}
 }
+
 
 func (this *FindbugsResult) TemplateArgs(current bool) (string, interface{}) {
 	if current {

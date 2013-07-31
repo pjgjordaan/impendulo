@@ -1,8 +1,10 @@
 package checkstyle
 
 import (
+	"fmt"
 	"encoding/xml"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/tool"
 	"html/template"
 	"labix.org/v2/mgo/bson"
 )
@@ -20,16 +22,18 @@ func (this *CheckstyleResult) GetName() string {
 	return NAME
 }
 
+func (this *CheckstyleResult) GetSummary() *tool.Summary {
+		body := fmt.Sprintf("Errors: %d", 
+		this.Data.Errors)
+	return &tool.Summary{this.GetName(), body}
+}
+
 func (this *CheckstyleResult) GetId() bson.ObjectId {
 	return this.Id
 }
 
 func (this *CheckstyleResult) GetFileId() bson.ObjectId {
 	return this.FileId
-}
-
-func (this *CheckstyleResult) String() string {
-	return "Type: tool.java.CheckstyleResult; Id: " + this.Id.Hex() + "; FileId: " + this.FileId.Hex() + "; Time: " + util.Date(this.Time)
 }
 
 func (this *CheckstyleResult) TemplateArgs(current bool) (string, interface{}) {
@@ -55,12 +59,17 @@ func genReport(id bson.ObjectId, data []byte) (res *CheckstyleReport, err error)
 		return
 	}
 	res.Id = id
+	res.Errors = 0
+	for _, f := range res.Files{
+		res.Errors += len(f.Errors)
+	}
 	return
 }
 
 type CheckstyleReport struct {
 	Id      bson.ObjectId
 	Version string  `xml:"version,attr"`
+	Errors int
 	Files   []*File `xml:"file"`
 }
 type File struct {

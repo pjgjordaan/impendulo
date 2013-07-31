@@ -120,7 +120,7 @@ func (this *SubmissionHandler) createSubmission(subInfo map[string]interface{}) 
 	if err != nil {
 		return err
 	} else if !bson.IsObjectIdHex(idStr) {
-		return fmt.Errorf("Invalid id hex %q", idStr)
+		return fmt.Errorf("Invalid project id %q", idStr)
 	}
 	this.Submission.ProjectId = bson.ObjectIdHex(idStr)
 	this.Submission.Time, err = util.GetInt64(subInfo, project.TIME)

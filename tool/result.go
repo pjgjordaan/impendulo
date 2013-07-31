@@ -5,42 +5,30 @@ import (
 	"strings"
 )
 
-//Result describes a tool or test's results for a given file.
-type Result interface {
-	TemplateArgs(current bool) (string, interface{})
-	Success() bool
-	GetName() string
+type ToolResult interface {
 	GetId() bson.ObjectId
 	GetFileId() bson.ObjectId
-	String() string
+	GetSummary() *Summary
+	GetName() string
 }
 
-func NewErrorResult(err error) *ErrorResult {
-	return &ErrorResult{err}
+//Result describes a tool or test's results for a given file.
+type DisplayResult interface {
+	TemplateArgs(current bool) (string, interface{})
+	GetName() string
+}
+
+func NewErrorResult(fileId bson.ObjectId, err error) *ErrorResult {
+	return &ErrorResult{fileId, err}
 }
 
 type ErrorResult struct {
+	fileId bson.ObjectId
 	err error
-}
-
-func (this *ErrorResult) String() string {
-	return this.err.Error()
 }
 
 func (this *ErrorResult) GetName() string {
 	return "Error"
-}
-
-func (this *ErrorResult) Success() bool {
-	return false
-}
-
-func (this *ErrorResult) GetId() bson.ObjectId {
-	return bson.NewObjectId()
-}
-
-func (this *ErrorResult) GetFileId() bson.ObjectId {
-	return bson.NewObjectId()
 }
 
 func (this *ErrorResult) TemplateArgs(current bool) (string, interface{}) {
@@ -51,6 +39,8 @@ func (this *ErrorResult) TemplateArgs(current bool) (string, interface{}) {
 	}
 }
 
+const CODE = "Code"
+
 func NewCodeResult(fileId bson.ObjectId, data []byte) *CodeResult {
 	return &CodeResult{fileId, strings.TrimSpace(string(data))}
 }
@@ -60,24 +50,8 @@ type CodeResult struct {
 	data   string
 }
 
-func (this *CodeResult) String() string {
-	return this.GetName()
-}
-
 func (this *CodeResult) GetName() string {
 	return CODE
-}
-
-func (this *CodeResult) Success() bool {
-	return true
-}
-
-func (this *CodeResult) GetId() bson.ObjectId {
-	return bson.NewObjectId()
-}
-
-func (this *CodeResult) GetFileId() bson.ObjectId {
-	return this.fileId
 }
 
 func (this *CodeResult) TemplateArgs(current bool) (string, interface{}) {
@@ -88,4 +62,33 @@ func (this *CodeResult) TemplateArgs(current bool) (string, interface{}) {
 	}
 }
 
-const CODE = "Code"
+const SUMMARY = "Summary"
+
+func NewSummaryResult() *SummaryResult {
+	return &SummaryResult{make([]*Summary,0)}
+}
+
+type SummaryResult struct {
+	summary []*Summary
+}
+
+func (this *SummaryResult) GetName() string {
+	return SUMMARY
+}
+
+func (this *SummaryResult) TemplateArgs(current bool) (string, interface{}) {
+	if current {
+		return "summaryCurrent", this.summary
+	} else {
+		return "summaryNext", this.summary
+	}
+}
+
+func (this *SummaryResult) AddSummary(result ToolResult) {
+	this.summary = append(this.summary, result.GetSummary())
+}
+
+type Summary struct{
+	Name string
+	Body string
+}

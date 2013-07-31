@@ -1,0 +1,17 @@
+{{define "nextResult"}}
+{{$address := address .}}
+<div class="accordion" id="summaryaccordion{{$address}}">
+  {{range . }}
+  <div class="accordion-group">
+    <div class="accordion-heading">
+      <a class="accordion-toggle" data-toggle="collapse" data-parent="#summaryaccordion{{$address}}" href="#{{.Name}}{{$address}}">{{.Name}}</a>
+    </div>
+    <div id="{{.Name}}{{$address}}" class="accordion-body collapse">
+      <div class="accordion-inner">
+	<p>{{setBreaks .Body}}</p>
+      </div>
+    </div>
+  </div>
+  {{end}}
+</div>
+{{end}}

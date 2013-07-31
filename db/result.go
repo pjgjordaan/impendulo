@@ -98,7 +98,29 @@ func GetJavacResult(matcher, selector interface{}) (ret *javac.JavacResult, err 
 	return
 }
 
-func GetResult(name string, matcher, selector interface{}) (ret tool.Result, err error) {
+func GetToolResult(name string, matcher, selector interface{}) (ret tool.ToolResult, err error) {
+	switch name {
+	case javac.NAME:
+		ret, err = GetJavacResult(matcher, selector)
+	case jpf.NAME:
+		ret, err = GetJPFResult(matcher, selector)
+	case findbugs.NAME:
+		ret, err = GetFindbugsResult(matcher, selector)
+	case pmd.NAME:
+		ret, err = GetPMDResult(matcher, selector)
+	case checkstyle.NAME:
+		ret, err = GetCheckstyleResult(matcher, selector)
+	default:
+		ret, err = GetJUnitResult(matcher, selector)
+		if err != nil {
+			err = fmt.Errorf("Unknown result %q.", name)
+		}
+	}
+	return
+}
+
+
+func GetDisplayResult(name string, matcher, selector interface{}) (ret tool.DisplayResult, err error) {
 	switch name {
 	case javac.NAME:
 		ret, err = GetJavacResult(matcher, selector)
@@ -120,7 +142,7 @@ func GetResult(name string, matcher, selector interface{}) (ret tool.Result, err
 }
 
 //AddResult adds a new result to the active database.
-func AddResult(r tool.Result) (err error) {
+func AddResult(r tool.ToolResult) (err error) {
 	session, err := getSession()
 	if err != nil {
 		return
@@ -129,7 +151,7 @@ func AddResult(r tool.Result) (err error) {
 	col := session.DB("").C(RESULTS)
 	err = col.Insert(r)
 	if err != nil {
-		err = &DBAddError{r.String(), err}
+		err = &DBAddError{r.GetName(), err}
 	}
 	return
 }
@@ -143,7 +165,7 @@ func GetResultNames(projectId bson.ObjectId) (ret []string, err error) {
 	for i, test := range tests {
 		ret[i] = strings.Split(test.Name, ".")[0]
 	}
-	ret = append(ret, []string{tool.CODE, checkstyle.NAME, findbugs.NAME, javac.NAME, jpf.NAME, pmd.NAME}...)
+	ret = append(ret, []string{tool.CODE, checkstyle.NAME, findbugs.NAME, javac.NAME, jpf.NAME, pmd.NAME, tool.SUMMARY}...)
 	return
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+	"path/filepath"
 )
 
 //SetupTests extracts a project's tests from db to filesystem for execution.
@@ -31,7 +32,7 @@ func SetupTests(projectId bson.ObjectId, dir string) (ret []*TestRunner, err err
 		if len(test.Data) == 0 {
 			continue
 		}
-		err = util.Unzip(dir, test.Data)
+		err = util.Unzip(ret[i].PackagePath(), test.Data)
 		if err != nil {
 			return
 		}
@@ -47,7 +48,7 @@ type TestRunner struct {
 
 //Run runs a test on the current file.
 func (this *TestRunner) Run(f *project.File, srcDir string) error {
-	ju := junit.NewJUnit(this.Dir, srcDir+":"+this.Dir, this.Dir)
+	ju := junit.NewJUnit(this.Dir, srcDir+":"+this.Dir, filepath.Join(this.PackagePath(), "data"))
 	if _, ok := f.Results[this.Name]; ok {
 		return nil
 	}

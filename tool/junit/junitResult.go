@@ -1,7 +1,9 @@
 package junit
 
 import (
+	"fmt"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
 	"encoding/xml"
 	"strings"
@@ -29,8 +31,10 @@ func (this *JUnitResult) GetFileId() bson.ObjectId {
 	return this.FileId
 }
 
-func (this *JUnitResult) String() string {
-	return "Type: tool.junit.JUnitResult; Id: " + this.Id.Hex() + "; FileId: " + this.FileId.Hex() + "; Time: " + util.Date(this.Time)
+func (this *JUnitResult) GetSummary() *tool.Summary {
+		body := fmt.Sprintf("Tests: %d \n Failures: %d \n Errors: %d \n Time: %f", 
+		this.Data.Tests, this.Data.Failures, this.Data.Errors, this.Data.Time)
+	return &tool.Summary{this.GetName(), body}
 }
 
 func (this *JUnitResult) TemplateArgs(current bool) (string, interface{}) {

@@ -366,7 +366,7 @@ func (this *Analyser) RunTools() {
 
 //AddResult adds a tool result to the db.
 //It updates the associated file's list of results to point to this new result.
-func AddResult(res tool.Result) error {
+func AddResult(res tool.ToolResult) error {
 	matcher := bson.M{project.ID: res.GetFileId()}
 	change := bson.M{db.SET: bson.M{project.RESULTS + "." + res.GetName(): res.GetId()}}
 	err := db.Update(db.FILES, matcher, change)

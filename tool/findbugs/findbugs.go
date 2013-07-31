@@ -23,7 +23,7 @@ func (this *FindBugs) GetName() string {
 	return NAME
 }
 
-func (this *FindBugs) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Result, err error) {
+func (this *FindBugs) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	args := []string{config.GetConfig(config.JAVA), "-jar", this.cmd, "-textui", "-low", "-xml:withMessages", ti.PackagePath()}
 	execRes := tool.RunCommand(args, nil)
 	if execRes.HasStdOut() {

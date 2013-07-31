@@ -20,7 +20,7 @@ func SetTimeout(minutes int) {
 type Tool interface {
 	GetName() string
 	GetLang() string
-	Run(fileId bson.ObjectId, target *TargetInfo) (Result, error)
+	Run(fileId bson.ObjectId, target *TargetInfo) (ToolResult, error)
 }
 
 type ExecResult struct {

@@ -24,7 +24,7 @@ func (this *Javac) GetName() string {
 	return NAME
 }
 
-func (this *Javac) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Result, err error) {
+func (this *Javac) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	args := []string{this.cmd, "-cp", this.cp + ":" + ti.Dir, "-implicit:class", ti.FilePath()}
 	execRes := tool.RunCommand(args, nil)
 	if execRes.HasStdErr() {
