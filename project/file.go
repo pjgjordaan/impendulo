@@ -35,8 +35,10 @@ func (this *File) String() string {
 
 func (this *File) SetMod(mod string) {
 	switch mod {
-	case "c":
+	case "s":
 		this.Mod = "Saved"
+	case "c":
+		this.Mod = "Compiled"
 	case "r":
 		this.Mod = "Removed"
 	case "l":
@@ -79,9 +81,6 @@ func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) (fil
 	}
 	file.FileType, err = util.GetString(info, FTYPE)
 	if err != nil && util.IsCastError(err) {
-		return
-	}
-	if file.Type == ARCHIVE{
 		return
 	}
 	//Essential fields

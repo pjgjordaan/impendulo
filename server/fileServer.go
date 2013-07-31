@@ -77,7 +77,11 @@ func (this *SubmissionHandler) Login() error {
 	if err != nil {
 		return err
 	}
-	this.Submission.Mode, err = util.GetString(loginInfo, project.MODE)
+	mode, err := util.GetString(loginInfo, project.MODE)
+	if err != nil {
+		return err
+	}
+	err = this.Submission.SetMode(mode)
 	if err != nil {
 		return err
 	}
@@ -181,7 +185,12 @@ func (this *SubmissionHandler) Read() (err error) {
 		requestInfo[project.NUM] = this.fileCount
 		this.fileCount++
 		var file *project.File
-		file, err = project.NewFile(this.Submission.Id, requestInfo, buffer)
+		switch this.Submission.Mode{
+		case project.ARCHIVE_MODE:
+			file = project.NewArchive(this.Submission.Id, buffer, project.ZIP)
+		case project.FILE_MODE:
+			file, err = project.NewFile(this.Submission.Id, requestInfo, buffer)
+		}
 		if err != nil {
 			return
 		}

@@ -15,7 +15,6 @@ const (
 	ARCHIVE      = "archive"
 	TEST         = "test"
 	FILE_MODE    = "file_remote"
-	TEST_MODE    = "archive_test"
 	ARCHIVE_MODE = "archive_remote"
 	FTYPE        = "ftype"
 	NAME         = "name"

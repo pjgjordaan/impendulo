@@ -3,6 +3,7 @@ package project
 import (
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+	"fmt"
 )
 
 //Submission is used for individual project submissions
@@ -14,9 +15,12 @@ type Submission struct {
 	Time      int64         "time"
 }
 
-//IsTest
-func (this *Submission) IsTest() bool {
-	return this.Mode == TEST_MODE
+func (this *Submission) SetMode(mode string) error {
+	if mode != FILE_MODE && mode != ARCHIVE_MODE{
+		return fmt.Errorf("Unknown mode %s.", mode)
+	}
+	this.Mode = mode
+	return nil
 }
 
 func (this *Submission) TypeName() string {
