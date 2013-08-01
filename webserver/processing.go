@@ -12,7 +12,6 @@ import (
 	"github.com/godfried/impendulo/util"
 	"io/ioutil"
 	"labix.org/v2/mgo/bson"
-	"mime/multipart"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -20,93 +19,60 @@ import (
 	"time"
 )
 
-type processor func(*http.Request, *Context) (string, error)
-
-func (p processor) exec(req *http.Request, ctx *Context) error {
-	msg, err := p(req, ctx)
-	ctx.AddMessage(msg, err != nil)
-	return err
-}
-
-func doArchive(req *http.Request, ctx *Context) (msg string, err error) {
+func doArchive(req *http.Request, ctx *Context) (err error) {
 	projectId, err := util.ReadId(req.FormValue("project"))
 	if err != nil {
-		msg = err.Error()
 		return
 	}
-	userName := req.FormValue("user")
-	if !db.Contains(db.USERS, bson.M{user.ID: userName}) {
-		err = fmt.Errorf("User %q not found.", userName)
-		msg = err.Error()
-		return
-	}
-	archiveFile, archiveHeader, err := req.FormFile("archive")
+	uname, err := GetString(req, "user")
 	if err != nil {
-		msg = fmt.Sprintf("Error loading archive file.")
 		return
 	}
-	archiveBytes, err := ioutil.ReadAll(archiveFile)
+	if !db.Contains(db.USERS, bson.M{user.ID: uname}) {
+		err = fmt.Errorf("User %q not found.", uname)
+		return
+	}
+	_, archiveBytes, err := ReadFormFile(req, "archive")
 	if err != nil {
-		msg = fmt.Sprintf("Error reading archive file %q.", archiveHeader.Filename)
 		return
 	}
-	sub := project.NewSubmission(projectId, userName, project.ARCHIVE_MODE, util.CurMilis())
+	sub := project.NewSubmission(projectId, uname, project.ARCHIVE_MODE, util.CurMilis())
 	err = db.AddSubmission(sub)
 	if err != nil {
-		msg = fmt.Sprintf("Could not create submission.")
 		return
 	}
 	file := project.NewArchive(sub.Id, archiveBytes, project.ZIP)
 	err = db.AddFile(file)
 	if err != nil {
-		msg = fmt.Sprintf("Could not create file.")
 		return
 	}
 	processing.StartSubmission(sub.Id)
 	processing.AddFile(file)	
 	processing.EndSubmission(sub.Id)
-	msg = fmt.Sprintf("Submission successful.")
 	return
 }
 
-func doSkeleton(req *http.Request, ctx *Context) (msg string, err error) {
+func doSkeleton(req *http.Request, ctx *Context) (err error) {
 	projectId, err := util.ReadId(req.FormValue("project"))
 	if err != nil {
-		msg = err.Error()
 		return
 	}
-	skeletonFile, skeletonHeader, err := req.FormFile("skeleton")
+	_, data, err := ReadFormFile(req, "skeleton")
 	if err != nil {
-		msg = fmt.Sprintf("Error loading skeleton file.")
 		return
 	}
-	skeletonBytes, err := ioutil.ReadAll(skeletonFile)
-	if err != nil {
-		msg = fmt.Sprintf("Error reading skeleton file %q.", skeletonHeader.Filename)
-		return
-	}
-	err = db.Update(db.PROJECTS, bson.M{project.ID: projectId}, bson.M{"$set": bson.M{project.SKELETON: skeletonBytes}})
-	if err != nil {
-		msg = fmt.Sprintf("Error updating project with skeleton %q.", skeletonHeader.Filename)
-	}
-	msg = fmt.Sprintf("Successfully added skeleton %q.", skeletonHeader.Filename)
+	err = db.Update(db.PROJECTS, bson.M{project.ID: projectId}, 
+		bson.M{db.SET: bson.M{project.SKELETON: data}})
 	return
 }
 
-func doTest(req *http.Request, ctx *Context) (msg string, err error) {
+func doTest(req *http.Request, ctx *Context) (err error) {
 	projectId, err := util.ReadId(req.FormValue("project"))
 	if err != nil {
-		msg = err.Error()
 		return
 	}
-	testFile, testHeader, err := req.FormFile("test")
+	testName, testBytes, err := ReadFormFile(req, "test")
 	if err != nil {
-		msg = fmt.Sprintf("Error loading test file")
-		return
-	}
-	testBytes, err := ioutil.ReadAll(testFile)
-	if err != nil {
-		msg = fmt.Sprintf("Error reading test file %q.", testHeader.Filename)
 		return
 	}
 	hasData := req.FormValue("data-check")
@@ -114,186 +80,143 @@ func doTest(req *http.Request, ctx *Context) (msg string, err error) {
 	if hasData == "" {
 		dataBytes = make([]byte, 0)
 	} else if hasData == "true" {
-		var dataFile multipart.File
-		var dataHeader *multipart.FileHeader
-		dataFile, dataHeader, err = req.FormFile("data")
+		_, dataBytes, err = ReadFormFile(req, "data")
 		if err != nil {
-			msg = fmt.Sprintf("Error loading data files.")
-			return
-		}
-		dataBytes, err = ioutil.ReadAll(dataFile)
-		if err != nil {
-			msg = fmt.Sprintf("Error reading data files %q.", dataHeader.Filename)
 			return
 		}
 	}
 	pkg := util.GetPackage(bytes.NewReader(testBytes))
 	username, err := ctx.Username()
 	if err != nil {
-		msg = err.Error()
 		return
 	}
-	test := project.NewTest(projectId, testHeader.Filename, username, pkg, testBytes, dataBytes)
+	test := project.NewTest(projectId, testName, username, pkg, testBytes, dataBytes)
 	err = db.AddTest(test)
-	if err != nil {
-		msg = fmt.Sprintf("Unable to add test %q.", testHeader.Filename)
-		return
-	}
-	msg = fmt.Sprintf("Successfully added test %q.", testHeader.Filename)
 	return
 }
 
-func doJPF(req *http.Request, ctx *Context) (msg string, err error) {
+func doJPF(req *http.Request, ctx *Context) (err error) {
 	projectId, err := util.ReadId(req.FormValue("project"))
 	if err != nil {
-		msg = err.Error()
 		return
 	}
-	jpfFile, jpfHeader, err := req.FormFile("jpf")
+	name, data, err := ReadFormFile(req, "jpf")
 	if err != nil {
-		msg = fmt.Sprintf("Error loading jpf config file.")
-		return
-	}
-	jpfBytes, err := ioutil.ReadAll(jpfFile)
-	if err != nil {
-		msg = fmt.Sprintf("Error reading jpf config file %q.", jpfHeader.Filename)
 		return
 	}
 	username, err := ctx.Username()
 	if err != nil {
-		msg = err.Error()
 		return
 	}
-	jpf := project.NewJPFFile(projectId, jpfHeader.Filename, username, jpfBytes)
+	jpf := project.NewJPFFile(projectId, name, username, data)
 	err = db.AddJPF(jpf)
-	if err != nil {
-		msg = fmt.Sprintf("Unable to add jpf config file %q.", jpf.Name)
-		return
-	}
-	msg = fmt.Sprintf("Successfully added jpf config file %q.", jpf.Name)
 	return
 }
 
-func doProject(req *http.Request, ctx *Context) (msg string, err error) {
-	name, lang := strings.TrimSpace(req.FormValue("name")), strings.TrimSpace(req.FormValue("lang"))
-	if name == "" {
-		err = fmt.Errorf("Invalid project name.")
-		msg = err.Error()
+func ReadFormFile(req *http.Request, name string)(fname string, data []byte, err error){
+	file, header, err := req.FormFile(name)
+	if err != nil {
 		return
 	}
-	if lang == "" {
-		err = fmt.Errorf("Invalid language.")
-		msg = err.Error()
+	fname = header.Filename
+	data, err = ioutil.ReadAll(file)
+	return
+}
+
+func doProject(req *http.Request, ctx *Context) (err error) {
+	name, err := GetString(req, "name")
+	if err != nil {
+		return
+	}
+	lang, err := GetString(req, "lang")
+	if err != nil{
 		return
 	}
 	username, err := ctx.Username()
 	if err != nil {
-		msg = err.Error()
 		return
 	}
-	skeletonFile, skeletonHeader, err := req.FormFile("skeleton")
+	_, skeletonBytes, err := ReadFormFile(req, "skeleton")
 	if err != nil {
-		msg = fmt.Sprintf("Error loading project skeleton.")
-		return
-	}
-	skeletonBytes, err := ioutil.ReadAll(skeletonFile)
-	if err != nil {
-		msg = fmt.Sprintf("Error reading project skeleton %q.", skeletonHeader.Filename)
 		return
 	}
 	p := project.NewProject(name, username, lang, skeletonBytes)
 	err = db.AddProject(p)
-	if err != nil {
-		msg = fmt.Sprintf("Error adding project %q.", name)
-		return
-	}
-	msg = "Successfully added project."
 	return
 }
 
-func doLogin(req *http.Request, ctx *Context) (msg string, err error) {
-	uname, pword := strings.TrimSpace(req.FormValue("username")), strings.TrimSpace(req.FormValue("password"))
+func doLogin(req *http.Request, ctx *Context) (err error) {
+	uname, err := GetString(req, "username")
+	if err != nil {
+		return
+	}
+	pword, err := GetString(req, "password")
+	if err != nil{
+		return
+	}
 	u, err := db.GetUserById(uname)
 	if err != nil {
-		msg = fmt.Sprintf("User %q is not registered.", uname)
 		return
-	} else if !util.Validate(u.Password, u.Salt, pword) {
+	} 
+	if !util.Validate(u.Password, u.Salt, pword) {
 		err = fmt.Errorf("Invalid username or password.")
-		msg = err.Error()
-		return
+	} else{
+		ctx.AddUser(uname)
 	}
-	ctx.AddUser(uname)
-	msg = fmt.Sprintf("Successfully logged in as %q.", uname)
 	return
 }
 
-func doRegister(req *http.Request, ctx *Context) (msg string, err error) {
-	uname, pword := strings.TrimSpace(req.FormValue("username")), strings.TrimSpace(req.FormValue("password"))
-	if uname == "" {
-		err = fmt.Errorf("Invalid username.")
-		msg = err.Error()
+func doRegister(req *http.Request, ctx *Context) (err error) {
+	uname, err := GetString(req, "username")
+	if err != nil {
 		return
 	}
-	if pword == "" {
-		err = fmt.Errorf("Invalid password.")
-		msg = err.Error()
+	pword, err := GetString(req, "password")
+	if err != nil{
 		return
 	}
 	u := user.NewUser(uname, pword)
 	err = db.AddUser(u)
-	if err != nil {
-		msg = fmt.Sprintf("User %q already exists.", uname)
-		return
+	if err == nil {
+		ctx.AddUser(uname)
 	}
-	ctx.AddUser(uname)
-	msg = fmt.Sprintf("Successfully registered as %q.", uname)
 	return
 }
 
-func doDeleteProject(req *http.Request, ctx *Context) (msg string, err error) {
+func doDeleteProject(req *http.Request, ctx *Context) (err error) {
 	projectId, err := util.ReadId(req.FormValue("project"))
-	if err != nil {
-		msg = err.Error()
-		return
+	if err == nil {
+		err = db.RemoveProjectById(projectId)
 	}
-	err = db.RemoveProjectById(projectId)
-	if err != nil {
-		msg = "Error deleting project."
-	}
-	msg = "Successfully deleted project."
 	return
 }
 
-func doDeleteUser(req *http.Request, ctx *Context) (msg string, err error) {
-	uname := req.FormValue("user")
-	err = db.RemoveUserById(uname)
-	if err != nil {
-		msg = "Error deleting user."
+func doDeleteUser(req *http.Request, ctx *Context) (err error) {
+	uname, err := GetString(req, "user")
+	if err == nil {
+		err = db.RemoveUserById(uname)
 	}
-	msg = "Successfully deleted user."
 	return
 }
 
-func retrieveNames(req *http.Request, ctx *Context) (ret []string, msg string, err error) {
+func retrieveNames(req *http.Request, ctx *Context) (ret []string, err error) {
 	ctx.Browse.Sid = req.FormValue("subid")
 	subId, err := util.ReadId(ctx.Browse.Sid)
 	if err != nil {
-		msg = err.Error()
 		return
 	}
 	matcher := bson.M{project.SUBID: subId, project.TYPE: project.SRC}
 	ret, err = db.GetFileNames(matcher)
 	if err != nil {
-		msg = fmt.Sprintf("Could not retrieve filenames for submission.")
+		return
 	}
 	if ctx.Browse.IsUser {
 		var sub *project.Submission
 		sub, err = db.GetSubmission(bson.M{project.ID: subId}, bson.M{project.PROJECT_ID: 1})
 		if err != nil {
-			msg = fmt.Sprintf("Could not retrieve project.")
-		} else {
-			ctx.Browse.Pid = sub.ProjectId.Hex()
-		}
+			return
+		} 
+		ctx.Browse.Pid = sub.ProjectId.Hex()
 	}
 	return
 }
@@ -312,79 +235,64 @@ func getCompileData(files []*project.File) (ret []bool) {
 	return ret
 }
 
-func retrieveFiles(req *http.Request, ctx *Context) (ret []*project.File, msg string, err error) {
-	name := req.FormValue("filename")
-	if !bson.IsObjectIdHex(ctx.Browse.Sid) {
-		err = fmt.Errorf("Invalid submission id %q.", ctx.Browse.Sid)
-		msg = err.Error()
+func retrieveFiles(req *http.Request, ctx *Context) (ret []*project.File, err error) {
+	name, err := GetString(req, "filename")
+	if err != nil{
 		return
 	}
-	matcher := bson.M{project.SUBID: bson.ObjectIdHex(ctx.Browse.Sid), project.TYPE: project.SRC, project.NAME: name}
+	sid, err := util.ReadId(ctx.Browse.Sid)
+	if err != nil{
+		return
+	}
+	matcher := bson.M{project.SUBID: sid, project.TYPE: project.SRC, project.NAME: name}
 	selector := bson.M{project.ID: 1, project.NAME: 1}
 	ret, err = db.GetFiles(matcher, selector, project.NUM)
-	if err != nil {
-		msg = fmt.Sprintf("Could not retrieve files for submission.")
-	}
-	if len(ret) == 0 {
+	if err == nil && len(ret) == 0 {
 		err = fmt.Errorf("No files found with name %q.", name)
-		msg = err.Error()
 	}
 	return
 }
 
-func getFile(id bson.ObjectId) (file *project.File, msg string, err error) {
+func getFile(id bson.ObjectId) (file *project.File, err error) {
 	selector := bson.M{project.NAME: 1, project.ID: 1, project.TIME: 1, project.NUM: 1}
 	file, err = db.GetFile(bson.M{project.ID: id}, selector)
-	if err != nil {
-		msg = fmt.Sprintf("Could not retrieve file.")
-	}
 	return
 }
 
-func getSelected(req *http.Request, maxSize int) (int, string, error) {
+func getSelected(req *http.Request, maxSize int) (int, error) {
 	return GetInt(req, "currentIndex", maxSize)
 }
 
-func getNeighbour(req *http.Request, maxSize int) (int, string, error) {
-	return GetInt(req, "nextIndex", maxSize)
+func getNeighbour(req *http.Request, maxSize int) (int, bool) {
+	val, err := GetInt(req, "nextIndex", maxSize)
+	return val, err == nil
 }
 
-func getResult(name string, fileId bson.ObjectId) (res tool.DisplayResult, msg string, err error) {
-	res, err = GetResultData(name, fileId)
-	if err != nil {
-		msg = fmt.Sprintf("Could not retrieve result %q.", name)
+func retrieveSubmissions(req *http.Request, ctx *Context) (subs []*project.Submission, err error) {
+	tipe, err := GetString(req, "type")
+	if err != nil{
+		return
 	}
-	return
-}
-
-func retrieveSubmissions(req *http.Request, ctx *Context) (subs []*project.Submission, msg string, err error) {
-	tipe := req.FormValue("type")
-	idStr := req.FormValue("id")
+	idStr, err := GetString(req, "id")
+	if err != nil{
+		return
+	}
 	if tipe == "project" {
-		if !bson.IsObjectIdHex(idStr) {
-			err = fmt.Errorf("Invalid id %q", idStr)
-			msg = err.Error()
+		var pid bson.ObjectId
+		pid, err = util.ReadId(idStr)
+		if err != nil {
 			return
 		}
 		ctx.Browse.Pid = idStr
 		ctx.Browse.IsUser = false
-		pid := bson.ObjectIdHex(idStr)
 		subs, err = db.GetSubmissions(bson.M{project.PROJECT_ID: pid}, nil)
-		if err != nil {
-			msg = "Could not retrieve project submissions."
-		}
-		return
 	} else if tipe == "user" {
 		ctx.Browse.Uid = idStr
 		ctx.Browse.IsUser = true
 		subs, err = db.GetSubmissions(bson.M{project.USER: ctx.Browse.Uid}, nil)
-		if err != nil {
-			msg = "Could not retrieve user submissions."
-		}
-		return
+	} else{
+		err = fmt.Errorf("Unknown request type %q", tipe)
 	}
-	err = fmt.Errorf("Unknown request type %q", tipe)
-	msg = err.Error()
 	return
 }
 
@@ -422,16 +330,22 @@ func loadSkeleton(req *http.Request) (path string, err error) {
 	return
 }
 
-func GetInt(req *http.Request, name string, maxSize int) (found int, msg string, err error) {
+func GetInt(req *http.Request, name string, maxSize int) (found int, err error) {
 	iStr := req.FormValue(name)
 	found, err = strconv.Atoi(iStr)
 	if err != nil {
-		msg = fmt.Sprintf("Invalid int %v.", iStr)
 		return
 	}
 	if found > maxSize {
 		err = fmt.Errorf("Integer size %v too big.", found)
-		msg = err.Error()
+	}
+	return
+}
+
+func GetString(req *http.Request, name string) (val string, err error) {
+	val = req.FormValue(name)
+	if strings.TrimSpace(val) == "" {
+		err = fmt.Errorf("Invalid value for %s.", name)
 	}
 	return
 }

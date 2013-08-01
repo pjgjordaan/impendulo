@@ -72,10 +72,11 @@ func Serve(maxProcs int) {
 	for {
 		if busy < maxProcs && subQueue.Len() > 0 {
 			subId := subQueue.Remove(subQueue.Front()).(bson.ObjectId)
-			fQueue := fileQueues[subId]
+			helper := helpers[subId]
+			helper.started = true
+			go helper.Handle(fileQueues[subId])
 			delete(fileQueues, subId)
 			busy++
-			go helpers[subId].Handle(fQueue)
 		} else if busy < 0 {
 			break
 		}
@@ -127,7 +128,6 @@ func (this *ProcHelper) SetDone() {
 }
 
 func (this *ProcHelper) Handle(fileQueue *list.List) {
-	this.started = true
 	procChan := make(chan bson.ObjectId)
 	stopChan := make(chan interface{})
 	proc, err := NewProcessor(this.subId)
@@ -248,26 +248,17 @@ func (this *Processor) extract(archive *project.File) error {
 		return err
 	}
 	for name, data := range files {
-		file, err := project.ParseName(name)
+		err = storeFile(name, data, this.sub.Id) 
 		if err != nil {
 			util.Log(err)
-			continue
 		}
-		matcher := bson.M{project.SUBID: archive.SubId, project.TIME: file.Time}
-		if !db.Contains(db.FILES, matcher) {
-			file.SubId = archive.SubId
-			file.Data = data
-			err = db.AddFile(file)
-			if err != nil {
-				util.Log(err)
-			}
-		} 
 	}
 	err = db.RemoveFileById(archive.Id)
 	if err != nil {
-		return err
+		util.Log(err)
 	}
-	fIds, err := db.GetFiles(bson.M{project.SUBID: archive.SubId}, bson.M{project.NUM: 1, project.ID: 1}, project.NUM)
+	fIds, err := db.GetFiles(bson.M{project.SUBID: this.sub.Id}, 
+		bson.M{project.NUM: 1, project.ID: 1}, project.NUM)
 	if err != nil {
 		return err
 	}
@@ -283,6 +274,20 @@ func (this *Processor) extract(archive *project.File) error {
 		}
 	}
 	return nil
+}
+
+func storeFile(name string, data []byte, subId bson.ObjectId)(err error){
+	file, err := project.ParseName(name)
+	if err != nil {
+		return
+	}
+	matcher := bson.M{project.SUBID: subId, project.TIME: file.Time}
+	if !db.Contains(db.FILES, matcher) {
+		file.SubId = subId
+		file.Data = data
+		err = db.AddFile(file)
+	}
+	return
 }
 
 //Analyser is used to run tools on a file.
@@ -340,7 +345,7 @@ func (this *Analyser) compile() (bool, error) {
 	if err != nil && !compileErr {
 		return false, err
 	}
-	return compileErr, AddResult(res)
+	return compileErr, db.AddResult(res)
 }
 
 //RunTools runs all available tools on a file, skipping previously run tools.
@@ -358,22 +363,10 @@ func (this *Analyser) RunTools() {
 			continue
 		}
 		if res != nil {
-			err = AddResult(res)
+			err = db.AddResult(res)
 		}
 		if err != nil {
 			util.Log(err)
 		}
 	}
-}
-
-//AddResult adds a tool result to the db.
-//It updates the associated file's list of results to point to this new result.
-func AddResult(res tool.ToolResult) error {
-	matcher := bson.M{project.ID: res.GetFileId()}
-	change := bson.M{db.SET: bson.M{project.RESULTS + "." + res.GetName(): res.GetId()}}
-	err := db.Update(db.FILES, matcher, change)
-	if err != nil {
-		return err
-	}
-	return db.AddResult(res)
 }

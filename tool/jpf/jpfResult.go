@@ -39,11 +39,15 @@ func (this *JPFResult) Success() bool {
 	return true
 }
 
-func (this *JPFResult) TemplateArgs(current bool) (string, interface{}) {
+func (this *JPFResult) GetData() interface{} {
+	return this.Data
+}
+
+func (this *JPFResult) Template(current bool) string {
 	if current {
-		return "jpfCurrent", this.Data
+		return "jpfCurrent"
 	} else {
-		return "jpfNext", this.Data
+		return "jpfNext"
 	}
 }
 

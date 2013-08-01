@@ -14,8 +14,9 @@ type ToolResult interface {
 
 //Result describes a tool or test's results for a given file.
 type DisplayResult interface {
-	TemplateArgs(current bool) (string, interface{})
+	Template(current bool) string
 	GetName() string
+	GetData() interface{}
 }
 
 func NewErrorResult(fileId bson.ObjectId, err error) *ErrorResult {
@@ -31,11 +32,15 @@ func (this *ErrorResult) GetName() string {
 	return "Error"
 }
 
-func (this *ErrorResult) TemplateArgs(current bool) (string, interface{}) {
+func (this *ErrorResult) GetData() interface{} {
+	return this.err
+}
+
+func (this *ErrorResult) Template(current bool) string {
 	if current {
-		return "errorCurrent", this.err
+		return "errorCurrent"
 	} else {
-		return "errorNext", this.err
+		return "errorNext"
 	}
 }
 
@@ -54,11 +59,16 @@ func (this *CodeResult) GetName() string {
 	return CODE
 }
 
-func (this *CodeResult) TemplateArgs(current bool) (string, interface{}) {
+
+func (this *CodeResult) GetData() interface{} {
+	return this.data
+}
+
+func (this *CodeResult) Template(current bool) string {
 	if current {
-		return "codeCurrent", this.data
+		return "codeCurrent"
 	} else {
-		return "codeNext", this.data
+		return "codeNext"
 	}
 }
 
@@ -76,11 +86,15 @@ func (this *SummaryResult) GetName() string {
 	return SUMMARY
 }
 
-func (this *SummaryResult) TemplateArgs(current bool) (string, interface{}) {
+func (this *SummaryResult) GetData() interface{} {
+	return this.summary
+}
+
+func (this *SummaryResult) Template(current bool) string {
 	if current {
-		return "summaryCurrent", this.summary
+		return "summaryCurrent"
 	} else {
-		return "summaryNext", this.summary
+		return "summaryNext"
 	}
 }
 

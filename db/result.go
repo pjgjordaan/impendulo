@@ -142,16 +142,22 @@ func GetDisplayResult(name string, matcher, selector interface{}) (ret tool.Disp
 }
 
 //AddResult adds a new result to the active database.
-func AddResult(r tool.ToolResult) (err error) {
+func AddResult(res tool.ToolResult) (err error) {
+	matcher := bson.M{project.ID: res.GetFileId()}
+	change := bson.M{SET: bson.M{project.RESULTS + "." + res.GetName(): res.GetId()}}
+	err = Update(FILES, matcher, change)
+	if err != nil {
+		return
+	}
 	session, err := getSession()
 	if err != nil {
 		return
 	}
 	defer session.Close()
 	col := session.DB("").C(RESULTS)
-	err = col.Insert(r)
+	err = col.Insert(res)
 	if err != nil {
-		err = &DBAddError{r.GetName(), err}
+		err = &DBAddError{res.GetName(), err}
 	}
 	return
 }

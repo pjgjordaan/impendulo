@@ -37,11 +37,15 @@ func (this *JUnitResult) GetSummary() *tool.Summary {
 	return &tool.Summary{this.GetName(), body}
 }
 
-func (this *JUnitResult) TemplateArgs(current bool) (string, interface{}) {
+func (this *JUnitResult) GetData() interface{} {
+	return this.Data
+}
+
+func (this *JUnitResult) Template(current bool) string {
 	if current {
-		return "junitCurrent", this.Data
+		return "junitCurrent"
 	} else {
-		return "junitNext", this.Data
+		return "junitNext"
 	}
 }
 

@@ -35,10 +35,10 @@ func (this *File) String() string {
 
 func (this *File) SetMod(mod string) {
 	switch mod {
-	case "s":
-		this.Mod = "Saved"
-	case "c":
+	case "b":
 		this.Mod = "Compiled"
+	case "c":
+		this.Mod = "Saved"
 	case "r":
 		this.Mod = "Removed"
 	case "l":

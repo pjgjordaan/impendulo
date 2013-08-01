@@ -38,11 +38,15 @@ func (this *JavacResult) GetSummary() *tool.Summary {
 	return &tool.Summary{this.GetName(), body}
 }
 
-func (this *JavacResult) TemplateArgs(current bool) (string, interface{}) {
+func (this *JavacResult) GetData() interface{} {
+	return this
+}
+
+func (this *JavacResult) Template(current bool) string {
 	if current {
-		return "javacCurrent", this
+		return "javacCurrent"
 	} else {
-		return "javacNext", this
+		return "javacNext"
 	}
 }
 

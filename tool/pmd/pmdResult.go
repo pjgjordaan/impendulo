@@ -35,11 +35,15 @@ func (this *PMDResult) GetSummary() *tool.Summary {
 	return &tool.Summary{this.GetName(), body}
 }
 
-func (this *PMDResult) TemplateArgs(current bool) (string, interface{}) {
+func (this *PMDResult) GetData() interface{} {
+	return this.Data
+}
+
+func (this *PMDResult) Template(current bool) string {
 	if current {
-		return "pmdCurrent", this.Data
+		return "pmdCurrent"
 	} else {
-		return "pmdNext", this.Data
+		return "pmdNext"
 	}
 }
 

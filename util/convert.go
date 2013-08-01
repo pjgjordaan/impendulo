@@ -6,25 +6,12 @@ import (
 	"strconv"
 )
 
-type MissingError struct {
-	key string
-}
-
-func (this *MissingError) Error() string {
-	return fmt.Sprintf("Error reading value for %q.", this.key)
-}
-
-type CastError struct {
-	tipe  string
-	value interface{}
-}
-
-func (this *CastError) Error() string {
-	return fmt.Sprintf("Error casting value %q to %q.", this.value, this.tipe)
-}
-
-func IsCastError(err error) (ok bool) {
-	_, ok = err.(*CastError)
+func ReadId(idStr string) (id bson.ObjectId, err error) {
+	if !bson.IsObjectIdHex(idStr) {
+		err = &CastError{"bson.ObjectId", idStr}
+	} else{
+		id = bson.ObjectIdHex(idStr)
+	}
 	return
 }
 
@@ -35,11 +22,11 @@ func GetString(jobj map[string]interface{}, key string) (val string, err error) 
 		err = &MissingError{key}
 		return
 	}
-	switch ival.(type) {
+	switch v := ival.(type) {
 	case string:
-		val = ival.(string)
+		val = v
 	default:
-		val = fmt.Sprint(ival)
+		val = fmt.Sprint(v)
 	}
 	return
 }
@@ -51,17 +38,17 @@ func GetInt(jobj map[string]interface{}, key string) (val int, err error) {
 		err = &MissingError{key}
 		return
 	}
-	switch ival.(type) {
+	switch v := ival.(type) {
 	case int64:
-		val = int(ival.(int64))
+		val = int(v)
 	case int:
-		val = ival.(int)
+		val = v
 	case float64:
-		val = int(ival.(float64))
+		val = int(v)
 	case string:
-		val, err = strconv.Atoi(ival.(string))
+		val, err = strconv.Atoi(v)
 	default:
-		err = &CastError{"int", ival}
+		err = &CastError{"int", v}
 	}
 	return
 }
@@ -73,17 +60,17 @@ func GetInt64(jobj map[string]interface{}, key string) (val int64, err error) {
 		err = &MissingError{key}
 		return
 	}
-	switch ival.(type) {
+	switch v := ival.(type) {
 	case int64:
-		val = ival.(int64)
+		val = v
 	case int:
-		val = int64(ival.(int))
+		val = int64(v)
 	case float64:
-		val = int64(ival.(float64))
+		val = int64(v)
 	case string:
-		val, err = strconv.ParseInt(ival.(string), 10, 64)
+		val, err = strconv.ParseInt(v, 10, 64)
 	default:
-		err = &CastError{"int64", ival}
+		err = &CastError{"int64", v}
 	}
 	return
 }
@@ -95,13 +82,13 @@ func GetId(jobj map[string]interface{}, key string) (id bson.ObjectId, err error
 		err = &MissingError{key}
 		return
 	}
-	switch ival.(type) {
+	switch v := ival.(type) {
 	case bson.ObjectId:
-		id = ival.(bson.ObjectId)
+		id = v
 	case string:
-		id, err = ReadId(ival.(string))
+		id, err = ReadId(v)
 	default:
-		err = &CastError{"id", ival}
+		err = &CastError{"id", v}
 	}
 	return
 }
@@ -113,11 +100,11 @@ func GetM(jobj map[string]interface{}, key string) (val bson.M, err error) {
 		err = &MissingError{key}
 		return
 	}
-	switch ival.(type) {
+	switch v := ival.(type) {
 	case bson.M:
-		val = ival.(bson.M)
+		val = v
 	default:
-		err = &CastError{"bson.M", ival}
+		err = &CastError{"bson.M", v}
 	}
 	return
 }
@@ -169,11 +156,25 @@ func toStrings(ivals interface{}) ([]string, error) {
 	return vals, nil
 }
 
-func ReadId(idStr string) (id bson.ObjectId, err error) {
-	if !bson.IsObjectIdHex(idStr) {
-		err = &CastError{"bson.ObjectId", idStr}
-	} else{
-		id = bson.ObjectIdHex(idStr)
-	}
+
+type MissingError struct {
+	key string
+}
+
+func (this *MissingError) Error() string {
+	return fmt.Sprintf("Error reading value for %q.", this.key)
+}
+
+type CastError struct {
+	tipe  string
+	value interface{}
+}
+
+func (this *CastError) Error() string {
+	return fmt.Sprintf("Error casting value %q to %q.", this.value, this.tipe)
+}
+
+func IsCastError(err error) (ok bool) {
+	_, ok = err.(*CastError)
 	return
 }

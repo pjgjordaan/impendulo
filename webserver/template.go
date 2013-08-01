@@ -12,7 +12,6 @@ import (
 )
 
 var funcs = template.FuncMap{
-	"reverse":      reverse,
 	"projectName":  projectName,
 	"date":         util.Date,
 	"setBreaks":    setBreaks,
@@ -26,6 +25,11 @@ var funcs = template.FuncMap{
 	"createHeader": fileHeader,
 	"sum":          sum,
 	"equal":        equal,
+	"langs": langs,
+}
+
+func langs()[]string{
+	return []string{"Java"}
 }
 
 func equal(a, b interface{}) bool {

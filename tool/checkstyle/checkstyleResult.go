@@ -36,11 +36,15 @@ func (this *CheckstyleResult) GetFileId() bson.ObjectId {
 	return this.FileId
 }
 
-func (this *CheckstyleResult) TemplateArgs(current bool) (string, interface{}) {
+func (this *CheckstyleResult) GetData() interface{} {
+	return this.Data
+}
+
+func (this *CheckstyleResult) Template(current bool) string{
 	if current {
-		return "checkstyleCurrent", this.Data
+		return "checkstyleCurrent"
 	} else {
-		return "checkstyleNext", this.Data
+		return "checkstyleNext"
 	}
 }
 

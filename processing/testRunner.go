@@ -56,5 +56,5 @@ func (this *TestRunner) Run(f *project.File, srcDir string) error {
 	if err != nil {
 		return err
 	}
-	return AddResult(res)
+	return db.AddResult(res)
 }

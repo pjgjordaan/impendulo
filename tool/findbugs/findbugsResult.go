@@ -35,12 +35,15 @@ func (this *FindbugsResult) GetSummary() *tool.Summary {
 	return &tool.Summary{this.GetName(), body}
 }
 
+func (this *FindbugsResult) GetData() interface{} {
+	return this.Data
+}
 
-func (this *FindbugsResult) TemplateArgs(current bool) (string, interface{}) {
+func (this *FindbugsResult) Template(current bool) string {
 	if current {
-		return "findbugsCurrent", this.Data
+		return "findbugsCurrent"
 	} else {
-		return "findbugsNext", this.Data
+		return "findbugsNext"
 	}
 }
 

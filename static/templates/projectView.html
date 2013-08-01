@@ -11,7 +11,8 @@
     <label class="control-label" for="lang">Language</label>
     <div class="controls">
       <select name="lang" id="lang">
-	{{ range .langs}}
+	{{$langs := langs}}
+	{{ range $langs}}
 	<option value={{.}}>{{.}}</option>
 	{{end}}
       </select>
