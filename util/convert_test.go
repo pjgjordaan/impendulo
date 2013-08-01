@@ -36,10 +36,10 @@ func TestGetInt(t *testing.T) {
 	}
 }
 
-func TestGetID(t *testing.T) {
+func TestGetId(t *testing.T) {
 	this := "id"
 	for k, v := range testmap {
-		res, err := GetID(testmap, k)
+		res, err := GetId(testmap, k)
 		if k == this {
 			if err != nil || res != v {
 				t.Error(err, res, "!=", v)

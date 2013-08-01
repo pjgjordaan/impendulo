@@ -29,109 +29,97 @@ func IsCastError(err error) (ok bool) {
 }
 
 //GetString
-func GetString(jobj map[string]interface{}, key string) (string, error) {
+func GetString(jobj map[string]interface{}, key string) (val string, err error) {
 	ival, ok := jobj[key]
 	if !ok {
-		return "", &MissingError{key}
+		err = &MissingError{key}
+		return
 	}
 	switch ival.(type) {
 	case string:
-		return readString(ival), nil
+		val = ival.(string)
 	default:
-		return fmt.Sprint(ival), nil
+		val = fmt.Sprint(ival)
 	}
-}
-
-func readString(ival interface{}) string {
-	val, _ := ival.(string)
-	return val
+	return
 }
 
 //GetInt
-func GetInt(jobj map[string]interface{}, key string) (int, error) {
+func GetInt(jobj map[string]interface{}, key string) (val int, err error) {
 	ival, ok := jobj[key]
 	if !ok {
-		return -1, &MissingError{key}
+		err = &MissingError{key}
+		return
 	}
 	switch ival.(type) {
 	case int64:
-		return int(readInt64(ival)), nil
+		val = int(ival.(int64))
 	case int:
-		return readInt(ival), nil
+		val = ival.(int)
 	case float64:
-		return int(readFloat64(ival)), nil
+		val = int(ival.(float64))
 	case string:
-		return strconv.Atoi(readString(ival))
+		val, err = strconv.Atoi(ival.(string))
 	default:
-		return -1, &CastError{"int", ival}
+		err = &CastError{"int", ival}
 	}
-
-}
-
-func readInt(ival interface{}) int {
-	val, _ := ival.(int)
-	return val
-}
-
-func readFloat64(ival interface{}) float64 {
-	val, _ := ival.(float64)
-	return val
+	return
 }
 
 //GetInt64
-func GetInt64(jobj map[string]interface{}, key string) (int64, error) {
+func GetInt64(jobj map[string]interface{}, key string) (val int64, err error) {
 	ival, ok := jobj[key]
 	if !ok {
-		return -1, &MissingError{key}
+		err = &MissingError{key}
+		return
 	}
 	switch ival.(type) {
 	case int64:
-		return readInt64(ival), nil
+		val = ival.(int64)
 	case int:
-		return int64(readInt(ival)), nil
+		val = int64(ival.(int))
 	case float64:
-		return int64(readFloat64(ival)), nil
+		val = int64(ival.(float64))
 	case string:
-		return strconv.ParseInt(readString(ival), 10, 64)
+		val, err = strconv.ParseInt(ival.(string), 10, 64)
 	default:
-		return -1, &CastError{"int64", ival}
+		err = &CastError{"int64", ival}
 	}
-}
-
-func readInt64(ival interface{}) int64 {
-	val, _ := ival.(int64)
-	return val
+	return
 }
 
 //GetID
-func GetID(jobj map[string]interface{}, key string) (bson.ObjectId, error) {
+func GetId(jobj map[string]interface{}, key string) (id bson.ObjectId, err error) {
 	ival, ok := jobj[key]
 	if !ok {
-		return bson.NewObjectId(), &MissingError{key}
+		err = &MissingError{key}
+		return
 	}
 	switch ival.(type) {
 	case bson.ObjectId:
-		return ival.(bson.ObjectId), nil
+		id = ival.(bson.ObjectId)
 	case string:
-		idStr := readString(ival)
-		if bson.IsObjectIdHex(idStr) {
-			return bson.ObjectIdHex(idStr), nil
-		}
+		id, err = ReadId(ival.(string))
+	default:
+		err = &CastError{"id", ival}
 	}
-	return bson.NewObjectId(), &CastError{"bson.ObjectId", ival}
+	return
 }
 
 //GetM
-func GetM(jobj map[string]interface{}, key string) (bson.M, error) {
+func GetM(jobj map[string]interface{}, key string) (val bson.M, err error) {
 	ival, ok := jobj[key]
 	if !ok {
-		return nil, &MissingError{key}
+		err = &MissingError{key}
+		return
 	}
-	val, ok := ival.(bson.M)
-	if !ok {
-		return nil, &CastError{"bson.M", ival}
+	switch ival.(type) {
+	case bson.M:
+		val = ival.(bson.M)
+	default:
+		err = &CastError{"bson.M", ival}
 	}
-	return val, nil
+	return
 }
 
 //GetBytes
@@ -179,4 +167,13 @@ func toStrings(ivals interface{}) ([]string, error) {
 		}
 	}
 	return vals, nil
+}
+
+func ReadId(idStr string) (id bson.ObjectId, err error) {
+	if !bson.IsObjectIdHex(idStr) {
+		err = &CastError{"bson.ObjectId", idStr}
+	} else{
+		id = bson.ObjectIdHex(idStr)
+	}
+	return
 }

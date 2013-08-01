@@ -63,13 +63,15 @@ func SaveFile(fname string, data []byte) error {
 
 //ReadBytes reads bytes from a reader until io.EOF is encountered.
 //If the reader can't be read an empty []byte is returned.
-func ReadBytes(r io.Reader) []byte {
+func ReadBytes(r io.Reader) (data []byte) {
 	buffer := new(bytes.Buffer)
 	_, err := buffer.ReadFrom(r)
 	if err != nil {
-		return make([]byte, 0)
+		data = make([]byte, 0)
+	} else{
+		data = buffer.Bytes()
 	}
-	return buffer.Bytes()
+	return
 }
 
 func GetPackage(r io.Reader) string {
@@ -89,27 +91,32 @@ type copier struct {
 }
 
 func (this *copier) copyFile(path string, f os.FileInfo, err error) error {
+	if err != nil || f == nil{
+		return err
+	}
+	return this.copy(path, f)
+}
+
+func (this *copier) copy(path string, f os.FileInfo) (err error){
 	destPath, err := filepath.Rel(this.src, path)
 	if err != nil {
-		return err
+		return
 	}
 	destPath = filepath.Join(this.dest, destPath)
-	if f == nil {
-		return nil
-	} else if f.IsDir() {
-		return os.MkdirAll(destPath, os.ModePerm)
-	} else {
-		srcFile, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		destFile, err := os.Create(destPath)
-		if err != nil {
-			return err
-		}
-		_, err = io.Copy(destFile, srcFile)
-		return err
+	if f.IsDir() {
+		err = os.MkdirAll(destPath, os.ModePerm)
+		return
 	}
+	srcFile, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	destFile, err := os.Create(destPath)
+	if err != nil {
+		return
+	}
+	_, err = io.Copy(destFile, srcFile)
+	return
 }
 
 func Copy(dest, src string) error {

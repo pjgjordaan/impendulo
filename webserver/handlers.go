@@ -173,7 +173,7 @@ func displayResult(w http.ResponseWriter, req *http.Request, ctx *Context) error
 		return err
 	}
 	curTemp, curResult := res.TemplateArgs(true)
-	projectId, err := ReadId(ctx.Browse.Pid)
+	projectId, err := util.ReadId(ctx.Browse.Pid)
 	if err != nil {
 		ctx.AddMessage("Could not retrieve project identifier.", true)
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)

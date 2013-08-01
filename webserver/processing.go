@@ -29,7 +29,7 @@ func (p processor) exec(req *http.Request, ctx *Context) error {
 }
 
 func doArchive(req *http.Request, ctx *Context) (msg string, err error) {
-	projectId, err := ReadId(req.FormValue("project"))
+	projectId, err := util.ReadId(req.FormValue("project"))
 	if err != nil {
 		msg = err.Error()
 		return
@@ -70,7 +70,7 @@ func doArchive(req *http.Request, ctx *Context) (msg string, err error) {
 }
 
 func doSkeleton(req *http.Request, ctx *Context) (msg string, err error) {
-	projectId, err := ReadId(req.FormValue("project"))
+	projectId, err := util.ReadId(req.FormValue("project"))
 	if err != nil {
 		msg = err.Error()
 		return
@@ -94,7 +94,7 @@ func doSkeleton(req *http.Request, ctx *Context) (msg string, err error) {
 }
 
 func doTest(req *http.Request, ctx *Context) (msg string, err error) {
-	projectId, err := ReadId(req.FormValue("project"))
+	projectId, err := util.ReadId(req.FormValue("project"))
 	if err != nil {
 		msg = err.Error()
 		return
@@ -144,7 +144,7 @@ func doTest(req *http.Request, ctx *Context) (msg string, err error) {
 }
 
 func doJPF(req *http.Request, ctx *Context) (msg string, err error) {
-	projectId, err := ReadId(req.FormValue("project"))
+	projectId, err := util.ReadId(req.FormValue("project"))
 	if err != nil {
 		msg = err.Error()
 		return
@@ -251,7 +251,7 @@ func doRegister(req *http.Request, ctx *Context) (msg string, err error) {
 }
 
 func doDeleteProject(req *http.Request, ctx *Context) (msg string, err error) {
-	projectId, err := ReadId(req.FormValue("project"))
+	projectId, err := util.ReadId(req.FormValue("project"))
 	if err != nil {
 		msg = err.Error()
 		return
@@ -276,7 +276,7 @@ func doDeleteUser(req *http.Request, ctx *Context) (msg string, err error) {
 
 func retrieveNames(req *http.Request, ctx *Context) (ret []string, msg string, err error) {
 	ctx.Browse.Sid = req.FormValue("subid")
-	subId, err := ReadId(ctx.Browse.Sid)
+	subId, err := util.ReadId(ctx.Browse.Sid)
 	if err != nil {
 		msg = err.Error()
 		return
@@ -390,7 +390,7 @@ func retrieveSubmissions(req *http.Request, ctx *Context) (subs []*project.Submi
 
 func projectName(idStr string) (name string, err error) {
 	var id bson.ObjectId
-	id, err = ReadId(idStr)
+	id, err = util.ReadId(idStr)
 	if err != nil {
 		return
 	}
@@ -405,7 +405,7 @@ func projectName(idStr string) (name string, err error) {
 
 func loadSkeleton(req *http.Request) (path string, err error) {
 	idStr := req.FormValue("project")
-	projectId, err := ReadId(idStr)
+	projectId, err := util.ReadId(idStr)
 	if err != nil {
 		return
 	}
@@ -419,15 +419,6 @@ func loadSkeleton(req *http.Request) (path string, err error) {
 		return
 	}
 	err = util.SaveFile(path, p.Skeleton)
-	return
-}
-
-func ReadId(idStr string) (ret bson.ObjectId, err error) {
-	if !bson.IsObjectIdHex(idStr) {
-		err = fmt.Errorf("Invalid id string %q.", idStr)
-		return
-	}
-	ret = bson.ObjectIdHex(idStr)
 	return
 }
 

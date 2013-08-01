@@ -57,12 +57,13 @@ func (this SyncLogger) Log(vals ...interface{}) {
 }
 
 //NewLogger creates a new SyncLogger which writes its logs to the specified file.
-func NewLogger(fname string) (*SyncLogger, error) {
-	fo, err := os.Create(fname)
+func NewLogger(fname string) (logger *SyncLogger, err error) {
+	logFile, err := os.Create(fname)
 	if err != nil {
-		return nil, err
+		return
 	}
-	return &SyncLogger{log.New(fo, "", log.LstdFlags), new(sync.Mutex), false}, nil
+	logger = &SyncLogger{log.New(logFile, "", log.LstdFlags), new(sync.Mutex), false}
+	return
 }
 
 //Log sends data to be logged to the appropriate logger.

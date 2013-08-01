@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/godfried/impendulo/util"
 	"net"
+	"io"
 )
 
 const (
@@ -38,15 +39,11 @@ func Run(port string, spawner HandlerSpawner) {
 }
 
 type HandlerSpawner interface {
-	Spawn() ConnHandler
+	Spawn() RWCHandler
 }
 
 //ConnHandler is an interface with basic methods for handling connections.
-type ConnHandler interface {
-	Start(conn net.Conn)
-	Handle() error
-	Login() error
-	LoadInfo() error
-	Read() error
+type RWCHandler interface {
+	Start(rwc io.ReadWriteCloser)
 	End(err error)
 }
