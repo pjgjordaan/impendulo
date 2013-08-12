@@ -2,11 +2,11 @@ package findbugs
 
 import (
 	"encoding/xml"
-	"github.com/godfried/impendulo/util"
+	"fmt"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/util"
 	"html/template"
 	"labix.org/v2/mgo/bson"
-	"fmt"
 )
 
 const NAME = "Findbugs"
@@ -55,9 +55,9 @@ func (this *FindbugsResult) Success() bool {
 
 func NewResult(fileId bson.ObjectId, data []byte) (res *FindbugsResult, err error) {
 	res = &FindbugsResult{
-		Id: bson.NewObjectId(), 
-		FileId: fileId, 
-		Time: util.CurMilis()}
+		Id:     bson.NewObjectId(),
+		FileId: fileId,
+		Time:   util.CurMilis()}
 	res.Data, err = genReport(res.Id, data)
 	return
 }
@@ -71,8 +71,8 @@ func genReport(id bson.ObjectId, data []byte) (res *FindbugsReport, err error) {
 	return
 }
 
-//FindbugsReport stores the results of running Findbugs. It is 
-//populated from XML output produced by findbugs. 
+//FindbugsReport stores the results of running Findbugs. It is
+//populated from XML output produced by findbugs.
 type FindbugsReport struct {
 	Id          bson.ObjectId
 	Time        int64            `xml:"analysisTimestamp,attr"`

@@ -31,7 +31,7 @@ java-strictexception,java-strings,java-sunsecure,java-typeresolution,
 java-unnecessary,java-unusedcode`
 
 func (this *PMD) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
-	args := []string{this.cmd, config.PMD, "-f", "xml", "-stress", 
+	args := []string{this.cmd, config.PMD, "-f", "xml", "-stress",
 		"-shortnames", "-rulesets", RULES, "-dir", ti.Dir}
 	execRes := tool.RunCommand(args, nil)
 	if execRes.HasStdOut() {

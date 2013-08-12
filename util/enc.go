@@ -57,7 +57,7 @@ func SaveMap(mp map[bson.ObjectId]bool, fname string) (err error) {
 	return
 }
 
-//WriteJson writes json marshalled data to to the writer. 
+//WriteJson writes json marshalled data to to the writer.
 func WriteJson(w io.Writer, data interface{}) (err error) {
 	marshalled, err := json.Marshal(data)
 	if err != nil {

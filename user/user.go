@@ -101,8 +101,8 @@ func ReadUsers(fname string) ([]*User, error) {
 	for scanner.Scan() {
 		vals := strings.Split(scanner.Text(), ":")
 		if len(vals) != 2 {
-			return nil, 
-			fmt.Errorf("Config file not formatted correctly.")
+			return nil,
+				fmt.Errorf("Config file not formatted correctly.")
 		}
 		uname := strings.TrimSpace(vals[0])
 		pword := strings.TrimSpace(vals[1])

@@ -20,8 +20,8 @@ func (this *Project) TypeName() string {
 }
 
 func (this *Project) String() string {
-	return "Type: project.Project; Id: " + this.Id.Hex() + 
-		"; Name: " + this.Name + "; User: " + this.User + 
+	return "Type: project.Project; Id: " + this.Id.Hex() +
+		"; Name: " + this.Name + "; User: " + this.User +
 		"; Lang: " + this.Lang + "; Time: " + util.Date(this.Time)
 }
 

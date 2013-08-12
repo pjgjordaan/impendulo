@@ -34,7 +34,7 @@ type ids struct {
 
 //AddFile sends a file id to be processed.
 func AddFile(file *project.File) {
-	if file.CanProcess(){
+	if file.CanProcess() {
 		idChan <- &ids{file.Id, file.SubId, true}
 	}
 }
@@ -72,7 +72,7 @@ func Serve(maxProcs int) {
 	busy := 0
 	for {
 		if busy < maxProcs && subQueue.Len() > 0 {
-			//If there is an available spot, 
+			//If there is an available spot,
 			//start processing the next submission.
 			subId := subQueue.Remove(subQueue.Front()).(bson.ObjectId)
 			helper := helpers[subId]
@@ -88,7 +88,7 @@ func Serve(maxProcs int) {
 			if ids.isFile {
 				if helper, ok := helpers[ids.subId]; ok {
 					if helper.started {
-						//Send file to goroutine if 
+						//Send file to goroutine if
 						//submission processing has started.
 						helper.serveChan <- ids.fileId
 					} else {
@@ -97,7 +97,7 @@ func Serve(maxProcs int) {
 					}
 				} else {
 					util.Log(fmt.Errorf(
-						"No submission %q found for file %q.", 
+						"No submission %q found for file %q.",
 						ids.subId, ids.fileId))
 				}
 			} else {
@@ -118,11 +118,11 @@ func Serve(maxProcs int) {
 }
 
 func NewProcHelper(subId bson.ObjectId) *ProcHelper {
-	return &ProcHelper{subId, make(chan bson.ObjectId), 
+	return &ProcHelper{subId, make(chan bson.ObjectId),
 		make(chan interface{}), false, false}
 }
 
-//ProcHelper is used to help handle a submission's files. 
+//ProcHelper is used to help handle a submission's files.
 type ProcHelper struct {
 	subId     bson.ObjectId
 	serveChan chan bson.ObjectId
@@ -198,9 +198,9 @@ func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
 	}
 	dir := filepath.Join(os.TempDir(), sub.Id.Hex())
 	proc = &Processor{
-		sub: sub, 
-		rootDir: dir, 
-		srcDir: filepath.Join(dir, "src"), 
+		sub:     sub,
+		rootDir: dir,
+		srcDir:  filepath.Join(dir, "src"),
 		toolDir: filepath.Join(dir, "tools"),
 	}
 	return
@@ -281,7 +281,7 @@ func (this *Processor) Extract(archive *project.File) error {
 		return err
 	}
 	for name, data := range files {
-		err = storeFile(name, data, this.sub.Id) 
+		err = storeFile(name, data, this.sub.Id)
 		if err != nil {
 			util.Log(err)
 		}
@@ -290,7 +290,7 @@ func (this *Processor) Extract(archive *project.File) error {
 	if err != nil {
 		util.Log(err)
 	}
-	fIds, err := db.GetFiles(bson.M{project.SUBID: this.sub.Id}, 
+	fIds, err := db.GetFiles(bson.M{project.SUBID: this.sub.Id},
 		bson.M{project.NUM: 1, project.ID: 1}, project.NUM)
 	if err != nil {
 		return err
@@ -310,7 +310,7 @@ func (this *Processor) Extract(archive *project.File) error {
 	return nil
 }
 
-func storeFile(name string, data []byte, subId bson.ObjectId)(err error){
+func storeFile(name string, data []byte, subId bson.ObjectId) (err error) {
 	file, err := project.ParseName(name)
 	if err != nil {
 		return
@@ -391,18 +391,18 @@ func (this *Analyser) RunTools() {
 		if _, ok := this.file.Results[t.GetName()]; ok {
 			continue
 		}
-		res, err := t.Run(this.file.Id, this.target)	
+		res, err := t.Run(this.file.Id, this.target)
 		if err != nil {
 			util.Log(err)
-			if tool.IsTimeOut(err){
+			if tool.IsTimeOut(err) {
 				err = db.AddTimeoutResult(
 					this.file.Id, t.GetName())
-			} else{
+			} else {
 				continue
 			}
 		} else if res != nil {
 			err = db.AddResult(res)
-		} else{
+		} else {
 			err = db.AddNoResult(this.file.Id, t.GetName())
 		}
 		if err != nil {

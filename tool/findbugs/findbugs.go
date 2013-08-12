@@ -7,7 +7,7 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
-//Findbugs is a tool.Tool used to run the Findbugs static analysis tool on 
+//Findbugs is a tool.Tool used to run the Findbugs static analysis tool on
 //Java classes.
 type FindBugs struct {
 	cmd string
@@ -27,13 +27,13 @@ func (this *FindBugs) GetName() string {
 }
 
 func (this *FindBugs) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
-	args := []string{config.GetConfig(config.JAVA), "-jar", this.cmd, 
+	args := []string{config.GetConfig(config.JAVA), "-jar", this.cmd,
 		"-textui", "-low", "-xml:withMessages", ti.PackagePath()}
 	execRes := tool.RunCommand(args, nil)
 	if execRes.HasStdOut() {
 		res, err = NewResult(fileId, execRes.StdOut)
 	} else if execRes.HasStdErr() {
-		err = fmt.Errorf("Could not run findbugs: %q.", 
+		err = fmt.Errorf("Could not run findbugs: %q.",
 			string(execRes.StdErr))
 	} else {
 		err = execRes.Err

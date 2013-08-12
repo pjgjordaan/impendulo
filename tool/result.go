@@ -5,12 +5,12 @@ import (
 	"strings"
 )
 
-const(
+const (
 	NORESULT = "No result"
-	TIMEOUT = "Timeout"
-	SUMMARY = "Summary"
-	ERROR = "Error"
-	CODE = "Code"
+	TIMEOUT  = "Timeout"
+	SUMMARY  = "Summary"
+	ERROR    = "Error"
+	CODE     = "Code"
 )
 
 //ToolResult is used to store tool result data.
@@ -28,9 +28,9 @@ type DisplayResult interface {
 	GetData() interface{}
 }
 
-//NoResult is a DisplayResult used to indicate that a 
+//NoResult is a DisplayResult used to indicate that a
 //Tool provided no result when run.
-type NoResult struct {}
+type NoResult struct{}
 
 func (this *NoResult) GetName() string {
 	return NORESULT
@@ -48,9 +48,9 @@ func (this *NoResult) Template(current bool) string {
 	}
 }
 
-//TimeoutResult is a DisplayResult used to indicate that a 
+//TimeoutResult is a DisplayResult used to indicate that a
 //Tool timed out when running.
-type TimeoutResult struct {}
+type TimeoutResult struct{}
 
 func (this *TimeoutResult) GetName() string {
 	return TIMEOUT
@@ -68,7 +68,7 @@ func (this *TimeoutResult) Template(current bool) string {
 	}
 }
 
-//ErrorResult is a DisplayResult used to indicate that an error 
+//ErrorResult is a DisplayResult used to indicate that an error
 //occured when retrieving a Tool's result.
 type ErrorResult struct {
 	err error
@@ -100,13 +100,12 @@ func NewCodeResult(data []byte) *CodeResult {
 
 //CodeResult is a DisplayResult used to display a source file's code.
 type CodeResult struct {
-	data   string
+	data string
 }
 
 func (this *CodeResult) GetName() string {
 	return CODE
 }
-
 
 func (this *CodeResult) GetData() interface{} {
 	return this.data
@@ -121,10 +120,10 @@ func (this *CodeResult) Template(current bool) string {
 }
 
 func NewSummaryResult() *SummaryResult {
-	return &SummaryResult{make([]*Summary,0)}
+	return &SummaryResult{make([]*Summary, 0)}
 }
 
-//SummaryResult is a DisplayResult used to 
+//SummaryResult is a DisplayResult used to
 //provide a summary of all results.
 type SummaryResult struct {
 	summary []*Summary
@@ -151,7 +150,7 @@ func (this *SummaryResult) AddSummary(result ToolResult) {
 }
 
 //Summary is short summary of a ToolResult's result.
-type Summary struct{
+type Summary struct {
 	Name string
 	Body string
 }

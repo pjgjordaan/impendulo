@@ -14,18 +14,18 @@ import (
 const DPERM = 0777
 const FPERM = os.O_WRONLY | os.O_CREATE | os.O_TRUNC
 
-type IOError struct{
+type IOError struct {
 	origin interface{}
-	tipe string
-	err error
+	tipe   string
+	err    error
 }
 
-func (this *IOError) Error() string{
-	return fmt.Sprintf(`Encountered error %q while %s %q.`, 
+func (this *IOError) Error() string {
+	return fmt.Sprintf(`Encountered error %q while %s %q.`,
 		this.err, this.tipe, this.origin)
 }
 
-//BaseDir retrieves the Impendulo directory.  
+//BaseDir retrieves the Impendulo directory.
 func BaseDir() string {
 	cur, err := user.Current()
 	if err != nil {
@@ -80,7 +80,7 @@ func ReadBytes(r io.Reader) (data []byte) {
 	_, err := buffer.ReadFrom(r)
 	if err != nil {
 		data = make([]byte, 0)
-	} else{
+	} else {
 		data = buffer.Bytes()
 	}
 	return
@@ -104,13 +104,13 @@ type copier struct {
 }
 
 func (this *copier) copyFile(path string, f os.FileInfo, err error) error {
-	if err != nil || f == nil{
+	if err != nil || f == nil {
 		return err
 	}
 	return this.copy(path, f)
 }
 
-func (this *copier) copy(path string, f os.FileInfo) (err error){
+func (this *copier) copy(path string, f os.FileInfo) (err error) {
 	destPath, err := filepath.Rel(this.src, path)
 	if err != nil {
 		return

@@ -83,35 +83,35 @@ func ExtractBytes(zf *zip.File) (ret []byte, err error) {
 	frc, err := zf.Open()
 	if err != nil {
 		err = &IOError{zf, "opening zipfile", err}
-	} else{
+	} else {
 		defer frc.Close()
 		ret = ReadBytes(frc)
 	}
 	return
 }
 
-//Zip creates a zip archive from a map which has file names as its keys and 
+//Zip creates a zip archive from a map which has file names as its keys and
 //file contents as its values.
 func Zip(files map[string][]byte) (ret []byte, err error) {
 	buf := new(bytes.Buffer)
 	zw := zip.NewWriter(buf)
 	for name, data := range files {
 		err = AddToZip(zw, name, data)
-		if err != nil{
+		if err != nil {
 			return
 		}
 	}
 	err = zw.Close()
 	if err != nil {
 		err = &IOError{zw, "closing zip", err}
-	} else{
+	} else {
 		ret = buf.Bytes()
 	}
 	return
 }
 
 //AddToZip adds a new file to a zip.Writer.
-func AddToZip(zw *zip.Writer, name string, data []byte)(err error){
+func AddToZip(zw *zip.Writer, name string, data []byte) (err error) {
 	f, err := zw.Create(name)
 	if err != nil {
 		err = &IOError{name, "creating zipfile", err}

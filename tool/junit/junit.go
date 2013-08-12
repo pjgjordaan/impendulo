@@ -8,19 +8,19 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
-//JUnit is a tool.Tool used to run JUnit tests on a Java source file. 
+//JUnit is a tool.Tool used to run JUnit tests on a Java source file.
 type JUnit struct {
 	cp           string
 	datalocation string
-	runnerInfo *tool.TargetInfo
+	runnerInfo   *tool.TargetInfo
 }
 
 //New creates a new JUnit instance. testDir is the location of the JUnit testing files.
 //cp is the classpath used and datalocation is the location of data files used when running
-//the tests. 
+//the tests.
 func New(testDir, cp, datalocation string) *JUnit {
 	runnerInfo := tool.NewTarget("TestRunner.java", "java", "testing", testDir)
-	cp += ":" + config.GetConfig(config.JUNIT_JAR) + ":" + 
+	cp += ":" + config.GetConfig(config.JUNIT_JAR) + ":" +
 		config.GetConfig(config.ANT_JUNIT) + ":" + config.GetConfig(config.ANT)
 	return &JUnit{cp, datalocation, runnerInfo}
 }
@@ -46,7 +46,7 @@ func (this *JUnit) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Tool
 		return
 	}
 	//Run the tests.
-	args := []string{config.GetConfig(config.JAVA), "-cp", this.cp, 
+	args := []string{config.GetConfig(config.JAVA), "-cp", this.cp,
 		this.runnerInfo.Executable(), ti.Executable(), this.datalocation}
 	execRes := tool.RunCommand(args, nil)
 	if execRes.HasStdOut() {

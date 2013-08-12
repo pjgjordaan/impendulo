@@ -92,7 +92,7 @@ func GenCertificate(certName, keyName string) (err error) {
 		IsCA:         true,
 		SubjectKeyId: []byte{1, 2, 3, 4},
 		Version:      2,
-	} 
+	}
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
 	if err != nil {
 		return

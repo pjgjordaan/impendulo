@@ -18,7 +18,7 @@ func init() {
 	router.Add("POST", "/deleteuser", Handler(deleteUser))
 
 	GeneratePosts(router)
-	
+
 	GenerateViews(router)
 
 	router.Add("GET", "/displayresult", Handler(displayResult)).Name("displayresult")
@@ -28,7 +28,6 @@ func init() {
 	router.Add("GET", "/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
 	router.Add("GET", "/", Handler(LoadView("homeView", "home"))).Name("index")
 }
-
 
 func getRoute(name string) string {
 	u, err := router.GetRoute(name).URL()

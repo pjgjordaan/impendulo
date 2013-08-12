@@ -2,9 +2,9 @@ package pmd
 
 import (
 	"encoding/xml"
-	"github.com/godfried/impendulo/util"
-	"github.com/godfried/impendulo/tool"
 	"fmt"
+	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/util"
 	"html/template"
 	"labix.org/v2/mgo/bson"
 )
@@ -63,7 +63,7 @@ func genReport(id bson.ObjectId, data []byte) (res *PMDReport, err error) {
 	}
 	res.Id = id
 	res.Errors = 0
-	for _, f := range res.Files{
+	for _, f := range res.Files {
 		res.Errors += len(f.Violations)
 	}
 	return
@@ -73,7 +73,7 @@ type PMDReport struct {
 	Id      bson.ObjectId
 	Version string  `xml:"version,attr"`
 	Files   []*File `xml:"file"`
-	Errors int
+	Errors  int
 }
 type File struct {
 	Name       string       `xml:"name,attr"`

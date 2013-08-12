@@ -30,10 +30,10 @@ func (this *File) TypeName() string {
 }
 
 func (this *File) String() string {
-	return "Type: project.File; Id: " + this.Id.Hex() + 
-		"; SubId: " + this.SubId.Hex() + "; Name: " + this.Name + 
-		"; Package: " + this.Package + "; Type: " + this.Type + 
-		"; FileType: " + this.FileType + "; Mod: " + this.Mod + 
+	return "Type: project.File; Id: " + this.Id.Hex() +
+		"; SubId: " + this.SubId.Hex() + "; Name: " + this.Name +
+		"; Package: " + this.Package + "; Type: " + this.Type +
+		"; FileType: " + this.FileType + "; Mod: " + this.Mod +
 		"; Num: " + strconv.Itoa(this.Num) + "; Time: " + util.Date(this.Time)
 }
 
@@ -62,8 +62,8 @@ func (this *File) Equals(that *File) bool {
 	if reflect.DeepEqual(this, that) {
 		return true
 	}
-	return that != nil && 
-		this.String() == that.String() && 
+	return that != nil &&
+		this.String() == that.String() &&
 		bytes.Equal(this.Data, that.Data)
 }
 
@@ -121,7 +121,7 @@ func NewArchive(subId bson.ObjectId, data []byte, ftype string) *File {
 //These file names must have the format:
 //[[<package descriptor>"_"]*<file name>"_"]<time in nanoseconds>
 //"_"<file number in current submission>"_"<modification char>
-//Where values between '[]' are optional, '*' indicates 0 to many, 
+//Where values between '[]' are optional, '*' indicates 0 to many,
 //values inside '""' are literals and values inside '<>'
 //describe the contents at that position.
 func ParseName(name string) (*File, error) {
@@ -137,13 +137,13 @@ func ParseName(name string) (*File, error) {
 	file.Num, err = strconv.Atoi(elems[len(elems)-2])
 	if err != nil {
 		return nil, fmt.Errorf(
-			"%q in name %q could not be parsed as an int.", 
+			"%q in name %q could not be parsed as an int.",
 			elems[len(elems)-2], name)
 	}
 	file.Time, err = strconv.ParseInt(elems[len(elems)-3], 10, 64)
 	if err != nil {
 		return nil, fmt.Errorf(
-			"%q in name %q could not be parsed as an int64.", 
+			"%q in name %q could not be parsed as an int64.",
 			elems[len(elems)-3], name)
 	}
 	if len(elems) > 3 {

@@ -24,9 +24,9 @@ func (this *Test) TypeName() string {
 
 //String
 func (this *Test) String() string {
-	return "Type: project.Test; Id: " + this.Id.Hex() + 
-		"; ProjectId: " + this.ProjectId.Hex() + 
-		"; Name: " + this.Name + "; Package: " + this.Package + 
+	return "Type: project.Test; Id: " + this.Id.Hex() +
+		"; ProjectId: " + this.ProjectId.Hex() +
+		"; Name: " + this.Name + "; Package: " + this.Package +
 		"; User: " + this.User + "; Time: " + util.Date(this.Time)
 }
 

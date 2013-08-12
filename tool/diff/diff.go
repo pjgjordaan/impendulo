@@ -12,7 +12,7 @@ import (
 )
 
 func Diff(orig, change string) (ret string, err error) {
-	origName := filepath.Join(util.BaseDir(), 
+	origName := filepath.Join(util.BaseDir(),
 		fmt.Sprint(&orig)+fmt.Sprint(&change))
 	err = util.SaveFile(origName, []byte(orig))
 	if err != nil {
@@ -29,7 +29,7 @@ func Diff2HTML(diff string) (ret template.HTML, err error) {
 	args := []string{config.GetConfig(config.DIFF2HTML)}
 	execRes := tool.RunCommand(args, strings.NewReader(diff))
 	if execRes.HasStdErr() {
-		err = fmt.Errorf("Could not generate html: %q", 
+		err = fmt.Errorf("Could not generate html: %q",
 			string(execRes.StdErr))
 	} else if execRes.Err != nil {
 		err = execRes.Err

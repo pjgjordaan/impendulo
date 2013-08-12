@@ -20,9 +20,9 @@ func (this *JPFFile) TypeName() string {
 }
 
 func (this *JPFFile) String() string {
-	return "Type: project.JPFFile; Id: " + this.Id.Hex() + 
-		"; ProjectId: " + this.ProjectId.Hex() + 
-		"; Name: " + this.Name + "; User: " + this.User + 
+	return "Type: project.JPFFile; Id: " + this.Id.Hex() +
+		"; ProjectId: " + this.ProjectId.Hex() +
+		"; Name: " + this.Name + "; User: " + this.User +
 		"; Time: " + util.Date(this.Time)
 }
 

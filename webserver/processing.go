@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-//A function used to add data to the database. 
+//A function used to add data to the database.
 type PostFunc func(*http.Request, *Context) error
 
 //SubmitArchive adds an Intlola archive to the database.
@@ -40,7 +40,7 @@ func SubmitArchive(req *http.Request, ctx *Context) (err error) {
 	if err != nil {
 		return
 	}
-	sub := project.NewSubmission(projectId, uname, project.ARCHIVE_MODE, 
+	sub := project.NewSubmission(projectId, uname, project.ARCHIVE_MODE,
 		util.CurMilis())
 	err = db.AddSubmission(sub)
 	if err != nil {
@@ -53,7 +53,7 @@ func SubmitArchive(req *http.Request, ctx *Context) (err error) {
 	}
 	//Send file to be analysed.
 	processing.StartSubmission(sub.Id)
-	processing.AddFile(file)	
+	processing.AddFile(file)
 	processing.EndSubmission(sub.Id)
 	return
 }
@@ -68,7 +68,7 @@ func ChangeSkeleton(req *http.Request, ctx *Context) (err error) {
 	if err != nil {
 		return
 	}
-	err = db.Update(db.PROJECTS, bson.M{project.ID: projectId}, 
+	err = db.Update(db.PROJECTS, bson.M{project.ID: projectId},
 		bson.M{db.SET: bson.M{project.SKELETON: data}})
 	return
 }
@@ -100,7 +100,7 @@ func AddTest(req *http.Request, ctx *Context) (err error) {
 	if err != nil {
 		return
 	}
-	test := project.NewTest(projectId, testName, username, 
+	test := project.NewTest(projectId, testName, username,
 		pkg, testBytes, dataBytes)
 	err = db.AddTest(test)
 	return
@@ -132,7 +132,7 @@ func AddProject(req *http.Request, ctx *Context) (err error) {
 		return
 	}
 	lang, err := GetString(req, "lang")
-	if err != nil{
+	if err != nil {
 		return
 	}
 	username, err := ctx.Username()
@@ -149,7 +149,7 @@ func AddProject(req *http.Request, ctx *Context) (err error) {
 }
 
 //ReadFormFile reads a file's name and data from a request form.
-func ReadFormFile(req *http.Request, name string)(fname string, data []byte, err error){
+func ReadFormFile(req *http.Request, name string) (fname string, data []byte, err error) {
 	file, header, err := req.FormFile(name)
 	if err != nil {
 		return
@@ -166,16 +166,16 @@ func Login(req *http.Request, ctx *Context) (err error) {
 		return
 	}
 	pword, err := GetString(req, "password")
-	if err != nil{
+	if err != nil {
 		return
 	}
 	u, err := db.GetUserById(uname)
 	if err != nil {
 		return
-	} 
+	}
 	if !util.Validate(u.Password, u.Salt, pword) {
 		err = fmt.Errorf("Invalid username or password.")
-	} else{
+	} else {
 		ctx.AddUser(uname)
 	}
 	return
@@ -188,7 +188,7 @@ func Register(req *http.Request, ctx *Context) (err error) {
 		return
 	}
 	pword, err := GetString(req, "password")
-	if err != nil{
+	if err != nil {
 		return
 	}
 	u := user.New(uname, pword)
@@ -232,27 +232,27 @@ func RetrieveNames(req *http.Request, ctx *Context) (ret []string, err error) {
 	if ctx.Browse.IsUser {
 		//Load project id if browsing in user view.
 		var sub *project.Submission
-		sub, err = db.GetSubmission(bson.M{project.ID: subId}, 
+		sub, err = db.GetSubmission(bson.M{project.ID: subId},
 			bson.M{project.PROJECT_ID: 1})
 		if err != nil {
 			return
-		} 
+		}
 		ctx.Browse.Pid = sub.ProjectId.Hex()
 	}
 	return
 }
 
-//RetrieveFiles fetches all files in a submission with a given name. 
+//RetrieveFiles fetches all files in a submission with a given name.
 func RetrieveFiles(req *http.Request, ctx *Context) (ret []*project.File, err error) {
 	name, err := GetString(req, "filename")
-	if err != nil{
+	if err != nil {
 		return
 	}
 	sid, err := util.ReadId(ctx.Browse.Sid)
-	if err != nil{
+	if err != nil {
 		return
 	}
-	matcher := bson.M{project.SUBID: sid, 
+	matcher := bson.M{project.SUBID: sid,
 		project.TYPE: project.SRC, project.NAME: name}
 	selector := bson.M{project.ID: 1, project.NAME: 1}
 	ret, err = db.GetFiles(matcher, selector, project.NUM)
@@ -262,14 +262,14 @@ func RetrieveFiles(req *http.Request, ctx *Context) (ret []*project.File, err er
 	return
 }
 
-//RetrieveSubmissions fetches all submissions in a project or by a user. 
+//RetrieveSubmissions fetches all submissions in a project or by a user.
 func RetrieveSubmissions(req *http.Request, ctx *Context) (subs []*project.Submission, err error) {
 	tipe, err := GetString(req, "type")
-	if err != nil{
+	if err != nil {
 		return
 	}
 	idStr, err := GetString(req, "id")
-	if err != nil{
+	if err != nil {
 		return
 	}
 	if tipe == "project" {
@@ -287,7 +287,7 @@ func RetrieveSubmissions(req *http.Request, ctx *Context) (subs []*project.Submi
 		ctx.Browse.IsUser = true
 		subs, err = db.GetSubmissions(
 			bson.M{project.USER: ctx.Browse.Uid}, nil)
-	} else{
+	} else {
 		err = fmt.Errorf("Unknown request type %q", tipe)
 	}
 	return
@@ -344,22 +344,22 @@ func GetResultData(resultName string, fileId bson.ObjectId) (res tool.DisplayRes
 	if resultName == tool.CODE {
 		//Need to load file's source code (data).
 		fileSelector = bson.M{project.DATA: 1}
-	} else{
+	} else {
 		fileSelector = bson.M{project.RESULTS: 1}
 	}
 	file, err = db.GetFile(matcher, fileSelector)
 	if err != nil {
 		return
 	}
-	if resultName == tool.CODE{
+	if resultName == tool.CODE {
 		res = tool.NewCodeResult(file.Data)
-	}else if resultName == tool.SUMMARY {
+	} else if resultName == tool.SUMMARY {
 		res = tool.NewSummaryResult()
 		//Load summary for each available result.
-		for name, resid := range file.Results{
+		for name, resid := range file.Results {
 			var currentRes tool.ToolResult
-			currentRes, err = db.GetToolResult(name, 
-				bson.M{project.ID: resid},nil) 
+			currentRes, err = db.GetToolResult(name,
+				bson.M{project.ID: resid}, nil)
 			if err != nil {
 				return
 			}
@@ -372,15 +372,15 @@ func GetResultData(resultName string, fileId bson.ObjectId) (res tool.DisplayRes
 				fmt.Errorf("No result available for %v.", resultName))
 			return
 		}
-		switch val := ival.(type){
+		switch val := ival.(type) {
 		case bson.ObjectId:
 			//Retrieve result from the db.
 			matcher = bson.M{project.ID: val}
-			res, err = db.GetDisplayResult(resultName, 
+			res, err = db.GetDisplayResult(resultName,
 				matcher, bson.M{project.DATA: 1})
 		case string:
 			//Error, so create new error result.
-			switch val{
+			switch val {
 			case tool.TIMEOUT:
 				res = new(tool.TimeoutResult)
 			case tool.NORESULT:
@@ -398,7 +398,7 @@ func GetResultData(resultName string, fileId bson.ObjectId) (res tool.DisplayRes
 }
 
 func getFile(id bson.ObjectId) (file *project.File, err error) {
-	selector := bson.M{project.NAME: 1, project.ID: 1, 
+	selector := bson.M{project.NAME: 1, project.ID: 1,
 		project.TIME: 1, project.NUM: 1}
 	file, err = db.GetFile(bson.M{project.ID: id}, selector)
 	return
@@ -420,7 +420,7 @@ func projectName(idStr string) (name string, err error) {
 		return
 	}
 	var proj *project.Project
-	proj, err = db.GetProject(bson.M{project.ID: id}, 
+	proj, err = db.GetProject(bson.M{project.ID: id},
 		bson.M{project.NAME: 1})
 	if err != nil {
 		return

@@ -32,7 +32,7 @@ type BrowseData struct {
 	Uid    string
 	Sid    string
 	Result string
-	View string
+	View   string
 }
 
 //Close closes a session.

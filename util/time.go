@@ -16,7 +16,7 @@ func GetTime(miliseconds int64) time.Time {
 
 const layout = "2006-01-02 15:04:05"
 
-//Date returns a string representation of the date 
+//Date returns a string representation of the date
 //represented by the miliseconds provided.
 func Date(miliseconds int64) string {
 	return GetTime(miliseconds).Format(layout)

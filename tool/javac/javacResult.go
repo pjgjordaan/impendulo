@@ -2,8 +2,8 @@ package javac
 
 import (
 	"bytes"
-	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -30,9 +30,9 @@ func (this *JavacResult) GetFileId() bson.ObjectId {
 
 func (this *JavacResult) GetSummary() *tool.Summary {
 	var body string
-	if this.Success(){
+	if this.Success() {
 		body = "Compiled successfully."
-	} else{
+	} else {
 		body = "No compile."
 	}
 	return &tool.Summary{this.GetName(), body}

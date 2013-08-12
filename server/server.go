@@ -3,8 +3,8 @@ package server
 import (
 	"fmt"
 	"github.com/godfried/impendulo/util"
-	"net"
 	"io"
+	"net"
 )
 
 const (
@@ -18,9 +18,9 @@ const (
 	SUBMISSION_CONTINUE = "submission_continue"
 )
 
-//Run is used to listen for new tcp connections and 
+//Run is used to listen for new tcp connections and
 //spawn a new goroutine for each connection.
-//Each goroutine launched will handle its connection and 
+//Each goroutine launched will handle its connection and
 //its type is determined by HandlerSpawner.
 func Run(port string, spawner HandlerSpawner) {
 	netListen, err := net.Listen("tcp", ":"+port)
@@ -35,7 +35,7 @@ func Run(port string, spawner HandlerSpawner) {
 		conn, err := netListen.Accept()
 		if err != nil {
 			util.Log(fmt.Errorf(
-				"Encountered error %q when accepting connection", 
+				"Encountered error %q when accepting connection",
 				err))
 		} else {
 			handler := spawner.Spawn()

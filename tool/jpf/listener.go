@@ -43,22 +43,22 @@ func Listeners() (listeners []*Listener, err error) {
 
 //FindListeners searches for JPF Listeners in the jpf-core directory tree.
 func FindListeners() (found []byte, err error) {
-	target := tool.NewTarget("ListenerFinder.java", "java", "listener", 
+	target := tool.NewTarget("ListenerFinder.java", "java", "listener",
 		config.GetConfig(config.LISTENER_DIR))
-	cp := filepath.Join(config.GetConfig(config.JPF_HOME), "build", "main")	+
+	cp := filepath.Join(config.GetConfig(config.JPF_HOME), "build", "main") +
 		":" + target.Dir + ":" + config.GetConfig(config.GSON_JAR)
 	comp := javac.New(cp)
 	_, err = comp.Run(bson.NewObjectId(), target)
 	if err != nil {
 		return
 	}
-	args := []string{config.GetConfig(config.JAVA), "-cp", cp, 
+	args := []string{config.GetConfig(config.JAVA), "-cp", cp,
 		target.Executable()}
 	execRes := tool.RunCommand(args, nil)
 	if execRes.Err != nil {
 		err = execRes.Err
 	} else if execRes.HasStdErr() {
-		err = fmt.Errorf("Could not run listener finder: %q.", 
+		err = fmt.Errorf("Could not run listener finder: %q.",
 			string(execRes.StdErr))
 	}
 	found = execRes.StdOut
@@ -79,7 +79,7 @@ func saveListeners(vals []*Listener, fname string) error {
 	enc := gob.NewEncoder(f)
 	err = enc.Encode(&vals)
 	if err != nil {
-		return fmt.Errorf("Encountered error %q while encoding map %q to file %q", 
+		return fmt.Errorf("Encountered error %q while encoding map %q to file %q",
 			err, vals, fname)
 	}
 	return nil

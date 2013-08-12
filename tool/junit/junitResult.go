@@ -1,11 +1,11 @@
 package junit
 
 import (
-	"fmt"
-	"github.com/godfried/impendulo/util"
-	"github.com/godfried/impendulo/tool"
-	"labix.org/v2/mgo/bson"
 	"encoding/xml"
+	"fmt"
+	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/util"
+	"labix.org/v2/mgo/bson"
 	"strings"
 )
 
@@ -16,7 +16,7 @@ type JUnitResult struct {
 	FileId   bson.ObjectId "fileid"
 	TestName string        "name"
 	Time     int64         "time"
-	Data     *TestSuite        "data"
+	Data     *TestSuite    "data"
 }
 
 func (this *JUnitResult) GetName() string {
@@ -32,7 +32,7 @@ func (this *JUnitResult) GetFileId() bson.ObjectId {
 }
 
 func (this *JUnitResult) GetSummary() *tool.Summary {
-		body := fmt.Sprintf("Tests: %d \n Failures: %d \n Errors: %d \n Time: %f", 
+	body := fmt.Sprintf("Tests: %d \n Failures: %d \n Errors: %d \n Time: %f",
 		this.Data.Tests, this.Data.Failures, this.Data.Errors, this.Data.Time)
 	return &tool.Summary{this.GetName(), body}
 }
@@ -59,40 +59,39 @@ func NewResult(fileId bson.ObjectId, name string, data []byte) (res *JUnitResult
 	return
 }
 
-
 type TestSuite struct {
-	Id      bson.ObjectId
-	Success bool
-	Errors int       `xml:"errors,attr"`
-	Failures int     `xml:"failures,attr"`
-	Name   string `xml:"name,attr"`
-	Tests  int       `xml:"tests,attr"`
-	Time   float64   `xml:"time,attr"`
-	Results []TestCase `xml:"testcase"`
+	Id       bson.ObjectId
+	Success  bool
+	Errors   int        `xml:"errors,attr"`
+	Failures int        `xml:"failures,attr"`
+	Name     string     `xml:"name,attr"`
+	Tests    int        `xml:"tests,attr"`
+	Time     float64    `xml:"time,attr"`
+	Results  []TestCase `xml:"testcase"`
 }
 
 type TestCase struct {
-	ClassName      string `xml:"classname,attr"`
-	Name string `xml:"name,attr"`
-	Time   float64 `xml:"time,attr"`
-	Fail Failure  `xml:"failure"`
+	ClassName string  `xml:"classname,attr"`
+	Name      string  `xml:"name,attr"`
+	Time      float64 `xml:"time,attr"`
+	Fail      Failure `xml:"failure"`
 }
 
 type Failure struct {
-	Message   string             `xml:"message,attr"`
-	Type string            `xml:"type,attr"`
-	Value  string `xml:",innerxml"`
+	Message string `xml:"message,attr"`
+	Type    string `xml:"type,attr"`
+	Value   string `xml:",innerxml"`
 }
 
-func (this *Failure) IsFailure()bool{
+func (this *Failure) IsFailure() bool {
 	return len(strings.TrimSpace(this.Type)) > 0
 }
 
 func genReport(id bson.ObjectId, data []byte) (res *TestSuite, err error) {
 	if err = xml.Unmarshal(data, &res); err != nil {
-		if res == nil{
+		if res == nil {
 			return
-		} else{
+		} else {
 			err = nil
 		}
 	}

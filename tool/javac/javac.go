@@ -27,7 +27,7 @@ func (this *Javac) GetName() string {
 }
 
 func (this *Javac) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
-	args := []string{this.cmd, "-cp", this.cp + ":" + ti.Dir, 
+	args := []string{this.cmd, "-cp", this.cp + ":" + ti.Dir,
 		"-implicit:class", ti.FilePath()}
 	//Compile the file.
 	execRes := tool.RunCommand(args, nil)

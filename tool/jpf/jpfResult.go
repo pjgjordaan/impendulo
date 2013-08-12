@@ -1,10 +1,10 @@
 package jpf
 
 import (
-	"fmt"
 	"encoding/xml"
-	"github.com/godfried/impendulo/util"
+	"fmt"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"strconv"
 )

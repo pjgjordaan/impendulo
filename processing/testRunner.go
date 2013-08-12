@@ -50,7 +50,7 @@ type TestRunner struct {
 
 //Run runs a test on the current file.
 func (this *TestRunner) Run(f *project.File, srcDir string) error {
-	ju := junit.New(this.Dir, srcDir+":"+this.Dir, 
+	ju := junit.New(this.Dir, srcDir+":"+this.Dir,
 		filepath.Join(this.PackagePath(), "data"))
 	if _, ok := f.Results[this.Name]; ok {
 		return nil

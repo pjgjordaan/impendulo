@@ -11,7 +11,7 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
-//SubmissionSpawner is an implementation of 
+//SubmissionSpawner is an implementation of
 //HandlerSpawner for SubmissionHandlers.
 type SubmissionSpawner struct{}
 
@@ -20,15 +20,15 @@ func (this *SubmissionSpawner) Spawn() RWCHandler {
 	return &SubmissionHandler{}
 }
 
-//SubmissionHandler is an implementation of ConnHandler 
+//SubmissionHandler is an implementation of ConnHandler
 //used to receive submissions from users of the impendulo system.
 type SubmissionHandler struct {
-	rwc       io.ReadWriteCloser
+	rwc        io.ReadWriteCloser
 	submission *project.Submission
 	fileCount  int
 }
 
-//Start sets the connection, launches the Handle method 
+//Start sets the connection, launches the Handle method
 //and ends the session when it returns.
 func (this *SubmissionHandler) Start(rwc io.ReadWriteCloser) {
 	this.rwc = rwc
@@ -50,13 +50,13 @@ func (this *SubmissionHandler) End(err error) {
 	this.rwc.Write([]byte(msg))
 }
 
-//Handle manages a connection by authenticating it, 
+//Handle manages a connection by authenticating it,
 //processing its Submission and reading Files from it.
-func(this *SubmissionHandler) Handle() (err error) {
+func (this *SubmissionHandler) Handle() (err error) {
 	err = this.Login()
 	if err != nil {
 		return
-	} 
+	}
 	err = this.LoadInfo()
 	if err != nil {
 		return
@@ -70,7 +70,7 @@ func(this *SubmissionHandler) Handle() (err error) {
 	return
 }
 
-//Login authenticates a Submission. 
+//Login authenticates a Submission.
 //It validates the user's credentials and permissions.
 func (this *SubmissionHandler) Login() (err error) {
 	loginInfo, err := util.ReadJson(this.rwc)
@@ -105,15 +105,15 @@ func (this *SubmissionHandler) Login() (err error) {
 		return
 	}
 	if !u.CheckSubmit(this.submission.Mode) {
-		err = fmt.Errorf("User %q has insufficient permissions for %q", 
+		err = fmt.Errorf("User %q has insufficient permissions for %q",
 			this.submission.User, this.submission.Mode)
 		return
 	}
 	if !util.Validate(u.Password, u.Salt, pword) {
-		err = fmt.Errorf("%q used an invalid username or password", 
+		err = fmt.Errorf("%q used an invalid username or password",
 			this.submission.User)
 		return
-	} 
+	}
 	projects, err := db.GetProjects(nil)
 	if err != nil {
 		return
@@ -122,7 +122,7 @@ func (this *SubmissionHandler) Login() (err error) {
 	return
 }
 
-//LoadInfo reads the Json request info. 
+//LoadInfo reads the Json request info.
 //A new submission is then created or an existing one resumed
 //depending on the request.
 func (this *SubmissionHandler) LoadInfo() (err error) {
@@ -143,12 +143,11 @@ func (this *SubmissionHandler) LoadInfo() (err error) {
 	return
 }
 
-
-func (this *SubmissionHandler) createSubmission(subInfo map[string]interface{})(err error) {
+func (this *SubmissionHandler) createSubmission(subInfo map[string]interface{}) (err error) {
 	idStr, err := util.GetString(subInfo, project.PROJECT_ID)
 	if err != nil {
 		return
-	} 
+	}
 	this.submission.ProjectId, err = util.ReadId(idStr)
 	if err != nil {
 		return
@@ -166,7 +165,7 @@ func (this *SubmissionHandler) createSubmission(subInfo map[string]interface{})(
 	return
 }
 
-func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{})(err error) {
+func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{}) (err error) {
 	idStr, err := util.GetString(subInfo, project.SUBID)
 	if err != nil {
 		return
@@ -179,7 +178,7 @@ func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{}
 	if err != nil {
 		return err
 	}
-	this.fileCount, err = db.Count(db.FILES, 
+	this.fileCount, err = db.Count(db.FILES,
 		bson.M{project.SUBID: this.submission.Id})
 	if err != nil {
 		return err
@@ -215,7 +214,7 @@ func (this *SubmissionHandler) Read() (done bool, err error) {
 		requestInfo[project.NUM] = this.fileCount
 		this.fileCount++
 		var file *project.File
-		switch this.submission.Mode{
+		switch this.submission.Mode {
 		case project.ARCHIVE_MODE:
 			file = project.NewArchive(
 				this.submission.Id, buffer, project.ZIP)

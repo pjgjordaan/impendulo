@@ -17,7 +17,7 @@ func SetTimeout(minutes int) {
 	timeLimit = time.Duration(minutes) * time.Minute
 }
 
-//Tool is an interface which represents various analysis tools used in Impendulo. 
+//Tool is an interface which represents various analysis tools used in Impendulo.
 type Tool interface {
 	//GetName retrieves the Tool's name.
 	GetName() string
@@ -40,11 +40,11 @@ func (this *ExecResult) HasStdErr() bool {
 
 //HasStdOut checks whether the ExecResult has standard output.
 func (this *ExecResult) HasStdOut() bool {
-	return this.StdOut != nil && 
+	return this.StdOut != nil &&
 		len(strings.TrimSpace(string(this.StdOut))) > 0
 }
 
-//RunCommand executes a given command given by args and stdin. It terminates 
+//RunCommand executes a given command given by args and stdin. It terminates
 //when the command finishes execution or times out. An ExecResult containing the
 //command's output is returned.
 func RunCommand(args []string, stdin io.Reader) (res *ExecResult) {
@@ -74,7 +74,7 @@ func RunCommand(args []string, stdin io.Reader) (res *ExecResult) {
 }
 
 //TimeOutError is an error used to indicate that a command timed out.
-type TimeOutError struct{
+type TimeOutError struct {
 	args []string
 }
 
@@ -82,7 +82,7 @@ func (this *TimeOutError) Error() string {
 	return fmt.Sprintf("Command %q timed out.", this.args)
 }
 
-func IsTimeOut(err error)(ok bool){
+func IsTimeOut(err error) (ok bool) {
 	_, ok = err.(*TimeOutError)
 	return
 }
@@ -94,10 +94,9 @@ type StartError struct {
 }
 
 func (this *StartError) Error() string {
-	return fmt.Sprintf("Encountered startup error %q executing command %q", 
+	return fmt.Sprintf("Encountered startup error %q executing command %q",
 		this.err, this.args)
 }
-
 
 //EndError is an error used to indicate that a command gave an error upon completion.
 type EndError struct {
@@ -106,6 +105,6 @@ type EndError struct {
 }
 
 func (this *EndError) Error() string {
-	return fmt.Sprintf("Encountered end error %q executing command %q", 
+	return fmt.Sprintf("Encountered end error %q executing command %q",
 		this.err, this.args)
 }

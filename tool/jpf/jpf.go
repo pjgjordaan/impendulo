@@ -16,13 +16,13 @@ type JPF struct {
 	pubInfo *tool.TargetInfo
 }
 
-//New creates a new JPF instance. jpfDir is the location of the 
+//New creates a new JPF instance. jpfDir is the location of the
 //Java JPF runner files. configPath is the location of the JPF
 //configuration file.
 func New(jpfDir, configPath string) *JPF {
 	jpfInfo := tool.NewTarget("JPFRunner.java", "java", "runner", jpfDir)
 	pubInfo := tool.NewTarget("ImpenduloPublisher.java", "java", "runner", jpfDir)
-	cp := jpfDir + ":" + config.GetConfig(config.JPF_JAR) + ":" + 
+	cp := jpfDir + ":" + config.GetConfig(config.JPF_JAR) + ":" +
 		config.GetConfig(config.RUNJPF_JAR) + ":" + config.GetConfig(config.GSON_JAR)
 	return &JPF{cp, configPath, jpfInfo, pubInfo}
 }

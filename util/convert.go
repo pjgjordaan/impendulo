@@ -10,7 +10,7 @@ import (
 func ReadId(idStr string) (id bson.ObjectId, err error) {
 	if !bson.IsObjectIdHex(idStr) {
 		err = &CastError{"bson.ObjectId", idStr}
-	} else{
+	} else {
 		id = bson.ObjectIdHex(idStr)
 	}
 	return
@@ -166,7 +166,7 @@ func (this *MissingError) Error() string {
 	return fmt.Sprintf("Error reading value for %q.", this.key)
 }
 
-//CastError indicates that an interface{} could not be cast to 
+//CastError indicates that an interface{} could not be cast to
 //a certain type.
 type CastError struct {
 	tipe  string

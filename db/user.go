@@ -2,8 +2,8 @@ package db
 
 import (
 	"fmt"
-	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/user"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -63,21 +63,21 @@ func AddUsers(users ...*user.User) (err error) {
 	err = c.Insert(users)
 	if err != nil {
 		err = fmt.Errorf(
-			"Encountered error %q when adding users %q to db", 
+			"Encountered error %q when adding users %q to db",
 			err, users)
 	}
 	return
 }
 
-//RemoveUserById removes a user matching 
+//RemoveUserById removes a user matching
 //the given id from the active database.
 func RemoveUserById(id interface{}) (err error) {
-	subs, err := GetSubmissions(bson.M{project.USER: id}, 
-		bson.M{project.ID: 1}) 
+	subs, err := GetSubmissions(bson.M{project.USER: id},
+		bson.M{project.ID: 1})
 	if err != nil {
 		return
 	}
-	for _, sub := range subs{
+	for _, sub := range subs {
 		err = RemoveSubmissionById(sub.Id)
 		if err != nil {
 			return
