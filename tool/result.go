@@ -5,6 +5,15 @@ import (
 	"strings"
 )
 
+const(
+	NORESULT = "No result"
+	TIMEOUT = "Timeout"
+	SUMMARY = "Summary"
+	ERROR = "Error"
+	CODE = "Code"
+)
+
+//ToolResult is used to store tool result data.
 type ToolResult interface {
 	GetId() bson.ObjectId
 	GetFileId() bson.ObjectId
@@ -12,28 +21,69 @@ type ToolResult interface {
 	GetName() string
 }
 
-//Result describes a tool or test's results for a given file.
+//DisplayResult is used to display result data.
 type DisplayResult interface {
 	Template(current bool) string
 	GetName() string
 	GetData() interface{}
 }
 
-func NewErrorResult(fileId bson.ObjectId, err error) *ErrorResult {
-	return &ErrorResult{fileId, err}
+//NoResult is a DisplayResult used to indicate that a 
+//Tool provided no result when run.
+type NoResult struct {}
+
+func (this *NoResult) GetName() string {
+	return NORESULT
 }
 
+func (this *NoResult) GetData() interface{} {
+	return "No output generated."
+}
+
+func (this *NoResult) Template(current bool) string {
+	if current {
+		return "errorCurrent"
+	} else {
+		return "errorNext"
+	}
+}
+
+//TimeoutResult is a DisplayResult used to indicate that a 
+//Tool timed out when running.
+type TimeoutResult struct {}
+
+func (this *TimeoutResult) GetName() string {
+	return TIMEOUT
+}
+
+func (this *TimeoutResult) GetData() interface{} {
+	return "A timeout occured during tool execution."
+}
+
+func (this *TimeoutResult) Template(current bool) string {
+	if current {
+		return "errorCurrent"
+	} else {
+		return "errorNext"
+	}
+}
+
+//ErrorResult is a DisplayResult used to indicate that an error 
+//occured when retrieving a Tool's result.
 type ErrorResult struct {
-	fileId bson.ObjectId
 	err error
 }
 
+func NewErrorResult(err error) *ErrorResult {
+	return &ErrorResult{err}
+}
+
 func (this *ErrorResult) GetName() string {
-	return "Error"
+	return ERROR
 }
 
 func (this *ErrorResult) GetData() interface{} {
-	return this.err
+	return this.err.Error()
 }
 
 func (this *ErrorResult) Template(current bool) string {
@@ -44,14 +94,12 @@ func (this *ErrorResult) Template(current bool) string {
 	}
 }
 
-const CODE = "Code"
-
-func NewCodeResult(fileId bson.ObjectId, data []byte) *CodeResult {
-	return &CodeResult{fileId, strings.TrimSpace(string(data))}
+func NewCodeResult(data []byte) *CodeResult {
+	return &CodeResult{strings.TrimSpace(string(data))}
 }
 
+//CodeResult is a DisplayResult used to display a source file's code.
 type CodeResult struct {
-	fileId bson.ObjectId
 	data   string
 }
 
@@ -72,12 +120,12 @@ func (this *CodeResult) Template(current bool) string {
 	}
 }
 
-const SUMMARY = "Summary"
-
 func NewSummaryResult() *SummaryResult {
 	return &SummaryResult{make([]*Summary,0)}
 }
 
+//SummaryResult is a DisplayResult used to 
+//provide a summary of all results.
 type SummaryResult struct {
 	summary []*Summary
 }
@@ -102,6 +150,7 @@ func (this *SummaryResult) AddSummary(result ToolResult) {
 	this.summary = append(this.summary, result.GetSummary())
 }
 
+//Summary is short summary of a ToolResult's result.
 type Summary struct{
 	Name string
 	Body string

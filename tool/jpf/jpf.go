@@ -8,6 +8,7 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
+//JPF is a tool.Tool which runs a JPF on a Java source file.
 type JPF struct {
 	cp      string
 	jpfPath string
@@ -15,10 +16,14 @@ type JPF struct {
 	pubInfo *tool.TargetInfo
 }
 
-func NewJPF(jpfDir, configPath string) *JPF {
+//New creates a new JPF instance. jpfDir is the location of the 
+//Java JPF runner files. configPath is the location of the JPF
+//configuration file.
+func New(jpfDir, configPath string) *JPF {
 	jpfInfo := tool.NewTarget("JPFRunner.java", "java", "runner", jpfDir)
 	pubInfo := tool.NewTarget("ImpenduloPublisher.java", "java", "runner", jpfDir)
-	cp := jpfDir + ":" + config.GetConfig(config.JPF_JAR) + ":" + config.GetConfig(config.RUNJPF_JAR) + ":" + config.GetConfig(config.GSON_JAR)
+	cp := jpfDir + ":" + config.GetConfig(config.JPF_JAR) + ":" + 
+		config.GetConfig(config.RUNJPF_JAR) + ":" + config.GetConfig(config.GSON_JAR)
 	return &JPF{cp, configPath, jpfInfo, pubInfo}
 }
 
@@ -35,7 +40,7 @@ func (this *JPF) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolRe
 		err = fmt.Errorf("No jpf configuration file available.")
 		return
 	}
-	comp := javac.NewJavac(this.cp)
+	comp := javac.New(this.cp)
 	_, err = comp.Run(fileId, this.pubInfo)
 	if err != nil {
 		return
@@ -44,7 +49,8 @@ func (this *JPF) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolRe
 	if err != nil {
 		return
 	}
-	args := []string{config.GetConfig(config.JAVA), "-cp", ti.Dir + ":" + this.cp, this.jpfInfo.Executable(), this.jpfPath, ti.Executable(), ti.Dir}
+	args := []string{config.GetConfig(config.JAVA), "-cp", ti.Dir + ":" +
+		this.cp, this.jpfInfo.Executable(), this.jpfPath, ti.Executable(), ti.Dir}
 	execRes := tool.RunCommand(args, nil)
 	if execRes.HasStdOut() {
 		res, err = NewResult(fileId, execRes.StdOut)

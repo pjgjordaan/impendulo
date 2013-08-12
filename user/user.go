@@ -72,8 +72,8 @@ func (this *User) CheckSubmit(mode string) bool {
 	return false
 }
 
-//NewUser creates a new user with file submission permissions.
-func NewUser(uname, pword string) *User {
+//New creates a new user with file submission permissions.
+func New(uname, pword string) *User {
 	hash, salt := util.Hash(pword)
 	return &User{uname, hash, salt, F_SUB}
 }
@@ -101,7 +101,8 @@ func ReadUsers(fname string) ([]*User, error) {
 	for scanner.Scan() {
 		vals := strings.Split(scanner.Text(), ":")
 		if len(vals) != 2 {
-			return nil, fmt.Errorf("Config file not formatted correctly.")
+			return nil, 
+			fmt.Errorf("Config file not formatted correctly.")
 		}
 		uname := strings.TrimSpace(vals[0])
 		pword := strings.TrimSpace(vals[1])

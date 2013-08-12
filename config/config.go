@@ -9,6 +9,9 @@ import (
 
 var settings map[string]string
 
+//LoadConfigs loads configurations from a file.
+//Configurations are key-value pairs on different lines.
+//Keys are seperated from the value by a '='.
 func LoadConfigs(fname string) error {
 	f, err := os.Open(fname)
 	if err != nil {
@@ -28,6 +31,7 @@ func LoadConfigs(fname string) error {
 	return scanner.Err()
 }
 
+//GetConfig attempts to retrieve the named config.
 func GetConfig(name string) string {
 	ret, ok := settings[name]
 	if !ok {
@@ -36,6 +40,7 @@ func GetConfig(name string) string {
 	return ret
 }
 
+//SetConfig sets the config 'name' to 'value'.
 func SetConfig(name, value string) {
 	settings[name] = value
 }

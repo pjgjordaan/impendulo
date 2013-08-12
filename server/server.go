@@ -18,19 +18,25 @@ const (
 	SUBMISSION_CONTINUE = "submission_continue"
 )
 
-//Run is used to listen for new tcp connections and spawn a new goroutine for each connection.
-//Each goroutine launched will handle its connection and its type is determined by HandlerSpawner.
+//Run is used to listen for new tcp connections and 
+//spawn a new goroutine for each connection.
+//Each goroutine launched will handle its connection and 
+//its type is determined by HandlerSpawner.
 func Run(port string, spawner HandlerSpawner) {
 	netListen, err := net.Listen("tcp", ":"+port)
 	if err != nil {
-		util.Log(fmt.Errorf("Encountered error %q when listening on port %q", err, port))
+		util.Log(fmt.Errorf(
+			"Encountered error %q when listening on port %q",
+			err, port))
 		return
 	}
 	defer netListen.Close()
 	for {
 		conn, err := netListen.Accept()
 		if err != nil {
-			util.Log(fmt.Errorf("Encountered error %q when accepting connection", err))
+			util.Log(fmt.Errorf(
+				"Encountered error %q when accepting connection", 
+				err))
 		} else {
 			handler := spawner.Spawn()
 			go handler.Start(conn)
@@ -38,6 +44,7 @@ func Run(port string, spawner HandlerSpawner) {
 	}
 }
 
+//HandlerSpawner is an interface used to spawn RWCHandlers.
 type HandlerSpawner interface {
 	Spawn() RWCHandler
 }

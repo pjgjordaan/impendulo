@@ -24,7 +24,9 @@ func SetupTests(projectId bson.ObjectId, dir string) (ret []*TestRunner, err err
 	}
 	ret = make([]*TestRunner, len(tests))
 	for i, test := range tests {
-		ret[i] = &TestRunner{tool.NewTarget(test.Name, proj.Lang, test.Package, dir)}
+		ret[i] = &TestRunner{
+			tool.NewTarget(test.Name, proj.Lang, test.Package, dir),
+		}
 		err = util.SaveFile(ret[i].FilePath(), test.Test)
 		if err != nil {
 			return
@@ -48,7 +50,8 @@ type TestRunner struct {
 
 //Run runs a test on the current file.
 func (this *TestRunner) Run(f *project.File, srcDir string) error {
-	ju := junit.NewJUnit(this.Dir, srcDir+":"+this.Dir, filepath.Join(this.PackagePath(), "data"))
+	ju := junit.New(this.Dir, srcDir+":"+this.Dir, 
+		filepath.Join(this.PackagePath(), "data"))
 	if _, ok := f.Results[this.Name]; ok {
 		return nil
 	}

@@ -22,6 +22,7 @@ import (
 var authName string = "authentication.key"
 var encName string = "encryption.key"
 
+//CookieKeys generates cookie keys.
 func CookieKeys() (auth, enc []byte) {
 	auth, enc = cookieKey(authName), cookieKey(encName)
 	return
@@ -69,6 +70,7 @@ func GenString(size int) string {
 	return string(d)
 }
 
+//GenCertificate generates a x509 certificate.
 func GenCertificate(certName, keyName string) (err error) {
 	priv, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {

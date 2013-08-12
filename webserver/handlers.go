@@ -22,9 +22,13 @@ func getNav(ctx *Context) string {
 	return "inNavbar"
 }
 
-type handler func(http.ResponseWriter, *http.Request, *Context) error
+//Handler is used to handle incoming requests. 
+//It allows for better session management.
+type Handler func(http.ResponseWriter, *http.Request, *Context) error
 
-func (h handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+//ServeHTTP loads a the current session, handles  the request and 
+//then stores the session.
+func (h Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	sess, err := store.Get(req, "impendulo")
 	if err != nil {
 		util.Log(err)
@@ -50,16 +54,18 @@ var views = map[string]string{"homeView":"home", "testView": "submit",
 	"jpfConfigView": "submit", "archiveView": "submit",
 	"projectView": "submit"}
 
-func generateViews(router *pat.Router){
+//GenerateViews is used to load all the basic views used by our web app.
+func GenerateViews(router *pat.Router){
 	for name, view := range views{
-		handleFunc := loadView(name, view)
+		handleFunc := LoadView(name, view)
 		lname := strings.ToLower(name)
 		pattern := "/"+lname
-		router.Add("GET", pattern, handler(handleFunc)).Name(lname)
+		router.Add("GET", pattern, Handler(handleFunc)).Name(lname)
 	}
 }
 
-func loadView(name, view string) handler{
+//LoadView loads a view so that it is accessible in our web app. 
+func LoadView(name, view string) Handler{
 	return func(w http.ResponseWriter, req *http.Request, ctx *Context) error{
 		ctx.Browse.View = views[name] 
 		args := map[string]interface{}{"ctx": ctx}
@@ -67,8 +73,57 @@ func loadView(name, view string) handler{
 	}
 }
 
+var posts = map[string]PostFunc{"addtest":AddTest, "addjpf": AddJPF, 
+	"addproject": AddProject, "changeskeleton": ChangeSkeleton, 
+	"submitarchive": SubmitArchive}
+
+//GeneratePosts loads post request handlers.
+func GeneratePosts(router *pat.Router){
+	for name, fn := range posts{
+		handleFunc := CreatePost(fn)
+		pattern := "/"+name
+		router.Add("POST", pattern, Handler(handleFunc)).Name(name)
+	}
+}
+
+//CreatePost loads a post request handler.
+func CreatePost(postFunc PostFunc) Handler{
+	return func(w http.ResponseWriter, req *http.Request, ctx *Context) error{
+		err := postFunc(req, ctx)
+		if err != nil {
+			ctx.AddMessage("Could not complete submission." , true)
+		} else{
+			ctx.AddMessage("Successfully completed submission.", false)
+		}
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
+	}
+}
+
+func deleteProject(w http.ResponseWriter, req *http.Request, ctx *Context) error {
+	err := DeleteProject(req, ctx)
+	if err != nil {
+		ctx.AddMessage("Could not delete project." , true)
+	} else{
+		ctx.AddMessage("Successfully deleted project." , false)
+	}
+	http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+	return err
+}
+
+func deleteUser(w http.ResponseWriter, req *http.Request, ctx *Context) error {
+	err := DeleteUser(req, ctx)
+	if err != nil {
+		ctx.AddMessage("Could not delete user." , true)
+	} else{
+		ctx.AddMessage("Successfully deleted user." , false)
+	}
+	http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+	return err
+}
+
 func downloadProject(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	path, err := loadSkeleton(req)
+	path, err := LoadSkeleton(req)
 	if err == nil {
 		http.ServeFile(w, req, path)
 	} else {
@@ -79,7 +134,7 @@ func downloadProject(w http.ResponseWriter, req *http.Request, ctx *Context) err
 }
 
 func getSubmissions(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	subs, err := retrieveSubmissions(req, ctx)
+	subs, err := RetrieveSubmissions(req, ctx)
 	if err != nil {
 		ctx.AddMessage("Could not retrieve submissions.", true)
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
@@ -92,18 +147,20 @@ func getSubmissions(w http.ResponseWriter, req *http.Request, ctx *Context) erro
 		temp = "projectSubmissionResult"
 	}
 	ctx.Browse.View = "home"
-	return T(getNav(ctx), temp).Execute(w, map[string]interface{}{"ctx": ctx, "subRes": subs})
+	return T(getNav(ctx), temp).Execute(w, map[string]interface{}{"ctx": ctx,
+		"subRes": subs})
 }
 
 func getFiles(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	names, err := retrieveNames(req, ctx)
+	names, err := RetrieveNames(req, ctx)
 	if err != nil {
 		ctx.AddMessage("Could not retrieve files.", true)
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 		return err
 	}
 	ctx.Browse.View = "home"
-	return T(getNav(ctx), "fileResult").Execute(w, map[string]interface{}{"ctx": ctx, "names": names})
+	return T(getNav(ctx), "fileResult").Execute(w, 
+		map[string]interface{}{"ctx": ctx, "names": names})
 }
 
 func displayResult(w http.ResponseWriter, req *http.Request, ctx *Context) error {
@@ -117,7 +174,7 @@ func displayResult(w http.ResponseWriter, req *http.Request, ctx *Context) error
 }
 
 func loadArgs(req *http.Request, ctx *Context)(args map[string]interface{}, temps []string, err error) {
-	files, err := retrieveFiles(req, ctx)
+	files, err := RetrieveFiles(req, ctx)
 	if err != nil{
 		return
 	}
@@ -169,7 +226,7 @@ func loadArgs(req *http.Request, ctx *Context)(args map[string]interface{}, temp
 }
 
 func login(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	err := doLogin(req, ctx)
+	err := Login(req, ctx)
 	if err != nil {
 		ctx.AddMessage("Invalid username or password." , true)
 	} 
@@ -178,7 +235,7 @@ func login(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 }
 
 func register(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	err := doRegister(req, ctx)
+	err := Register(req, ctx)
 	if err != nil {
 		ctx.AddMessage("Invalid credentials." , true)
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
@@ -193,81 +250,4 @@ func logout(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	delete(ctx.Session.Values, "user")
 	http.Redirect(w, req, getRoute("index"), http.StatusSeeOther)
 	return nil
-}
-
-func addTest(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	err := doTest(req, ctx)
-	if err != nil {
-		ctx.AddMessage("Could not add test." , true)
-	} else{
-		ctx.AddMessage("Successfully added test." , false)
-	}
-	http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
-	return err
-}
-
-func addJPF(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	err := doJPF(req, ctx)
-	if err != nil {
-		ctx.AddMessage("Could not add jpf config file." , true)
-	} else{
-		ctx.AddMessage("Successfully added jpf config file." , false)
-	}
-	http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
-	return err
-}
-
-func addProject(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	err := doProject(req, ctx)
-	if err != nil {
-		ctx.AddMessage("Could not add project." , true)
-	} else{
-		ctx.AddMessage("Successfully added project.", false)
-	}
-	http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
-	return err
-}
-
-func changeSkeleton(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	err := doSkeleton(req, ctx)
-	if err != nil {
-		ctx.AddMessage("Could not change project skeleton." , true)
-	} else{
-		ctx.AddMessage("Successfully changed project skeleton." , false)
-	}
-	http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
-	return err
-}
-
-func submitArchive(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	err := doArchive(req, ctx)
-	if err != nil {
-		ctx.AddMessage("Could not submit Intlola archive." , true)
-	} else{
-		ctx.AddMessage("Submission successful." , false)
-	}
-	http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
-	return err
-}
-
-func deleteProject(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	err := doDeleteProject(req, ctx)
-	if err != nil {
-		ctx.AddMessage("Could not delete project." , true)
-	} else{
-		ctx.AddMessage("Successfully deleted project." , false)
-	}
-	http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
-	return err
-}
-
-func deleteUser(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	err := doDeleteUser(req, ctx)
-	if err != nil {
-		ctx.AddMessage("Could not delete user." , true)
-	} else{
-		ctx.AddMessage("Successfully deleted user." , false)
-	}
-	http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
-	return err
 }

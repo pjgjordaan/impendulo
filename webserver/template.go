@@ -73,8 +73,10 @@ func _setBreaks(val string) string {
 }
 
 var dir = filepath.Join("static", "templates")
-var basicT = []string{filepath.Join(dir, "base.html"), filepath.Join(dir, "index.html"), filepath.Join(dir, "messages.html")}
+var basicT = []string{filepath.Join(dir, "base.html"), 
+	filepath.Join(dir, "index.html"), filepath.Join(dir, "messages.html")}
 
+//T creates a new HTML template from the given files. 
 func T(names ...string) *template.Template {
 	t := template.New("base.html").Funcs(funcs)
 	all := make([]string, len(basicT)+len(names))

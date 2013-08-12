@@ -11,6 +11,8 @@ import (
 
 const NAME = "Findbugs"
 
+//FindBugsResult is a tool.ToolResult and a tool.DisplayResult.
+//It is used to store the output of running Findbugs.
 type FindbugsResult struct {
 	Id     bson.ObjectId   "_id"
 	FileId bson.ObjectId   "fileid"
@@ -52,7 +54,10 @@ func (this *FindbugsResult) Success() bool {
 }
 
 func NewResult(fileId bson.ObjectId, data []byte) (res *FindbugsResult, err error) {
-	res = &FindbugsResult{Id: bson.NewObjectId(), FileId: fileId, Time: util.CurMilis()}
+	res = &FindbugsResult{
+		Id: bson.NewObjectId(), 
+		FileId: fileId, 
+		Time: util.CurMilis()}
 	res.Data, err = genReport(res.Id, data)
 	return
 }
@@ -66,6 +71,8 @@ func genReport(id bson.ObjectId, data []byte) (res *FindbugsReport, err error) {
 	return
 }
 
+//FindbugsReport stores the results of running Findbugs. It is 
+//populated from XML output produced by findbugs. 
 type FindbugsReport struct {
 	Id          bson.ObjectId
 	Time        int64            `xml:"analysisTimestamp,attr"`

@@ -11,7 +11,8 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
-//SubmissionSpawner is an implementation of HandlerSpawner for SubmissionHandlers.
+//SubmissionSpawner is an implementation of 
+//HandlerSpawner for SubmissionHandlers.
 type SubmissionSpawner struct{}
 
 //Spawn creates a new ConnHandler of type SubmissionHandler.
@@ -19,14 +20,16 @@ func (this *SubmissionSpawner) Spawn() RWCHandler {
 	return &SubmissionHandler{}
 }
 
-//SubmissionHandler is an implementation of ConnHandler used to receive submissions from users of the impendulo system.
+//SubmissionHandler is an implementation of ConnHandler 
+//used to receive submissions from users of the impendulo system.
 type SubmissionHandler struct {
 	rwc       io.ReadWriteCloser
 	submission *project.Submission
 	fileCount  int
 }
 
-//Start sets the connection, launches the Handle method and ends the session when it returns.
+//Start sets the connection, launches the Handle method 
+//and ends the session when it returns.
 func (this *SubmissionHandler) Start(rwc io.ReadWriteCloser) {
 	this.rwc = rwc
 	this.submission = new(project.Submission)
@@ -47,7 +50,8 @@ func (this *SubmissionHandler) End(err error) {
 	this.rwc.Write([]byte(msg))
 }
 
-//Handle manages a connection by authenticating it, processing its Submission and reading Files from it.
+//Handle manages a connection by authenticating it, 
+//processing its Submission and reading Files from it.
 func(this *SubmissionHandler) Handle() (err error) {
 	err = this.Login()
 	if err != nil {
@@ -66,8 +70,8 @@ func(this *SubmissionHandler) Handle() (err error) {
 	return
 }
 
-//Login authenticates this Submission by validating the user's credentials and permissions.
-//This Submission is then stored.
+//Login authenticates a Submission. 
+//It validates the user's credentials and permissions.
 func (this *SubmissionHandler) Login() (err error) {
 	loginInfo, err := util.ReadJson(this.rwc)
 	if err != nil {
@@ -101,11 +105,13 @@ func (this *SubmissionHandler) Login() (err error) {
 		return
 	}
 	if !u.CheckSubmit(this.submission.Mode) {
-		err = fmt.Errorf("User %q has insufficient permissions for %q", this.submission.User, this.submission.Mode)
+		err = fmt.Errorf("User %q has insufficient permissions for %q", 
+			this.submission.User, this.submission.Mode)
 		return
 	}
 	if !util.Validate(u.Password, u.Salt, pword) {
-		err = fmt.Errorf("User %q attempted to login with an invalid username or password", this.submission.User)
+		err = fmt.Errorf("%q used an invalid username or password", 
+			this.submission.User)
 		return
 	} 
 	projects, err := db.GetProjects(nil)
@@ -116,6 +122,9 @@ func (this *SubmissionHandler) Login() (err error) {
 	return
 }
 
+//LoadInfo reads the Json request info. 
+//A new submission is then created or an existing one resumed
+//depending on the request.
 func (this *SubmissionHandler) LoadInfo() (err error) {
 	reqInfo, err := util.ReadJson(this.rwc)
 	if err != nil {
@@ -170,7 +179,8 @@ func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{}
 	if err != nil {
 		return err
 	}
-	this.fileCount, err = db.Count(db.FILES, bson.M{project.SUBID: this.submission.Id})
+	this.fileCount, err = db.Count(db.FILES, 
+		bson.M{project.SUBID: this.submission.Id})
 	if err != nil {
 		return err
 	}
@@ -207,9 +217,11 @@ func (this *SubmissionHandler) Read() (done bool, err error) {
 		var file *project.File
 		switch this.submission.Mode{
 		case project.ARCHIVE_MODE:
-			file = project.NewArchive(this.submission.Id, buffer, project.ZIP)
+			file = project.NewArchive(
+				this.submission.Id, buffer, project.ZIP)
 		case project.FILE_MODE:
-			file, err = project.NewFile(this.submission.Id, requestInfo, buffer)
+			file, err = project.NewFile(
+				this.submission.Id, requestInfo, buffer)
 		}
 		if err != nil {
 			return
@@ -218,6 +230,7 @@ func (this *SubmissionHandler) Read() (done bool, err error) {
 		if err != nil {
 			return
 		}
+		//Send file to be processed.
 		processing.AddFile(file)
 	} else if req == LOGOUT {
 		done = true

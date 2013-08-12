@@ -6,8 +6,7 @@ import (
 	"sync"
 )
 
-//Buffer is a type that implements http.ResponseWriter but buffers all the data
-//and headers.
+//Buffer is a http.ResponseWriter which buffers all the data and headers.
 type HttpBuffer struct {
 	bytes.Buffer
 	resp    int

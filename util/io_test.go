@@ -25,7 +25,7 @@ func TestReadData(t *testing.T) {
 			t.Error(err)
 		}
 		if !bytes.Equal(v, data) {
-			t.Error(fmt.Sprintf("Expected package %q but got %q.", v, data))
+			t.Error(fmt.Sprintf("Expected data %q but got %q.", v, data))
 		}
 	}
 }

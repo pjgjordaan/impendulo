@@ -6,6 +6,7 @@ import (
 	"strconv"
 )
 
+//ReadId tries to read a bson.ObjectId from a string.
 func ReadId(idStr string) (id bson.ObjectId, err error) {
 	if !bson.IsObjectIdHex(idStr) {
 		err = &CastError{"bson.ObjectId", idStr}
@@ -15,7 +16,7 @@ func ReadId(idStr string) (id bson.ObjectId, err error) {
 	return
 }
 
-//GetString
+//GetString converts a value in a map to a string.
 func GetString(jobj map[string]interface{}, key string) (val string, err error) {
 	ival, ok := jobj[key]
 	if !ok {
@@ -31,7 +32,7 @@ func GetString(jobj map[string]interface{}, key string) (val string, err error) 
 	return
 }
 
-//GetInt
+//GetInt converts a value in a map to an int.
 func GetInt(jobj map[string]interface{}, key string) (val int, err error) {
 	ival, ok := jobj[key]
 	if !ok {
@@ -53,7 +54,7 @@ func GetInt(jobj map[string]interface{}, key string) (val int, err error) {
 	return
 }
 
-//GetInt64
+//GetInt64 converts a value in a map to an int64.
 func GetInt64(jobj map[string]interface{}, key string) (val int64, err error) {
 	ival, ok := jobj[key]
 	if !ok {
@@ -75,7 +76,7 @@ func GetInt64(jobj map[string]interface{}, key string) (val int64, err error) {
 	return
 }
 
-//GetID
+//GetId converts a value in a map to a bson.ObjectId.
 func GetId(jobj map[string]interface{}, key string) (id bson.ObjectId, err error) {
 	ival, ok := jobj[key]
 	if !ok {
@@ -93,7 +94,7 @@ func GetId(jobj map[string]interface{}, key string) (id bson.ObjectId, err error
 	return
 }
 
-//GetM
+//GetM converts a value in a map to a bson.M.
 func GetM(jobj map[string]interface{}, key string) (val bson.M, err error) {
 	ival, ok := jobj[key]
 	if !ok {
@@ -109,7 +110,7 @@ func GetM(jobj map[string]interface{}, key string) (val bson.M, err error) {
 	return
 }
 
-//GetBytes
+//GetBytes converts a value in a map to a []byte.
 func GetBytes(jobj map[string]interface{}, key string) ([]byte, error) {
 	ival, ok := jobj[key]
 	if !ok {
@@ -118,7 +119,7 @@ func GetBytes(jobj map[string]interface{}, key string) ([]byte, error) {
 	return toBytes(ival)
 }
 
-//GetStrings
+//GetStrings converts a value in a map to a []string.
 func GetStrings(jobj map[string]interface{}, key string) ([]string, error) {
 	ival, ok := jobj[key]
 	if !ok {
@@ -127,7 +128,7 @@ func GetStrings(jobj map[string]interface{}, key string) ([]string, error) {
 	return toStrings(ival)
 }
 
-//toBytes
+//toBytes converts an interface to a []byte.
 func toBytes(ival interface{}) ([]byte, error) {
 	val, ok := ival.([]byte)
 	if !ok {
@@ -136,7 +137,7 @@ func toBytes(ival interface{}) ([]byte, error) {
 	return val, nil
 }
 
-//toStrings
+//toStrings converts an interface to a []string.
 func toStrings(ivals interface{}) ([]string, error) {
 	vals, ok := ivals.([]string)
 	if !ok {
@@ -156,7 +157,7 @@ func toStrings(ivals interface{}) ([]string, error) {
 	return vals, nil
 }
 
-
+//MissingError indicates that a key was not present in a map.
 type MissingError struct {
 	key string
 }
@@ -165,6 +166,8 @@ func (this *MissingError) Error() string {
 	return fmt.Sprintf("Error reading value for %q.", this.key)
 }
 
+//CastError indicates that an interface{} could not be cast to 
+//a certain type.
 type CastError struct {
 	tipe  string
 	value interface{}

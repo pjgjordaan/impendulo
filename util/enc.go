@@ -3,13 +3,12 @@ package util
 import (
 	"encoding/gob"
 	"encoding/json"
-	"fmt"
 	"io"
 	"labix.org/v2/mgo/bson"
 	"os"
 )
 
-//ReadJSON reads all Json data from a reader.
+//ReadJson reads all Json data from a reader.
 func ReadJson(r io.Reader) (jmap map[string]interface{}, err error) {
 	read, err := ReadData(r)
 	if err != nil {
@@ -18,12 +17,12 @@ func ReadJson(r io.Reader) (jmap map[string]interface{}, err error) {
 	var holder interface{}
 	err = json.Unmarshal(read, &holder)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q when unmarshaling data %q", err, read)
+		err = &IOError{read, "unmarshalling data from", err}
 		return
 	}
 	jmap, ok := holder.(map[string]interface{})
 	if !ok {
-		err = fmt.Errorf("Encountered error when attempting to cast %q to json map", holder)
+		err = &IOError{holder, "casting to json", nil}
 	}
 	return
 }
@@ -32,13 +31,13 @@ func ReadJson(r io.Reader) (jmap map[string]interface{}, err error) {
 func LoadMap(fname string) (ret map[bson.ObjectId]bool, err error) {
 	f, err := os.Open(fname)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q while opening file %q", err, fname)
+		err = &IOError{fname, "opening", err}
 		return
 	}
 	dec := gob.NewDecoder(f)
 	err = dec.Decode(&ret)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q while decoding map stored in %q", err, f)
+		err = &IOError{fname, "decoding map stored in", err}
 	}
 	return
 }
@@ -47,13 +46,13 @@ func LoadMap(fname string) (ret map[bson.ObjectId]bool, err error) {
 func SaveMap(mp map[bson.ObjectId]bool, fname string) (err error) {
 	f, err := os.Create(fname)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q while creating file %q", err, fname)
+		err = &IOError{fname, "creating", err}
 		return
 	}
 	enc := gob.NewEncoder(f)
 	err = enc.Encode(&mp)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q while encoding map %q to file %q", err, mp, fname)
+		err = &IOError{mp, "encoding map", err}
 	}
 	return
 }

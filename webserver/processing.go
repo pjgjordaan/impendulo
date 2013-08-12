@@ -1,3 +1,4 @@
+//Contains processing functions used by handlers.go to add or retrieve data.
 package webserver
 
 import (
@@ -7,7 +8,6 @@ import (
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"io/ioutil"
@@ -19,7 +19,11 @@ import (
 	"time"
 )
 
-func doArchive(req *http.Request, ctx *Context) (err error) {
+//A function used to add data to the database. 
+type PostFunc func(*http.Request, *Context) error
+
+//SubmitArchive adds an Intlola archive to the database.
+func SubmitArchive(req *http.Request, ctx *Context) (err error) {
 	projectId, err := util.ReadId(req.FormValue("project"))
 	if err != nil {
 		return
@@ -36,7 +40,8 @@ func doArchive(req *http.Request, ctx *Context) (err error) {
 	if err != nil {
 		return
 	}
-	sub := project.NewSubmission(projectId, uname, project.ARCHIVE_MODE, util.CurMilis())
+	sub := project.NewSubmission(projectId, uname, project.ARCHIVE_MODE, 
+		util.CurMilis())
 	err = db.AddSubmission(sub)
 	if err != nil {
 		return
@@ -46,13 +51,15 @@ func doArchive(req *http.Request, ctx *Context) (err error) {
 	if err != nil {
 		return
 	}
+	//Send file to be analysed.
 	processing.StartSubmission(sub.Id)
 	processing.AddFile(file)	
 	processing.EndSubmission(sub.Id)
 	return
 }
 
-func doSkeleton(req *http.Request, ctx *Context) (err error) {
+//ChangeSkeleton replaces a project's skeleton file.
+func ChangeSkeleton(req *http.Request, ctx *Context) (err error) {
 	projectId, err := util.ReadId(req.FormValue("project"))
 	if err != nil {
 		return
@@ -66,7 +73,8 @@ func doSkeleton(req *http.Request, ctx *Context) (err error) {
 	return
 }
 
-func doTest(req *http.Request, ctx *Context) (err error) {
+//AddTest adds a new test to a project.
+func AddTest(req *http.Request, ctx *Context) (err error) {
 	projectId, err := util.ReadId(req.FormValue("project"))
 	if err != nil {
 		return
@@ -80,22 +88,26 @@ func doTest(req *http.Request, ctx *Context) (err error) {
 	if hasData == "" {
 		dataBytes = make([]byte, 0)
 	} else if hasData == "true" {
+		//Read data files if provided.
 		_, dataBytes, err = ReadFormFile(req, "data")
 		if err != nil {
 			return
 		}
 	}
+	//Read package name from file.
 	pkg := util.GetPackage(bytes.NewReader(testBytes))
 	username, err := ctx.Username()
 	if err != nil {
 		return
 	}
-	test := project.NewTest(projectId, testName, username, pkg, testBytes, dataBytes)
+	test := project.NewTest(projectId, testName, username, 
+		pkg, testBytes, dataBytes)
 	err = db.AddTest(test)
 	return
 }
 
-func doJPF(req *http.Request, ctx *Context) (err error) {
+//AddJPF replaces a project's JPF configuration file.
+func AddJPF(req *http.Request, ctx *Context) (err error) {
 	projectId, err := util.ReadId(req.FormValue("project"))
 	if err != nil {
 		return
@@ -113,17 +125,8 @@ func doJPF(req *http.Request, ctx *Context) (err error) {
 	return
 }
 
-func ReadFormFile(req *http.Request, name string)(fname string, data []byte, err error){
-	file, header, err := req.FormFile(name)
-	if err != nil {
-		return
-	}
-	fname = header.Filename
-	data, err = ioutil.ReadAll(file)
-	return
-}
-
-func doProject(req *http.Request, ctx *Context) (err error) {
+//AddProject creates a new Impendulo Project.
+func AddProject(req *http.Request, ctx *Context) (err error) {
 	name, err := GetString(req, "name")
 	if err != nil {
 		return
@@ -145,7 +148,19 @@ func doProject(req *http.Request, ctx *Context) (err error) {
 	return
 }
 
-func doLogin(req *http.Request, ctx *Context) (err error) {
+//ReadFormFile reads a file's name and data from a request form.
+func ReadFormFile(req *http.Request, name string)(fname string, data []byte, err error){
+	file, header, err := req.FormFile(name)
+	if err != nil {
+		return
+	}
+	fname = header.Filename
+	data, err = ioutil.ReadAll(file)
+	return
+}
+
+//Login signs a user into the web app.
+func Login(req *http.Request, ctx *Context) (err error) {
 	uname, err := GetString(req, "username")
 	if err != nil {
 		return
@@ -166,7 +181,8 @@ func doLogin(req *http.Request, ctx *Context) (err error) {
 	return
 }
 
-func doRegister(req *http.Request, ctx *Context) (err error) {
+//Register registers a new user with Impendulo.
+func Register(req *http.Request, ctx *Context) (err error) {
 	uname, err := GetString(req, "username")
 	if err != nil {
 		return
@@ -175,7 +191,7 @@ func doRegister(req *http.Request, ctx *Context) (err error) {
 	if err != nil{
 		return
 	}
-	u := user.NewUser(uname, pword)
+	u := user.New(uname, pword)
 	err = db.AddUser(u)
 	if err == nil {
 		ctx.AddUser(uname)
@@ -183,7 +199,8 @@ func doRegister(req *http.Request, ctx *Context) (err error) {
 	return
 }
 
-func doDeleteProject(req *http.Request, ctx *Context) (err error) {
+//DeleteProject removes a project and all data associated with it from the system.
+func DeleteProject(req *http.Request, ctx *Context) (err error) {
 	projectId, err := util.ReadId(req.FormValue("project"))
 	if err == nil {
 		err = db.RemoveProjectById(projectId)
@@ -191,7 +208,8 @@ func doDeleteProject(req *http.Request, ctx *Context) (err error) {
 	return
 }
 
-func doDeleteUser(req *http.Request, ctx *Context) (err error) {
+//DeleteUser removes a user and all data associated with them from the system.
+func DeleteUser(req *http.Request, ctx *Context) (err error) {
 	uname, err := GetString(req, "user")
 	if err == nil {
 		err = db.RemoveUserById(uname)
@@ -199,7 +217,8 @@ func doDeleteUser(req *http.Request, ctx *Context) (err error) {
 	return
 }
 
-func retrieveNames(req *http.Request, ctx *Context) (ret []string, err error) {
+//RetrieveNames fetches all filenames in a submission.
+func RetrieveNames(req *http.Request, ctx *Context) (ret []string, err error) {
 	ctx.Browse.Sid = req.FormValue("subid")
 	subId, err := util.ReadId(ctx.Browse.Sid)
 	if err != nil {
@@ -211,8 +230,10 @@ func retrieveNames(req *http.Request, ctx *Context) (ret []string, err error) {
 		return
 	}
 	if ctx.Browse.IsUser {
+		//Load project id if browsing in user view.
 		var sub *project.Submission
-		sub, err = db.GetSubmission(bson.M{project.ID: subId}, bson.M{project.PROJECT_ID: 1})
+		sub, err = db.GetSubmission(bson.M{project.ID: subId}, 
+			bson.M{project.PROJECT_ID: 1})
 		if err != nil {
 			return
 		} 
@@ -221,21 +242,8 @@ func retrieveNames(req *http.Request, ctx *Context) (ret []string, err error) {
 	return
 }
 
-func getCompileData(files []*project.File) (ret []bool) {
-	ret = make([]bool, len(files))
-	for i, file := range files {
-		file, _ = db.GetFile(bson.M{project.ID: file.Id}, nil)
-		if id, ok := file.Results[javac.NAME]; ok {
-			res, _ := db.GetJavacResult(bson.M{project.ID: id}, nil)
-			ret[i] = res.Success()
-		} else {
-			ret[i] = false
-		}
-	}
-	return ret
-}
-
-func retrieveFiles(req *http.Request, ctx *Context) (ret []*project.File, err error) {
+//RetrieveFiles fetches all files in a submission with a given name. 
+func RetrieveFiles(req *http.Request, ctx *Context) (ret []*project.File, err error) {
 	name, err := GetString(req, "filename")
 	if err != nil{
 		return
@@ -244,7 +252,8 @@ func retrieveFiles(req *http.Request, ctx *Context) (ret []*project.File, err er
 	if err != nil{
 		return
 	}
-	matcher := bson.M{project.SUBID: sid, project.TYPE: project.SRC, project.NAME: name}
+	matcher := bson.M{project.SUBID: sid, 
+		project.TYPE: project.SRC, project.NAME: name}
 	selector := bson.M{project.ID: 1, project.NAME: 1}
 	ret, err = db.GetFiles(matcher, selector, project.NUM)
 	if err == nil && len(ret) == 0 {
@@ -253,22 +262,8 @@ func retrieveFiles(req *http.Request, ctx *Context) (ret []*project.File, err er
 	return
 }
 
-func getFile(id bson.ObjectId) (file *project.File, err error) {
-	selector := bson.M{project.NAME: 1, project.ID: 1, project.TIME: 1, project.NUM: 1}
-	file, err = db.GetFile(bson.M{project.ID: id}, selector)
-	return
-}
-
-func getSelected(req *http.Request, maxSize int) (int, error) {
-	return GetInt(req, "currentIndex", maxSize)
-}
-
-func getNeighbour(req *http.Request, maxSize int) (int, bool) {
-	val, err := GetInt(req, "nextIndex", maxSize)
-	return val, err == nil
-}
-
-func retrieveSubmissions(req *http.Request, ctx *Context) (subs []*project.Submission, err error) {
+//RetrieveSubmissions fetches all submissions in a project or by a user. 
+func RetrieveSubmissions(req *http.Request, ctx *Context) (subs []*project.Submission, err error) {
 	tipe, err := GetString(req, "type")
 	if err != nil{
 		return
@@ -285,33 +280,21 @@ func retrieveSubmissions(req *http.Request, ctx *Context) (subs []*project.Submi
 		}
 		ctx.Browse.Pid = idStr
 		ctx.Browse.IsUser = false
-		subs, err = db.GetSubmissions(bson.M{project.PROJECT_ID: pid}, nil)
+		subs, err = db.GetSubmissions(
+			bson.M{project.PROJECT_ID: pid}, nil)
 	} else if tipe == "user" {
 		ctx.Browse.Uid = idStr
 		ctx.Browse.IsUser = true
-		subs, err = db.GetSubmissions(bson.M{project.USER: ctx.Browse.Uid}, nil)
+		subs, err = db.GetSubmissions(
+			bson.M{project.USER: ctx.Browse.Uid}, nil)
 	} else{
 		err = fmt.Errorf("Unknown request type %q", tipe)
 	}
 	return
 }
 
-func projectName(idStr string) (name string, err error) {
-	var id bson.ObjectId
-	id, err = util.ReadId(idStr)
-	if err != nil {
-		return
-	}
-	var proj *project.Project
-	proj, err = db.GetProject(bson.M{project.ID: id}, bson.M{project.NAME: 1})
-	if err != nil {
-		return
-	}
-	name = proj.Name
-	return
-}
-
-func loadSkeleton(req *http.Request) (path string, err error) {
+//LoadSkeleton makes a project skeleton available for download.
+func LoadSkeleton(req *http.Request) (path string, err error) {
 	idStr := req.FormValue("project")
 	projectId, err := util.ReadId(idStr)
 	if err != nil {
@@ -326,10 +309,12 @@ func loadSkeleton(req *http.Request) (path string, err error) {
 	if err != nil {
 		return
 	}
+	//Save file to filesystem and return path to it.
 	err = util.SaveFile(path, p.Skeleton)
 	return
 }
 
+//GetInt retrieves an integer value from a request form.
 func GetInt(req *http.Request, name string, maxSize int) (found int, err error) {
 	iStr := req.FormValue(name)
 	found, err = strconv.Atoi(iStr)
@@ -342,6 +327,7 @@ func GetInt(req *http.Request, name string, maxSize int) (found int, err error) 
 	return
 }
 
+//GetString retrieves a string value from a request form.
 func GetString(req *http.Request, name string) (val string, err error) {
 	val = req.FormValue(name)
 	if strings.TrimSpace(val) == "" {
@@ -350,42 +336,95 @@ func GetString(req *http.Request, name string) (val string, err error) {
 	return
 }
 
+//GetResultData retrieves a DisplayResult for a given file and result name.
 func GetResultData(resultName string, fileId bson.ObjectId) (res tool.DisplayResult, err error) {
 	var file *project.File
-	dataSelector := bson.M{project.DATA: 1}
+	var fileSelector bson.M
 	matcher := bson.M{project.ID: fileId}
 	if resultName == tool.CODE {
-		file, err = db.GetFile(matcher, dataSelector)
-		if err != nil {
-			return
-		}
-		res = tool.NewCodeResult(fileId, file.Data)
-	} else if resultName == tool.SUMMARY {
-		file, err = db.GetFile(matcher, bson.M{project.RESULTS: 1})
-		if err != nil {
-			return
-		}
+		//Need to load file's source code (data).
+		fileSelector = bson.M{project.DATA: 1}
+	} else{
+		fileSelector = bson.M{project.RESULTS: 1}
+	}
+	file, err = db.GetFile(matcher, fileSelector)
+	if err != nil {
+		return
+	}
+	if resultName == tool.CODE{
+		res = tool.NewCodeResult(file.Data)
+	}else if resultName == tool.SUMMARY {
 		res = tool.NewSummaryResult()
+		//Load summary for each available result.
 		for name, resid := range file.Results{
 			var currentRes tool.ToolResult
-			currentRes, err = db.GetToolResult(name, bson.M{project.ID: resid},nil) 
+			currentRes, err = db.GetToolResult(name, 
+				bson.M{project.ID: resid},nil) 
 			if err != nil {
 				return
 			}
 			res.(*tool.SummaryResult).AddSummary(currentRes)
 		}
 	} else {
-		file, err = db.GetFile(matcher, bson.M{project.RESULTS: 1})
-		if err != nil {
-			return
-		}
-		id, ok := file.Results[resultName]
+		ival, ok := file.Results[resultName]
 		if !ok {
-			res = tool.NewErrorResult(fileId, fmt.Errorf("No result available for %v.", resultName))
+			res = tool.NewErrorResult(
+				fmt.Errorf("No result available for %v.", resultName))
 			return
 		}
-		matcher = bson.M{project.ID: id}
-		res, err = db.GetDisplayResult(resultName, matcher, dataSelector)
+		switch val := ival.(type){
+		case bson.ObjectId:
+			//Retrieve result from the db.
+			matcher = bson.M{project.ID: val}
+			res, err = db.GetDisplayResult(resultName, 
+				matcher, bson.M{project.DATA: 1})
+		case string:
+			//Error, so create new error result.
+			switch val{
+			case tool.TIMEOUT:
+				res = new(tool.TimeoutResult)
+			case tool.NORESULT:
+				res = new(tool.NoResult)
+			default:
+				res = tool.NewErrorResult(
+					fmt.Errorf("No result available for %v.", resultName))
+			}
+		default:
+			res = tool.NewErrorResult(
+				fmt.Errorf("No result available for %v.", resultName))
+		}
 	}
+	return
+}
+
+func getFile(id bson.ObjectId) (file *project.File, err error) {
+	selector := bson.M{project.NAME: 1, project.ID: 1, 
+		project.TIME: 1, project.NUM: 1}
+	file, err = db.GetFile(bson.M{project.ID: id}, selector)
+	return
+}
+
+func getSelected(req *http.Request, maxSize int) (int, error) {
+	return GetInt(req, "currentIndex", maxSize)
+}
+
+func getNeighbour(req *http.Request, maxSize int) (int, bool) {
+	val, err := GetInt(req, "nextIndex", maxSize)
+	return val, err == nil
+}
+
+func projectName(idStr string) (name string, err error) {
+	var id bson.ObjectId
+	id, err = util.ReadId(idStr)
+	if err != nil {
+		return
+	}
+	var proj *project.Project
+	proj, err = db.GetProject(bson.M{project.ID: id}, 
+		bson.M{project.NAME: 1})
+	if err != nil {
+		return
+	}
+	name = proj.Name
 	return
 }

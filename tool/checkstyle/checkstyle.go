@@ -13,8 +13,10 @@ type Checkstyle struct {
 	configFile string
 }
 
-func NewCheckstyle() *Checkstyle {
-	return &Checkstyle{config.GetConfig(config.JAVA), config.GetConfig(config.CHECKSTYLE), config.GetConfig(config.CHECKSTYLE_CONFIG)}
+func New() *Checkstyle {
+	return &Checkstyle{config.GetConfig(config.JAVA), 
+		config.GetConfig(config.CHECKSTYLE), 
+		config.GetConfig(config.CHECKSTYLE_CONFIG)}
 }
 
 func (this *Checkstyle) GetLang() string {
@@ -26,12 +28,14 @@ func (this *Checkstyle) GetName() string {
 }
 
 func (this *Checkstyle) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
-	args := []string{this.java, "-jar", this.cmd, "-f", "xml", "-c", this.configFile, "-r", ti.Dir}
+	args := []string{this.java, "-jar", this.cmd, 
+		"-f", "xml", "-c", this.configFile, "-r", ti.Dir}
 	execRes := tool.RunCommand(args, nil)
 	if execRes.HasStdOut() {
 		res, err = NewResult(fileId, execRes.StdOut)
 	} else if execRes.HasStdErr() {
-		err = fmt.Errorf("Could not run checkstyle: %q.", string(execRes.StdErr))
+		err = fmt.Errorf("Could not run checkstyle: %q.", 
+			string(execRes.StdErr))
 	} else {
 		err = execRes.Err
 	}

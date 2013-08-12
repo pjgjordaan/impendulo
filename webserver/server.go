@@ -11,24 +11,22 @@ var router *pat.Router
 
 func init() {
 	router = pat.New()
-	router.Add("POST", "/login", handler(login))
-	router.Add("POST", "/register", handler(register))
-	router.Add("POST", "/logout", handler(logout))
-	router.Add("POST", "/addproject", handler(addProject))
-	router.Add("POST", "/addtest", handler(addTest))
-	router.Add("POST", "/changeskeleton", handler(changeSkeleton))
-	router.Add("POST", "/addjpf", handler(addJPF))
-	router.Add("POST", "/submitarchive", handler(submitArchive))
-	router.Add("POST", "/deleteproject", handler(deleteProject))
-	router.Add("POST", "/deleteuser", handler(deleteUser))
+	router.Add("POST", "/login", Handler(login))
+	router.Add("POST", "/register", Handler(register))
+	router.Add("POST", "/logout", Handler(logout))
+	router.Add("POST", "/deleteproject", Handler(deleteProject))
+	router.Add("POST", "/deleteuser", Handler(deleteUser))
+
+	GeneratePosts(router)
 	
-	router.Add("GET", "/displayresult", handler(displayResult)).Name("displayresult")
-	router.Add("GET", "/getfiles", handler(getFiles)).Name("getfiles")
-	router.Add("GET", "/getsubmissions", handler(getSubmissions)).Name("getsubmissions")
-	generateViews(router)
-	router.Add("GET", "/skeleton.zip", handler(downloadProject))
+	GenerateViews(router)
+
+	router.Add("GET", "/displayresult", Handler(displayResult)).Name("displayresult")
+	router.Add("GET", "/getfiles", Handler(getFiles)).Name("getfiles")
+	router.Add("GET", "/getsubmissions", Handler(getSubmissions)).Name("getsubmissions")
+	router.Add("GET", "/skeleton.zip", Handler(downloadProject))
 	router.Add("GET", "/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
-	router.Add("GET", "/", handler(loadView("homeView", "home"))).Name("index")
+	router.Add("GET", "/", Handler(LoadView("homeView", "home"))).Name("index")
 }
 
 

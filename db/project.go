@@ -38,7 +38,8 @@ func GetFiles(matcher, selector interface{}, sort string) (ret []*project.File, 
 	}
 	return
 }
-
+//GetFileNames retrieves names of files 
+//matching the given interface from the active database.
 func GetFileNames(matcher interface{}) (ret []string, err error) {
 	session, err := getSession()
 	if err != nil {
@@ -53,7 +54,8 @@ func GetFileNames(matcher interface{}) (ret []string, err error) {
 	return
 }
 
-//GetSubmission retrieves a submission matching the given interface from the active database.
+//GetSubmission retrieves a submission matching 
+//the given interface from the active database.
 func GetSubmission(matcher, selector interface{}) (ret *project.Submission, err error) {
 	session, err := getSession()
 	if err != nil {
@@ -68,7 +70,8 @@ func GetSubmission(matcher, selector interface{}) (ret *project.Submission, err 
 	return
 }
 
-//GetSubmission retrieves submissions matching the given interface from the active database.
+//GetSubmissions retrieves submissions matching 
+//the given interface from the active database.
 func GetSubmissions(matcher, selector interface{}) (ret []*project.Submission, err error) {
 	session, err := getSession()
 	if err != nil {
@@ -98,7 +101,8 @@ func GetTest(matcher, selector interface{}) (ret *project.Test, err error) {
 	return
 }
 
-//GetTest retrieves a test matching the given interface from the active database.
+//GetTest retrieves tests matching 
+//the given interface from the active database.
 func GetTests(matcher, selector interface{}) (ret []*project.Test, err error) {
 	session, err := getSession()
 	if err != nil {
@@ -113,6 +117,8 @@ func GetTests(matcher, selector interface{}) (ret []*project.Test, err error) {
 	return
 }
 
+//GetJPF retrieves a JPF configuration file 
+//matching the given interface from the active database.
 func GetJPF(matcher, selector interface{}) (ret *project.JPFFile, err error) {
 	session, err := getSession()
 	if err != nil {
@@ -127,7 +133,8 @@ func GetJPF(matcher, selector interface{}) (ret *project.JPFFile, err error) {
 	return
 }
 
-//GetTest retrieves a test matching the given interface from the active database.
+//GetProject retrieves a project matching 
+//the given interface from the active database.
 func GetProject(matcher, selector interface{}) (ret *project.Project, err error) {
 	session, err := getSession()
 	if err != nil {
@@ -142,7 +149,8 @@ func GetProject(matcher, selector interface{}) (ret *project.Project, err error)
 	return
 }
 
-//GetTest retrieves a test matching the given interface from the active database.
+//GetProjects retrieves projects matching 
+//the given interface from the active database.
 func GetProjects(matcher interface{}) (ret []*project.Project, err error) {
 	session, err := getSession()
 	if err != nil {
@@ -172,7 +180,7 @@ func AddFile(f *project.File) (err error) {
 	return
 }
 
-//AddFile adds a new file to the active database.
+//AddTest adds a new test to the active database.
 func AddTest(t *project.Test) error {
 	session, err := getSession()
 	if err != nil {
@@ -187,6 +195,7 @@ func AddTest(t *project.Test) error {
 	return nil
 }
 
+//AddJPF adds a new JPF configuration file to the active database.
 func AddJPF(jpf *project.JPFFile) error {
 	session, err := getSession()
 	if err != nil {
@@ -221,7 +230,7 @@ func AddSubmission(s *project.Submission) (err error) {
 	return
 }
 
-//AddSubmission adds a new submission to the active database.
+//AddProject adds a new project to the active database.
 func AddProject(p *project.Project) (err error) {
 	session, err := getSession()
 	if err != nil {
@@ -261,8 +270,11 @@ func RemoveFileById(id interface{}) (err error) {
 	return
 }
 
+//RemoveSubmissionById removes a submission matching 
+//the given id from the active database.
 func RemoveSubmissionById(id interface{}) (err error) {
-	files, err := GetFiles(bson.M{project.SUBID: id}, bson.M{project.ID: 1}, "") 
+	files, err := GetFiles(bson.M{project.SUBID: id}, 
+		bson.M{project.ID: 1}, "") 
 	if err != nil {
 		return
 	}
@@ -285,6 +297,8 @@ func RemoveSubmissionById(id interface{}) (err error) {
 	return
 }
 
+//RemoveJPFById removes a JPF configuration file matching 
+//the given id from the active database.
 func RemoveJPFById(id interface{}) (err error) {
 	session, err := getSession()
 	if err != nil {
@@ -299,6 +313,7 @@ func RemoveJPFById(id interface{}) (err error) {
 	return
 }
 
+//RemoveTestById removes a test matching the given id from the active database.
 func RemoveTestById(id interface{}) (err error) {
 	session, err := getSession()
 	if err != nil {
@@ -313,8 +328,12 @@ func RemoveTestById(id interface{}) (err error) {
 	return
 }
 
+//RemoveProjectById removes a project matching 
+//the given id from the active database.
 func RemoveProjectById(id interface{}) (err error) {
-	subs, err := GetSubmissions(bson.M{project.PROJECT_ID: id}, bson.M{project.ID: 1}) 
+	projectMatch := bson.M{project.PROJECT_ID: id}
+	idSelect := bson.M{project.ID: 1}
+	subs, err := GetSubmissions(projectMatch, idSelect)
 	if err != nil {
 		return
 	}
@@ -324,7 +343,7 @@ func RemoveProjectById(id interface{}) (err error) {
 			return
 		}
 	}
-	tests, err := GetTests(bson.M{project.PROJECT_ID: id}, bson.M{project.ID: 1}) 
+	tests, err := GetTests(projectMatch, idSelect) 
 	if err != nil {
 		return
 	}
@@ -334,7 +353,7 @@ func RemoveProjectById(id interface{}) (err error) {
 			return
 		}
 	} 
-	jpfConfig, err := GetJPF(bson.M{project.PROJECT_ID: id}, bson.M{project.ID: 1}) 
+	jpfConfig, err := GetJPF(projectMatch, idSelect) 
 	if err == nil {
 		RemoveJPFById(jpfConfig.Id)
 	}

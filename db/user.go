@@ -22,7 +22,7 @@ func GetUserById(id interface{}) (ret *user.User, err error) {
 	return
 }
 
-//GetUsers retrieves a user matching the given id from the active database.
+//GetUsers retrieves users matching the given interface from the active database.
 func GetUsers(matcher interface{}) (ret []*user.User, err error) {
 	session, err := getSession()
 	if err != nil {
@@ -62,14 +62,18 @@ func AddUsers(users ...*user.User) (err error) {
 	c := session.DB("").C(USERS)
 	err = c.Insert(users)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q when adding users %q to db", err, users)
+		err = fmt.Errorf(
+			"Encountered error %q when adding users %q to db", 
+			err, users)
 	}
 	return
 }
 
-
+//RemoveUserById removes a user matching 
+//the given id from the active database.
 func RemoveUserById(id interface{}) (err error) {
-	subs, err := GetSubmissions(bson.M{project.USER: id}, bson.M{project.ID: 1}) 
+	subs, err := GetSubmissions(bson.M{project.USER: id}, 
+		bson.M{project.ID: 1}) 
 	if err != nil {
 		return
 	}
@@ -90,5 +94,4 @@ func RemoveUserById(id interface{}) (err error) {
 		err = &DBRemoveError{"user", err, id}
 	}
 	return
-
 }

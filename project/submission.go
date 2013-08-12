@@ -28,16 +28,14 @@ func (this *Submission) TypeName() string {
 }
 
 func (this *Submission) String() string {
-	return "Type: project.Submission; Id: " + this.Id.Hex() + "; ProjectId: " + this.ProjectId.Hex() + "; User: " + this.User + "; Mode: " + this.Mode + "; Time: " + util.Date(this.Time)
+	return "Type: project.Submission; Id: " + this.Id.Hex() + 
+		"; ProjectId: " + this.ProjectId.Hex() + 
+		"; User: " + this.User + "; Mode: " + this.Mode + 
+		"; Time: " + util.Date(this.Time)
 }
 
 //NewSubmission
 func NewSubmission(projectId bson.ObjectId, user, mode string, time int64) *Submission {
 	subId := bson.NewObjectId()
 	return &Submission{subId, projectId, user, mode, time}
-}
-
-//isOutFolder
-func isOutFolder(arg string) bool {
-	return arg == SRC_DIR || arg == BIN_DIR
 }

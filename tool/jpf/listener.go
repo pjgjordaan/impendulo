@@ -15,6 +15,13 @@ import (
 
 var listenersFile = "listeners.gob"
 
+//Listener is a JPF Listener.
+type Listener struct {
+	Name    string
+	Package string
+}
+
+//Listeners retrieves all JPF Listeners.
 func Listeners() (listeners []*Listener, err error) {
 	var data []byte
 	path := filepath.Join(util.BaseDir(), listenersFile)
@@ -34,28 +41,28 @@ func Listeners() (listeners []*Listener, err error) {
 	return
 }
 
+//FindListeners searches for JPF Listeners in the jpf-core directory tree.
 func FindListeners() (found []byte, err error) {
-	target := tool.NewTarget("ListenerFinder.java", "java", "listener", config.GetConfig(config.LISTENER_DIR))
-	cp := filepath.Join(config.GetConfig(config.JPF_HOME), "build", "main") + ":" + target.Dir + ":" + config.GetConfig(config.GSON_JAR)
-	comp := javac.NewJavac(cp)
+	target := tool.NewTarget("ListenerFinder.java", "java", "listener", 
+		config.GetConfig(config.LISTENER_DIR))
+	cp := filepath.Join(config.GetConfig(config.JPF_HOME), "build", "main")	+
+		":" + target.Dir + ":" + config.GetConfig(config.GSON_JAR)
+	comp := javac.New(cp)
 	_, err = comp.Run(bson.NewObjectId(), target)
 	if err != nil {
 		return
 	}
-	args := []string{config.GetConfig(config.JAVA), "-cp", cp, target.Executable()}
+	args := []string{config.GetConfig(config.JAVA), "-cp", cp, 
+		target.Executable()}
 	execRes := tool.RunCommand(args, nil)
 	if execRes.Err != nil {
 		err = execRes.Err
 	} else if execRes.HasStdErr() {
-		err = fmt.Errorf("Could not run listener finder: %q.", string(execRes.StdErr))
+		err = fmt.Errorf("Could not run listener finder: %q.", 
+			string(execRes.StdErr))
 	}
 	found = execRes.StdOut
 	return
-}
-
-type Listener struct {
-	Name    string
-	Package string
 }
 
 func readListeners(data []byte) (listeners []*Listener, err error) {
@@ -66,12 +73,14 @@ func readListeners(data []byte) (listeners []*Listener, err error) {
 func saveListeners(vals []*Listener, fname string) error {
 	f, err := os.Create(fname)
 	if err != nil {
-		return fmt.Errorf("Encountered error %q while creating file %q", err, fname)
+		return fmt.Errorf("Encountered error %q while creating file %q",
+			err, fname)
 	}
 	enc := gob.NewEncoder(f)
 	err = enc.Encode(&vals)
 	if err != nil {
-		return fmt.Errorf("Encountered error %q while encoding map %q to file %q", err, vals, fname)
+		return fmt.Errorf("Encountered error %q while encoding map %q to file %q", 
+			err, vals, fname)
 	}
 	return nil
 }

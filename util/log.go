@@ -31,10 +31,12 @@ func init() {
 	}
 }
 
+//SetErrorConsoleLogging sets whether errors should be logged to the console.
 func SetErrorConsoleLogging(enable bool) {
 	errLogger.console = enable
 }
 
+//SetInfoConsoleLogging sets whether info should be logged to the console.
 func SetInfoConsoleLogging(enable bool) {
 	infoLogger.console = enable
 }

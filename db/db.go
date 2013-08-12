@@ -48,6 +48,7 @@ func getSession() (s *mgo.Session, err error) {
 	return
 }
 
+//Close shuts down the current session.
 func Close() {
 	dbLock.Lock()
 	if activeSession != nil {
@@ -56,6 +57,7 @@ func Close() {
 	dbLock.Unlock()
 }
 
+//DeleteDB removes a db.
 func DeleteDB(db string) error {
 	session, err := getSession()
 	if err != nil {
@@ -65,7 +67,8 @@ func DeleteDB(db string) error {
 	return session.DB(db).DropDatabase()
 }
 
-//Update updates documents from the collection col matching the matcher interface to the change interface.
+//Update updates documents from the collection col 
+//matching the matcher interface to the change interface.
 func Update(col string, matcher, change interface{}) (err error) {
 	session, err := getSession()
 	if err != nil {
@@ -75,16 +78,23 @@ func Update(col string, matcher, change interface{}) (err error) {
 	tcol := session.DB("").C(col)
 	err = tcol.Update(matcher, change)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q when updating %q matching %q to %q in db", err, col, matcher, change)
+		err = fmt.Errorf(
+			"Encountered error %q when updating %q matching %q to %q in db", 
+			err, col, matcher, change,
+		)
 	}
 	return
 }
 
+//Contains checks whether the collection col 
+//contains any items matching the interfacce{} matcher.
 func Contains(col string, matcher interface{}) bool {
 	n, err := Count(col, matcher)
 	return err == nil && n > 0
 }
 
+//Count calculates the amount of items in the collection col 
+//which match the interface{} matcher. 
 func Count(col string, matcher interface{}) (n int, err error) {
 	session, err := getSession()
 	if err != nil {
@@ -99,6 +109,8 @@ func Count(col string, matcher interface{}) (n int, err error) {
 	return
 }
 
+//DBGetError represents errors encountered 
+//when retrieving data from the db.
 type DBGetError struct {
 	tipe    string
 	err     error
@@ -106,18 +118,28 @@ type DBGetError struct {
 }
 
 func (this *DBGetError) Error() string {
-	return fmt.Sprintf("Encountered error %q when retrieving %q matching %q from db", this.err, this.tipe, this.matcher)
+	return fmt.Sprintf(
+		"Encountered error %q when retrieving %q matching %q from db", 
+		this.err, this.tipe, this.matcher,
+	)
 }
 
+//DBAddError represents errors encountered 
+//when adding data to the db.
 type DBAddError struct {
 	msg string
 	err error
 }
 
 func (this *DBAddError) Error() string {
-	return fmt.Sprintf("Encountered error %q when adding %q to db", this.err, this.msg)
+	return fmt.Sprintf(
+		"Encountered error %q when adding %q to db", 
+		this.err, this.msg,
+	)
 }
 
+//DBRemoveError represents errors encountered 
+//when removing data from the db.
 type DBRemoveError struct {
 	tipe    string
 	err     error
@@ -125,5 +147,8 @@ type DBRemoveError struct {
 }
 
 func (this *DBRemoveError) Error() string {
-	return fmt.Sprintf("Encountered error %q when removing %q matching %q from db", this.err, this.tipe, this.matcher)
+	return fmt.Sprintf(
+		"Encountered error %q when removing %q matching %q from db", 
+		this.err, this.tipe, this.matcher,
+	)
 }

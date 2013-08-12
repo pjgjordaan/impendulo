@@ -3,7 +3,6 @@ package util
 import (
 	"archive/zip"
 	"bytes"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -14,7 +13,7 @@ func Unzip(dir string, data []byte) (err error) {
 	br := bytes.NewReader(data)
 	zr, err := zip.NewReader(br, int64(br.Len()))
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q while creating zip reader from from %q", err, data)
+		err = &IOError{data, "creating zip reader from", err}
 		return
 	}
 	for _, zf := range zr.File {
@@ -30,28 +29,28 @@ func Unzip(dir string, data []byte) (err error) {
 func ExtractFile(zf *zip.File, dir string) error {
 	frc, err := zf.Open()
 	if err != nil {
-		return fmt.Errorf("Encountered error %q while opening zip file %q", err, zf)
+		return &IOError{zf, "opening zipfile", err}
 	}
 	defer frc.Close()
 	path := filepath.Join(dir, zf.Name)
 	if zf.FileInfo().IsDir() {
 		err = os.MkdirAll(path, DPERM)
 		if err != nil {
-			return fmt.Errorf("Encountered error %q while creating directory %q", err, path)
+			return &IOError{path, "creating directory", err}
 		}
 	} else {
 		err = os.MkdirAll(filepath.Dir(path), DPERM)
 		if err != nil {
-			return fmt.Errorf("Encountered error %q while creating directory %q", err, path)
+			return &IOError{path, "creating directory", err}
 		}
 		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, zf.Mode())
 		if err != nil {
-			return fmt.Errorf("Encountered error %q while opening file %q", err, path)
+			return &IOError{path, "opening", err}
 		}
 		defer f.Close()
 		_, err = io.Copy(f, frc)
 		if err != nil {
-			return fmt.Errorf("Encountered error %q while copying from %q to %q", err, frc, f)
+			return &IOError{f, "copying to", err}
 		}
 	}
 	return nil
@@ -63,7 +62,7 @@ func UnzipToMap(data []byte) (ret map[string][]byte, err error) {
 	br := bytes.NewReader(data)
 	zr, err := zip.NewReader(br, int64(br.Len()))
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q while creating zip reader from from %q", err, data)
+		err = &IOError{data, "creating zip reader from", err}
 		return
 	}
 	ret = make(map[string][]byte)
@@ -83,7 +82,7 @@ func UnzipToMap(data []byte) (ret map[string][]byte, err error) {
 func ExtractBytes(zf *zip.File) (ret []byte, err error) {
 	frc, err := zf.Open()
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q while opening zip file %q", err, zf)
+		err = &IOError{zf, "opening zipfile", err}
 	} else{
 		defer frc.Close()
 		ret = ReadBytes(frc)
@@ -91,7 +90,8 @@ func ExtractBytes(zf *zip.File) (ret []byte, err error) {
 	return
 }
 
-//Zip creates a zip archive from a map which has file names as its keys and file contents as its values.
+//Zip creates a zip archive from a map which has file names as its keys and 
+//file contents as its values.
 func Zip(files map[string][]byte) (ret []byte, err error) {
 	buf := new(bytes.Buffer)
 	zw := zip.NewWriter(buf)
@@ -103,22 +103,23 @@ func Zip(files map[string][]byte) (ret []byte, err error) {
 	}
 	err = zw.Close()
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q while closing zip %q", err, zw)
+		err = &IOError{zw, "closing zip", err}
 	} else{
 		ret = buf.Bytes()
 	}
 	return
 }
 
+//AddToZip adds a new file to a zip.Writer.
 func AddToZip(zw *zip.Writer, name string, data []byte)(err error){
 	f, err := zw.Create(name)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q while creating file %q in zip %q", err, name, zw)
+		err = &IOError{name, "creating zipfile", err}
 		return
 	}
 	_, err = f.Write(data)
 	if err != nil {
-		err = fmt.Errorf("Encountered error %q while writing to file %q in zip %q", err, f, zw)
+		err = &IOError{f, "writing to zipfile", err}
 	}
 	return
 }

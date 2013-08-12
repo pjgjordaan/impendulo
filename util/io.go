@@ -14,6 +14,18 @@ import (
 const DPERM = 0777
 const FPERM = os.O_WRONLY | os.O_CREATE | os.O_TRUNC
 
+type IOError struct{
+	origin interface{}
+	tipe string
+	err error
+}
+
+func (this *IOError) Error() string{
+	return fmt.Sprintf(`Encountered error %q while %s %q.`, 
+		this.err, this.tipe, this.origin)
+}
+
+//BaseDir retrieves the Impendulo directory.  
 func BaseDir() string {
 	cur, err := user.Current()
 	if err != nil {
@@ -34,7 +46,7 @@ func ReadData(r io.Reader) ([]byte, error) {
 		if err == io.EOF {
 			busy = false
 		} else if err != nil {
-			return nil, fmt.Errorf("Encountered error %q while reading from %q", err, r)
+			return nil, &IOError{r, "reading from", err}
 		} else if bytes.HasSuffix(read, eof) {
 			read = read[:len(read)-len(eof)]
 			busy = false
@@ -44,19 +56,19 @@ func ReadData(r io.Reader) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-//SaveFile saves a file (given as a []byte)  in dir.
+//SaveFile saves a file (given as a []byte) as fname.
 func SaveFile(fname string, data []byte) error {
 	err := os.MkdirAll(filepath.Dir(fname), DPERM)
 	if err != nil {
-		return fmt.Errorf("Encountered error %q while creating parent directory for %q", err, fname)
+		return &IOError{fname, "creating", err}
 	}
 	f, err := os.Create(fname)
 	if err != nil {
-		return fmt.Errorf("Encountered error %q while creating file %q", err, fname)
+		return &IOError{fname, "creating", err}
 	}
 	_, err = f.Write(data)
 	if err != nil {
-		return fmt.Errorf("Encountered error %q while writing data to %q", err, f)
+		return &IOError{fname, "writing to", err}
 	}
 	return nil
 }
@@ -74,6 +86,7 @@ func ReadBytes(r io.Reader) (data []byte) {
 	return
 }
 
+//GetPackage retrieves the package name from a Java source file.
 func GetPackage(r io.Reader) string {
 	scanner := bufio.NewScanner(r)
 	scanner.Split(bufio.ScanWords)
@@ -119,11 +132,13 @@ func (this *copier) copy(path string, f os.FileInfo) (err error){
 	return
 }
 
+//Copy copies the contents of src to dest.
 func Copy(dest, src string) error {
 	c := &copier{dest, src}
 	return filepath.Walk(src, c.copyFile)
 }
 
+//Exists checks whether a given path exists.
 func Exists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil

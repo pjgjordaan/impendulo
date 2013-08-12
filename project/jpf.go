@@ -5,6 +5,7 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
+//JPFFile represents a JPF configuration file.
 type JPFFile struct {
 	Id        bson.ObjectId "_id"
 	ProjectId bson.ObjectId "projectid"
@@ -19,7 +20,10 @@ func (this *JPFFile) TypeName() string {
 }
 
 func (this *JPFFile) String() string {
-	return "Type: project.JPFFile; Id: " + this.Id.Hex() + "; ProjectId: " + this.ProjectId.Hex() + "; Name: " + this.Name + "; User: " + this.User + "; Time: " + util.Date(this.Time)
+	return "Type: project.JPFFile; Id: " + this.Id.Hex() + 
+		"; ProjectId: " + this.ProjectId.Hex() + 
+		"; Name: " + this.Name + "; User: " + this.User + 
+		"; Time: " + util.Date(this.Time)
 }
 
 //NewFile
