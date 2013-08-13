@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
 //File stores a single file's data from a submission.
@@ -111,10 +112,24 @@ func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) (fil
 	return
 }
 
-//NewFile
-func NewArchive(subId bson.ObjectId, data []byte, ftype string) *File {
+//NewArchive
+func NewArchive(subId bson.ObjectId, data []byte, ftype string, isOld bool) *File {
 	id := bson.NewObjectId()
-	return &File{Id: id, SubId: subId, Data: data, FileType: ftype, Type: ARCHIVE}
+	var format int64
+	//Store the time format as the archive's time
+	if isOld{
+		format = -1
+	} else{
+		format = 1
+	}
+	return &File{
+		Id: id, 
+		SubId: subId, 
+		Data: data, 
+		FileType: ftype, 
+		Type: ARCHIVE,
+		Time: format,
+	}
 }
 
 //ParseName retrieves file metadata encoded in a file name.
@@ -124,7 +139,7 @@ func NewArchive(subId bson.ObjectId, data []byte, ftype string) *File {
 //Where values between '[]' are optional, '*' indicates 0 to many,
 //values inside '""' are literals and values inside '<>'
 //describe the contents at that position.
-func ParseName(name string) (*File, error) {
+func ParseName(name string, isOld bool) (*File, error) {
 	elems := strings.Split(name, "_")
 	if len(elems) < 3 {
 		return nil, fmt.Errorf(
@@ -140,11 +155,18 @@ func ParseName(name string) (*File, error) {
 			"%q in name %q could not be parsed as an int.",
 			elems[len(elems)-2], name)
 	}
-	file.Time, err = strconv.ParseInt(elems[len(elems)-3], 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"%q in name %q could not be parsed as an int64.",
-			elems[len(elems)-3], name)
+	if !isOld{
+		file.Time, err = strconv.ParseInt(elems[len(elems)-3], 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"%s in name %s could not be parsed as an int64.",
+				elems[len(elems)-3], name)
+		}
+	} else{
+		file.Time, err = calcTime(elems[len(elems)-3])
+		if err != nil {
+			return nil, err
+		}
 	}
 	if len(elems) > 3 {
 		file.Name = elems[len(elems)-4]
@@ -169,6 +191,59 @@ func ParseName(name string) (*File, error) {
 		file.FileType = EMPTY
 	}
 	return file, nil
+}
+
+func calcTime(timeStr string)(int64, error){
+	if len(timeStr) != 17{
+		return -1, fmt.Errorf("Invalid time string length %d for %s.", 
+			len(timeStr), timeStr)
+	}
+	year, err := strconv.Atoi(timeStr[:4])
+	if err != nil{
+		return -1, fmt.Errorf("Error %q reading year from %s.", 
+			err, timeStr) 
+	}
+	m, err := strconv.Atoi(timeStr[4:6])
+	if err != nil{
+		return -1, fmt.Errorf("Error %q reading month from %s.", 
+			err, timeStr) 
+	}
+	if m > 12{
+		return -1, fmt.Errorf("Invalid month %d.", m) 
+	}
+	month := time.Month(m)
+	day, err := strconv.Atoi(timeStr[6:8])
+	if err != nil{
+		return -1, fmt.Errorf("Error %q reading day from %s.", 
+			err, timeStr) 
+	}
+	hour, err := strconv.Atoi(timeStr[8:10])
+	if err != nil{
+		return -1, fmt.Errorf("Error %q reading hour from %s.", 
+			err, timeStr) 
+	}
+	minutes, err := strconv.Atoi(timeStr[10:12])
+	if err != nil{
+		return -1, fmt.Errorf("Error %q reading minutes from %s.", 
+			err, timeStr) 
+	}
+	seconds, err := strconv.Atoi(timeStr[12:14])
+	if err != nil{
+		return -1, fmt.Errorf("Error %q reading seconds from %s.", 
+			err, timeStr) 
+	}
+	miliseconds, err := strconv.Atoi(timeStr[14:17])
+	if err != nil{
+		return -1, fmt.Errorf("Error %q reading miliseconds from %s.", 
+			err, timeStr) 
+	}
+	nanos := miliseconds * 1000000
+	loc, err := time.LoadLocation("Local")
+	if err != nil{
+		return -1, fmt.Errorf("Error %q loading location.", err) 
+	}
+	t := time.Date(year, month, day, hour, minutes, seconds, nanos, loc)
+	return util.GetMilis(t), nil
 }
 
 //isOutFolder

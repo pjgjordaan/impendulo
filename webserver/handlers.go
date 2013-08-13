@@ -68,9 +68,23 @@ func GenerateViews(router *pat.Router) {
 func LoadView(name, view string) Handler {
 	return func(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 		ctx.Browse.View = views[name]
+		err := loadGraphs(name)
+		if err != nil{
+			util.Log(err)
+		}
 		args := map[string]interface{}{"ctx": ctx}
 		return T(getNav(ctx), name).Execute(w, args)
 	}
+}
+
+func loadGraphs(name string)(err error){
+	switch name{
+	case "projectResult":
+		err = LoadProjectGraphData()
+	case "userResult":
+		err = LoadUserGraphData()
+	}
+	return
 }
 
 var posts = map[string]PostFunc{"addtest": AddTest, "addjpf": AddJPF,

@@ -4,9 +4,14 @@ import (
 	"time"
 )
 
+//CurMilis returns the time in miliseconds.
+func GetMilis(t time.Time) int64 {
+	return t.UnixNano() / 1000000
+}
+
 //CurMilis returns the current time in miliseconds.
 func CurMilis() int64 {
-	return time.Now().UnixNano() / 1000000
+	return GetMilis(time.Now())
 }
 
 //GetTime returns an instance of time.Time for the miliseconds provided.

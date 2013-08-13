@@ -280,8 +280,17 @@ func (this *Processor) Extract(archive *project.File) error {
 	if err != nil {
 		return err
 	}
+	var isOld bool
+	switch archive.Time{
+	case -1:
+		isOld = true
+	case 1:
+		isOld = false
+	default:
+		return fmt.Errorf("Unknown time format %d.", archive.Time)
+	}
 	for name, data := range files {
-		err = storeFile(name, data, this.sub.Id)
+		err = this.storeFile(name, data, isOld)
 		if err != nil {
 			util.Log(err)
 		}
@@ -310,14 +319,14 @@ func (this *Processor) Extract(archive *project.File) error {
 	return nil
 }
 
-func storeFile(name string, data []byte, subId bson.ObjectId) (err error) {
-	file, err := project.ParseName(name)
+func (this *Processor) storeFile(name string, data []byte, isOld bool) (err error) {
+	file, err := project.ParseName(name, isOld)
 	if err != nil {
 		return
 	}
-	matcher := bson.M{project.SUBID: subId, project.TIME: file.Time}
+	matcher := bson.M{project.SUBID: this.sub.Id, project.TIME: file.Time}
 	if !db.Contains(db.FILES, matcher) {
-		file.SubId = subId
+		file.SubId = this.sub.Id
 		file.Data = data
 		err = db.AddFile(file)
 	}

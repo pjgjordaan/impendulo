@@ -12,6 +12,8 @@
 _obj
 _test
 data
+static/data
+tool/jpf/bin
 
 # Architecture specific extensions/prefixes
 *.[568vq]

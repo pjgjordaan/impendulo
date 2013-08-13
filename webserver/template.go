@@ -5,10 +5,12 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool/diff"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/db"
 	"html/template"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"labix.org/v2/mgo/bson"
 )
 
 var funcs = template.FuncMap{
@@ -26,6 +28,11 @@ var funcs = template.FuncMap{
 	"sum":          sum,
 	"equal":        equal,
 	"langs":        langs,
+	"submissionCount":  submissionCount,
+}
+
+func submissionCount(id bson.ObjectId) (int, error){
+	return db.Count(db.SUBMISSIONS, bson.M{project.PROJECT_ID: id})
 }
 
 func langs() []string {

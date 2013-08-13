@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"encoding/json"
 )
 
 //A function used to add data to the database.
@@ -36,6 +37,20 @@ func SubmitArchive(req *http.Request, ctx *Context) (err error) {
 		err = fmt.Errorf("User %q not found.", uname)
 		return
 	}
+	format, err := GetString(req, "dateFormat")
+	if err != nil {
+		return
+	}
+	var isOld bool
+	switch format{
+	case "new":
+		isOld = false
+	case "old":
+		isOld = true
+	default:
+		err = fmt.Errorf("Unknown date format %s.", format)
+		return
+	}
 	_, archiveBytes, err := ReadFormFile(req, "archive")
 	if err != nil {
 		return
@@ -46,7 +61,7 @@ func SubmitArchive(req *http.Request, ctx *Context) (err error) {
 	if err != nil {
 		return
 	}
-	file := project.NewArchive(sub.Id, archiveBytes, project.ZIP)
+	file := project.NewArchive(sub.Id, archiveBytes, project.ZIP, isOld)
 	err = db.AddFile(file)
 	if err != nil {
 		return
@@ -396,6 +411,79 @@ func GetResultData(resultName string, fileId bson.ObjectId) (res tool.DisplayRes
 	}
 	return
 }
+
+func LoadProjectGraphData() (error) {
+	projects, err := db.GetProjects(nil)
+	if err != nil{
+		return err
+	}
+	jsonData := make([]map[string]interface{}, 0)
+	for _, p := range projects{
+		subs, err := db.GetSubmissions(bson.M{project.PROJECT_ID: p.Id}, bson.M{project.TIME: 1})
+		if err != nil{
+			return err
+		}
+		if len(subs) == 0{
+			continue
+		}
+		cur, err := calcData(p.Name, subs)
+		if err != nil{
+			return err
+		}
+		jsonData = append(jsonData, cur)
+	}
+	marshalled, err := json.Marshal(jsonData)
+	if err != nil{
+		return err
+	}
+	return util.SaveFile("static/data/projectGraph.json", marshalled)
+}
+
+func LoadUserGraphData() (error) {
+	users, err := db.GetUsers(nil)
+	if err != nil{
+		return err
+	}
+	jsonData := make([]map[string]interface{}, 0)
+	for _, u := range users{
+		subs, err := db.GetSubmissions(bson.M{project.USER: u.Name}, bson.M{project.TIME: 1})
+		if err != nil{
+			return err
+		}
+		if len(subs) == 0{
+			continue
+		}
+		cur, err := calcData(u.Name, subs)
+		if err != nil{
+			return err
+		}
+		jsonData = append(jsonData, cur)
+	}
+	marshalled, err := json.Marshal(jsonData)
+	if err != nil{
+		return err
+	}
+	return util.SaveFile("static/data/userGraph.json", marshalled)
+}
+
+func calcData(name string, subs []*project.Submission) (data map[string]interface{}, err error) {
+	data = make(map[string]interface{})
+	data["name"] = name
+	dataVals := make(map[int64] int64)
+	for _, s := range subs{
+		v := ((s.Time/1000)/86400)*86400
+		dataVals[v] += 1
+	}
+	dataArray := make([]map[string] int64, len(dataVals))
+	index := 0
+	for k, v := range dataVals{
+		dataArray[index] = map[string] int64{"x": k, "y": v}
+		index += 1
+	}
+	data["data"] = dataArray
+	return
+}
+
 
 func getFile(id bson.ObjectId) (file *project.File, err error) {
 	selector := bson.M{project.NAME: 1, project.ID: 1,
