@@ -8,7 +8,6 @@ function movevalue (srcParent, destParent, src) {
 }
 
 function unhide (it, box) {
-    console.log(it);
     var check = (box.checked) ? "block" : "none";
     document.getElementById(it).style.display = check;
 }

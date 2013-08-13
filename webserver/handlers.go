@@ -68,21 +68,21 @@ func GenerateViews(router *pat.Router) {
 func LoadView(name, view string) Handler {
 	return func(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 		ctx.Browse.View = views[name]
-		err := loadGraphs(name)
+		jsonData, err := loadGraphs(name)
 		if err != nil{
 			util.Log(err)
 		}
-		args := map[string]interface{}{"ctx": ctx}
+		args := map[string]interface{}{"ctx": ctx, "jsonData": jsonData}
 		return T(getNav(ctx), name).Execute(w, args)
 	}
 }
 
-func loadGraphs(name string)(err error){
+func loadGraphs(name string)(jsonData []map[string]interface{}, err error){
 	switch name{
 	case "projectResult":
-		err = LoadProjectGraphData()
+		jsonData, err = loadProjectGraphData()
 	case "userResult":
-		err = LoadUserGraphData()
+		jsonData, err = loadUserGraphData()
 	}
 	return
 }
@@ -213,11 +213,15 @@ func loadArgs(req *http.Request, ctx *Context) (args map[string]interface{}, tem
 	if err != nil {
 		return
 	}
+	jsonData, err := loadResultGraphData(ctx.Browse.Result, curFile.Name, files)
+	if err != nil {
+		return
+	}
 	ctx.Browse.View = "home"
 	args = map[string]interface{}{"ctx": ctx, "files": files,
 		"selected": selected, "resultName": res.GetName(),
 		"curFile": curFile, "curResult": res.GetData(),
-		"results": results}
+		"results": results, "jsonData": jsonData}
 	neighbour, ok := getNeighbour(req, len(files)-1)
 	temps = []string{getNav(ctx), "fileInfo", res.Template(true)}
 	if !ok {

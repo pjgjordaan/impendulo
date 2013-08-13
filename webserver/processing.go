@@ -17,7 +17,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"encoding/json"
 )
 
 //A function used to add data to the database.
@@ -269,7 +268,7 @@ func RetrieveFiles(req *http.Request, ctx *Context) (ret []*project.File, err er
 	}
 	matcher := bson.M{project.SUBID: sid,
 		project.TYPE: project.SRC, project.NAME: name}
-	selector := bson.M{project.ID: 1, project.NAME: 1}
+	selector := bson.M{project.NUM: 1}
 	ret, err = db.GetFiles(matcher, selector, project.NUM)
 	if err == nil && len(ret) == 0 {
 		err = fmt.Errorf("No files found with name %q.", name)
@@ -412,82 +411,8 @@ func GetResultData(resultName string, fileId bson.ObjectId) (res tool.DisplayRes
 	return
 }
 
-func LoadProjectGraphData() (error) {
-	projects, err := db.GetProjects(nil)
-	if err != nil{
-		return err
-	}
-	jsonData := make([]map[string]interface{}, 0)
-	for _, p := range projects{
-		subs, err := db.GetSubmissions(bson.M{project.PROJECT_ID: p.Id}, bson.M{project.TIME: 1})
-		if err != nil{
-			return err
-		}
-		if len(subs) == 0{
-			continue
-		}
-		cur, err := calcData(p.Name, subs)
-		if err != nil{
-			return err
-		}
-		jsonData = append(jsonData, cur)
-	}
-	marshalled, err := json.Marshal(jsonData)
-	if err != nil{
-		return err
-	}
-	return util.SaveFile("static/data/projectGraph.json", marshalled)
-}
-
-func LoadUserGraphData() (error) {
-	users, err := db.GetUsers(nil)
-	if err != nil{
-		return err
-	}
-	jsonData := make([]map[string]interface{}, 0)
-	for _, u := range users{
-		subs, err := db.GetSubmissions(bson.M{project.USER: u.Name}, bson.M{project.TIME: 1})
-		if err != nil{
-			return err
-		}
-		if len(subs) == 0{
-			continue
-		}
-		cur, err := calcData(u.Name, subs)
-		if err != nil{
-			return err
-		}
-		jsonData = append(jsonData, cur)
-	}
-	marshalled, err := json.Marshal(jsonData)
-	if err != nil{
-		return err
-	}
-	return util.SaveFile("static/data/userGraph.json", marshalled)
-}
-
-func calcData(name string, subs []*project.Submission) (data map[string]interface{}, err error) {
-	data = make(map[string]interface{})
-	data["name"] = name
-	dataVals := make(map[int64] int64)
-	for _, s := range subs{
-		v := ((s.Time/1000)/86400)*86400
-		dataVals[v] += 1
-	}
-	dataArray := make([]map[string] int64, len(dataVals))
-	index := 0
-	for k, v := range dataVals{
-		dataArray[index] = map[string] int64{"x": k, "y": v}
-		index += 1
-	}
-	data["data"] = dataArray
-	return
-}
-
-
 func getFile(id bson.ObjectId) (file *project.File, err error) {
-	selector := bson.M{project.NAME: 1, project.ID: 1,
-		project.TIME: 1, project.NUM: 1}
+	selector := bson.M{project.NAME: 1, project.TIME: 1, project.NUM: 1}
 	file, err = db.GetFile(bson.M{project.ID: id}, selector)
 	return
 }

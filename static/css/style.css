@@ -117,25 +117,25 @@ h2{
 .form-padded{padding:20px 10px 25px;}
 
 .chart_container {
-        display: inline-block;
-        font-family: Arial, Helvetica, sans-serif;
-	text-align: center;
+    display: inline-block;
+    font-family: Arial, Helvetica, sans-serif;
 }
 .chart {
-        float: left;
+    margin-left: 80px;
+    float: left;
 }
 .legend {
-        float: left;
-        margin-left: 15px;
+    display: inline-block;
+    float:left;
 }
 .offset_form {
-        float: left;
-        margin: 2em 0 0 15px;
-        font-size: 13px;
+    float: left;
+    margin: 2em 0 0 15px;
+    font-size: 13px;
 }
 .y_axis {
-        float: left;
-        width: 40px;
+    position: absolute;
+    width: 80px;
 }
 
 .center

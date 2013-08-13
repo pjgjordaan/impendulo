@@ -2,10 +2,10 @@
 <ul class="breadcrumb">
   <li><a href="homeview">Home</a><span class="divider">/</span></li>  
   {{if .ctx.Browse.IsUser}}
-  <li><a href="getusers">Users</a><span class="divider"></span></li>
+  <li><a href="userresult">Users</a><span class="divider"></span></li>
   <li><a href="getsubmissions?id={{.ctx.Browse.Uid}}&type=user">Submissions</a><span class="divider"></span></li>
   {{else}}
-  <li><a href="getprojects">Projects</a><span class="divider"></span></li>
+  <li><a href="projectresult">Projects</a><span class="divider"></span></li>
   <li><a href="getsubmissions?id={{.ctx.Browse.Pid}}&type=project">Submissions</a><span class="divider"></span></li>
   {{end}}
   <li class="active">Files</li>
