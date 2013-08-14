@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"labix.org/v2/mgo/bson"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -44,6 +45,14 @@ func (this *ExecResult) HasStdOut() bool {
 		len(strings.TrimSpace(string(this.StdOut))) > 0
 }
 
+func MemoryError(err error)bool{
+	pErr, ok := err.(*os.PathError); 
+	if !ok {
+		return false
+	}
+	return pErr.Err.Error() == "cannot allocate memory"
+}
+
 //RunCommand executes a given command given by args and stdin. It terminates
 //when the command finishes execution or times out. An ExecResult containing the
 //command's output is returned.
@@ -54,6 +63,9 @@ func RunCommand(args []string, stdin io.Reader) (res *ExecResult) {
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	err := cmd.Start()
+	for MemoryError(err) {
+		err = cmd.Start()
+	} 
 	if err != nil {
 		res.Err = &StartError{args, err}
 		return

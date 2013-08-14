@@ -12,7 +12,11 @@
 </ul>
 <ul class="unstyled">
   {{range .names}}
-  <li><a href="displayresult?filename={{.}}&currentIndex={{0}}&nextIndex={{1}}"><h3>{{.}}</h3></a></li>
+  <li>
+    <h3>{{.}}</h3>
+    <a href="displayresult?filename={{.}}&currentIndex={{0}}&nextIndex={{1}}">Analysis</a>
+    <a href="displaygraphs?filename={{.}}">Graphs</a>
+  </li>
   {{end}}
 </ul>
 {{end}}

@@ -7,6 +7,7 @@ import (
 	"github.com/godfried/impendulo/util"
 	"html/template"
 	"labix.org/v2/mgo/bson"
+	"math"
 )
 
 const NAME = "Findbugs"
@@ -16,12 +17,13 @@ const NAME = "Findbugs"
 type FindbugsResult struct {
 	Id     bson.ObjectId   "_id"
 	FileId bson.ObjectId   "fileid"
+	Name string "name"
 	Time   int64           "time"
 	Data   *FindbugsReport "data"
 }
 
 func (this *FindbugsResult) GetName() string {
-	return NAME
+	return this.Name
 }
 
 func (this *FindbugsResult) GetId() bson.ObjectId {
@@ -53,10 +55,38 @@ func (this *FindbugsResult) Success() bool {
 	return true
 }
 
+func (this *FindbugsResult) AddGraphData(max float64, graphData []map[string]interface{})float64{
+	if graphData[0] == nil{
+		graphData[0] = make(map[string]interface{})
+		graphData[0]["name"] = "Findbugs All"
+		graphData[0]["data"] = make([]map[string] float64, 0)
+		graphData[1] = make(map[string]interface{})
+		graphData[1]["name"] = "Findbugs Priority 1"
+		graphData[1]["data"] = make([]map[string] float64, 0)
+		graphData[2] = make(map[string]interface{})
+		graphData[2]["name"] = "Findbugs Priority 2"
+		graphData[2]["data"] = make([]map[string] float64, 0)
+		graphData[3] = make(map[string]interface{})
+		graphData[3]["name"] = "Findbugs Priority 3"
+		graphData[3]["data"] = make([]map[string] float64, 0)
+	}
+	x := float64(this.Time/1000)	
+	yB := float64(this.Data.Summary.BugCount)  
+	y1 := float64(this.Data.Summary.Priority1)  
+	y2 := float64(this.Data.Summary.Priority2)
+	y3 := float64(this.Data.Summary.Priority3)
+	graphData[0]["data"] = append(graphData[0]["data"].([]map[string]float64), map[string]float64{"x": x, "y": yB})
+	graphData[1]["data"] = append(graphData[1]["data"].([]map[string]float64), map[string]float64{"x": x, "y": y1})
+	graphData[2]["data"] = append(graphData[2]["data"].([]map[string]float64), map[string]float64{"x": x, "y": y2})
+	graphData[3]["data"] = append(graphData[3]["data"].([]map[string]float64), map[string]float64{"x": x, "y": y3})
+	return math.Max(max, math.Max(y1, math.Max(y2, math.Max(y3, yB))))
+}
+
 func NewResult(fileId bson.ObjectId, data []byte) (res *FindbugsResult, err error) {
 	res = &FindbugsResult{
 		Id:     bson.NewObjectId(),
 		FileId: fileId,
+		Name: NAME,
 		Time:   util.CurMilis()}
 	res.Data, err = genReport(res.Id, data)
 	return

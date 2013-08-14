@@ -7,6 +7,7 @@ import (
 	"github.com/godfried/impendulo/util"
 	"html/template"
 	"labix.org/v2/mgo/bson"
+	"math"
 )
 
 const NAME = "Checkstyle"
@@ -14,12 +15,13 @@ const NAME = "Checkstyle"
 type CheckstyleResult struct {
 	Id     bson.ObjectId     "_id"
 	FileId bson.ObjectId     "fileid"
+	Name string "name"
 	Time   int64             "time"
 	Data   *CheckstyleReport "data"
 }
 
 func (this *CheckstyleResult) GetName() string {
-	return NAME
+	return this.Name
 }
 
 func (this *CheckstyleResult) GetSummary() *tool.Summary {
@@ -52,8 +54,20 @@ func (this *CheckstyleResult) Success() bool {
 	return true
 }
 
+func (this *CheckstyleResult) AddGraphData(max float64, graphData []map[string]interface{}) float64 {
+	if graphData[0] == nil{
+		graphData[0] = make(map[string]interface{})
+		graphData[0]["name"] = "Checkstyle Errors"
+		graphData[0]["data"] = make([]map[string] float64, 0)
+	}
+	x := float64(this.Time/1000)	
+	y := float64(this.Data.Errors)
+	graphData[0]["data"] = append(graphData[0]["data"].([]map[string]float64), map[string]float64{"x": x, "y": y})
+	return math.Max(max, y)
+}
+
 func NewResult(fileId bson.ObjectId, data []byte) (res *CheckstyleResult, err error) {
-	res = &CheckstyleResult{Id: bson.NewObjectId(), FileId: fileId, Time: util.CurMilis()}
+	res = &CheckstyleResult{Id: bson.NewObjectId(), FileId: fileId, Name: NAME, Time: util.CurMilis()}
 	res.Data, err = genReport(res.Id, data)
 	return
 }

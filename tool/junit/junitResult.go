@@ -7,6 +7,7 @@ import (
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"strings"
+	"math"
 )
 
 const NAME = "JUnit Test"
@@ -52,6 +53,29 @@ func (this *JUnitResult) Template(current bool) string {
 func (this *JUnitResult) Success() bool {
 	return this.Data.Success
 }
+
+func (this *JUnitResult) AddGraphData(max float64, graphData []map[string]interface{})(float64){
+	if graphData[0] == nil{
+		graphData[0] = make(map[string]interface{})
+		graphData[0]["name"] = this.GetName()+" Errors"
+		graphData[0]["data"] = make([]map[string] float64, 0)
+		graphData[1] = make(map[string]interface{})
+		graphData[1]["name"] = this.GetName()+" Failures"
+		graphData[1]["data"] = make([]map[string] float64, 0)
+		graphData[2] = make(map[string]interface{})
+		graphData[2]["name"] = this.GetName()+" Successes"
+		graphData[2]["data"] = make([]map[string] float64, 0)
+	}
+	x := float64(this.Time/1000)	
+	yE := float64(this.Data.Errors)  
+	yF := float64(this.Data.Failures)  
+	yS := float64(this.Data.Tests - this.Data.Failures - this.Data.Errors)
+	graphData[0]["data"] = append(graphData[0]["data"].([]map[string]float64), map[string]float64{"x": x, "y": yE})
+	graphData[1]["data"] = append(graphData[1]["data"].([]map[string]float64), map[string]float64{"x": x, "y": yF})
+	graphData[2]["data"] = append(graphData[2]["data"].([]map[string]float64), map[string]float64{"x": x, "y": yS})
+	return math.Max(max, math.Max(yE, math.Max(yF, yS)))
+}
+
 
 func NewResult(fileId bson.ObjectId, name string, data []byte) (res *JUnitResult, err error) {
 	res = &JUnitResult{Id: bson.NewObjectId(), FileId: fileId, TestName: name, Time: util.CurMilis()}

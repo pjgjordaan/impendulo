@@ -68,23 +68,9 @@ func GenerateViews(router *pat.Router) {
 func LoadView(name, view string) Handler {
 	return func(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 		ctx.Browse.View = views[name]
-		jsonData, err := loadGraphs(name)
-		if err != nil{
-			util.Log(err)
-		}
-		args := map[string]interface{}{"ctx": ctx, "jsonData": jsonData}
+		args := map[string]interface{}{"ctx": ctx}
 		return T(getNav(ctx), name).Execute(w, args)
 	}
-}
-
-func loadGraphs(name string)(jsonData []map[string]interface{}, err error){
-	switch name{
-	case "projectResult":
-		jsonData, err = loadProjectGraphData()
-	case "userResult":
-		jsonData, err = loadUserGraphData()
-	}
-	return
 }
 
 var posts = map[string]PostFunc{"addtest": AddTest, "addjpf": AddJPF,
@@ -178,7 +164,9 @@ func getFiles(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 }
 
 func displayResult(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	args, temps, err := loadArgs(req, ctx)
+	ctx.SetResult(req)
+	ctx.Browse.View = "home"
+	args, temps, err := analysisArgs(req, ctx)
 	if err != nil {
 		ctx.AddMessage("Could not retrieve results.", true)
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
@@ -187,7 +175,7 @@ func displayResult(w http.ResponseWriter, req *http.Request, ctx *Context) error
 	return T(temps...).Execute(w, args)
 }
 
-func loadArgs(req *http.Request, ctx *Context) (args map[string]interface{}, temps []string, err error) {
+func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{}, temps []string, err error) {
 	files, err := RetrieveFiles(req, ctx)
 	if err != nil {
 		return
@@ -204,24 +192,18 @@ func loadArgs(req *http.Request, ctx *Context) (args map[string]interface{}, tem
 	if err != nil {
 		return
 	}
-	results, err := db.GetResultNames(projectId)
+	results, err := db.GetResultNames(projectId, true)
 	if err != nil {
 		return
 	}
-	ctx.SetResult(req)
 	res, err := GetResultData(ctx.Browse.Result, curFile.Id)
 	if err != nil {
 		return
 	}
-	jsonData, err := loadResultGraphData(ctx.Browse.Result, curFile.Name, files)
-	if err != nil {
-		return
-	}
-	ctx.Browse.View = "home"
 	args = map[string]interface{}{"ctx": ctx, "files": files,
-		"selected": selected, "resultName": res.GetName(),
+		"selected": selected,
 		"curFile": curFile, "curResult": res.GetData(),
-		"results": results, "jsonData": jsonData}
+		"results": results}
 	neighbour, ok := getNeighbour(req, len(files)-1)
 	temps = []string{getNav(ctx), "fileInfo", res.Template(true)}
 	if !ok {
@@ -240,6 +222,43 @@ func loadArgs(req *http.Request, ctx *Context) (args map[string]interface{}, tem
 	args["nextResult"] = res.GetData()
 	args["neighbour"] = neighbour
 	temps = append(temps, "doubleResult", res.Template(false))
+	return
+}
+
+func displayGraph(w http.ResponseWriter, req *http.Request, ctx *Context) error {
+	ctx.Browse.View = "home"
+	ctx.SetResult(req)
+	args, err := graphArgs(req, ctx)
+	if err != nil {
+		ctx.AddMessage("Could not retrieve graph data.", true)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
+	}
+	temps := []string{getNav(ctx), "graphResult"}
+	return T(temps...).Execute(w, args)
+}
+
+func graphArgs(req *http.Request, ctx *Context) (args map[string]interface{}, err error) {
+	fileName, err := GetString(req, "filename")
+	if err != nil {
+		return
+	}
+	files, err := RetrieveFiles(req, ctx)
+	if err != nil {
+		return
+	}
+	projectId, err := util.ReadId(ctx.Browse.Pid)
+	if err != nil {
+		return
+	}
+	results, err := db.GetResultNames(projectId, false)
+	results = append(results, "All")
+	if err != nil {
+		return
+	}
+	graphArgs := loadResultGraphData(ctx.Browse.Result, files)
+	args = map[string]interface{}{"ctx": ctx, "files": files,
+		"results": results, "fileName": fileName, "graphArgs": graphArgs}
 	return
 }
 

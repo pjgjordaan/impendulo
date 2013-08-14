@@ -7,6 +7,7 @@ import (
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"strconv"
+	"math"
 )
 
 const NAME = "JPF"
@@ -14,12 +15,13 @@ const NAME = "JPF"
 type JPFResult struct {
 	Id     bson.ObjectId "_id"
 	FileId bson.ObjectId "fileid"
+	Name string "name"
 	Time   int64         "time"
 	Data   *JPFReport    "data"
 }
 
 func (this *JPFResult) GetName() string {
-	return NAME
+	return this.Name
 }
 
 func (this *JPFResult) GetId() bson.ObjectId {
@@ -51,9 +53,36 @@ func (this *JPFResult) Template(current bool) string {
 	}
 }
 
+func (this *JPFResult) AddGraphData(max float64, graphData []map[string]interface{})float64{
+	if graphData[0] == nil{
+		graphData[0] = make(map[string]interface{})
+		graphData[0]["name"] = "JPF New States"
+		graphData[0]["data"] = make([]map[string] float64, 0)
+		graphData[1] = make(map[string]interface{})
+		graphData[1]["name"] = "JPF Visited States"
+		graphData[1]["data"] = make([]map[string] float64, 0)
+		graphData[2] = make(map[string]interface{})
+		graphData[2]["name"] = "JPF Backtracked States"
+		graphData[2]["data"] = make([]map[string] float64, 0)
+		graphData[3] = make(map[string]interface{})
+		graphData[3]["name"] = "JPF End States"
+		graphData[3]["data"] = make([]map[string] float64, 0)
+	}
+	x := float64(this.Time/1000)	
+	yN := float64(this.Data.Stats.NewStates)  
+	yV := float64(this.Data.Stats.VisitedStates)  
+	yB := float64(this.Data.Stats.BacktrackedStates)
+	yE := float64(this.Data.Stats.EndStates)
+	graphData[0]["data"] = append(graphData[0]["data"].([]map[string]float64), map[string]float64{"x": x, "y": yN})
+	graphData[1]["data"] = append(graphData[1]["data"].([]map[string]float64), map[string]float64{"x": x, "y": yV})
+	graphData[2]["data"] = append(graphData[2]["data"].([]map[string]float64), map[string]float64{"x": x, "y": yB})
+	graphData[3]["data"] = append(graphData[3]["data"].([]map[string]float64), map[string]float64{"x": x, "y": yE})
+	return math.Max(max, math.Max(yN, math.Max(yV, math.Max(yB, yE))))
+}
+
 //NewResult
 func NewResult(fileId bson.ObjectId, data []byte) (res *JPFResult, err error) {
-	res = &JPFResult{Id: bson.NewObjectId(), FileId: fileId, Time: util.CurMilis()}
+	res = &JPFResult{Id: bson.NewObjectId(), FileId: fileId, Name: NAME, Time: util.CurMilis()}
 	res.Data, err = genReport(res.Id, data)
 	return
 }

@@ -10,78 +10,44 @@ import(
 	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
+	"fmt"
+	"math"
 )
 
-func loadProjectGraphData() (jsonData []map[string]interface{}, err error) {
-	projects, err := db.GetProjects(nil)
-	if err != nil{
-		return
-	}
-	jsonData = make([]map[string]interface{}, 0)
-	for _, p := range projects{
-		var subs []*project.Submission
-		subs, err = db.GetSubmissions(bson.M{project.PROJECT_ID: p.Id}, bson.M{project.TIME: 1})
-		if err != nil{
-			return
-		}
-		if len(subs) == 0{
-			continue
-		}
-		var cur map[string]interface{}
-		cur, err = calcData(p.Name, subs)
-		if err != nil{
-			return
-		}
-		jsonData = append(jsonData, cur)
-	}
-	return
-}
+func init(){fmt.Sprint()}
 
-func loadUserGraphData() (jsonData []map[string]interface{}, err error) {
-	users, err := db.GetUsers(nil)
-	if err != nil{
-		return
-	}
-	jsonData = make([]map[string]interface{}, 0)
-	for _, u := range users{
-		var subs []*project.Submission
-		subs, err = db.GetSubmissions(bson.M{project.USER: u.Name}, bson.M{project.TIME: 1})
-		if err != nil{
-			return
-		}
-		if len(subs) == 0{
-			continue
-		}
-		var cur map[string]interface{}
-		cur, err = calcData(u.Name, subs)
-		if err != nil{
-			return
-		}
-		jsonData = append(jsonData, cur)
-	}
-	return
-}
+type GraphArgs map[string]interface{}
 
-
-func loadResultGraphData(result, name string, files []*project.File) ([]map[string]interface{}, error) {
-	var jsonData []map[string]interface{}
+func loadResultGraphData(result string, files []*project.File) (graphArgs GraphArgs) {
 	switch result{
 	case javac.NAME:
-		jsonData = loadJavacGraphData(name, files)
+		graphArgs = loadJavacGraphData(files)
 	case jpf.NAME:
+		graphArgs = loadJPFGraphData(files)
 	case findbugs.NAME:
+		graphArgs = loadFindbugsGraphData(files)
 	case pmd.NAME:
+		graphArgs = loadPMDGraphData(files)
 	case checkstyle.NAME:
+		graphArgs = loadCheckstyleGraphData(files)
+	case "All":
+		graphArgs = loadAllGraphData(files)
 	case tool.CODE:
 	case tool.SUMMARY:
 	default:
-		jsonData = loadJUnitGraphData(result, name, files)
+		graphArgs = loadJUnitGraphData(result, files)
 	}
-	return jsonData, nil
+	if graphArgs == nil{
+		return
+	}
+	graphArgs["height"] = 400;
+	graphArgs["width"] = 700;
+	graphArgs["interpolation"] = "linear";
+	return
 }
 
-func loadJavacGraphData(fname string, files []*project.File) ([]map[string]interface{}) {
-	jsonData := make([]map[string]interface{}, 1)
+func loadJavacGraphData(files []*project.File) (GraphArgs) {
+	graphData := make([]map[string]interface{}, 1)
 	dataArray := make([]map[string] int64, 0)
 	for _, f := range files{
 		result, err := db.GetJavacResult(
@@ -99,50 +65,155 @@ func loadJavacGraphData(fname string, files []*project.File) ([]map[string]inter
 			map[string] int64{"x": result.Time/1000, "y": y})
 	}
 	cur := make(map[string]interface{})
-	cur["name"] = fname
+	cur["name"] = "Compilation Success"
 	cur["data"] = dataArray
-	jsonData[0] = cur
-	return jsonData
+	graphData[0] = cur
+	graphArgs := make(map[string]interface{})
+	graphArgs["max"] = 1.05
+	graphArgs["min"] = -0.05
+	graphArgs["renderer"] = "scatterplot"
+	graphArgs["series"] = graphData
+	graphArgs["yformat"] = map[string]interface{}{"0": "No Compile", "1": "Compiled"}
+	return graphArgs
 }
 
-func loadJUnitGraphData(testName, fname string, files []*project.File) ([]map[string]interface{}) {
-	jsonData := make([]map[string]interface{}, 1)
-	if _, err := db.GetJUnitResult(bson.M{project.NAME: testName}, nil); err != nil{
-		return jsonData
+func loadJUnitGraphData(testName string, files []*project.File) (GraphArgs) {
+	graphArgs := make(map[string]interface{})
+	if !db.Contains(db.RESULTS, bson.M{project.NAME: testName}){
+		return graphArgs
 	}
-	dataArray := make([]map[string] int64, 0)
+	graphData := make([]map[string]interface{}, 3)
+	max := 0.0
 	for _, f := range files{
 		result, err := db.GetJUnitResult(
 			bson.M{project.FILEID: f.Id, project.NAME: testName}, nil)
 		if err != nil{
 			continue
-		}
-		y := result.Data.Tests - result.Data.Failures - result.Data.Errors  
-		dataArray = append(dataArray, map[string] int64{
-			"x": result.Time/1000, "y": int64(y)})
+		}  
+		max = result.AddGraphData(max, graphData)
 	}
-	cur := make(map[string]interface{})
-	cur["name"] = fname
-	cur["data"] = dataArray
-	jsonData[0] = cur
-	return jsonData
+	graphArgs["max"] = max + max*0.05
+	graphArgs["min"] = -max*0.05
+	graphArgs["renderer"] = "line"
+	graphArgs["series"] = graphData
+	return graphArgs
+}
+
+func loadJPFGraphData(files []*project.File) (GraphArgs) {
+	graphArgs := make(map[string]interface{})
+	graphData := make([]map[string]interface{}, 3)
+	max := 0.0
+	for _, f := range files{
+		result, err := db.GetJPFResult(
+			bson.M{project.FILEID: f.Id}, nil)
+		if err != nil{
+			continue
+		}  
+		max = result.AddGraphData(max, graphData)
+	}
+	graphArgs["max"] = max + max*0.05
+	graphArgs["min"] = -max*0.05
+	graphArgs["renderer"] = "line"
+	graphArgs["series"] = graphData
+	return graphArgs
+}
+
+func loadFindbugsGraphData(files []*project.File) (GraphArgs) {
+	graphArgs := make(map[string]interface{})
+	graphData := make([]map[string]interface{}, 4)
+	max := 0.0
+	for _, f := range files{
+		result, err := db.GetFindbugsResult(
+			bson.M{project.FILEID: f.Id}, nil)
+		if err != nil || result.Data == nil {
+			continue
+		}  
+		max = result.AddGraphData(max, graphData) 
+	}
+	graphArgs["max"] = max + max*0.05
+	graphArgs["min"] = -max*0.05
+	graphArgs["renderer"] = "line"
+	graphArgs["series"] = graphData
+	return graphArgs
 }
 
 
-func calcData(name string, subs []*project.Submission) (data map[string]interface{}, err error) {
-	data = make(map[string]interface{})
-	data["name"] = name
-	dataVals := make(map[int64] int64)
-	for _, s := range subs{
-		v := ((s.Time/1000)/86400)*86400
-		dataVals[v] += 1
+func loadCheckstyleGraphData(files []*project.File) (GraphArgs) {
+	graphArgs := make(map[string]interface{})
+	graphData := make([]map[string]interface{}, 1)
+	max := 0.0
+	for _, f := range files{
+		result, err := db.GetCheckstyleResult(
+			bson.M{project.FILEID: f.Id}, nil)
+		if err != nil || result.Data == nil {
+			continue
+		}  
+		max = result.AddGraphData(max, graphData)
 	}
-	dataArray := make([]map[string] int64, len(dataVals))
-	index := 0
-	for k, v := range dataVals{
-		dataArray[index] = map[string] int64{"x": k, "y": v}
-		index += 1
+	graphArgs["max"] = max + max*0.05
+	graphArgs["min"] = -max*0.05
+	graphArgs["renderer"] = "line"
+	graphArgs["series"] = graphData
+	return graphArgs
+}
+
+func loadPMDGraphData(files []*project.File) (GraphArgs) {
+	graphArgs := make(map[string]interface{})
+	graphData := make([]map[string]interface{}, 1)
+	max := 0.0
+	for _, f := range files{
+		result, err := db.GetPMDResult(
+			bson.M{project.FILEID: f.Id}, nil)
+		if err != nil || result.Data == nil {
+			continue
+		}  
+		max = result.AddGraphData(max, graphData) 
 	}
-	data["data"] = dataArray
-	return
+	graphArgs["max"] = max + max*0.05
+	graphArgs["min"] = -max*0.05
+	graphArgs["renderer"] = "line"
+	graphArgs["series"] = graphData
+	return graphArgs
+}
+
+func loadAllGraphData(files []*project.File) (GraphArgs) {
+	graphArgs := make(map[string]interface{})
+	graphData := make(map[string][]map[string]interface{})
+	allMax := make(map[string]float64)
+	for _, f := range files{
+		results, err := db.GetGraphResults(f.Id)
+		if err != nil || results == nil {
+			continue
+		}  
+		for _, result := range results{
+			if _, ok := graphData[result.GetName()]; !ok{
+				graphData[result.GetName()] = make([]map[string]interface{}, 4)
+			}
+			allMax[result.GetName()] = result.AddGraphData(allMax[result.GetName()], graphData[result.GetName()])
+		} 
+	}
+	max := 0.0
+	for _, v := range allMax{
+		max = math.Max(max, v)
+	}
+	allData := make([]map[string]interface{}, 0)
+	for key, val := range graphData{
+		scale := max/allMax[key]
+		for _, data := range val{
+			if data == nil{
+				break
+			}
+			point := data["data"].([]map[string]float64)
+			for _, vals := range point{
+				vals["y"] *= scale
+			}
+			data["data"] = point
+			allData = append(allData, data)
+		} 
+	}
+	graphArgs["max"] = max + max*0.05
+	graphArgs["min"] = -max*0.05
+	graphArgs["renderer"] = "line"
+	graphArgs["series"] = allData
+	return graphArgs
 }

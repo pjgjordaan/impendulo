@@ -16,7 +16,7 @@
   <li><a href="getsubmissions?id={{.ctx.Browse.Pid}}&type=project">Submissions</a><span class="divider">/</span></li>
   {{end}}
   <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">Snapshots</a><span class="divider">/</span></li>
-  <li class="active">Results</li>
+  <li class="active">Analysis</li>
 </ul>
 <ul class="breadcrumb">
   {{range $results}}
@@ -119,23 +119,4 @@
   </div>
 </div>
 {{end}}
-
-<script language="javascript" src="/static/js/jquery-2.0.2.min.js"></script>
-<script language="javascript" src="/static/js/d3.v3.min.js"></script>
-<script language="javascript" src="/static/js/rickshaw.js"></script>
-<script language="javascript" src="/static/js/graphs.js"></script> 
-<div class="chart_holder" id="resultGraphHolder">
-  <div class="y_axis" id="resultGraphY"></div>
-  <div class="chart" id="resultGraph"></div>
-  <div class="legend" id="resultGraphLegend"></div>
-</div>
- <script>
-   var res = document.getElementById("result");
-   console.log(res);
-   if(res.outerText === "Javac"){
-   javacGraph({{.jsonData}});
-   } else{
-   timeLineGraph("resultGraph", {{.jsonData}});
-   }
-</script> 
 {{end}}

@@ -13,6 +13,13 @@ const (
 	CODE     = "Code"
 )
 
+
+//GraphResult is used to display result data in a graph.
+type GraphResult interface {
+	AddGraphData(curMax float64, graphData []map[string]interface{}) (newMax float64)
+	GetName() string
+}
+
 //ToolResult is used to store tool result data.
 type ToolResult interface {
 	GetId() bson.ObjectId

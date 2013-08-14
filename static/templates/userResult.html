@@ -8,18 +8,4 @@
   <li><a href="getsubmissions?id={{.Name}}&type=user"><h4>{{.Name}}</h4></a></li>
   {{end}}
 </ul>
-
-<script language="javascript" src="/static/js/jquery-2.0.2.min.js"></script>
-<script language="javascript" src="/static/js/d3.v3.min.js"></script>
-<script language="javascript" src="/static/js/rickshaw.js"></script>
-<script language="javascript" src="/static/js/graphs.js"></script> 
-<div class="chart_holder" id="userGraphHolder">
-  <h3>Daily Submissions</h3>
-  <div class="y_axis" id="userGraphY"></div>
-  <div class="chart" id="userGraph"></div>
-  <div class="legend" id="userGraphLegend"></div>
-</div>
-<script>
-  timeLineGraph("userGraph", {{.jsonData}});
-</script>
 {{end}}

@@ -12,12 +12,13 @@ const NAME = "Javac"
 type JavacResult struct {
 	Id     bson.ObjectId "_id"
 	FileId bson.ObjectId "fileid"
+	Name string "name"
 	Time   int64         "time"
 	Data   []byte        "data"
 }
 
 func (this *JavacResult) GetName() string {
-	return NAME
+	return this.Name
 }
 
 func (this *JavacResult) GetId() bson.ObjectId {
@@ -59,5 +60,5 @@ func (this *JavacResult) Result() string {
 }
 
 func NewResult(fileId bson.ObjectId, data []byte) *JavacResult {
-	return &JavacResult{bson.NewObjectId(), fileId, util.CurMilis(), data}
+	return &JavacResult{bson.NewObjectId(), fileId, NAME, util.CurMilis(), data}
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/godfried/impendulo/util"
 	"html/template"
 	"labix.org/v2/mgo/bson"
+	"math"
 )
 
 const NAME = "PMD"
@@ -14,12 +15,13 @@ const NAME = "PMD"
 type PMDResult struct {
 	Id     bson.ObjectId "_id"
 	FileId bson.ObjectId "fileid"
+	Name string "name"
 	Time   int64         "time"
 	Data   *PMDReport    "data"
 }
 
 func (this *PMDResult) GetName() string {
-	return NAME
+	return this.Name
 }
 
 func (this *PMDResult) GetId() bson.ObjectId {
@@ -51,8 +53,20 @@ func (this *PMDResult) Success() bool {
 	return true
 }
 
+func (this *PMDResult) AddGraphData(max float64, graphData []map[string]interface{}) float64{
+	if graphData[0] == nil{
+		graphData[0] = make(map[string]interface{})
+		graphData[0]["name"] = "PMD Errors"
+		graphData[0]["data"] = make([]map[string] float64, 0)
+	}
+	x := float64(this.Time/1000)
+	y := float64(this.Data.Errors)
+	graphData[0]["data"] = append(graphData[0]["data"].([]map[string]float64), map[string]float64{"x": x, "y": y})
+	return math.Max(max, y)
+}
+
 func NewResult(fileId bson.ObjectId, data []byte) (res *PMDResult, err error) {
-	res = &PMDResult{Id: bson.NewObjectId(), FileId: fileId, Time: util.CurMilis()}
+	res = &PMDResult{Id: bson.NewObjectId(), FileId: fileId, Name: NAME, Time: util.CurMilis()}
 	res.Data, err = genReport(res.Id, data)
 	return
 }
@@ -69,15 +83,49 @@ func genReport(id bson.ObjectId, data []byte) (res *PMDReport, err error) {
 	return
 }
 
+
+func (this *PMDResult) String() (ret string) {
+	if this.Data != nil{
+		ret = this.Data.String()
+	}
+	ret += this.Id.Hex()
+	return
+}
+
 type PMDReport struct {
 	Id      bson.ObjectId
 	Version string  `xml:"version,attr"`
 	Files   []*File `xml:"file"`
 	Errors  int
 }
+
+func (this *PMDReport) String() (ret string) {
+	ret = fmt.Sprintf("Report{ Errors: %d\n.", this.Errors) 
+	if this.Files != nil{
+		ret += "Files: \n"
+		for _, f := range this.Files{
+			ret += f.String()
+		}
+	}
+	ret += "}\n"
+	return
+}
+
 type File struct {
 	Name       string       `xml:"name,attr"`
 	Violations []*Violation `xml:"violation"`
+}
+
+func (this *File) String() (ret string) {
+	ret = fmt.Sprintf("File{ Name: %s\n.", this.Name) 
+	if this.Violations != nil{
+		ret += "Violations: \n"
+		for _, v := range this.Violations{
+			ret += v.String()
+		}
+	}
+	ret += "}\n"
+	return
 }
 
 type Violation struct {
@@ -88,4 +136,12 @@ type Violation struct {
 	Url         template.URL `xml:"externalInfoUrl,attr"`
 	Priority    int          `xml:"priority,attr"`
 	Description string       `xml:",innerxml"`
+}
+
+func (this *Violation) String() (ret string) {
+	ret = fmt.Sprintf("Violation{ Begin: %d; End: %d; Rule: %s; RuleSet: %s; "+
+		"Priority: %d; Description: %s}\n", 
+		this.Begin, this.End, this.Rule, this.RuleSet, 
+		this.Priority, this.Description) 
+	return
 }

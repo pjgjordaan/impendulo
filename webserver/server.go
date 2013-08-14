@@ -21,6 +21,7 @@ func init() {
 
 	GenerateViews(router)
 
+	router.Add("GET", "/displaygraph", Handler(displayGraph)).Name("displaygraph")
 	router.Add("GET", "/displayresult", Handler(displayResult)).Name("displayresult")
 	router.Add("GET", "/getfiles", Handler(getFiles)).Name("getfiles")
 	router.Add("GET", "/getsubmissions", Handler(getSubmissions)).Name("getsubmissions")

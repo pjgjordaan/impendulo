@@ -138,6 +138,11 @@ h2{
     width: 80px;
 }
 
+.y_axis {
+    height: 450px;
+}
+
+
 .center
 {
     margin-left:auto;
