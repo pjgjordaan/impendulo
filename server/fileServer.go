@@ -217,7 +217,7 @@ func (this *SubmissionHandler) Read() (done bool, err error) {
 		switch this.submission.Mode {
 		case project.ARCHIVE_MODE:
 			file = project.NewArchive(
-				this.submission.Id, buffer, project.ZIP, false)
+				this.submission.Id, buffer, project.ZIP)
 		case project.FILE_MODE:
 			file, err = project.NewFile(
 				this.submission.Id, requestInfo, buffer)

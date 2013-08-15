@@ -280,17 +280,8 @@ func (this *Processor) Extract(archive *project.File) error {
 	if err != nil {
 		return err
 	}
-	var isOld bool
-	switch archive.Time{
-	case -1:
-		isOld = true
-	case 1:
-		isOld = false
-	default:
-		return fmt.Errorf("Unknown time format %d.", archive.Time)
-	}
 	for name, data := range files {
-		err = this.storeFile(name, data, isOld)
+		err = this.storeFile(name, data)
 		if err != nil {
 			util.Log(err)
 		}
@@ -319,8 +310,8 @@ func (this *Processor) Extract(archive *project.File) error {
 	return nil
 }
 
-func (this *Processor) storeFile(name string, data []byte, isOld bool) (err error) {
-	file, err := project.ParseName(name, isOld)
+func (this *Processor) storeFile(name string, data []byte) (err error) {
+	file, err := project.ParseName(name)
 	if err != nil {
 		return
 	}

@@ -36,20 +36,6 @@ func SubmitArchive(req *http.Request, ctx *Context) (err error) {
 		err = fmt.Errorf("User %q not found.", uname)
 		return
 	}
-	format, err := GetString(req, "dateFormat")
-	if err != nil {
-		return
-	}
-	var isOld bool
-	switch format{
-	case "new":
-		isOld = false
-	case "old":
-		isOld = true
-	default:
-		err = fmt.Errorf("Unknown date format %s.", format)
-		return
-	}
 	_, archiveBytes, err := ReadFormFile(req, "archive")
 	if err != nil {
 		return
@@ -60,7 +46,7 @@ func SubmitArchive(req *http.Request, ctx *Context) (err error) {
 	if err != nil {
 		return
 	}
-	file := project.NewArchive(sub.Id, archiveBytes, project.ZIP, isOld)
+	file := project.NewArchive(sub.Id, archiveBytes, project.ZIP)
 	err = db.AddFile(file)
 	if err != nil {
 		return

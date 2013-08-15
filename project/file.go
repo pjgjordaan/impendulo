@@ -113,22 +113,14 @@ func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) (fil
 }
 
 //NewArchive
-func NewArchive(subId bson.ObjectId, data []byte, ftype string, isOld bool) *File {
+func NewArchive(subId bson.ObjectId, data []byte, ftype string) *File {
 	id := bson.NewObjectId()
-	var format int64
-	//Store the time format as the archive's time
-	if isOld{
-		format = -1
-	} else{
-		format = 1
-	}
 	return &File{
 		Id: id, 
 		SubId: subId, 
 		Data: data, 
 		FileType: ftype, 
 		Type: ARCHIVE,
-		Time: format,
 	}
 }
 
@@ -139,7 +131,7 @@ func NewArchive(subId bson.ObjectId, data []byte, ftype string, isOld bool) *Fil
 //Where values between '[]' are optional, '*' indicates 0 to many,
 //values inside '""' are literals and values inside '<>'
 //describe the contents at that position.
-func ParseName(name string, isOld bool) (*File, error) {
+func ParseName(name string) (*File, error) {
 	elems := strings.Split(name, "_")
 	if len(elems) < 3 {
 		return nil, fmt.Errorf(
@@ -155,18 +147,23 @@ func ParseName(name string, isOld bool) (*File, error) {
 			"%q in name %q could not be parsed as an int.",
 			elems[len(elems)-2], name)
 	}
-	if !isOld{
-		file.Time, err = strconv.ParseInt(elems[len(elems)-3], 10, 64)
+	timeString := elems[len(elems)-3]
+	if len(timeString) == 13 {
+		file.Time, err = strconv.ParseInt(timeString, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"%s in name %s could not be parsed as an int64.",
-				elems[len(elems)-3], name)
+				timeString, name)
 		}
-	} else{
-		file.Time, err = calcTime(elems[len(elems)-3])
+	} else if timeString[0] == '2' && len(timeString) == 17{
+		file.Time, err = calcTime(timeString)
 		if err != nil {
 			return nil, err
 		}
+	} else{
+		return nil, fmt.Errorf(
+			"Unknown time format %s in %s.",
+			timeString, name)
 	}
 	if len(elems) > 3 {
 		file.Name = elems[len(elems)-4]
