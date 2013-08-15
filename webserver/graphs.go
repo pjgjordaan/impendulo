@@ -17,73 +17,63 @@ import(
 func init(){fmt.Sprint()}
 
 type GraphArgs map[string]interface{}
+type GraphData []map[string]interface{}
+
 
 func loadResultGraphData(result string, files []*project.File) (graphArgs GraphArgs) {
+	var graphData GraphData
+	max := -1.0
 	switch result{
 	case javac.NAME:
-		graphArgs = loadJavacGraphData(files)
+		graphData, max = loadJavacGraphData(files)
 	case jpf.NAME:
-		graphArgs = loadJPFGraphData(files)
+		graphData, max = loadJPFGraphData(files)
 	case findbugs.NAME:
-		graphArgs = loadFindbugsGraphData(files)
+		graphData, max = loadFindbugsGraphData(files)
 	case pmd.NAME:
-		graphArgs = loadPMDGraphData(files)
+		graphData, max = loadPMDGraphData(files)
 	case checkstyle.NAME:
-		graphArgs = loadCheckstyleGraphData(files)
+		graphData, max = loadCheckstyleGraphData(files)
 	case "All":
-		graphArgs = loadAllGraphData(files)
+		graphData, max = loadAllGraphData(files)
 	case tool.CODE:
 	case tool.SUMMARY:
 	default:
-		graphArgs = loadJUnitGraphData(result, files)
+		graphData, max = loadJUnitGraphData(result, files)
 	}
-	if graphArgs == nil{
+	if max == -1.0{
 		return
 	}
-	graphArgs["height"] = 400;
-	graphArgs["width"] = 700;
-	graphArgs["interpolation"] = "linear";
+	graphArgs = make(GraphArgs)
+	graphArgs["max"] = max+max*0.05
+	graphArgs["series"] = graphData
+	if result == javac.NAME{
+		graphArgs["yformat"] = map[string]interface{}{"0": "Failure", "1": "Success"}
+		graphArgs["min"]= -0.05
+	}
+	graphArgs["height"] = 400
+	graphArgs["width"] = 700
+	graphArgs["interpolation"] = "linear"
+	graphArgs["renderer"] = "line"
 	return
 }
 
-func loadJavacGraphData(files []*project.File) (GraphArgs) {
-	graphData := make([]map[string]interface{}, 1)
-	dataArray := make([]map[string] int64, 0)
+func loadJavacGraphData(files []*project.File) (GraphData, float64) {
+	graphData := make(GraphData, 1)
 	for _, f := range files{
 		result, err := db.GetJavacResult(
 			bson.M{project.FILEID: f.Id}, nil)
 		if err != nil{
 			continue
 		}
-		var y int64
-		if result.Success(){
-			y = 1
-		} else{
-			y = 0
-		}
-		dataArray = append(dataArray, 
-			map[string] int64{"x": result.Time/1000, "y": y})
+		result.AddGraphData(0, graphData)
 	}
-	cur := make(map[string]interface{})
-	cur["name"] = "Compilation Success"
-	cur["data"] = dataArray
-	graphData[0] = cur
-	graphArgs := make(map[string]interface{})
-	graphArgs["max"] = 1.05
-	graphArgs["min"] = -0.05
-	graphArgs["renderer"] = "scatterplot"
-	graphArgs["series"] = graphData
-	graphArgs["yformat"] = map[string]interface{}{"0": "No Compile", "1": "Compiled"}
-	return graphArgs
+	return graphData, 1
 }
 
-func loadJUnitGraphData(testName string, files []*project.File) (GraphArgs) {
-	graphArgs := make(map[string]interface{})
-	if !db.Contains(db.RESULTS, bson.M{project.NAME: testName}){
-		return graphArgs
-	}
-	graphData := make([]map[string]interface{}, 3)
-	max := 0.0
+func loadJUnitGraphData(testName string, files []*project.File) (GraphData, float64) {
+	graphData := make(GraphData, 3)
+	max := -1.0
 	for _, f := range files{
 		result, err := db.GetJUnitResult(
 			bson.M{project.FILEID: f.Id, project.NAME: testName}, nil)
@@ -92,17 +82,12 @@ func loadJUnitGraphData(testName string, files []*project.File) (GraphArgs) {
 		}  
 		max = result.AddGraphData(max, graphData)
 	}
-	graphArgs["max"] = max + max*0.05
-	graphArgs["min"] = -max*0.05
-	graphArgs["renderer"] = "line"
-	graphArgs["series"] = graphData
-	return graphArgs
+	return graphData, max
 }
 
-func loadJPFGraphData(files []*project.File) (GraphArgs) {
-	graphArgs := make(map[string]interface{})
-	graphData := make([]map[string]interface{}, 3)
-	max := 0.0
+func loadJPFGraphData(files []*project.File) (GraphData, float64) {
+	graphData := make(GraphData, 3)
+	max := -1.0
 	for _, f := range files{
 		result, err := db.GetJPFResult(
 			bson.M{project.FILEID: f.Id}, nil)
@@ -111,17 +96,12 @@ func loadJPFGraphData(files []*project.File) (GraphArgs) {
 		}  
 		max = result.AddGraphData(max, graphData)
 	}
-	graphArgs["max"] = max + max*0.05
-	graphArgs["min"] = -max*0.05
-	graphArgs["renderer"] = "line"
-	graphArgs["series"] = graphData
-	return graphArgs
+	return graphData, max
 }
 
-func loadFindbugsGraphData(files []*project.File) (GraphArgs) {
-	graphArgs := make(map[string]interface{})
-	graphData := make([]map[string]interface{}, 4)
-	max := 0.0
+func loadFindbugsGraphData(files []*project.File) (GraphData, float64) {
+	graphData := make(GraphData, 4)
+	max := -1.0
 	for _, f := range files{
 		result, err := db.GetFindbugsResult(
 			bson.M{project.FILEID: f.Id}, nil)
@@ -130,18 +110,13 @@ func loadFindbugsGraphData(files []*project.File) (GraphArgs) {
 		}  
 		max = result.AddGraphData(max, graphData) 
 	}
-	graphArgs["max"] = max + max*0.05
-	graphArgs["min"] = -max*0.05
-	graphArgs["renderer"] = "line"
-	graphArgs["series"] = graphData
-	return graphArgs
+	return graphData, max
 }
 
 
-func loadCheckstyleGraphData(files []*project.File) (GraphArgs) {
-	graphArgs := make(map[string]interface{})
-	graphData := make([]map[string]interface{}, 1)
-	max := 0.0
+func loadCheckstyleGraphData(files []*project.File) (GraphData, float64) {
+	graphData := make(GraphData, 1)
+	max := -1.0
 	for _, f := range files{
 		result, err := db.GetCheckstyleResult(
 			bson.M{project.FILEID: f.Id}, nil)
@@ -150,17 +125,12 @@ func loadCheckstyleGraphData(files []*project.File) (GraphArgs) {
 		}  
 		max = result.AddGraphData(max, graphData)
 	}
-	graphArgs["max"] = max + max*0.05
-	graphArgs["min"] = -max*0.05
-	graphArgs["renderer"] = "line"
-	graphArgs["series"] = graphData
-	return graphArgs
+	return graphData, max
 }
 
-func loadPMDGraphData(files []*project.File) (GraphArgs) {
-	graphArgs := make(map[string]interface{})
-	graphData := make([]map[string]interface{}, 1)
-	max := 0.0
+func loadPMDGraphData(files []*project.File) (GraphData, float64) {
+	graphData := make(GraphData, 1)
+	max := -1.0
 	for _, f := range files{
 		result, err := db.GetPMDResult(
 			bson.M{project.FILEID: f.Id}, nil)
@@ -169,16 +139,11 @@ func loadPMDGraphData(files []*project.File) (GraphArgs) {
 		}  
 		max = result.AddGraphData(max, graphData) 
 	}
-	graphArgs["max"] = max + max*0.05
-	graphArgs["min"] = -max*0.05
-	graphArgs["renderer"] = "line"
-	graphArgs["series"] = graphData
-	return graphArgs
+	return graphData, max
 }
 
-func loadAllGraphData(files []*project.File) (GraphArgs) {
-	graphArgs := make(map[string]interface{})
-	graphData := make(map[string][]map[string]interface{})
+func loadAllGraphData(files []*project.File) (GraphData, float64) {
+	graphData := make(map[string]GraphData)
 	allMax := make(map[string]float64)
 	for _, f := range files{
 		results, err := db.GetGraphResults(f.Id)
@@ -187,7 +152,7 @@ func loadAllGraphData(files []*project.File) (GraphArgs) {
 		}  
 		for _, result := range results{
 			if _, ok := graphData[result.GetName()]; !ok{
-				graphData[result.GetName()] = make([]map[string]interface{}, 4)
+				graphData[result.GetName()] = make(GraphData, 4)
 			}
 			allMax[result.GetName()] = result.AddGraphData(allMax[result.GetName()], graphData[result.GetName()])
 		} 
@@ -196,7 +161,7 @@ func loadAllGraphData(files []*project.File) (GraphArgs) {
 	for _, v := range allMax{
 		max = math.Max(max, v)
 	}
-	allData := make([]map[string]interface{}, 0)
+	allData := make(GraphData, 0)
 	for key, val := range graphData{
 		scale := max/allMax[key]
 		for _, data := range val{
@@ -211,9 +176,5 @@ func loadAllGraphData(files []*project.File) (GraphArgs) {
 			allData = append(allData, data)
 		} 
 	}
-	graphArgs["max"] = max + max*0.05
-	graphArgs["min"] = -max*0.05
-	graphArgs["renderer"] = "line"
-	graphArgs["series"] = allData
-	return graphArgs
+	return allData, max
 }

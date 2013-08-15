@@ -20,6 +20,20 @@ type GraphResult interface {
 	GetName() string
 }
 
+func AddCoords(chart map[string]interface{}, y float64){
+	x := float64(len(chart["data"].([]map[string]float64)))
+	chart["data"] = append(chart["data"].([]map[string]float64), 
+		map[string]float64{"x": x, "y": y})
+}
+
+func CreateChart(name string)(chart map[string]interface{}){
+	chart = make(map[string]interface{})
+	chart["name"] = name
+	chart["data"] = make([]map[string] float64, 0)
+	return
+}
+		
+
 //ToolResult is used to store tool result data.
 type ToolResult interface {
 	GetId() bson.ObjectId

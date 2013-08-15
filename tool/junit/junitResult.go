@@ -56,23 +56,16 @@ func (this *JUnitResult) Success() bool {
 
 func (this *JUnitResult) AddGraphData(max float64, graphData []map[string]interface{})(float64){
 	if graphData[0] == nil{
-		graphData[0] = make(map[string]interface{})
-		graphData[0]["name"] = this.GetName()+" Errors"
-		graphData[0]["data"] = make([]map[string] float64, 0)
-		graphData[1] = make(map[string]interface{})
-		graphData[1]["name"] = this.GetName()+" Failures"
-		graphData[1]["data"] = make([]map[string] float64, 0)
-		graphData[2] = make(map[string]interface{})
-		graphData[2]["name"] = this.GetName()+" Successes"
-		graphData[2]["data"] = make([]map[string] float64, 0)
+		graphData[0] = tool.CreateChart(this.GetName()+" Errors")
+		graphData[1] = tool.CreateChart(this.GetName()+" Failures")
+		graphData[2] = tool.CreateChart(this.GetName()+" Successes")
 	}
-	x := float64(this.Time/1000)	
 	yE := float64(this.Data.Errors)  
 	yF := float64(this.Data.Failures)  
 	yS := float64(this.Data.Tests - this.Data.Failures - this.Data.Errors)
-	graphData[0]["data"] = append(graphData[0]["data"].([]map[string]float64), map[string]float64{"x": x, "y": yE})
-	graphData[1]["data"] = append(graphData[1]["data"].([]map[string]float64), map[string]float64{"x": x, "y": yF})
-	graphData[2]["data"] = append(graphData[2]["data"].([]map[string]float64), map[string]float64{"x": x, "y": yS})
+	tool.AddCoords(graphData[0], yE)
+	tool.AddCoords(graphData[1], yF)
+	tool.AddCoords(graphData[2], yS)	
 	return math.Max(max, math.Max(yE, math.Max(yF, yS)))
 }
 

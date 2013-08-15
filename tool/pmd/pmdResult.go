@@ -55,13 +55,10 @@ func (this *PMDResult) Success() bool {
 
 func (this *PMDResult) AddGraphData(max float64, graphData []map[string]interface{}) float64{
 	if graphData[0] == nil{
-		graphData[0] = make(map[string]interface{})
-		graphData[0]["name"] = "PMD Errors"
-		graphData[0]["data"] = make([]map[string] float64, 0)
+		graphData[0] = tool.CreateChart("PMD Errors")
 	}
-	x := float64(this.Time/1000)
 	y := float64(this.Data.Errors)
-	graphData[0]["data"] = append(graphData[0]["data"].([]map[string]float64), map[string]float64{"x": x, "y": y})
+	tool.AddCoords(graphData[0], y)
 	return math.Max(max, y)
 }
 

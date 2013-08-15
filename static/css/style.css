@@ -138,8 +138,9 @@ h2{
     width: 80px;
 }
 
-.y_axis {
-    height: 450px;
+.x_axis {
+    margin-left: 80px;
+    float: left;
 }
 
 

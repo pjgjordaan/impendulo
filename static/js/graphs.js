@@ -1,5 +1,5 @@
-function timeLineGraph(graphArgs) {
-    if (graphArgs === null || graphArgs['series'].length === 0){
+function lineGraph(graphArgs) {
+    if (graphArgs === null){
 	return;
     }
     var palette = new Rickshaw.Color.Palette();
@@ -11,6 +11,9 @@ function timeLineGraph(graphArgs) {
     var graph = new Rickshaw.Graph(graphArgs);   
     var yTickFormat = Rickshaw.Fixtures.Number.formatKMBT;
     var yHoverFormat =  function(n) {
+	return n === null ? n : n.toFixed(2);
+    };
+    var xHoverFormat =  function(n) {
 	return n === null ? n : n.toFixed(2);
     };
     if (graphArgs["yformat"] != null){
@@ -26,22 +29,25 @@ function timeLineGraph(graphArgs) {
 	tickFormat: yTickFormat,
 	element: document.getElementById('resultGraphY'),
     } );
-    graph.render();
+    var x_ticks = new Rickshaw.Graph.Axis.X( {
+	graph: graph,
+	orientation: 'bottom',
+	element: document.getElementById('resultGraphX'),
+	tickFormat: Rickshaw.Fixtures.Number.formatKMBT
+    } );
+    
     var legend = new Rickshaw.Graph.Legend( {
 	element: document.getElementById('resultGraphLegend'),
 	graph: graph
     } );
     var hoverDetail = new Rickshaw.Graph.HoverDetail( {
 	graph: graph,
-	yFormatter: yHoverFormat
+	yFormatter: yHoverFormat,
+	xFormatter: xHoverFormat
     } );
     var shelving = new Rickshaw.Graph.Behavior.Series.Toggle( {
 	graph: graph,
 	legend: legend
-    } );   
-    var axes = new Rickshaw.Graph.Axis.Time( {
-	element: document.getElementById('resultGraphX'),
-	graph: graph
-    } );
-    axes.render();   
+    } );      
+    graph.render();
 }

@@ -55,28 +55,19 @@ func (this *JPFResult) Template(current bool) string {
 
 func (this *JPFResult) AddGraphData(max float64, graphData []map[string]interface{})float64{
 	if graphData[0] == nil{
-		graphData[0] = make(map[string]interface{})
-		graphData[0]["name"] = "JPF New States"
-		graphData[0]["data"] = make([]map[string] float64, 0)
-		graphData[1] = make(map[string]interface{})
-		graphData[1]["name"] = "JPF Visited States"
-		graphData[1]["data"] = make([]map[string] float64, 0)
-		graphData[2] = make(map[string]interface{})
-		graphData[2]["name"] = "JPF Backtracked States"
-		graphData[2]["data"] = make([]map[string] float64, 0)
-		graphData[3] = make(map[string]interface{})
-		graphData[3]["name"] = "JPF End States"
-		graphData[3]["data"] = make([]map[string] float64, 0)
+		graphData[0] = tool.CreateChart("JPF New States")
+		graphData[1] = tool.CreateChart("JPF Visited States")
+		graphData[2] = tool.CreateChart("JPF Backtracked States")
+		graphData[3] = tool.CreateChart("JPF End States")
 	}
-	x := float64(this.Time/1000)	
 	yN := float64(this.Data.Stats.NewStates)  
 	yV := float64(this.Data.Stats.VisitedStates)  
 	yB := float64(this.Data.Stats.BacktrackedStates)
 	yE := float64(this.Data.Stats.EndStates)
-	graphData[0]["data"] = append(graphData[0]["data"].([]map[string]float64), map[string]float64{"x": x, "y": yN})
-	graphData[1]["data"] = append(graphData[1]["data"].([]map[string]float64), map[string]float64{"x": x, "y": yV})
-	graphData[2]["data"] = append(graphData[2]["data"].([]map[string]float64), map[string]float64{"x": x, "y": yB})
-	graphData[3]["data"] = append(graphData[3]["data"].([]map[string]float64), map[string]float64{"x": x, "y": yE})
+	tool.AddCoords(graphData[0], yN)
+	tool.AddCoords(graphData[1], yV)
+	tool.AddCoords(graphData[2], yB)
+	tool.AddCoords(graphData[3], yE)
 	return math.Max(max, math.Max(yN, math.Max(yV, math.Max(yB, yE))))
 }
 
