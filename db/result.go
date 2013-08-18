@@ -167,7 +167,7 @@ func GetDisplayResult(name string, matcher, selector bson.M) (ret tool.DisplayRe
 func GetGraphResult(name string, matcher, selector bson.M) (ret tool.GraphResult, err error) {
 	switch name {
 	case javac.NAME:
-		err = fmt.Errorf("Unsupported result %q.", name)
+		ret, err = GetJavacResult(matcher, selector)
 	case jpf.NAME:
 		ret, err = GetJPFResult(matcher, selector)
 	case findbugs.NAME:
@@ -187,6 +187,10 @@ func GetGraphResult(name string, matcher, selector bson.M) (ret tool.GraphResult
 
 //AddResult adds a new result to the active database.
 func AddResult(res tool.ToolResult) (err error) {
+	if res == nil{
+		err = fmt.Errorf("Result is nil. In db/result.go.")
+		return
+	}
 	matcher := bson.M{project.ID: res.GetFileId()}
 	change := bson.M{SET: bson.M{project.RESULTS + "." + res.GetName(): res.GetId()}}
 	err = Update(FILES, matcher, change)

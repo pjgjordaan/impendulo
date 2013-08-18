@@ -107,6 +107,7 @@ func (this *Failure) IsFailure() bool {
 func genReport(id bson.ObjectId, data []byte) (res *TestSuite, err error) {
 	if err = xml.Unmarshal(data, &res); err != nil {
 		if res == nil {
+			err = tool.NewXMLError(err, "junit/junitResult.go")
 			return
 		} else {
 			err = nil

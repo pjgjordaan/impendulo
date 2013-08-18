@@ -85,6 +85,7 @@ func NewResult(fileId bson.ObjectId, data []byte) (res *FindbugsResult, err erro
 
 func genReport(id bson.ObjectId, data []byte) (res *FindbugsReport, err error) {
 	if err = xml.Unmarshal(data, &res); err != nil {
+		err = tool.NewXMLError(err, "findbugs/findbugsResult.go")
 		return
 	}
 	res.loadMaps()

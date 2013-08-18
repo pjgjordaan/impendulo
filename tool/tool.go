@@ -53,6 +53,15 @@ func MemoryError(err error)bool{
 	return pErr.Err.Error() == "cannot allocate memory"
 }
 
+func AccessError(err error)bool{
+	pErr, ok := err.(*os.PathError); 
+	if !ok {
+		return false
+	}
+	return pErr.Err.Error() == "bad file descriptor"
+}
+
+
 //RunCommand executes a given command given by args and stdin. It terminates
 //when the command finishes execution or times out. An ExecResult containing the
 //command's output is returned.
@@ -63,7 +72,7 @@ func RunCommand(args []string, stdin io.Reader) (res *ExecResult) {
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	err := cmd.Start()
-	for MemoryError(err) {
+	for MemoryError(err) || AccessError(err){
 		err = cmd.Start()
 	} 
 	if err != nil {
@@ -71,7 +80,9 @@ func RunCommand(args []string, stdin io.Reader) (res *ExecResult) {
 		return
 	}
 	doneChan := make(chan error)
-	go func() { doneChan <- cmd.Wait() }()
+	go func() { 
+		doneChan <- cmd.Wait() 
+	}()
 	select {
 	case err := <-doneChan:
 		if err != nil {

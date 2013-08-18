@@ -109,7 +109,7 @@ type copier struct {
 }
 
 func (this *copier) copyFile(path string, f os.FileInfo, err error) error {
-	if err != nil{
+	if err != nil || f == nil {
 		return err
 	}
 	return this.copy(path, f)
@@ -118,10 +118,6 @@ func (this *copier) copyFile(path string, f os.FileInfo, err error) error {
 func (this *copier) copy(path string, f os.FileInfo) (err error) {
 	destPath, err := filepath.Rel(this.src, path)
 	if err != nil {
-		//Should never happen but lets still handle it.
-		return
-	}
-	if f == nil{
 		return
 	}
 	destPath = filepath.Join(this.dest, destPath)

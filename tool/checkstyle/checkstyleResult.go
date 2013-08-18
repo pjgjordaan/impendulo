@@ -71,6 +71,7 @@ func NewResult(fileId bson.ObjectId, data []byte) (res *CheckstyleResult, err er
 
 func genReport(id bson.ObjectId, data []byte) (res *CheckstyleReport, err error) {
 	if err = xml.Unmarshal(data, &res); err != nil {
+		err = tool.NewXMLError(err, "checkstyle/checkstyleResult.go")
 		return
 	}
 	res.Id = id

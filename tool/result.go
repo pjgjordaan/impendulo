@@ -3,6 +3,7 @@ package tool
 import (
 	"labix.org/v2/mgo/bson"
 	"strings"
+	"fmt"
 )
 
 const (
@@ -174,4 +175,18 @@ func (this *SummaryResult) AddSummary(result ToolResult) {
 type Summary struct {
 	Name string
 	Body string
+}
+
+type XMLError struct{
+	err error
+	origin string
+}
+
+func (this *XMLError) Error()string{
+	return fmt.Sprintf("Encountered error %q while parsing xml in %s.", 
+		this.err, this.origin)
+}
+
+func NewXMLError(err error, origin string) *XMLError{
+	return &XMLError{err, origin}
 }

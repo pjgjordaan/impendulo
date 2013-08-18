@@ -18,6 +18,8 @@ import (
 	"path/filepath"
 )
 
+const LOG_PROCESSING = "processing/processing.go"
+
 var idChan chan *ids
 var processedChan chan interface{}
 
@@ -98,7 +100,7 @@ func Serve(maxProcs int) {
 				} else {
 					util.Log(fmt.Errorf(
 						"No submission %q found for file %q.",
-						ids.subId, ids.fileId))
+						ids.subId, ids.fileId), LOG_PROCESSING)
 				}
 			} else {
 				if helper, ok := helpers[ids.subId]; ok {
@@ -148,7 +150,7 @@ func (this *ProcHelper) Handle(fileQueue *list.List) {
 	stopChan := make(chan interface{})
 	proc, err := NewProcessor(this.subId)
 	if err != nil {
-		util.Log(err)
+		util.Log(err, LOG_PROCESSING)
 	}
 	go proc.Process(procChan, stopChan)
 	busy := false
@@ -214,11 +216,11 @@ func (this *Processor) Process(fileChan chan bson.ObjectId, doneChan chan interf
 	//Configure the submission's environment.
 	err := this.SetupJPF()
 	if err != nil {
-		util.Log(err)
+		util.Log(err, LOG_PROCESSING)
 	}
 	this.tests, err = SetupTests(this.sub.ProjectId, this.toolDir)
 	if err != nil {
-		util.Log(err)
+		util.Log(err, LOG_PROCESSING)
 	}
 	//Processing loop.
 processing:
@@ -228,11 +230,11 @@ processing:
 			//Retrieve file and process it.
 			file, err := db.GetFile(bson.M{project.ID: fId}, nil)
 			if err != nil {
-				util.Log(err)
+				util.Log(err, LOG_PROCESSING)
 			} else {
 				err = this.ProcessFile(file)
 				if err != nil {
-					util.Log(err)
+					util.Log(err, LOG_PROCESSING)
 				}
 			}
 			//Indicate that we are finished with the file.
@@ -283,12 +285,12 @@ func (this *Processor) Extract(archive *project.File) error {
 	for name, data := range files {
 		err = this.storeFile(name, data)
 		if err != nil {
-			util.Log(err)
+			util.Log(err, LOG_PROCESSING)
 		}
 	}
 	err = db.RemoveFileById(archive.Id)
 	if err != nil {
-		util.Log(err)
+		util.Log(err, LOG_PROCESSING)
 	}
 	fIds, err := db.GetFiles(bson.M{project.SUBID: this.sub.Id},
 		bson.M{project.NUM: 1, project.ID: 1}, project.NUM)
@@ -299,12 +301,12 @@ func (this *Processor) Extract(archive *project.File) error {
 	for _, fId := range fIds {
 		file, err := db.GetFile(bson.M{project.ID: fId.Id}, nil)
 		if err != nil {
-			util.Log(err)
+			util.Log(err, LOG_PROCESSING)
 			continue
 		}
 		err = this.ProcessFile(file)
 		if err != nil {
-			util.Log(err)
+			util.Log(err, LOG_PROCESSING)
 		}
 	}
 	return nil
@@ -352,7 +354,7 @@ func (this *Analyser) Eval() error {
 	for _, test := range this.proc.tests {
 		err = test.Run(this.file, this.proc.srcDir)
 		if err != nil {
-			util.Log(err)
+			util.Log(err, LOG_PROCESSING)
 		}
 	}
 	this.RunTools()
@@ -393,7 +395,7 @@ func (this *Analyser) RunTools() {
 		}
 		res, err := t.Run(this.file.Id, this.target)
 		if err != nil {
-			util.Log(err)
+			util.Log(err, LOG_PROCESSING)
 			if tool.IsTimeOut(err) {
 				err = db.AddTimeoutResult(
 					this.file.Id, t.GetName())
@@ -406,7 +408,7 @@ func (this *Analyser) RunTools() {
 			err = db.AddNoResult(this.file.Id, t.GetName())
 		}
 		if err != nil {
-			util.Log(err)
+			util.Log(err, LOG_PROCESSING)
 		}
 	}
 }

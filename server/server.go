@@ -17,6 +17,7 @@ const (
 	SUBMISSION_NEW      = "submission_new"
 	SUBMISSION_CONTINUE = "submission_continue"
 )
+const LOG_SERVER = "server/server.go"
 
 //Run is used to listen for new tcp connections and
 //spawn a new goroutine for each connection.
@@ -27,7 +28,7 @@ func Run(port string, spawner HandlerSpawner) {
 	if err != nil {
 		util.Log(fmt.Errorf(
 			"Encountered error %q when listening on port %q",
-			err, port))
+			err, port), LOG_SERVER)
 		return
 	}
 	defer netListen.Close()
@@ -36,7 +37,7 @@ func Run(port string, spawner HandlerSpawner) {
 		if err != nil {
 			util.Log(fmt.Errorf(
 				"Encountered error %q when accepting connection",
-				err))
+				err), LOG_SERVER)
 		} else {
 			handler := spawner.Spawn()
 			go handler.Start(conn)

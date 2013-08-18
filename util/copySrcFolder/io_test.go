@@ -15,7 +15,7 @@ func TestCopier(t *testing.T) {
 	fakeDest := "/dummy"
 	realSrcFile := "io_test.go"
 	noPermSrcFile := "noperm.txt"
-	realSrcDir := "./copySrcFolder"
+	realSrcDir := "./copy"
 	fakeSrc := "dummy"
 	tests := map[string]bool{fakeDest+","+fakeSrc: false,
 		fakeDest+","+realSrcFile: false, fakeDest+","+realSrcDir: false,
@@ -33,7 +33,6 @@ func TestCopier(t *testing.T) {
 	os.RemoveAll(realDest)
 }
 
-
 func tcopy(destSrc string, valid bool)error{
 	vals := strings.Split(destSrc, ",")
 	err := Copy(vals[0]+"/"+vals[1], vals[1])
@@ -45,45 +44,6 @@ func tcopy(destSrc string, valid bool)error{
 		return nil
 	}
 }
-
-func TestExists(t *testing.T) {
-	if(!Exists("io_test.go")){
-		t.Error("Should return true.")
-	}
-	if(Exists("io_tester.go")){
-		t.Error("Should return false.")
-	}
-}
-
-
-func TestSaveFile(t *testing.T) {
-	tests := map[string]bool{"/fake/fake/fake": false,
-		"/tmp": false, "/tmp/real": true,
-	}
-	for test, valid := range tests{
-		err := tsave(test, valid)
-		if err != nil {
-			t.Error(err)
-		}
-
-	}
-	err := SaveFile("/tmp/real", nil)
-	if err != nil {
-		t.Error(err)
-	}
-}
-
-func tsave(name string, valid bool)error{
-	err := SaveFile(name, []byte{})
-	if valid {
-		return err
-	} else if err == nil{
-		return fmt.Errorf("Expected error for test "+name)
-	} else{
-		return nil
-	}
-}
-
 
 
 func TestReadBytes(t *testing.T) {

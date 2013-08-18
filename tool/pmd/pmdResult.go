@@ -70,6 +70,7 @@ func NewResult(fileId bson.ObjectId, data []byte) (res *PMDResult, err error) {
 
 func genReport(id bson.ObjectId, data []byte) (res *PMDReport, err error) {
 	if err = xml.Unmarshal(data, &res); err != nil {
+		err = tool.NewXMLError(err, "pmd/pmdResult.go")
 		return
 	}
 	res.Id = id

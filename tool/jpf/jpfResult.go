@@ -140,6 +140,7 @@ type Statistics struct {
 
 func genReport(id bson.ObjectId, data []byte) (res *JPFReport, err error) {
 	if err = xml.Unmarshal(data, &res); err != nil {
+		err = tool.NewXMLError(err, "jpf/jpfResult.go")
 		return
 	}
 	if res.Result.Findings == "none" {

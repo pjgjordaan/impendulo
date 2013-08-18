@@ -49,7 +49,7 @@ type SyncLogger struct {
 	console, file bool
 }
 
-func (this *SyncLogger) setLogging(setting string){
+func (this SyncLogger) setLogging(setting string){
 	if setting == "a"{
 		this.file = true 
 		this.console = true
@@ -61,12 +61,12 @@ func (this *SyncLogger) setLogging(setting string){
 }
 
 //Log safely logs data to this logger's log file.
-func (this *SyncLogger) Log(vals ...interface{}) {
+func (this SyncLogger) Log(vals ...interface{}) {
 	this.lock.Lock()
 	if this.file{
 		this.logger.Print(vals)
 	}
-	if this.console{
+	if this.console {
 		fmt.Println(vals)
 	}
 	this.lock.Unlock()
@@ -83,7 +83,7 @@ func NewLogger(fname string) (logger *SyncLogger, err error) {
 }
 
 //Log sends data to be logged to the appropriate logger.
-func Log(v ...interface{}) {	
+func Log(v ...interface{}) {
 	if len(v) > 0 {
 		if _, ok := v[0].(error); ok {
 			errLogger.Log(v)

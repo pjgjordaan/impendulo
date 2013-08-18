@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"labix.org/v2/mgo"
+	"labix.org/v2/mgo/bson"
 	"sync"
 )
 
@@ -16,7 +17,10 @@ const (
 	JPF          = "jpf"
 	SET          = "$set"
 	DEFAULT_CONN = "mongodb://localhost/impendulo"
+	DEBUG_CONN    = "mongodb://localhost/impendulo_debug"
 	TEST_CONN    = "mongodb://localhost/impendulo_test"
+	DEFAULT_DB = "impendulo"
+	DEBUG_DB      = "impendulo_debug"
 	TEST_DB      = "impendulo_test"
 )
 
@@ -65,6 +69,21 @@ func DeleteDB(db string) error {
 	}
 	defer session.Close()
 	return session.DB(db).DropDatabase()
+}
+
+//CopyDB
+func CopyDB(from, to string) error {
+	session, err := getSession()
+	if err != nil {
+		return err
+	}
+	err = DeleteDB(to)
+	if err != nil {
+		return err
+	}
+	return session.Run(bson.D{
+		{"copydb", "1"}, {"fromdb", from}, 
+		{"todb", to}}, nil)
 }
 
 //Update updates documents from the collection col

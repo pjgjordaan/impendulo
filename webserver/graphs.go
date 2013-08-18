@@ -16,11 +16,14 @@ import(
 
 func init(){fmt.Sprint()}
 
+//GraphArgs represents arguments which are passed to rickshaw
+//in order to draw a graph.
 type GraphArgs map[string]interface{}
+//GraphData represents the x and y values used to draw the graphs.
 type GraphData []map[string]interface{}
 
-
-func loadResultGraphData(result string, files []*project.File) (graphArgs GraphArgs) {
+//LoadResultGraphData calculates GraphArgs for a given result.
+func LoadResultGraphData(result string, files []*project.File) (graphArgs GraphArgs) {
 	var graphData GraphData
 	max := -1.0
 	switch result{

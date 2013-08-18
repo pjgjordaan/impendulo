@@ -190,6 +190,8 @@ func ParseName(name string) (*File, error) {
 	return file, nil
 }
 
+//calcTime determines the number of miliseconds since the unix epoch
+//for a given time string formattedm as yyyymmddhhmmssmmm.
 func calcTime(timeStr string)(int64, error){
 	if len(timeStr) != 17{
 		return -1, fmt.Errorf("Invalid time string length %d for %s.", 

@@ -11,35 +11,46 @@ import (
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/webserver"
+	"runtime"
 )
 
 //Flag variables for setting ports to listen on, users file to process and the mode to run in.
-var Port, UsersFile, ConfigFile string
-var Web, Receiver, Processor, ConsoleErrors, ConsoleInfo bool
+var Port, UsersFile, ConfigFile, ErrorLogging, InfoLogging string
+var Web, Receiver, Processor, Debug bool
 var MaxProcs, Timeout int
+var conn string
+const LOG_IMPENDULO = "impendulo.go"
 
 func init() {
 	fmt.Sprint()
 	flag.IntVar(&Timeout, "t", 10, "Specify the time limit for a tool to run in, in minutes (default 10).")
 	flag.IntVar(&MaxProcs, "mp", 10, "Specify the maximum number of goroutines to run when processing submissions (default 10).")
-	flag.BoolVar(&ConsoleErrors, "e", false, "Specify whether to log errors to console (default false).")
-	flag.BoolVar(&ConsoleInfo, "i", false, "Specify whether to log info to console (default false).")
 	flag.BoolVar(&Web, "w", true, "Specify whether to run the webserver (default true).")
 	flag.BoolVar(&Receiver, "r", true, "Specify whether to run the Intlola file receiver (default true).")
 	flag.BoolVar(&Processor, "s", true, "Specify whether to run the Intlola file processor (default true).")
+	flag.BoolVar(&Debug, "d", false, "Specify whether to run in debug mode (default false).")
+	flag.StringVar(&ErrorLogging, "e", "a", "Specify where to log errors to (default console & file).")
+	flag.StringVar(&InfoLogging, "i", "f", "Specify where to log info to (default file).")
 	flag.StringVar(&Port, "p", "8010", "Specify the port to listen on for files.")
 	flag.StringVar(&UsersFile, "u", "", "Specify a file with new users.")
 	flag.StringVar(&ConfigFile, "c", "config.txt", "Specify a configuration file.")
 }
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	flag.Parse()
-	util.SetErrorConsoleLogging(ConsoleErrors)
-	util.SetInfoConsoleLogging(ConsoleInfo)
-	tool.SetTimeout(Timeout)
-	err := config.LoadConfigs(ConfigFile)
+	err := setupConn(Debug)
 	if err != nil {
-		util.Log(err)
+		util.Log(err, LOG_IMPENDULO)
+		return
+	}
+	defer db.Close()
+	util.SetErrorLogging(ErrorLogging)
+	util.SetInfoLogging(InfoLogging)
+	tool.SetTimeout(Timeout)
+	err = config.LoadConfigs(ConfigFile)
+	if err != nil {
+		util.Log(err, LOG_IMPENDULO)
 		return
 	}
 	if UsersFile != "" {
@@ -56,60 +67,72 @@ func main() {
 	}
 }
 
+func setupConn(debug bool)(err error){
+	if debug{
+		err = db.Setup(db.DEBUG_CONN)
+		if err != nil{
+			return
+		}
+		err = db.DeleteDB(db.DEBUG_DB)
+		if err != nil{
+			return
+		}
+		err = db.Setup(db.DEFAULT_CONN)
+		if err != nil{
+			return
+		}
+		err = db.CopyDB(db.DEFAULT_DB, db.DEBUG_DB)
+		if err != nil{
+			return
+		}
+		db.Close()
+		conn = db.DEBUG_CONN
+	}else{
+		conn = db.DEFAULT_CONN
+	}
+	err = db.Setup(conn)
+	return
+}
+
 //AddUsers adds users from a text file to the database.
 func AddUsers() {
 	users, err := user.ReadUsers(UsersFile)
 	if err != nil {
-		util.Log(err)
+		util.Log(err, LOG_IMPENDULO)
 		return
 	}
-	err = db.Setup(db.DEFAULT_CONN)
+	err = db.Setup(conn)
 	if err != nil {
-		util.Log(err)
+		util.Log(err, LOG_IMPENDULO)
 		return
 	}
 	err = db.AddUsers(users...)
 	if err != nil {
-		util.Log(err)
+		util.Log(err, LOG_IMPENDULO)
 	}
 
 }
 
 func RunWebServer(inRoutine bool) {
-	err := db.Setup(db.DEFAULT_CONN)
-	if err != nil {
-		util.Log(err)
+	if inRoutine {
+		go webserver.Run()
 	} else {
-		if inRoutine {
-			go webserver.Run()
-		} else {
-			webserver.Run()
-		}
+		webserver.Run()
 	}
 }
 
 func RunFileReceiver(inRoutine bool) {
-	err := db.Setup(db.DEFAULT_CONN)
-	if err != nil {
-		util.Log(err)
+	if inRoutine {
+		go server.Run(Port, new(server.SubmissionSpawner))
 	} else {
-		if inRoutine {
-			go server.Run(Port, new(server.SubmissionSpawner))
-		} else {
-			server.Run(Port, new(server.SubmissionSpawner))
-		}
-	}
+		server.Run(Port, new(server.SubmissionSpawner))
+	}	
 }
 
 func RunFileProcessor(inRoutine bool) {
-	err := db.Setup(db.DEFAULT_CONN)
-	if err != nil {
-		util.Log(err)
+	if inRoutine {
+		go processing.Serve(MaxProcs)
 	} else {
-		if inRoutine {
-			go processing.Serve(MaxProcs)
-		} else {
-			processing.Serve(MaxProcs)
-		}
-	}
+		processing.Serve(MaxProcs)
+	}	
 }

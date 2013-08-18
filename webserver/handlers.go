@@ -11,6 +11,8 @@ import (
 
 var store sessions.Store
 
+const LOG_HANDLERS = "webserver/handlers.go"
+
 func init() {
 	store = sessions.NewCookieStore(util.CookieKeys())
 }
@@ -31,13 +33,13 @@ type Handler func(http.ResponseWriter, *http.Request, *Context) error
 func (h Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	sess, err := store.Get(req, "impendulo")
 	if err != nil {
-		util.Log(err)
+		util.Log(err, LOG_HANDLERS)
 	}
 	ctx := NewContext(sess)
 	buf := new(HttpBuffer)
 	err = h(buf, req, ctx)
 	if err != nil {
-		util.Log(err)
+		util.Log(err, LOG_HANDLERS)
 	}
 	if err = ctx.Save(req, buf); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -256,7 +258,7 @@ func graphArgs(req *http.Request, ctx *Context) (args map[string]interface{}, er
 	if err != nil {
 		return
 	}
-	graphArgs := loadResultGraphData(ctx.Browse.Result, files)
+	graphArgs := LoadResultGraphData(ctx.Browse.Result, files)
 	args = map[string]interface{}{"ctx": ctx, "files": files,
 		"results": results, "fileName": fileName, "graphArgs": graphArgs}
 	return

@@ -8,6 +8,7 @@ import (
 )
 
 var router *pat.Router
+const LOG_SERVER = "webserver/server.go" 
 
 func init() {
 	router = pat.New()
@@ -44,11 +45,11 @@ func RunTLS() {
 	if !util.Exists(cert) || !util.Exists(key) {
 		err := util.GenCertificate(cert, key)
 		if err != nil {
-			util.Log(err)
+			util.Log(err, LOG_SERVER)
 		}
 	}
 	if err := http.ListenAndServeTLS(":8080", cert, key, router); err != nil {
-		util.Log(err)
+		util.Log(err, LOG_SERVER)
 	}
 }
 
