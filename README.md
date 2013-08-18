@@ -1,4 +1,4 @@
 Impendulo
 =======
 
-Server and web frontend for impendulo system.
+Server and web app for Impendulo system.
