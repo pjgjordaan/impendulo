@@ -6,6 +6,7 @@ import (
 	"github.com/godfried/impendulo/tool/diff"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/processing"
 	"html/template"
 	"path/filepath"
 	"strconv"
@@ -29,10 +30,18 @@ var funcs = template.FuncMap{
 	"equal":        equal,
 	"langs":        langs,
 	"submissionCount":  submissionCount,
+	"getBusy": processing.GetBusy, 
 }
 
-func submissionCount(id bson.ObjectId) (int, error){
-	return db.Count(db.SUBMISSIONS, bson.M{project.PROJECT_ID: id})
+func submissionCount(id interface{}) (int, error){
+	switch tipe := id.(type){
+	case bson.ObjectId:
+		return db.Count(db.SUBMISSIONS, bson.M{project.PROJECT_ID: tipe})
+	case string:
+		return db.Count(db.SUBMISSIONS, bson.M{project.USER: tipe})
+	default:
+		return -1, fmt.Errorf("Unknown id type %q.", id)
+	} 
 }
 
 func langs() []string {

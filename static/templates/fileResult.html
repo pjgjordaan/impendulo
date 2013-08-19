@@ -11,11 +11,12 @@
   <li class="active">Files</li>
 </ul>
 <ul class="unstyled">
-  {{range .names}}
+  {{range .fileinfo}}
   <li>
-    <h3>{{.}}</h3>
-    <a href="displayresult?filename={{.}}&currentIndex={{0}}&nextIndex={{1}}">Analysis</a>
-    <a href="displaygraphs?filename={{.}}">Graphs</a>
+    <h3>{{.Name}}</h3>
+    <h5>{{.Count}} Snapshots</h5>
+    <a href="displayresult?filename={{.Name}}&currentIndex={{0}}&nextIndex={{1}}">Analysis</a>
+    <a href="displaygraphs?filename={{.Name}}">Graphs</a>
   </li>
   {{end}}
 </ul>

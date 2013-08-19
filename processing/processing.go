@@ -16,6 +16,7 @@ import (
 	"labix.org/v2/mgo/bson"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 const LOG_PROCESSING = "processing/processing.go"
@@ -23,9 +24,33 @@ const LOG_PROCESSING = "processing/processing.go"
 var idChan chan *ids
 var processedChan chan interface{}
 
+var busyFiles int
+var busyLock *sync.Mutex
+
 func init() {
 	idChan = make(chan *ids)
 	processedChan = make(chan interface{})
+	busyLock = new(sync.Mutex)
+}
+
+
+func incBusy(){
+	busyLock.Lock()
+	busyFiles ++
+	busyLock.Unlock()
+}
+
+func decBusy(){
+	busyLock.Lock()
+	busyFiles --
+	busyLock.Unlock()
+}
+
+func GetBusy() (ret int){
+	busyLock.Lock()
+	ret = busyFiles
+	busyLock.Unlock()
+	return
 }
 
 type ids struct {
@@ -38,6 +63,7 @@ type ids struct {
 func AddFile(file *project.File) {
 	if file.CanProcess() {
 		idChan <- &ids{file.Id, file.SubId, true}
+		incBusy()
 	}
 }
 
@@ -176,6 +202,7 @@ func (this *ProcHelper) Handle(fileQueue *list.List) {
 		case <-procChan:
 			//Processor has finished with its current file.
 			busy = false
+			decBusy()
 		case <-this.doneChan:
 			//Submission will receive no more files.
 			this.done = true

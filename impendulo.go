@@ -69,7 +69,7 @@ func main() {
 
 func setupConn(debug bool)(err error){
 	if debug{
-		err = db.Setup(db.DEBUG_CONN)
+		/*err = db.Setup(db.DEBUG_CONN)
 		if err != nil{
 			return
 		}
@@ -85,7 +85,7 @@ func setupConn(debug bool)(err error){
 		if err != nil{
 			return
 		}
-		db.Close()
+		db.Close()*/
 		conn = db.DEBUG_CONN
 	}else{
 		conn = db.DEFAULT_CONN

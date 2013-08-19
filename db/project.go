@@ -39,6 +39,31 @@ func GetFiles(matcher, selector interface{}, sort string) (ret []*project.File, 
 	return
 }
 
+
+type FileInfo struct{
+	Name string
+	Count int
+}
+
+//GetFileInfo retrieves names of file information.
+func GetFileInfo(matcher bson.M) (ret []*FileInfo, err error) {
+	names, err := GetFileNames(matcher)
+	if err != nil {
+		return
+	}
+	ret = make([]*FileInfo, len(names))
+	for i, name := range names{
+		ret[i] = new(FileInfo)
+		ret[i].Name = name
+		matcher[project.NAME] = name
+		ret[i].Count, err = Count(FILES, matcher)
+		if err != nil{
+			return
+		}
+	}
+	return
+}
+
 //GetFileNames retrieves names of files
 //matching the given interface from the active database.
 func GetFileNames(matcher interface{}) (ret []string, err error) {

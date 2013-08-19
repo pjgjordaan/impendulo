@@ -30,7 +30,7 @@ func AddCoords(chart map[string]interface{}, y float64){
 func CreateChart(name string)(chart map[string]interface{}){
 	chart = make(map[string]interface{})
 	chart["name"] = name
-	chart["data"] = make([]map[string] float64, 0)
+	chart["data"] = make([]map[string] float64, 0, 100)
 	return
 }
 		

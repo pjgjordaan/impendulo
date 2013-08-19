@@ -3,9 +3,19 @@
   <li><a href="homeview">Home</a> <span class="divider">/</span></li>  
   <li class="active">Users</li>
 </ul>
-<ul class="unstyled">
-  {{range .ctx.Users}}
-  <li><a href="getsubmissions?id={{.Name}}&type=user"><h4>{{.Name}}</h4></a></li>
-  {{end}}
-</ul>
+<table class="table table-hover">
+  <thead><tr class="info">
+      <th>User</th>
+      <th>Submissions</th>
+  </tr></thead>
+  <tbody data-provides="rowlink" >
+    {{ range .ctx.Users}}
+    <tr class="success">
+      <td><a class="rowlink" href="getsubmissions?id={{.Name}}&type=user">{{.Name}}</a></td>
+      <td><a class="rowlink" href="getsubmissions?id={{.Name}}&type=user">{{submissionCount .Name}}</a></td>
+    </tr>
+    {{end}}
+  </tbody>
+</table>
+
 {{end}}

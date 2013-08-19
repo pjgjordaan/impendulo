@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"time"
 )
 
 //File stores a single file's data from a submission.
@@ -156,10 +155,11 @@ func ParseName(name string) (*File, error) {
 				timeString, name)
 		}
 	} else if timeString[0] == '2' && len(timeString) == 17{
-		file.Time, err = calcTime(timeString)
+		t, err := util.CalcTime(timeString)
 		if err != nil {
 			return nil, err
 		}
+		file.Time = util.GetMilis(t) 
 	} else{
 		return nil, fmt.Errorf(
 			"Unknown time format %s in %s.",
@@ -188,61 +188,6 @@ func ParseName(name string) (*File, error) {
 		file.FileType = EMPTY
 	}
 	return file, nil
-}
-
-//calcTime determines the number of miliseconds since the unix epoch
-//for a given time string formattedm as yyyymmddhhmmssmmm.
-func calcTime(timeStr string)(int64, error){
-	if len(timeStr) != 17{
-		return -1, fmt.Errorf("Invalid time string length %d for %s.", 
-			len(timeStr), timeStr)
-	}
-	year, err := strconv.Atoi(timeStr[:4])
-	if err != nil{
-		return -1, fmt.Errorf("Error %q reading year from %s.", 
-			err, timeStr) 
-	}
-	m, err := strconv.Atoi(timeStr[4:6])
-	if err != nil{
-		return -1, fmt.Errorf("Error %q reading month from %s.", 
-			err, timeStr) 
-	}
-	if m > 12{
-		return -1, fmt.Errorf("Invalid month %d.", m) 
-	}
-	month := time.Month(m)
-	day, err := strconv.Atoi(timeStr[6:8])
-	if err != nil{
-		return -1, fmt.Errorf("Error %q reading day from %s.", 
-			err, timeStr) 
-	}
-	hour, err := strconv.Atoi(timeStr[8:10])
-	if err != nil{
-		return -1, fmt.Errorf("Error %q reading hour from %s.", 
-			err, timeStr) 
-	}
-	minutes, err := strconv.Atoi(timeStr[10:12])
-	if err != nil{
-		return -1, fmt.Errorf("Error %q reading minutes from %s.", 
-			err, timeStr) 
-	}
-	seconds, err := strconv.Atoi(timeStr[12:14])
-	if err != nil{
-		return -1, fmt.Errorf("Error %q reading seconds from %s.", 
-			err, timeStr) 
-	}
-	miliseconds, err := strconv.Atoi(timeStr[14:17])
-	if err != nil{
-		return -1, fmt.Errorf("Error %q reading miliseconds from %s.", 
-			err, timeStr) 
-	}
-	nanos := miliseconds * 1000000
-	loc, err := time.LoadLocation("Local")
-	if err != nil{
-		return -1, fmt.Errorf("Error %q loading location.", err) 
-	}
-	t := time.Date(year, month, day, hour, minutes, seconds, nanos, loc)
-	return util.GetMilis(t), nil
 }
 
 //isOutFolder

@@ -233,7 +233,7 @@ func GetGraphResults(fileId bson.ObjectId) (ret []tool.GraphResult, err error) {
 	if err != nil{
 		return
 	}
-	ret = make([]tool.GraphResult, 0)
+	ret = make([]tool.GraphResult, 0, len(file.Results))
 	for name, id := range file.Results{
 		if _, ok := id.(bson.ObjectId); !ok{
 			continue

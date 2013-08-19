@@ -242,6 +242,31 @@ func RetrieveNames(req *http.Request, ctx *Context) (ret []string, err error) {
 	return
 }
 
+//RetrieveFileInfo fetches all filenames in a submission.
+func RetrieveFileInfo(req *http.Request, ctx *Context) (ret []*db.FileInfo, err error) {
+	ctx.Browse.Sid = req.FormValue("subid")
+	subId, err := util.ReadId(ctx.Browse.Sid)
+	if err != nil {
+		return
+	}
+	matcher := bson.M{project.SUBID: subId, project.TYPE: project.SRC}
+	ret, err = db.GetFileInfo(matcher)
+	if err != nil {
+		return
+	}
+	if ctx.Browse.IsUser {
+		//Load project id if browsing in user view.
+		var sub *project.Submission
+		sub, err = db.GetSubmission(bson.M{project.ID: subId},
+			bson.M{project.PROJECT_ID: 1})
+		if err != nil {
+			return
+		}
+		ctx.Browse.Pid = sub.ProjectId.Hex()
+	}
+	return
+}
+
 //RetrieveFiles fetches all files in a submission with a given name.
 func RetrieveFiles(req *http.Request, ctx *Context) (ret []*project.File, err error) {
 	name, err := GetString(req, "filename")
