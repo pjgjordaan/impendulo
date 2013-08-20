@@ -1,25 +1,25 @@
 {{ define "title" }}Impendulo{{ end }}
 {{ define "content" }}
-<div class="row-fluid">
-  <div class="span12">
-    <div id="navbar" class="row-fluid">
-      <div class="span1"></div>
-      <div class="span10">
+<div class="row">
+  <div class="col-md-12">
+    <div id="navbar" class="row">
+      <div class="col-md-1"></div>
+      <div class="col-md-10">
 	{{ template "navbar" . }}
       </div>
-      <div class="span1"></div>
+      <div class="col-md-1"></div>
     </div>
-    <div id="main" class="row-fluid">
-      <div class="span1"></div>
-      <div class="span10">
-	<div id="messages" class="row-fluid">
+    <div id="main" class="row">
+      <div class="col-md-1"></div>
+      <div class="col-md-10">
+	<div id="messages" class="row">
 	  {{ template "messages" .}}
 	</div>
-	<div id="view" class="row-fluid">
+	<div id="view" class="row">
 	{{ template "view" .}}
 	</div>
       </div>
-      <div class="span1"></div>
+      <div class="col-md-1"></div>
     </div>
   </div>
 </div>

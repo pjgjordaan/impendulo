@@ -1,37 +1,44 @@
 {{ define "view" }}
 <h3>Add Project Tests</h3>
 <form class="form-horizontal" action="addtest" method="post" enctype="multipart/form-data">
-  <div class="control-group">
-    <label class="control-label" for="project">Project</label>
-    <div class="controls">
-      <select name="project" id="project">
+  <div class="form-group">
+    <label class="col-lg-2 control-label" for="project">Project</label>
+    <div class="col-lg-3">
+      <select class="form-control" name="project" id="project">
 	{{ range .ctx.Projects}}
 	<option value={{.Id.Hex}}>{{.Name}}</option>
 	{{end}}
       </select>
     </div>
   </div>
-  <div class="control-group">
-    <label class="control-label" for="test">Test File</label>
-    <div class="controls">
-      <input name="test" type="file" id="test">
+  <div class="form-group">
+    <label class="col-lg-2 control-label" for="test">Test File</label>
+    <div class="col-lg-3">
+      <input class="form-control" name="test" type="file" id="test">
     </div>
   </div>
-  <div class="control-group">
-    <label class="control-label" for="data-check">Data files required</label>
-    <div class="controls">
-      <input type="checkbox" value="true" onclick="unhide('data-files-group', this)" id="data-check" name="data-check">
+  <div class="form-group">
+    <div class="col-lg-offset-2 col-lg-3">
+      <div class="checkbox">
+        <label>
+	  <input type="checkbox" value="true"
+		 onclick="unhide('data-files-group', this)"
+		 id="data-check" name="data-check">
+	  Data files required</label>
+      </div>
     </div>
   </div>
-  <div class="control-group" id="data-files-group" style="display:none">
-    <label class="control-label" for="data">Data Files</label>
-    <div class="controls">
-      <input name="data" type="file" id="data">
+  <div class="form-group" id="data-files-group" style="display:none">
+    <label class="col-lg-2 control-label" for="data">Data Files</label>
+    <div class="col-lg-3">
+      <input class="form-control" name="data" type="file" id="data">
     </div>
   </div>
-  <div class="control-group">
-    <div class="controls">
-      <button type="submit" class="btn btn-inverse">Submit</button>
+  <div class="form-group">
+    <div class="col-lg-offset-2 col-lg-3">
+      <button type="submit" class="btn btn-default">
+	<span class="glyphicon glyphicon-upload"></span> Submit
+      </button>
     </div>
   </div>
 </form>

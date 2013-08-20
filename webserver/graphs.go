@@ -10,11 +10,8 @@ import(
 	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
-	"fmt"
 	"math"
 )
-
-func init(){fmt.Sprint()}
 
 //GraphArgs represents arguments which are passed to rickshaw
 //in order to draw a graph.

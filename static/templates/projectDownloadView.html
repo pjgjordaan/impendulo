@@ -1,19 +1,21 @@
 {{ define "view" }}
 <h3>Download Project Skeleton</h3>
 <form class="form-horizontal" action="skeleton.zip" method="get">
-  <div class="control-group">
-    <label class="control-label" for="project">Project</label>
-    <div class="controls">
-      <select name="project" id="project">
+  <div class="form-group">
+    <label class="col-lg-2 control-label" for="project">Project</label>
+    <div class="col-lg-3">
+      <select class="form-control" name="project" id="project">
 	{{ range .ctx.Projects}}
 	<option value={{.Id.Hex}}>{{.Name}}</option>
 	{{end}}
       </select>
     </div>
   </div>
-  <div class="control-group">
-    <div class="controls">
-      <button type="submit" class="btn btn-inverse">Download</button>
+  <div class="form-group">
+    <div class="col-lg-offset-2 col-lg-3">
+      <button type="submit" class="btn btn-default">
+	<span class="glyphicon glyphicon-download"></span> Download
+      </button>
     </div>
   </div>
 </form>

@@ -1,16 +1,33 @@
 {{ define "navbar" }}
-<div id="navbar" class="row-fluid">
+<div id="navbar" class="row">
     <div class="navbar navbar-inverse" style="position: static;">
       <div class="navbar-inner" style="height: auto;">
-	<a class="brand" >Impendulo</a>
-	<ul class="nav">
-	  <li {{ if (.ctx.IsView "home") }} class="active" {{ end }}><a href="homeview">Home</a></li>
-	  <li {{ if (.ctx.IsView "register")  }} class="active" {{ end }}><a href="registerview">Register</a></li>
+	<a class="navbar-brand" >Impendulo</a>
+	<ul class="nav navbar-nav">
+	  <li {{if (.ctx.IsView "home")}} class="active" {{end}}>
+	    <a href="homeview">
+	      <span class="glyphicon glyphicon-home"></span> Home
+	    </a>
+	  </li>
+	  <li {{if (.ctx.IsView "register")}} class="active" {{end}}>
+	    <a href="registerview">
+	      <span class="glyphicon glyphicon-pencil"></span> Register
+	    </a>
+	  </li>
 	</ul>
-	<form class="navbar-form pull-right" action="login" method="POST">
-          <input class="span4" type="text" placeholder="Username" name="username">
-          <input class="span4" type="password" placeholder="Password" name="password">
-          <button type="submit" class="btn btn-inverse">Login</button>
+	<form class="navbar-form navbar-right" role="form"
+	      action="login" method="POST">
+	  <div class="form-group">
+	    <input class="form-control" type="text" placeholder="Username"
+		   name="username">
+	  </div>
+	  <div class="form-group">
+          <input class="form-control" type="password"
+		 placeholder="Password" name="password">
+          </div>
+	    <button type="submit" class="btn btn-default">
+	      <span class="glyphicon glyphicon-log-in"></span> Login
+	    </button>
 	</form>
       </div>
   </div>

@@ -3,26 +3,26 @@
 {{$fileName := .fileName}}
 {{$results := .results}}
 <ul class="breadcrumb">
-  <li><a href="homeview">Home</a><span class="divider">/</span></li>
+  <li><a href="homeview">Home</a></li>
   {{if .ctx.Browse.IsUser}}
-  <li><a href="userresult">Users</a><span class="divider">/</span></li>
-  <li><a href="getsubmissions?id={{.ctx.Browse.Uid}}&type=user">Submissions</a><span class="divider">/</span></li>
+  <li><a href="userresult">Users</a></li>
+  <li><a href="getsubmissions?id={{.ctx.Browse.Uid}}&type=user">Submissions</a></li>
   {{else}}
-  <li><a href="projectresult">Projects</a><span class="divider"></span></li>
-  <li><a href="getsubmissions?id={{.ctx.Browse.Pid}}&type=project">Submissions</a><span class="divider">/</span></li>
+  <li><a href="projectresult">Projects</a></li>
+  <li><a href="getsubmissions?id={{.ctx.Browse.Pid}}&type=project">Submissions</a></li>
   {{end}}
-  <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">Snapshots</a><span class="divider">/</span></li>
+  <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">Snapshots</a></li>
   <li class="active">Graphs</li>
 </ul>
 <ul class="breadcrumb">
   {{range $results}}
   {{if equal . $resultName}}
-  <li class="active">{{$resultName}}<span class="divider"></span></li>
+  <li class="active">{{$resultName}}</li>
   {{else}}
   <li>
     <a href="displaygraph?filename={{$fileName}}&resultname={{.}}">
       {{.}}
-    </a><span class="divider"></span>
+    </a>
   </li>
   {{end}}
   {{end}}

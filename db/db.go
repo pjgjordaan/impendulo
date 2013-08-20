@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
-	"sync"
 )
 
 const (
@@ -24,41 +23,57 @@ const (
 	TEST_DB      = "impendulo_test"
 )
 
-var activeSession *mgo.Session
-var dbLock *sync.Mutex
+var sessionChan chan *mgo.Session
+var requestChan chan bool
 
-func init() {
-	dbLock = new(sync.Mutex)
-}
+func init(){
+	sessionChan = make(chan *mgo.Session)
+	requestChan = make(chan bool)
+} 
 
 //Setup creates a mongodb session.
 //This must be called before using any other db functions.
-func Setup(conn string) (err error) {
-	dbLock.Lock()
-	activeSession, err = mgo.Dial(conn)
-	dbLock.Unlock()
-	return
+func Setup(conn string) error {
+	activeSession, err := mgo.Dial(conn)
+	if err != nil{
+		return err
+	}
+	go serveSession(activeSession)
+	return nil
+}
+
+func serveSession(activeSession *mgo.Session){		
+	for{
+		req, ok := <- requestChan
+		if !ok || !req{
+			break
+		}
+		if activeSession == nil {
+			sessionChan <- nil
+		} else {
+			sessionChan <- activeSession.Clone()
+		}
+	}
+	if activeSession != nil {
+		activeSession.Close()
+	}
+	close(requestChan)
+	close(sessionChan)
 }
 
 //getSession retrieves the current active session.
 func getSession() (s *mgo.Session, err error) {
-	dbLock.Lock()
-	if activeSession == nil {
+	requestChan <- true
+	s, ok := <- sessionChan
+	if s == nil || !ok {
 		err = fmt.Errorf("Could not retrieve session.")
-	} else {
-		s = activeSession.Clone()
-	}
-	dbLock.Unlock()
+	} 
 	return
 }
 
 //Close shuts down the current session.
 func Close() {
-	dbLock.Lock()
-	if activeSession != nil {
-		activeSession.Close()
-	}
-	dbLock.Unlock()
+	requestChan <- false
 }
 
 //DeleteDB removes a db.
@@ -67,7 +82,7 @@ func DeleteDB(db string) error {
 	if err != nil {
 		return err
 	}
-	defer session.Close()
+	defer Close()
 	return session.DB(db).DropDatabase()
 }
 

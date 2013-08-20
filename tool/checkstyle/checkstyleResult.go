@@ -27,7 +27,10 @@ func (this *CheckstyleResult) GetName() string {
 func (this *CheckstyleResult) GetSummary() *tool.Summary {
 	body := fmt.Sprintf("Errors: %d",
 		this.Data.Errors)
-	return &tool.Summary{this.GetName(), body}
+	return &tool.Summary{
+		Name: this.GetName(), 
+		Body: body,
+	}
 }
 
 func (this *CheckstyleResult) GetId() bson.ObjectId {

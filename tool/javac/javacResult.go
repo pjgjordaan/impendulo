@@ -36,7 +36,10 @@ func (this *JavacResult) GetSummary() *tool.Summary {
 	} else {
 		body = "No compile."
 	}
-	return &tool.Summary{this.GetName(), body}
+	return &tool.Summary{
+		Name: this.GetName(), 
+		Body: body,
+	}
 }
 
 func (this *JavacResult) GetData() interface{} {

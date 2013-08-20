@@ -27,32 +27,6 @@
       dp.SyntaxHighlighter.ClipboardSwf = 'static/flash/clipboard.swf';
       dp.SyntaxHighlighter.HighlightAll('code');
       }
-      $(function(){
-      var pager = document.getElementById("filePager");
-      var len = 0;
-      var selected = 0;
-      if(pager != null){
-      len = pager.getAttribute("files");
-      selected = pager.getAttribute("selected");
-      selected ++;
-      }
-      var target = $('.pagination'),
-      options = {
-      prev: 'prev',
-      next: 'next',
-      left: 3,
-      right: 3,
-      page: selected,
-      lastPage: len,
-      click: function(i) {
-      options.page = i;
-      target.pagination(options);
-      var a = document.getElementById("file"+(i-1));
-      a.click()
-      }
-      };
-      target.pagination(options);
-      });
     </script>
   </body>
 </html>

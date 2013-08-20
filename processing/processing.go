@@ -16,7 +16,6 @@ import (
 	"labix.org/v2/mgo/bson"
 	"os"
 	"path/filepath"
-	"sync"
 )
 
 const LOG_PROCESSING = "processing/processing.go"
@@ -24,33 +23,37 @@ const LOG_PROCESSING = "processing/processing.go"
 var idChan chan *ids
 var processedChan chan interface{}
 
-var busyFiles int
-var busyLock *sync.Mutex
+var statusChan chan Status
 
 func init() {
 	idChan = make(chan *ids)
 	processedChan = make(chan interface{})
-	busyLock = new(sync.Mutex)
+	statusChan = make(chan Status)
 }
 
+type Status int
 
-func incBusy(){
-	busyLock.Lock()
-	busyFiles ++
-	busyLock.Unlock()
+func ChangeStatus(change Status){
+	statusChan <- change
 }
 
-func decBusy(){
-	busyLock.Lock()
-	busyFiles --
-	busyLock.Unlock()
-}
-
-func GetBusy() (ret int){
-	busyLock.Lock()
-	ret = busyFiles
-	busyLock.Unlock()
+func GetStatus() (ret Status){
+	statusChan <- Status(0)
+	ret = <- statusChan
 	return
+}
+
+func monitorStatus(){
+	var status Status = 0
+	for{
+		val := <- statusChan
+		switch val{
+		case 0:
+			statusChan <- status
+		default:
+			status += val
+		}
+	}
 }
 
 type ids struct {
@@ -63,7 +66,7 @@ type ids struct {
 func AddFile(file *project.File) {
 	if file.CanProcess() {
 		idChan <- &ids{file.Id, file.SubId, true}
-		incBusy()
+		ChangeStatus(1)
 	}
 }
 
@@ -94,6 +97,7 @@ func None() interface{} {
 //Serve spawns new processing routines for each submission started.
 //Added files are received here and then sent to the relevant submission goroutine.
 func Serve(maxProcs int) {
+	go monitorStatus()
 	helpers := make(map[bson.ObjectId]*ProcHelper)
 	fileQueues := make(map[bson.ObjectId]*list.List)
 	subQueue := list.New()
@@ -202,7 +206,7 @@ func (this *ProcHelper) Handle(fileQueue *list.List) {
 		case <-procChan:
 			//Processor has finished with its current file.
 			busy = false
-			decBusy()
+			ChangeStatus(-1)
 		case <-this.doneChan:
 			//Submission will receive no more files.
 			this.done = true
@@ -324,6 +328,7 @@ func (this *Processor) Extract(archive *project.File) error {
 	if err != nil {
 		return err
 	}
+	ChangeStatus(Status(len(fIds)))
 	//Process archive files.
 	for _, fId := range fIds {
 		file, err := db.GetFile(bson.M{project.ID: fId.Id}, nil)

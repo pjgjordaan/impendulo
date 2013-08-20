@@ -1,22 +1,22 @@
 {{define "view"}}
 <ul class="breadcrumb">
-  <li><a href="homeview">Home</a><span class="divider">/</span></li>  
+  <li><a href="homeview">Home</a></li>  
   {{if .ctx.Browse.IsUser}}
-  <li><a href="userresult">Users</a><span class="divider"></span></li>
-  <li><a href="getsubmissions?id={{.ctx.Browse.Uid}}&type=user">Submissions</a><span class="divider"></span></li>
+  <li><a href="userresult">Users</a></li>
+  <li><a href="getsubmissions?id={{.ctx.Browse.Uid}}&type=user">Submissions</a></li>
   {{else}}
-  <li><a href="projectresult">Projects</a><span class="divider"></span></li>
-  <li><a href="getsubmissions?id={{.ctx.Browse.Pid}}&type=project">Submissions</a><span class="divider"></span></li>
+  <li><a href="projectresult">Projects</a></li>
+  <li><a href="getsubmissions?id={{.ctx.Browse.Pid}}&type=project">Submissions</a></li>
   {{end}}
   <li class="active">Files</li>
 </ul>
-<ul class="unstyled">
+<ul class="list-unstyled">
   {{range .fileinfo}}
   <li>
     <h3>{{.Name}}</h3>
     <h5>{{.Count}} Snapshots</h5>
     <a href="displayresult?filename={{.Name}}&currentIndex={{0}}&nextIndex={{1}}">Analysis</a>
-    <a href="displaygraphs?filename={{.Name}}">Graphs</a>
+    <a href="displaygraph?filename={{.Name}}">Graphs</a>
   </li>
   {{end}}
 </ul>

@@ -35,7 +35,10 @@ func (this *JUnitResult) GetFileId() bson.ObjectId {
 func (this *JUnitResult) GetSummary() *tool.Summary {
 	body := fmt.Sprintf("Tests: %d \n Failures: %d \n Errors: %d \n Time: %f",
 		this.Data.Tests, this.Data.Failures, this.Data.Errors, this.Data.Time)
-	return &tool.Summary{this.GetName(), body}
+	return &tool.Summary{
+		Name: this.GetName(), 
+		Body: body,
+	}
 }
 
 func (this *JUnitResult) GetData() interface{} {

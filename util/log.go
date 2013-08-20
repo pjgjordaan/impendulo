@@ -6,11 +6,10 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"sync"
 	"time"
 )
 
-var errLogger, infoLogger *SyncLogger
+var errLogger, infoLogger *Logger
 
 //init sets up the loggers.
 func init() {
@@ -43,13 +42,12 @@ func SetInfoLogging(setting string) {
 
 
 //SyncLogger allows for concurrent logging.
-type SyncLogger struct {
+type Logger struct {
 	logger  *log.Logger
-	lock    *sync.Mutex
 	console, file bool
 }
 
-func (this *SyncLogger) setLogging(setting string){
+func (this *Logger) setLogging(setting string){
 	if setting == "a"{
 		this.file = true 
 		this.console = true
@@ -61,24 +59,22 @@ func (this *SyncLogger) setLogging(setting string){
 }
 
 //Log safely logs data to this logger's log file.
-func (this *SyncLogger) Log(vals ...interface{}) {
-	this.lock.Lock()
+func (this *Logger) Log(vals ...interface{}) {
 	if this.file{
 		this.logger.Print(vals)
 	}
 	if this.console{
 		fmt.Println(vals)
 	}
-	this.lock.Unlock()
 }
 
 //NewLogger creates a new SyncLogger which writes its logs to the specified file.
-func NewLogger(fname string) (logger *SyncLogger, err error) {
+func NewLogger(fname string) (logger *Logger, err error) {
 	logFile, err := os.Create(fname)
 	if err != nil {
 		return
 	}
-	logger = &SyncLogger{log.New(logFile, "", log.LstdFlags), new(sync.Mutex), false, false}
+	logger = &Logger{log.New(logFile, "", log.LstdFlags), false, false}
 	return
 }
 

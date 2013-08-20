@@ -34,7 +34,10 @@ func (this *PMDResult) GetFileId() bson.ObjectId {
 
 func (this *PMDResult) GetSummary() *tool.Summary {
 	body := fmt.Sprintf("Errors: %d", this.Data.Errors)
-	return &tool.Summary{this.GetName(), body}
+	return &tool.Summary{
+		Name: this.GetName(), 
+		Body: body,
+	}
 }
 
 func (this *PMDResult) GetData() interface{} {

@@ -30,7 +30,33 @@ var funcs = template.FuncMap{
 	"equal":        equal,
 	"langs":        langs,
 	"submissionCount":  submissionCount,
-	"getBusy": processing.GetBusy, 
+	"getBusy": processing.GetStatus, 
+	"slice": slice,
+	"adjustment": adjustment,
+}
+
+func slice(files []*project.File, selected int)(ret []*project.File){
+	if len(files) < 10{
+		ret = files
+	}else if selected < 5{
+		ret = files[:10]
+	}else if selected + 5 >= len(files){
+		ret = files[len(files)-10:]
+	} else{ 
+		ret = files[selected - 5: selected +5]
+	}
+	return
+}
+
+func adjustment(files []*project.File, selected int) (ret int){
+	if len(files) < 10 || selected < 5{
+		ret = 0
+	} else if selected + 5 >= len(files){
+		ret = len(files)-10
+	} else {
+		ret = selected - 5
+	}
+	return
 }
 
 func submissionCount(id interface{}) (int, error){

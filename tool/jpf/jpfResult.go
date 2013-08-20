@@ -34,7 +34,10 @@ func (this *JPFResult) GetFileId() bson.ObjectId {
 
 func (this *JPFResult) GetSummary() *tool.Summary {
 	body := fmt.Sprintf("Result: %s \n Errors: %d", this.Data.Result.Findings, len(this.Data.Result.Errors))
-	return &tool.Summary{this.GetName(), body}
+	return &tool.Summary{
+		Name: this.GetName(), 
+		Body: body,
+	}
 }
 
 func (this *JPFResult) Success() bool {

@@ -1,0 +1,20 @@
+{{define "pager"}}
+{{$selected := .selected}}
+{{$fileName := .curFile.Name}}
+{{$sliced := slice .files $selected}}
+{{$adjustment := adjustment .files $selected}}
+<ul id="filePager" class="pagination">
+  {{$prev := sum $selected -1}}
+  <li><a href="displayresult?filename={{$fileName}}&currentIndex={{$prev}}&nextIndex={{$selected}}">&laquo;</a></li>
+  {{range $index, $file := $sliced}}
+  {{$actual := sum $index $adjustment}}
+  {{$actualNext := sum $actual 1}}
+  {{if (equal $actual $selected)}} 
+  <li class="active"><a id="file{{$actual}}" href="displayresult?filename={{$fileName}}&currentIndex={{$actual}}&nextIndex={{$actualNext}}">{{$actualNext}}</a></li>
+  {{else}}
+  <li><a id="file{{$actual}}" href="displayresult?filename={{$fileName}}&currentIndex={{$actual}}&nextIndex={{$actualNext}}">{{$actualNext}}</a></li>
+  {{end}}
+  {{end}}  
+  <li class="disabled"><a href="#">&raquo;</a></li>
+</ul>
+{{end}}

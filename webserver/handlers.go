@@ -16,7 +16,6 @@ var store sessions.Store
 const LOG_HANDLERS = "webserver/handlers.go"
 
 func init() {
-	fmt.Sprint()
 	store = sessions.NewCookieStore(util.CookieKeys())
 }
 
@@ -255,9 +254,9 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 		"curFile": curFile, "curResult": res.GetData(),
 		"results": results}
 	neighbour, ok := getNeighbour(req, len(files)-1)
-	temps = []string{getNav(ctx), "fileInfo", res.Template(true)}
+	temps = []string{getNav(ctx), "fileInfo",res.Template(true)}
 	if !ok {
-		temps = append(temps, "singleResult")
+		temps = append(temps, "singleResult", "singlePager")
 		return
 	}
 	nextFile, err := getFile(files[neighbour].Id)
@@ -271,7 +270,7 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 	args["nextFile"] = nextFile
 	args["nextResult"] = res.GetData()
 	args["neighbour"] = neighbour
-	temps = append(temps, "doubleResult", res.Template(false))
+	temps = append(temps, "doubleResult", "doublePager", res.Template(false))
 	return
 }
 

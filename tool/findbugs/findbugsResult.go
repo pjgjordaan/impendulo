@@ -36,7 +36,10 @@ func (this *FindbugsResult) GetFileId() bson.ObjectId {
 
 func (this *FindbugsResult) GetSummary() *tool.Summary {
 	body := fmt.Sprintf("Bugs: %d", this.Data.Summary.BugCount)
-	return &tool.Summary{this.GetName(), body}
+	return &tool.Summary{
+		Name: this.GetName(), 
+		Body: body,
+	}
 }
 
 func (this *FindbugsResult) GetData() interface{} {
