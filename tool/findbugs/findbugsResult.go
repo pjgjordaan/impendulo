@@ -100,7 +100,7 @@ func genReport(id bson.ObjectId, data []byte) (res *FindbugsReport, err error) {
 //populated from XML output produced by findbugs.
 type FindbugsReport struct {
 	Id          bson.ObjectId
-	Time        int64            `xml:"analysisTimestamp,attr"`
+	Time        int            `xml:"analysisTimestamp,attr"`
 	Summary     *FindBugsSummary `xml:"FindBugsSummary"`
 	Instances   []*BugInstance   `xml:"BugInstance"`
 	Categories  []*BugCategory   `xml:"BugCategory"`

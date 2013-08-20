@@ -8,7 +8,11 @@ import (
 	"testing"
 )
 
-var testmap = map[string]interface{}{"string": "2a 3", "int": 2, "id": bson.NewObjectId(), "map": bson.M{"a": "b"}, "bytes": []byte("AB"), "strings": []string{"A", "B"}}
+var testmap = map[string]interface{}{
+	"string": "2a 3", "int": 2, "id": bson.NewObjectId(), 
+	"map": bson.M{"a": "b"}, "bytes": []byte("AB"), 
+	"strings": []string{"A", "B"}, "int64": int64(2231231223123123123),
+}
 
 func TestGetString(t *testing.T) {
 	this := "string"
@@ -30,11 +34,26 @@ func TestGetInt(t *testing.T) {
 			if err != nil || res != v {
 				t.Error(err, res, "!=", v)
 			}
-		} else if err == nil {
+		} else if err == nil && k != "int64" {
 			t.Error(errors.New("Error function should not cast"))
 		}
 	}
 }
+
+func TestGetInt64(t *testing.T) {
+	this := "int64"
+	for k, v := range testmap {
+		res, err := GetInt64(testmap, k)
+		if k == this {
+			if err != nil || res != v.(int64) {
+				t.Error(err, res, "!=", v)
+			}
+		} else if err == nil && k != "int"{
+			t.Error(errors.New("Error function should not cast"))
+		}
+	}
+}
+
 
 func TestGetId(t *testing.T) {
 	this := "id"

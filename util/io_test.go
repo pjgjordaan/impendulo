@@ -12,16 +12,17 @@ import (
 func TestCopier(t *testing.T) {
 	realDest := "/tmp/copy"
 	fakeDest := "/dummy"
-	realSrcFile := "io_test.go"
-	noPermSrcFile := "noperm.txt"
-	realSrcDir := "./copySrcFolder"
+	realSrcFile := "data.txt"
+	realSrcDir := "folder/"
 	fakeSrc := "dummy"
 	tests := map[string]bool{fakeDest + "," + fakeSrc: false,
 		fakeDest + "," + realSrcFile: false, fakeDest + "," + realSrcDir: false,
-		realDest + "," + fakeSrc: false, realDest + "," + realSrcFile: true,
-		realDest + "," + realSrcDir: true, realDest + "," + noPermSrcFile: false,
+		realDest + "," + fakeSrc: false, realDest + "," + realSrcDir: true,
+		realDest + "," + realSrcFile: true,
 	}
 	os.Mkdir(realDest, os.ModeDir|os.ModePerm)
+	os.Mkdir(realSrcDir, os.ModeDir|os.ModePerm)
+	os.Create(realSrcFile)
 	for test, valid := range tests {
 		err := tcopy(test, valid)
 		if err != nil {
@@ -29,7 +30,9 @@ func TestCopier(t *testing.T) {
 		}
 
 	}
+	os.RemoveAll(realSrcFile)
 	os.RemoveAll(realDest)
+	os.RemoveAll(realSrcDir)
 }
 
 func tcopy(destSrc string, valid bool) error {

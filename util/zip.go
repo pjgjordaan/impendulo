@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"fmt"
 )
 
 //Unzip extracts a file (given as a []byte) to dir.
@@ -27,6 +28,9 @@ func Unzip(dir string, data []byte) (err error) {
 
 //ExtractFile extracts the contents of a zip.File and saves it in dir.
 func ExtractFile(zf *zip.File, dir string) error {
+	if zf == nil{
+		return fmt.Errorf("Could not extract nil *zip.File")
+	}
 	frc, err := zf.Open()
 	if err != nil {
 		return &IOError{zf, "opening zipfile", err}

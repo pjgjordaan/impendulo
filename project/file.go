@@ -151,7 +151,7 @@ func ParseName(name string) (*File, error) {
 		file.Time, err = strconv.ParseInt(timeString, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"%s in name %s could not be parsed as an int64.",
+				"%s in name %s could not be parsed as an int.",
 				timeString, name)
 		}
 	} else if timeString[0] == '2' && len(timeString) == 17 {

@@ -54,7 +54,7 @@ func GetInt(jobj map[string]interface{}, key string) (val int, err error) {
 	return
 }
 
-//GetInt64 converts a value in a map to an int64.
+//GetInt64 converts a value in a map to an int.
 func GetInt64(jobj map[string]interface{}, key string) (val int64, err error) {
 	ival, ok := jobj[key]
 	if !ok {
@@ -71,7 +71,7 @@ func GetInt64(jobj map[string]interface{}, key string) (val int64, err error) {
 	case string:
 		val, err = strconv.ParseInt(v, 10, 64)
 	default:
-		err = &CastError{"int64", v}
+		err = &CastError{"int", v}
 	}
 	return
 }
