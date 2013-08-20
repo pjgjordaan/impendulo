@@ -17,7 +17,7 @@ const NAME = "Findbugs"
 type FindbugsResult struct {
 	Id     bson.ObjectId   "_id"
 	FileId bson.ObjectId   "fileid"
-	Name string "name"
+	Name   string          "name"
 	Time   int64           "time"
 	Data   *FindbugsReport "data"
 }
@@ -37,7 +37,7 @@ func (this *FindbugsResult) GetFileId() bson.ObjectId {
 func (this *FindbugsResult) GetSummary() *tool.Summary {
 	body := fmt.Sprintf("Bugs: %d", this.Data.Summary.BugCount)
 	return &tool.Summary{
-		Name: this.GetName(), 
+		Name: this.GetName(),
 		Body: body,
 	}
 }
@@ -58,15 +58,15 @@ func (this *FindbugsResult) Success() bool {
 	return true
 }
 
-func (this *FindbugsResult) AddGraphData(max float64, graphData []map[string]interface{})float64{
-	if graphData[0] == nil{
+func (this *FindbugsResult) AddGraphData(max float64, graphData []map[string]interface{}) float64 {
+	if graphData[0] == nil {
 		graphData[0] = tool.CreateChart("Findbugs All")
 		graphData[1] = tool.CreateChart("Findbugs Priority 1")
 		graphData[2] = tool.CreateChart("Findbugs Priority 2")
 		graphData[3] = tool.CreateChart("Findbugs Priority 3")
 	}
-	yB := float64(this.Data.Summary.BugCount)  
-	y1 := float64(this.Data.Summary.Priority1)  
+	yB := float64(this.Data.Summary.BugCount)
+	y1 := float64(this.Data.Summary.Priority1)
 	y2 := float64(this.Data.Summary.Priority2)
 	y3 := float64(this.Data.Summary.Priority3)
 	tool.AddCoords(graphData[0], yB)
@@ -80,7 +80,7 @@ func NewResult(fileId bson.ObjectId, data []byte) (res *FindbugsResult, err erro
 	res = &FindbugsResult{
 		Id:     bson.NewObjectId(),
 		FileId: fileId,
-		Name: NAME,
+		Name:   NAME,
 		Time:   util.CurMilis()}
 	res.Data, err = genReport(res.Id, data)
 	return

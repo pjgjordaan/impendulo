@@ -39,9 +39,8 @@ func GetFiles(matcher, selector interface{}, sort string) (ret []*project.File, 
 	return
 }
 
-
-type FileInfo struct{
-	Name string
+type FileInfo struct {
+	Name  string
 	Count int
 }
 
@@ -52,12 +51,12 @@ func GetFileInfo(matcher bson.M) (ret []*FileInfo, err error) {
 		return
 	}
 	ret = make([]*FileInfo, len(names))
-	for i, name := range names{
+	for i, name := range names {
 		ret[i] = new(FileInfo)
 		ret[i].Name = name
 		matcher[project.NAME] = name
 		ret[i].Count, err = Count(FILES, matcher)
-		if err != nil{
+		if err != nil {
 			return
 		}
 	}

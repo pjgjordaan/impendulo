@@ -8,7 +8,8 @@ import (
 )
 
 var router *pat.Router
-const LOG_SERVER = "webserver/server.go" 
+
+const LOG_SERVER = "webserver/server.go"
 
 func init() {
 	router = pat.New()

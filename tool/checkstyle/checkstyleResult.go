@@ -15,7 +15,7 @@ const NAME = "Checkstyle"
 type CheckstyleResult struct {
 	Id     bson.ObjectId     "_id"
 	FileId bson.ObjectId     "fileid"
-	Name string "name"
+	Name   string            "name"
 	Time   int64             "time"
 	Data   *CheckstyleReport "data"
 }
@@ -28,7 +28,7 @@ func (this *CheckstyleResult) GetSummary() *tool.Summary {
 	body := fmt.Sprintf("Errors: %d",
 		this.Data.Errors)
 	return &tool.Summary{
-		Name: this.GetName(), 
+		Name: this.GetName(),
 		Body: body,
 	}
 }
@@ -58,7 +58,7 @@ func (this *CheckstyleResult) Success() bool {
 }
 
 func (this *CheckstyleResult) AddGraphData(max float64, graphData []map[string]interface{}) float64 {
-	if graphData[0] == nil{
+	if graphData[0] == nil {
 		graphData[0] = tool.CreateChart("Checkstyle Errors")
 	}
 	y := float64(this.Data.Errors)

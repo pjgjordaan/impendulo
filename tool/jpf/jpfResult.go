@@ -6,8 +6,8 @@ import (
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
-	"strconv"
 	"math"
+	"strconv"
 )
 
 const NAME = "JPF"
@@ -15,7 +15,7 @@ const NAME = "JPF"
 type JPFResult struct {
 	Id     bson.ObjectId "_id"
 	FileId bson.ObjectId "fileid"
-	Name string "name"
+	Name   string        "name"
 	Time   int64         "time"
 	Data   *JPFReport    "data"
 }
@@ -35,7 +35,7 @@ func (this *JPFResult) GetFileId() bson.ObjectId {
 func (this *JPFResult) GetSummary() *tool.Summary {
 	body := fmt.Sprintf("Result: %s \n Errors: %d", this.Data.Result.Findings, len(this.Data.Result.Errors))
 	return &tool.Summary{
-		Name: this.GetName(), 
+		Name: this.GetName(),
 		Body: body,
 	}
 }
@@ -56,15 +56,15 @@ func (this *JPFResult) Template(current bool) string {
 	}
 }
 
-func (this *JPFResult) AddGraphData(max float64, graphData []map[string]interface{})float64{
-	if graphData[0] == nil{
+func (this *JPFResult) AddGraphData(max float64, graphData []map[string]interface{}) float64 {
+	if graphData[0] == nil {
 		graphData[0] = tool.CreateChart("JPF New States")
 		graphData[1] = tool.CreateChart("JPF Visited States")
 		graphData[2] = tool.CreateChart("JPF Backtracked States")
 		graphData[3] = tool.CreateChart("JPF End States")
 	}
-	yN := float64(this.Data.Stats.NewStates)  
-	yV := float64(this.Data.Stats.VisitedStates)  
+	yN := float64(this.Data.Stats.NewStates)
+	yV := float64(this.Data.Stats.VisitedStates)
 	yB := float64(this.Data.Stats.BacktrackedStates)
 	yE := float64(this.Data.Stats.EndStates)
 	tool.AddCoords(graphData[0], yN)

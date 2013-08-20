@@ -18,6 +18,7 @@ var Port, UsersFile, ConfigFile, ErrorLogging, InfoLogging string
 var Web, Receiver, Processor, Debug bool
 var MaxProcs, Timeout int
 var conn string
+
 const LOG_IMPENDULO = "impendulo.go"
 
 func init() {
@@ -65,8 +66,8 @@ func main() {
 	}
 }
 
-func setupConn(debug bool)(err error){
-	if debug{
+func setupConn(debug bool) (err error) {
+	if debug {
 		/*err = db.Setup(db.DEBUG_CONN)
 		if err != nil{
 			return
@@ -85,7 +86,7 @@ func setupConn(debug bool)(err error){
 		}
 		db.Close()*/
 		conn = db.DEBUG_CONN
-	}else{
+	} else {
 		conn = db.DEFAULT_CONN
 	}
 	err = db.Setup(conn)
@@ -124,7 +125,7 @@ func RunFileReceiver(inRoutine bool) {
 		go server.Run(Port, new(server.SubmissionSpawner))
 	} else {
 		server.Run(Port, new(server.SubmissionSpawner))
-	}	
+	}
 }
 
 func RunFileProcessor(inRoutine bool) {
@@ -132,5 +133,5 @@ func RunFileProcessor(inRoutine bool) {
 		go processing.Serve(MaxProcs)
 	} else {
 		processing.Serve(MaxProcs)
-	}	
+	}
 }

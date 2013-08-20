@@ -11,8 +11,8 @@ import (
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/tool/pmd"
 	"labix.org/v2/mgo/bson"
-	"strings"
 	"sort"
+	"strings"
 )
 
 //GetCheckstyleResult retrieves a CheckstyleResult matching
@@ -187,7 +187,7 @@ func GetGraphResult(name string, matcher, selector bson.M) (ret tool.GraphResult
 
 //AddResult adds a new result to the active database.
 func AddResult(res tool.ToolResult) (err error) {
-	if res == nil{
+	if res == nil {
 		err = fmt.Errorf("Result is nil. In db/result.go.")
 		return
 	}
@@ -230,16 +230,16 @@ func AddNoResult(fileId bson.ObjectId, name string) (err error) {
 //the given file Id from the active database.
 func GetGraphResults(fileId bson.ObjectId) (ret []tool.GraphResult, err error) {
 	file, err := GetFile(bson.M{project.ID: fileId}, bson.M{project.RESULTS: 1})
-	if err != nil{
+	if err != nil {
 		return
 	}
 	ret = make([]tool.GraphResult, 0, len(file.Results))
-	for name, id := range file.Results{
-		if _, ok := id.(bson.ObjectId); !ok{
+	for name, id := range file.Results {
+		if _, ok := id.(bson.ObjectId); !ok {
 			continue
 		}
-		res, err := GetGraphResult(name, bson.M{project.ID: id}, nil) 
-		if err != nil{
+		res, err := GetGraphResult(name, bson.M{project.ID: id}, nil)
+		if err != nil {
 			err = nil
 			continue
 		}
@@ -261,7 +261,7 @@ func GetResultNames(projectId bson.ObjectId, nonTool bool) (ret []string, err er
 	}
 	ret = append(ret, checkstyle.NAME, findbugs.NAME,
 		javac.NAME, jpf.NAME, pmd.NAME)
-	if nonTool{
+	if nonTool {
 		ret = append(ret, tool.CODE, tool.SUMMARY)
 	}
 	sort.Strings(ret)
