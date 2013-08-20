@@ -115,11 +115,11 @@ func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) (fil
 func NewArchive(subId bson.ObjectId, data []byte, ftype string) *File {
 	id := bson.NewObjectId()
 	return &File{
-		Id: id, 
-		SubId: subId, 
-		Data: data, 
-		FileType: ftype, 
-		Type: ARCHIVE,
+		Id:       id,
+		SubId:    subId,
+		Data:     data,
+		FileType: ftype,
+		Type:     ARCHIVE,
 	}
 }
 
@@ -154,13 +154,13 @@ func ParseName(name string) (*File, error) {
 				"%s in name %s could not be parsed as an int64.",
 				timeString, name)
 		}
-	} else if timeString[0] == '2' && len(timeString) == 17{
+	} else if timeString[0] == '2' && len(timeString) == 17 {
 		t, err := util.CalcTime(timeString)
 		if err != nil {
 			return nil, err
 		}
-		file.Time = util.GetMilis(t) 
-	} else{
+		file.Time = util.GetMilis(t)
+	} else {
 		return nil, fmt.Errorf(
 			"Unknown time format %s in %s.",
 			timeString, name)

@@ -6,8 +6,8 @@ import (
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
-	"strings"
 	"math"
+	"strings"
 )
 
 const NAME = "JUnit Test"
@@ -36,7 +36,7 @@ func (this *JUnitResult) GetSummary() *tool.Summary {
 	body := fmt.Sprintf("Tests: %d \n Failures: %d \n Errors: %d \n Time: %f",
 		this.Data.Tests, this.Data.Failures, this.Data.Errors, this.Data.Time)
 	return &tool.Summary{
-		Name: this.GetName(), 
+		Name: this.GetName(),
 		Body: body,
 	}
 }
@@ -57,21 +57,20 @@ func (this *JUnitResult) Success() bool {
 	return this.Data.Success
 }
 
-func (this *JUnitResult) AddGraphData(max float64, graphData []map[string]interface{})(float64){
-	if graphData[0] == nil{
-		graphData[0] = tool.CreateChart(this.GetName()+" Errors")
-		graphData[1] = tool.CreateChart(this.GetName()+" Failures")
-		graphData[2] = tool.CreateChart(this.GetName()+" Successes")
+func (this *JUnitResult) AddGraphData(max float64, graphData []map[string]interface{}) float64 {
+	if graphData[0] == nil {
+		graphData[0] = tool.CreateChart(this.GetName() + " Errors")
+		graphData[1] = tool.CreateChart(this.GetName() + " Failures")
+		graphData[2] = tool.CreateChart(this.GetName() + " Successes")
 	}
-	yE := float64(this.Data.Errors)  
-	yF := float64(this.Data.Failures)  
+	yE := float64(this.Data.Errors)
+	yF := float64(this.Data.Failures)
 	yS := float64(this.Data.Tests - this.Data.Failures - this.Data.Errors)
 	tool.AddCoords(graphData[0], yE)
 	tool.AddCoords(graphData[1], yF)
-	tool.AddCoords(graphData[2], yS)	
+	tool.AddCoords(graphData[2], yS)
 	return math.Max(max, math.Max(yE, math.Max(yF, yS)))
 }
-
 
 func NewResult(fileId bson.ObjectId, name string, data []byte) (res *JUnitResult, err error) {
 	res = &JUnitResult{Id: bson.NewObjectId(), FileId: fileId, TestName: name, Time: util.CurMilis()}

@@ -4,11 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
-	"os"
 )
-
 
 func TestCopier(t *testing.T) {
 	realDest := "/tmp/copy"
@@ -17,13 +16,13 @@ func TestCopier(t *testing.T) {
 	noPermSrcFile := "noperm.txt"
 	realSrcDir := "./copySrcFolder"
 	fakeSrc := "dummy"
-	tests := map[string]bool{fakeDest+","+fakeSrc: false,
-		fakeDest+","+realSrcFile: false, fakeDest+","+realSrcDir: false,
-		realDest+","+fakeSrc: false, realDest+","+realSrcFile: true,
-		realDest+","+realSrcDir: true, realDest+","+noPermSrcFile: false,
+	tests := map[string]bool{fakeDest + "," + fakeSrc: false,
+		fakeDest + "," + realSrcFile: false, fakeDest + "," + realSrcDir: false,
+		realDest + "," + fakeSrc: false, realDest + "," + realSrcFile: true,
+		realDest + "," + realSrcDir: true, realDest + "," + noPermSrcFile: false,
 	}
-	os.Mkdir(realDest, os.ModeDir | os.ModePerm)
-	for test, valid := range tests{
+	os.Mkdir(realDest, os.ModeDir|os.ModePerm)
+	for test, valid := range tests {
 		err := tcopy(test, valid)
 		if err != nil {
 			t.Error(err)
@@ -33,34 +32,32 @@ func TestCopier(t *testing.T) {
 	os.RemoveAll(realDest)
 }
 
-
-func tcopy(destSrc string, valid bool)error{
+func tcopy(destSrc string, valid bool) error {
 	vals := strings.Split(destSrc, ",")
 	err := Copy(vals[0]+"/"+vals[1], vals[1])
 	if valid {
 		return err
-	} else if err == nil{
-		return fmt.Errorf("Expected error for test "+destSrc)
-	} else{
+	} else if err == nil {
+		return fmt.Errorf("Expected error for test " + destSrc)
+	} else {
 		return nil
 	}
 }
 
 func TestExists(t *testing.T) {
-	if(!Exists("io_test.go")){
+	if !Exists("io_test.go") {
 		t.Error("Should return true.")
 	}
-	if(Exists("io_tester.go")){
+	if Exists("io_tester.go") {
 		t.Error("Should return false.")
 	}
 }
-
 
 func TestSaveFile(t *testing.T) {
 	tests := map[string]bool{"/fake/fake/fake": false,
 		"/tmp": false, "/tmp/real": true,
 	}
-	for test, valid := range tests{
+	for test, valid := range tests {
 		err := tsave(test, valid)
 		if err != nil {
 			t.Error(err)
@@ -73,18 +70,16 @@ func TestSaveFile(t *testing.T) {
 	}
 }
 
-func tsave(name string, valid bool)error{
+func tsave(name string, valid bool) error {
 	err := SaveFile(name, []byte{})
 	if valid {
 		return err
-	} else if err == nil{
-		return fmt.Errorf("Expected error for test "+name)
-	} else{
+	} else if err == nil {
+		return fmt.Errorf("Expected error for test " + name)
+	} else {
 		return nil
 	}
 }
-
-
 
 func TestReadBytes(t *testing.T) {
 	orig := []byte("bytes")
@@ -93,20 +88,20 @@ func TestReadBytes(t *testing.T) {
 	if !bytes.Equal(orig, ret) {
 		t.Error(errors.New("Bytes not equal"))
 	}
-	
+
 	ret = ReadBytes(nil)
 	if !bytes.Equal(ret, []byte{}) {
-			t.Error("Expected empty []byte.")
+		t.Error("Expected empty []byte.")
 	}
 	ret = ReadBytes(new(ErrorReader))
 	if !bytes.Equal(ret, []byte{}) {
-			t.Error("Expected empty []byte.")
+		t.Error("Expected empty []byte.")
 	}
 }
 
 type ErrorReader struct{}
 
-func (this *ErrorReader) Read(b []byte)(int, error){
+func (this *ErrorReader) Read(b []byte) (int, error) {
 	return 0, fmt.Errorf("I just give errors")
 }
 
@@ -123,11 +118,11 @@ func TestReadData(t *testing.T) {
 	}
 	_, err := ReadData(nil)
 	if err == nil {
-			t.Error("Expected error for nil reader.")
+		t.Error("Expected error for nil reader.")
 	}
 	_, err = ReadData(new(ErrorReader))
 	if err == nil {
-			t.Error("Expected error for error reader.")
+		t.Error("Expected error for error reader.")
 	}
 }
 

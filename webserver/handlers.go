@@ -3,12 +3,12 @@ package webserver
 import (
 	"code.google.com/p/gorilla/pat"
 	"code.google.com/p/gorilla/sessions"
+	"fmt"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/util"
 	"net/http"
 	"net/url"
 	"strings"
-	"fmt"
 )
 
 var store sessions.Store
@@ -40,11 +40,11 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	ctx := NewContext(sess)
 	buf := new(HttpBuffer)
 	err = checkAccess(req.URL, ctx)
-	if err != nil{
+	if err != nil {
 		ctx.AddMessage(err.Error(), true)
 		err = nil
 		http.Redirect(buf, req, getRoute("index"), http.StatusSeeOther)
-	}else{
+	} else {
 		err = h(buf, req, ctx)
 	}
 	if err != nil {
@@ -57,24 +57,24 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	buf.Apply(w)
 }
 
-func checkAccess(url *url.URL, ctx *Context)error{
-	start := strings.LastIndex(url.Path, "/")+1
+func checkAccess(url *url.URL, ctx *Context) error {
+	start := strings.LastIndex(url.Path, "/") + 1
 	end := strings.Index(url.Path, "?")
 	if end < 0 {
 		end = len(url.Path)
 	}
-	if start > end{
+	if start > end {
 		return fmt.Errorf("Invalid request %s", url.Path)
 	}
-	name := url.Path[start: end]
+	name := url.Path[start:end]
 	val, ok := perms[name]
-	if !ok{
+	if !ok {
 		return fmt.Errorf("Could not find request %s", url.Path)
 	}
-	if val == 0{
+	if val == 0 {
 		return nil
 	}
-	if !ctx.LoggedIn(){
+	if !ctx.LoggedIn() {
 		return fmt.Errorf("Insufficient permissions to access %s", url.Path)
 	}
 	return nil
@@ -91,17 +91,16 @@ var views = map[string]string{
 }
 
 var perms = map[string]int{
-	"homeview": 0, "testview": 1, "skeletonview": 1, 
+	"homeview": 0, "testview": 1, "skeletonview": 1,
 	"jpffileview": 1, "registerview": 0, "projectdownloadview": 1,
-	"projectdeleteview": 1, "userdeleteview": 1, "userresult": 0, 
+	"projectdeleteview": 1, "userdeleteview": 1, "userresult": 0,
 	"projectresult": 0, "jpfconfigview": 1, "archiveview": 1,
-	"projectview": 1, "addtest": 1, "addjpf": 1, "addproject": 1, 
-	"changeskeleton": 1, "submitarchive": 1,"login": 0, "register": 0, 
+	"projectview": 1, "addtest": 1, "addjpf": 1, "addproject": 1,
+	"changeskeleton": 1, "submitarchive": 1, "login": 0, "register": 0,
 	"logout": 1, "deleteproject": 1, "deleteuser": 1, "displaygraph": 0,
-	"displayresult": 0, "getfiles": 0, "getsubmissions": 0, 
+	"displayresult": 0, "getfiles": 0, "getsubmissions": 0,
 	"skeleton.zip": 0, "index": 0, "favicon.ico": 0, "": 0, "statusview": 1,
 }
-
 
 //GenerateViews is used to load all the basic views used by our web app.
 func GenerateViews(router *pat.Router) {
@@ -251,10 +250,10 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 	}
 	args = map[string]interface{}{"ctx": ctx, "files": files,
 		"selected": selected,
-		"curFile": curFile, "curResult": res.GetData(),
+		"curFile":  curFile, "curResult": res.GetData(),
 		"results": results}
 	neighbour, ok := getNeighbour(req, len(files)-1)
-	temps = []string{getNav(ctx), "fileInfo",res.Template(true)}
+	temps = []string{getNav(ctx), "fileInfo", res.Template(true)}
 	if !ok {
 		temps = append(temps, "singleResult", "singlePager")
 		return

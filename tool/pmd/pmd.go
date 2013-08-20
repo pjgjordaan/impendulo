@@ -23,12 +23,12 @@ func (this *PMD) GetName() string {
 	return NAME
 }
 
-const RULES = "java-basic,java-braces,java-clone,java-codesize,java-comments,"+
-"java-controversial,java-design,java-empty,java-finalizers,java-imports,"+
-"java-j2ee,java-javabeans,java-junit,java-logging-jakarta-commons,"+
-"java-logging-java,java-migrating,java-naming,java-optimizations,"+
-"java-strictexception,java-strings,java-sunsecure,java-typeresolution,"+
-"java-unnecessary,java-unusedcode"
+const RULES = "java-basic,java-braces,java-clone,java-codesize,java-comments," +
+	"java-controversial,java-design,java-empty,java-finalizers,java-imports," +
+	"java-j2ee,java-javabeans,java-junit,java-logging-jakarta-commons," +
+	"java-logging-java,java-migrating,java-naming,java-optimizations," +
+	"java-strictexception,java-strings,java-sunsecure,java-typeresolution," +
+	"java-unnecessary,java-unusedcode"
 
 func (this *PMD) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	args := []string{this.cmd, config.PMD, "-f", "xml", "-stress",

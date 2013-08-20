@@ -1,9 +1,9 @@
 package tool
 
 import (
+	"fmt"
 	"labix.org/v2/mgo/bson"
 	"strings"
-	"fmt"
 )
 
 const (
@@ -14,26 +14,24 @@ const (
 	CODE     = "Code"
 )
 
-
 //GraphResult is used to display result data in a graph.
 type GraphResult interface {
 	AddGraphData(curMax float64, graphData []map[string]interface{}) (newMax float64)
 	GetName() string
 }
 
-func AddCoords(chart map[string]interface{}, y float64){
+func AddCoords(chart map[string]interface{}, y float64) {
 	x := float64(len(chart["data"].([]map[string]float64)))
-	chart["data"] = append(chart["data"].([]map[string]float64), 
+	chart["data"] = append(chart["data"].([]map[string]float64),
 		map[string]float64{"x": x, "y": y})
 }
 
-func CreateChart(name string)(chart map[string]interface{}){
+func CreateChart(name string) (chart map[string]interface{}) {
 	chart = make(map[string]interface{})
 	chart["name"] = name
-	chart["data"] = make([]map[string] float64, 0, 100)
+	chart["data"] = make([]map[string]float64, 0, 100)
 	return
 }
-		
 
 //ToolResult is used to store tool result data.
 type ToolResult interface {
@@ -177,16 +175,16 @@ type Summary struct {
 	Body string
 }
 
-type XMLError struct{
-	err error
+type XMLError struct {
+	err    error
 	origin string
 }
 
-func (this *XMLError) Error()string{
-	return fmt.Sprintf("Encountered error %q while parsing xml in %s.", 
+func (this *XMLError) Error() string {
+	return fmt.Sprintf("Encountered error %q while parsing xml in %s.",
 		this.err, this.origin)
 }
 
-func NewXMLError(err error, origin string) *XMLError{
+func NewXMLError(err error, origin string) *XMLError {
 	return &XMLError{err, origin}
 }

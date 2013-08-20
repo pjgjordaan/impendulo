@@ -2,72 +2,72 @@ package webserver
 
 import (
 	"fmt"
+	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool/diff"
 	"github.com/godfried/impendulo/util"
-	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/processing"
 	"html/template"
+	"labix.org/v2/mgo/bson"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"labix.org/v2/mgo/bson"
 )
 
 var funcs = template.FuncMap{
-	"projectName":  projectName,
-	"date":         util.Date,
-	"setBreaks":    setBreaks,
-	"address":      address,
-	"base":         filepath.Base,
-	"shortname":    shortname,
-	"isCode":       isCode,
-	"diff":         diff.Diff,
-	"diffHTML":     diff.Diff2HTML,
-	"diffHeader":   diff.SetHeader,
-	"createHeader": fileHeader,
-	"sum":          sum,
-	"equal":        equal,
-	"langs":        langs,
-	"submissionCount":  submissionCount,
-	"getBusy": processing.GetStatus, 
-	"slice": slice,
-	"adjustment": adjustment,
+	"projectName":     projectName,
+	"date":            util.Date,
+	"setBreaks":       setBreaks,
+	"address":         address,
+	"base":            filepath.Base,
+	"shortname":       shortname,
+	"isCode":          isCode,
+	"diff":            diff.Diff,
+	"diffHTML":        diff.Diff2HTML,
+	"diffHeader":      diff.SetHeader,
+	"createHeader":    fileHeader,
+	"sum":             sum,
+	"equal":           equal,
+	"langs":           langs,
+	"submissionCount": submissionCount,
+	"getBusy":         processing.GetStatus,
+	"slice":           slice,
+	"adjustment":      adjustment,
 }
 
-func slice(files []*project.File, selected int)(ret []*project.File){
-	if len(files) < 10{
+func slice(files []*project.File, selected int) (ret []*project.File) {
+	if len(files) < 10 {
 		ret = files
-	}else if selected < 5{
+	} else if selected < 5 {
 		ret = files[:10]
-	}else if selected + 5 >= len(files){
+	} else if selected+5 >= len(files) {
 		ret = files[len(files)-10:]
-	} else{ 
-		ret = files[selected - 5: selected +5]
+	} else {
+		ret = files[selected-5 : selected+5]
 	}
 	return
 }
 
-func adjustment(files []*project.File, selected int) (ret int){
-	if len(files) < 10 || selected < 5{
+func adjustment(files []*project.File, selected int) (ret int) {
+	if len(files) < 10 || selected < 5 {
 		ret = 0
-	} else if selected + 5 >= len(files){
-		ret = len(files)-10
+	} else if selected+5 >= len(files) {
+		ret = len(files) - 10
 	} else {
 		ret = selected - 5
 	}
 	return
 }
 
-func submissionCount(id interface{}) (int, error){
-	switch tipe := id.(type){
+func submissionCount(id interface{}) (int, error) {
+	switch tipe := id.(type) {
 	case bson.ObjectId:
 		return db.Count(db.SUBMISSIONS, bson.M{project.PROJECT_ID: tipe})
 	case string:
 		return db.Count(db.SUBMISSIONS, bson.M{project.USER: tipe})
 	default:
 		return -1, fmt.Errorf("Unknown id type %q.", id)
-	} 
+	}
 }
 
 func langs() []string {

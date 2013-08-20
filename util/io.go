@@ -36,7 +36,7 @@ func BaseDir() string {
 
 //ReadData reads data from a reader until io.EOF or []byte("eof") is encountered.
 func ReadData(r io.Reader) ([]byte, error) {
-	if r == nil{
+	if r == nil {
 		return nil, fmt.Errorf("Can't read from a nil io.Reader")
 	}
 	buffer := new(bytes.Buffer)
@@ -78,8 +78,8 @@ func SaveFile(fname string, data []byte) error {
 
 //ReadBytes reads bytes from a reader until io.EOF is encountered.
 //If the reader can't be read an empty []byte is returned.
-func ReadBytes(r io.Reader) ([]byte) {
-	if r == nil{
+func ReadBytes(r io.Reader) []byte {
+	if r == nil {
 		return make([]byte, 0)
 	}
 	buffer := new(bytes.Buffer)
@@ -109,7 +109,7 @@ type copier struct {
 }
 
 func (this *copier) copyFile(path string, f os.FileInfo, err error) error {
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	return this.copy(path, f)
@@ -121,7 +121,7 @@ func (this *copier) copy(path string, f os.FileInfo) (err error) {
 		//Should never happen but lets still handle it.
 		return
 	}
-	if f == nil{
+	if f == nil {
 		return
 	}
 	destPath = filepath.Join(this.dest, destPath)

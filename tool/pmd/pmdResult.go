@@ -15,7 +15,7 @@ const NAME = "PMD"
 type PMDResult struct {
 	Id     bson.ObjectId "_id"
 	FileId bson.ObjectId "fileid"
-	Name string "name"
+	Name   string        "name"
 	Time   int64         "time"
 	Data   *PMDReport    "data"
 }
@@ -35,7 +35,7 @@ func (this *PMDResult) GetFileId() bson.ObjectId {
 func (this *PMDResult) GetSummary() *tool.Summary {
 	body := fmt.Sprintf("Errors: %d", this.Data.Errors)
 	return &tool.Summary{
-		Name: this.GetName(), 
+		Name: this.GetName(),
 		Body: body,
 	}
 }
@@ -56,8 +56,8 @@ func (this *PMDResult) Success() bool {
 	return true
 }
 
-func (this *PMDResult) AddGraphData(max float64, graphData []map[string]interface{}) float64{
-	if graphData[0] == nil{
+func (this *PMDResult) AddGraphData(max float64, graphData []map[string]interface{}) float64 {
+	if graphData[0] == nil {
 		graphData[0] = tool.CreateChart("PMD Errors")
 	}
 	y := float64(this.Data.Errors)
@@ -84,9 +84,8 @@ func genReport(id bson.ObjectId, data []byte) (res *PMDReport, err error) {
 	return
 }
 
-
 func (this *PMDResult) String() (ret string) {
-	if this.Data != nil{
+	if this.Data != nil {
 		ret = this.Data.String()
 	}
 	ret += this.Id.Hex()
@@ -101,10 +100,10 @@ type PMDReport struct {
 }
 
 func (this *PMDReport) String() (ret string) {
-	ret = fmt.Sprintf("Report{ Errors: %d\n.", this.Errors) 
-	if this.Files != nil{
+	ret = fmt.Sprintf("Report{ Errors: %d\n.", this.Errors)
+	if this.Files != nil {
 		ret += "Files: \n"
-		for _, f := range this.Files{
+		for _, f := range this.Files {
 			ret += f.String()
 		}
 	}
@@ -118,10 +117,10 @@ type File struct {
 }
 
 func (this *File) String() (ret string) {
-	ret = fmt.Sprintf("File{ Name: %s\n.", this.Name) 
-	if this.Violations != nil{
+	ret = fmt.Sprintf("File{ Name: %s\n.", this.Name)
+	if this.Violations != nil {
 		ret += "Violations: \n"
-		for _, v := range this.Violations{
+		for _, v := range this.Violations {
 			ret += v.String()
 		}
 	}
@@ -141,8 +140,8 @@ type Violation struct {
 
 func (this *Violation) String() (ret string) {
 	ret = fmt.Sprintf("Violation{ Begin: %d; End: %d; Rule: %s; RuleSet: %s; "+
-		"Priority: %d; Description: %s}\n", 
-		this.Begin, this.End, this.Rule, this.RuleSet, 
-		this.Priority, this.Description) 
+		"Priority: %d; Description: %s}\n",
+		this.Begin, this.End, this.Rule, this.RuleSet,
+		this.Priority, this.Description)
 	return
 }

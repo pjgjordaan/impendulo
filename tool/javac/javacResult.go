@@ -12,7 +12,7 @@ const NAME = "Javac"
 type JavacResult struct {
 	Id     bson.ObjectId "_id"
 	FileId bson.ObjectId "fileid"
-	Name string "name"
+	Name   string        "name"
 	Time   int64         "time"
 	Data   []byte        "data"
 }
@@ -37,7 +37,7 @@ func (this *JavacResult) GetSummary() *tool.Summary {
 		body = "No compile."
 	}
 	return &tool.Summary{
-		Name: this.GetName(), 
+		Name: this.GetName(),
 		Body: body,
 	}
 }
@@ -62,21 +62,19 @@ func (this *JavacResult) Result() string {
 	return string(this.Data)
 }
 
-
-func (this *JavacResult) AddGraphData(max float64, graphData []map[string]interface{})(float64){
-	if graphData[0] == nil{
+func (this *JavacResult) AddGraphData(max float64, graphData []map[string]interface{}) float64 {
+	if graphData[0] == nil {
 		graphData[0] = tool.CreateChart("Compilation")
 	}
 	var y float64
-	if this.Success(){
+	if this.Success() {
 		y = 1
-	} else{
+	} else {
 		y = 0
 	}
 	tool.AddCoords(graphData[0], y)
 	return 1
 }
-
 
 func NewResult(fileId bson.ObjectId, data []byte) *JavacResult {
 	return &JavacResult{bson.NewObjectId(), fileId, NAME, util.CurMilis(), data}

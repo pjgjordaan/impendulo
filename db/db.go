@@ -16,36 +16,36 @@ const (
 	JPF          = "jpf"
 	SET          = "$set"
 	DEFAULT_CONN = "mongodb://localhost/impendulo"
-	DEBUG_CONN    = "mongodb://localhost/impendulo_debug"
+	DEBUG_CONN   = "mongodb://localhost/impendulo_debug"
 	TEST_CONN    = "mongodb://localhost/impendulo_test"
-	DEFAULT_DB = "impendulo"
-	DEBUG_DB      = "impendulo_debug"
+	DEFAULT_DB   = "impendulo"
+	DEBUG_DB     = "impendulo_debug"
 	TEST_DB      = "impendulo_test"
 )
 
 var sessionChan chan *mgo.Session
 var requestChan chan bool
 
-func init(){
+func init() {
 	sessionChan = make(chan *mgo.Session)
 	requestChan = make(chan bool)
-} 
+}
 
 //Setup creates a mongodb session.
 //This must be called before using any other db functions.
 func Setup(conn string) error {
 	activeSession, err := mgo.Dial(conn)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	go serveSession(activeSession)
 	return nil
 }
 
-func serveSession(activeSession *mgo.Session){		
-	for{
-		req, ok := <- requestChan
-		if !ok || !req{
+func serveSession(activeSession *mgo.Session) {
+	for {
+		req, ok := <-requestChan
+		if !ok || !req {
 			break
 		}
 		if activeSession == nil {
@@ -64,10 +64,10 @@ func serveSession(activeSession *mgo.Session){
 //getSession retrieves the current active session.
 func getSession() (s *mgo.Session, err error) {
 	requestChan <- true
-	s, ok := <- sessionChan
+	s, ok := <-sessionChan
 	if s == nil || !ok {
 		err = fmt.Errorf("Could not retrieve session.")
-	} 
+	}
 	return
 }
 
@@ -97,7 +97,7 @@ func CopyDB(from, to string) error {
 		return err
 	}
 	return session.Run(bson.D{
-		{"copydb", "1"}, {"fromdb", from}, 
+		{"copydb", "1"}, {"fromdb", from},
 		{"todb", to}}, nil)
 }
 

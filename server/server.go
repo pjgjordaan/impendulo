@@ -71,7 +71,7 @@ func Run(port string, spawner HandlerSpawner) {
 				"Encountered error %q when accepting connection",
 				err), LOG_SERVER)
 		} else {
-			go func(c net.Conn){
+			go func(c net.Conn) {
 				handler := spawner.Spawn()
 				handler.Start(c)
 			}(conn)

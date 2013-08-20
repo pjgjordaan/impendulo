@@ -40,30 +40,29 @@ func SetInfoLogging(setting string) {
 	infoLogger.setLogging(setting)
 }
 
-
 //SyncLogger allows for concurrent logging.
 type Logger struct {
-	logger  *log.Logger
+	logger        *log.Logger
 	console, file bool
 }
 
-func (this *Logger) setLogging(setting string){
-	if setting == "a"{
-		this.file = true 
-		this.console = true
-	} else if setting == "f"{
+func (this *Logger) setLogging(setting string) {
+	if setting == "a" {
 		this.file = true
-	} else if setting == "c"{
+		this.console = true
+	} else if setting == "f" {
+		this.file = true
+	} else if setting == "c" {
 		this.console = true
 	}
 }
 
 //Log safely logs data to this logger's log file.
 func (this *Logger) Log(vals ...interface{}) {
-	if this.file{
+	if this.file {
 		this.logger.Print(vals)
 	}
-	if this.console{
+	if this.console {
 		fmt.Println(vals)
 	}
 }
@@ -79,7 +78,7 @@ func NewLogger(fname string) (logger *Logger, err error) {
 }
 
 //Log sends data to be logged to the appropriate logger.
-func Log(v ...interface{}) {	
+func Log(v ...interface{}) {
 	if len(v) > 0 {
 		if _, ok := v[0].(error); ok {
 			errLogger.Log(v)

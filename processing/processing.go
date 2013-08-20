@@ -33,21 +33,21 @@ func init() {
 
 type Status int
 
-func ChangeStatus(change Status){
+func ChangeStatus(change Status) {
 	statusChan <- change
 }
 
-func GetStatus() (ret Status){
+func GetStatus() (ret Status) {
 	statusChan <- Status(0)
-	ret = <- statusChan
+	ret = <-statusChan
 	return
 }
 
-func monitorStatus(){
+func monitorStatus() {
 	var status Status = 0
-	for{
-		val := <- statusChan
-		switch val{
+	for {
+		val := <-statusChan
+		switch val {
 		case 0:
 			statusChan <- status
 		default:

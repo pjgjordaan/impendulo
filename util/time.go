@@ -29,18 +29,17 @@ func Date(miliseconds int64) string {
 	return GetTime(miliseconds).Format(layout)
 }
 
-
-//CalcTime converts a time string formatted as yyyymmddhhmmssmmm 
+//CalcTime converts a time string formatted as yyyymmddhhmmssmmm
 //to a time.Time.
-func CalcTime(timeStr string)(t time.Time, err error){
-	if len(timeStr) != 17{
-		err = fmt.Errorf("Invalid time string length %d for %s.", 
+func CalcTime(timeStr string) (t time.Time, err error) {
+	if len(timeStr) != 17 {
+		err = fmt.Errorf("Invalid time string length %d for %s.",
 			len(timeStr), timeStr)
 		return
 	}
 	year, err := strconv.Atoi(timeStr[:4])
-	if err != nil{
-		err = fmt.Errorf("Error %q reading year from %s.", 
+	if err != nil {
+		err = fmt.Errorf("Error %q reading year from %s.",
 			err, timeStr)
 		return
 	}
@@ -49,8 +48,8 @@ func CalcTime(timeStr string)(t time.Time, err error){
 		return
 	}
 	m, err := strconv.Atoi(timeStr[4:6])
-	if err != nil{
-		err = fmt.Errorf("Error %q reading month from %s.", 
+	if err != nil {
+		err = fmt.Errorf("Error %q reading month from %s.",
 			err, timeStr)
 		return
 	}
@@ -60,58 +59,58 @@ func CalcTime(timeStr string)(t time.Time, err error){
 	}
 	month := time.Month(m)
 	day, err := strconv.Atoi(timeStr[6:8])
-	if err != nil{
-		err = fmt.Errorf("Error %q reading day from %s.", 
+	if err != nil {
+		err = fmt.Errorf("Error %q reading day from %s.",
 			err, timeStr)
 		return
 	}
-	if day < 1 || day > 31{
+	if day < 1 || day > 31 {
 		err = fmt.Errorf("Invalid day %d.", day)
 		return
 	}
 	hour, err := strconv.Atoi(timeStr[8:10])
-	if err != nil{
-		err = fmt.Errorf("Error %q reading hour from %s.", 
-			err, timeStr) 
+	if err != nil {
+		err = fmt.Errorf("Error %q reading hour from %s.",
+			err, timeStr)
 		return
 	}
-	if hour < 0 || hour > 24{
+	if hour < 0 || hour > 24 {
 		err = fmt.Errorf("Invalid hour %d.", hour)
 		return
 	}
 	minutes, err := strconv.Atoi(timeStr[10:12])
-	if err != nil{
-		err = fmt.Errorf("Error %q reading minutes from %s.", 
+	if err != nil {
+		err = fmt.Errorf("Error %q reading minutes from %s.",
 			err, timeStr)
 		return
 	}
-	if minutes < 0 || minutes > 60{
+	if minutes < 0 || minutes > 60 {
 		err = fmt.Errorf("Invalid minutes %d.", minutes)
 		return
 	}
 	seconds, err := strconv.Atoi(timeStr[12:14])
-	if err != nil{
-		err = fmt.Errorf("Error %q reading seconds from %s.", 
+	if err != nil {
+		err = fmt.Errorf("Error %q reading seconds from %s.",
 			err, timeStr)
 		return
 	}
-	if seconds < 0 || seconds > 60{
+	if seconds < 0 || seconds > 60 {
 		err = fmt.Errorf("Invalid seconds %d.", seconds)
 		return
 	}
 	miliseconds, err := strconv.Atoi(timeStr[14:17])
-	if err != nil{
-		err = fmt.Errorf("Error %q reading miliseconds from %s.", 
+	if err != nil {
+		err = fmt.Errorf("Error %q reading miliseconds from %s.",
 			err, timeStr)
 		return
 	}
-	if miliseconds < 0 || miliseconds > 1000{
+	if miliseconds < 0 || miliseconds > 1000 {
 		err = fmt.Errorf("Invalid miliseconds %d.", miliseconds)
 		return
 	}
 	nanos := miliseconds * 1000000
 	loc, err := time.LoadLocation("Local")
-	if err != nil{
+	if err != nil {
 		err = fmt.Errorf("Error %q loading location.", err)
 		return
 	}
