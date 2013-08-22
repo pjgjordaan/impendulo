@@ -2,6 +2,7 @@ package testing;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.PrintStream;
 import java.security.InvalidParameterException;
 
 import org.apache.tools.ant.Project;
@@ -15,6 +16,10 @@ public class TestRunner {
 		if(args.length != 2){
 			throw new InvalidParameterException("Expected 2 arguments.");
 		}
+		PrintStream tOut = System.out;
+		PrintStream tErr = System.out;
+		System.setOut(new PrintStream(new NullOutputStream()));
+		System.setErr(new PrintStream(new NullOutputStream()));
 		String testName = args[0];
 		String dataLocation = args[1];
 		System.setProperty("data.location", dataLocation);
@@ -42,6 +47,8 @@ public class TestRunner {
 			String name  = test.getTodir()+File.separator+test.getOutfile()+".xml";
 			FileInputStream fis = new FileInputStream(new File(name));
 			int read = 0;
+			System.setOut(tOut);
+			System.setErr(tErr);
 			while((read  = fis.read(buffer)) != -1){
 				System.out.println(new String(buffer, 0, read));
 			}

@@ -30,67 +30,62 @@
   {{end}}
 </ul>
 <div class="row">
-<div class="col-md-4">  
-  <h3>{{ $fileName}}</h3>
-</div>
+  <div class="col-md-4">  
+    <h2>{{ $fileName}} <small>- {{$resultName}}</small></h2>
+  </div>
   <div class="col-md-5">
     {{template "pager" .}}
   </div>
   <div class="col-md-3">
-    <form class="form-inline form-padded" action="displayresult" method="get">
-      <select class="input-mini" name="currentIndex">
-	{{range $index, $file := .files}} 
-	{{$dispIndex := sum $index 1}}
-	{{if $curFile.Same $file}}
-	<option selected value="{{$index}}">{{$dispIndex}}</option>
-	{{else}}
-	<option value="{{$index}}">{{$dispIndex}}</option>
-	{{end}}
-	{{end}}
-      </select>
-      <select class="input-mini" name="nextIndex">
-	{{range $index, $file := .files}} 
-	{{$dispIndex := sum $index 1}}
-	{{if $nextFile.Same $file}}
-	<option selected value="{{$index}}">{{$dispIndex}}</option>
-	{{else}}
-	<option value="{{$index}}">{{$dispIndex}}</option>
-	{{end}}
-	{{end}}
-      </select>        
-      <input type="hidden" name="filename" value="{{$fileName}}"/>
-      <button type="submit" class="btn btn-default">
-	Compare <span class="glyphicon glyphicon-arrow-right"></span>
-      </button>
+      <form role="form" class="form-padded form-inline" action="displayresult" method="get">
+	<div class="form-group">
+	  <label class="sr-only" for="currentIndex">First File</label>
+	  <select class="form-control" name="currentIndex" id="currentIndex">
+	    {{range $index, $file := .files}} 
+	    {{$dispIndex := sum $index 1}}
+	    {{if $curFile.Same $file}}
+	    <option selected value="{{$index}}">{{$dispIndex}}</option>
+	    {{else}}
+	    <option value="{{$index}}">{{$dispIndex}}</option>
+	    {{end}}
+	    {{end}}
+	  </select>
+	</div>
+	<div class="form-group">
+	  <label class="sr-only" for="nextIndex">Second File</label>
+	  <select class="form-control" name="nextIndex" id="nextIndex">
+	    {{range $index, $file := .files}} 
+	    {{$dispIndex := sum $index 1}}
+	    {{if equal $neighbour $index}}
+	    <option selected value="{{$index}}">{{$dispIndex}}</option>
+	    {{else}}
+	    <option value="{{$index}}">{{$dispIndex}}</option>
+	    {{end}}
+	    {{end}}
+	  </select>
+	</div>
+	<input type="hidden" name="filename" value="{{$fileName}}"/>
+	<button type="submit" class="btn btn-default">
+	  <span class="glyphicon glyphicon-arrow-right"></span>
+	</button>
     </form>
   </div>
 </div>
 {{if isCode $resultName}}
-<div class="accordion" id="codeaccordion">
-  <div class="accordion-group">
-    <div class="accordion-heading">
-      <a class="accordion-toggle" data-toggle="collapse" data-parent="#codeaccordion" href="#code">Code</a>
-    </div>
-    <div id="code" class="accordion-body collapse">
-      <div class="accordion-inner">
-	<div class="row">
-	  <div class="col-md-6">
-	    {{template "fileInfo" $curFile}}
-	    {{template "currentResult" .curResult}}
-	  </div>
-	  <div class="col-md-6">
-	    {{template "fileInfo" $nextFile}}
-	    {{template "nextResult" .nextResult}}
-	  </div>
-	</div>
-      </div>
-    </div>
+<div class="row">
+  <div class="col-md-6">
+    {{template "fileInfo" $curFile}}
   </div>
-  <div class="accordion-group">
-    <div class="accordion-heading">
+  <div class="col-md-6">
+    {{template "fileInfo" $nextFile}}
+  </div>
+</div>
+<div class="panel-group" id="codeaccordion">
+  <div class="panel panel-default">
+    <div class="panel-heading">
       <a class="accordion-toggle" data-toggle="collapse" data-parent="#codeaccordion" href="#diff">Diff</a>
     </div>
-    <div id="diff" class="accordion-body collapse">
+    <div id="diff" class="panel-collapse collapse in">
       <div class="accordion-inner">
 	{{$diff := diff .curResult .nextResult}}
 	{{$cur := sum $curFile.Num 1}}
@@ -102,9 +97,25 @@
       </div>
     </div>
   </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <a class="accordion-toggle" data-toggle="collapse" data-parent="#codeaccordion" href="#code">Code</a>
+    </div>
+    <div id="code" class="panel-collapse collapse">
+      <div class="accordion-inner">
+	<div class="row">
+	  <div class="col-md-6">
+	    {{template "currentResult" .curResult}}
+	  </div>
+	  <div class="col-md-6">
+	    {{template "nextResult" .nextResult}}
+	  </div>
+	</div>
+      </div>
+    </div>
+  </div>
 </div>
 {{else}}
-<h4 id="result">{{$resultName}}</h4>
 <div class="row">
   <div class="col-md-6">
     {{template "fileInfo" $curFile}}

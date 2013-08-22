@@ -28,40 +28,48 @@
   {{end}}
 </ul>
 <div class="row">
-  <div class="col-md-4">
-    <h3>{{ $fileName}}</h3>
+  <div class="col-md-3">
+    <h2>{{ $fileName}}</h2>
   </div>
-    <div class="col-md-5">
+    <div class="col-md-6">
     {{template "pager" .}}
     </div>
     <div class="col-md-3">
-      <form class="form-inline form-padded" action="displayresult" method="get">
-	<select class="input-mini" name="currentIndex">
-	  {{range $index, $file := .files}} 
-	  {{$dispIndex := sum $index 1}}
-	  {{if $curFile.Same $file}}
-	  <option selected value="{{$index}}">{{$dispIndex}}</option>
-	  {{else}}
-	  <option value="{{$index}}">{{$dispIndex}}</option>
-	  {{end}}
-	  {{end}}
-	</select>
-	<select class="input-mini" name="nextIndex">
-	  {{range $index, $file := .files}} 
-	  {{$dispIndex := sum $index 1}}
-	  {{if equal $dispIndex 1}}
-	  <option selected value="{{$index}}">{{$dispIndex}}</option>
-	  {{else}}
-	  <option value="{{$index}}">{{$dispIndex}}</option>
-	  {{end}}
-	  {{end}}
-	</select>        
+      <form role="form" class="form-padded form-inline" action="displayresult" method="get">
+	<div class="form-group">
+	  <label class="sr-only" for="currentIndex">First File</label>
+	  <select class="form-control" name="currentIndex" id="currentIndex">
+	    {{range $index, $file := .files}} 
+	    {{$dispIndex := sum $index 1}}
+	    {{if $curFile.Same $file}}
+	    <option selected value="{{$index}}">{{$dispIndex}}</option>
+	    {{else}}
+	    <option value="{{$index}}">{{$dispIndex}}</option>
+	    {{end}}
+	    {{end}}
+	  </select>
+	</div>
+	<div class="form-group">
+	  <label class="sr-only" for="nextIndex">Second File</label>
+	  <select class="form-control" name="nextIndex" id="nextIndex">
+	    {{range $index, $file := .files}} 
+	    {{$dispIndex := sum $index 1}}
+	    {{if equal $index 0}}
+	    <option selected value="{{$index}}">{{$dispIndex}}</option>
+	    {{else}}
+	    <option value="{{$index}}">{{$dispIndex}}</option>
+	    {{end}}
+	    {{end}}
+	  </select>
+	</div>
 	<input type="hidden" name="filename" value="{{$fileName}}"/>
-	<button type="submit" class="btn btn-default">Compare</button>
+	<button type="submit" class="btn btn-default">
+	   <span class="glyphicon glyphicon-arrow-right"></span>
+	</button>
       </form>
     </div>
   </div>
-<h4 id="result">{{$resultName}}</h4>
+<h3>{{$resultName}}</h3>
 {{template "fileInfo" $curFile}}
 {{template "currentResult" .curResult}}
 {{end}}

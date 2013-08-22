@@ -35,26 +35,29 @@ var funcs = template.FuncMap{
 	"adjustment":      adjustment,
 }
 
+const PAGER_SIZE = 6
+
 func slice(files []*project.File, selected int) (ret []*project.File) {
-	if len(files) < 10 {
+	if len(files) < PAGER_SIZE {
 		ret = files
-	} else if selected < 5 {
+	} else if selected < PAGER_SIZE/2 {
 		ret = files[:10]
-	} else if selected+5 >= len(files) {
-		ret = files[len(files)-10:]
+	} else if selected+PAGER_SIZE/2 >= len(files) {
+		ret = files[len(files)-PAGER_SIZE:]
 	} else {
-		ret = files[selected-5 : selected+5]
+		ret = files[selected-PAGER_SIZE/2: 
+			selected+PAGER_SIZE/2]
 	}
 	return
 }
 
 func adjustment(files []*project.File, selected int) (ret int) {
-	if len(files) < 10 || selected < 5 {
+	if len(files) < PAGER_SIZE || selected < PAGER_SIZE/2 {
 		ret = 0
-	} else if selected+5 >= len(files) {
-		ret = len(files) - 10
+	} else if selected+PAGER_SIZE/2 >= len(files) {
+		ret = len(files) - PAGER_SIZE
 	} else {
-		ret = selected - 5
+		ret = selected - PAGER_SIZE/2
 	}
 	return
 }

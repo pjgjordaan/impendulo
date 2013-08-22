@@ -87,7 +87,7 @@ func loadJUnitGraphData(testName string, files []*project.File) (GraphData, floa
 }
 
 func loadJPFGraphData(files []*project.File) (GraphData, float64) {
-	graphData := make(GraphData, 3)
+	graphData := make(GraphData, 4)
 	max := -1.0
 	for _, f := range files {
 		result, err := db.GetJPFResult(

@@ -1,22 +1,30 @@
 {{ define "nextResult" }}
 {{$id := .Id.Hex}}
-<div class="accordion" id="pmdaccordion{{$id}}">
+<div class="panel-group" id="pmdaccordion{{$id}}">
   {{range .Files}}
   {{$fileaddress := address .}}
-  <div class="accordion-group">
-    <div class="accordion-heading">
-      <a class="accordion-toggle" data-toggle="collapse" data-parent="#pmdaccordion{{$id}}" href="#File{{$fileaddress}}{{$id}}">{{.Name}}</a>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <a class="accordion-toggle" data-toggle="collapse"
+  data-parent="#pmdaccordion{{$id}}"
+  href="#File{{$fileaddress}}{{$id}}">
+	<h4>{{.Name}}</h4>
+      </a>
     </div>
-    <div id="File{{$fileaddress}}{{$id}}" class="accordion-body collapse">
+    <div id="File{{$fileaddress}}{{$id}}" class="panel-collapse collapse">
       <div class="accordion-inner">
-	<div class="accordion" id="violations{{$fileaddress}}{{$id}}">
+	<div class="panel-group" id="violations{{$fileaddress}}{{$id}}">
 	  {{range .Violations}}
 	  {{$violationaddress := address .}}
-	  <div class="accordion-group">
-	    <div class="accordion-heading">
-	      <a class="accordion-toggle" data-toggle="collapse" data-parent="#violations{{$fileaddress}}{{$id}}" href="#Violation{{$violationaddress}}{{$id}}">{{.Rule}}</a>
+	  <div class="panel panel-default">
+	    <div class="panel-heading">
+	      <a class="accordion-toggle" data-toggle="collapse"
+	  data-parent="#violations{{$fileaddress}}{{$id}}"
+	  href="#Violation{{$violationaddress}}{{$id}}">
+		<h5 class="text-center">{{.Rule}}</h5>
+	      </a>
 	    </div>
-	    <div id="Violation{{$violationaddress}}{{$id}}" class="accordion-body collapse">
+	    <div id="Violation{{$violationaddress}}{{$id}}" class="panel-collapse collapse">
 	      <div class="accordion-inner">
 		<dl class="dl-horizontal">
 		  <dt>Location</dt><dd>Line {{.Begin}} to {{.End}}</dd>

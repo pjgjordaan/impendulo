@@ -1,14 +1,18 @@
 {{define "nextResult"}}
 {{$address := address .}}
-<div class="accordion" id="summaryaccordion{{$address}}">
+<div class="panel-group" id="summaryaccordion{{$address}}">
   {{range . }}
-  <div class="accordion-group">
-    <div class="accordion-heading">
-      <a class="accordion-toggle" data-toggle="collapse" data-parent="#summaryaccordion{{$address}}" href="#{{.Name}}{{$address}}">{{.Name}}</a>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <a class="accordion-toggle" data-toggle="collapse"
+	 data-parent="#summaryaccordion{{$address}}"
+	 href="#{{.Name}}{{$address}}">
+	<h4>{{.Name}}</h4>
+      </a>
     </div>
-    <div id="{{.Name}}{{$address}}" class="accordion-body collapse">
+    <div id="{{.Name}}{{$address}}" class="panel-collapse collapse">
       <div class="accordion-inner">
-	<p>{{setBreaks .Body}}</p>
+	<p class="text-center">{{setBreaks .Body}}</p>
       </div>
     </div>
   </div>

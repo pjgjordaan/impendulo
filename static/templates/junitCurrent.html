@@ -11,36 +11,49 @@
 {{if and $errors $failures}}
 <p class="text-success">Passed all tests.</p>
 {{else}}
-<div class="accordion" id="junitaccordion{{$id}}">
-  <div class="accordion-group">
-    <div class="accordion-heading">
-      <a class="accordion-toggle" data-toggle="collapse" data-parent="#junitaccordion{{$id}}" href="#Failures{{$id}}">Failures</a>
+<div class="panel-group" id="junitaccordion{{$id}}">
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <a class="accordion-toggle" data-toggle="collapse"
+	 data-parent="#junitaccordion{{$id}}" href="#Failures{{$id}}">
+	<h4>Failures<h4>
+      </a>
     </div>
-    <div id="Failures{{$id}}" class="accordion-body collapse">
+    <div id="Failures{{$id}}" class="panel-collapse collapse in">
       <div class="accordion-inner">
-	<div class="accordion" id="junitresults{{$id}}">
+	<div class="panel-group" id="junitresults{{$id}}">
 	  {{range .Results}}
 	  {{$resultaddress := address .}}
 	  {{if .Fail.IsFailure}}
-	  <div class="accordion-group">
-	    <div class="accordion-heading">
-	      <a class="accordion-toggle" data-toggle="collapse" data-parent="#junitresults{{$id}}" href="#Result{{$resultaddress}}{{$id}}">{{base .Name}}</a>
+	  <div class="panel panel-default">
+	    <div class="panel-heading">
+	      <a class="accordion-toggle" data-toggle="collapse"
+	  data-parent="#junitresults{{$id}}" href="#Result{{$resultaddress}}{{$id}}">
+		<h5 class="text-center">{{base .Name}}</h5>
+	      </a>
 	    </div>
-	    <div id="Result{{$resultaddress}}{{$id}}" class="accordion-body collapse">
+	    <div id="Result{{$resultaddress}}{{$id}}" class="panel-collapse collapse">
 	      <div class="accordion-inner">
 		<dl class="dl-horizontal">
 		  <dt>Time</dt><dd>{{.Time}}</dd>
 		  <dt>Message</dt><dd>{{.Fail.Message}}</dd>
 		  <dt>Type</dt><dd>{{.Fail.Type}}</dd>
 	  	</dl>
-		<div class="accordion" id="traceaccordion{{$resultaddress}}{{$id}}">
-		  <div class="accordion-group">
-		    <div class="accordion-heading">
-		      <a class="accordion-toggle" data-toggle="collapse" data-parent="#traceaccordion{{$resultaddress}}{{$id}}" href="#Trace{{$resultaddress}}{{$id}}">Trace</a>
+		<div class="panel-group" id="traceaccordion{{$resultaddress}}{{$id}}">
+		  <div class="panel panel-default">
+		    <div class="panel-heading">
+		      <a class="accordion-toggle"
+			 data-toggle="collapse"
+			 data-parent="#traceaccordion{{$resultaddress}}{{$id}}"
+			 href="#Trace{{$resultaddress}}{{$id}}">
+			<h6>Trace</h6>
+		      </a>
 		    </div>
-		    <div id="Trace{{$resultaddress}}{{$id}}" class="accordion-body collapse">
+		    <div id="Trace{{$resultaddress}}{{$id}}" class="panel-collapse collapse">
 		      <div class="accordion-inner">
-			<p class="text-error">{{setBreaks .Fail.Value}}</p>
+			<p class="text-error">
+			  {{setBreaks .Fail.Value}}
+			</p>
 		      </div>
 		    </div>
 		  </div>
