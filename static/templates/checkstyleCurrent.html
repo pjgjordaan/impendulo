@@ -2,6 +2,8 @@
 {{$id := .Id.Hex}}
 <div class="panel-group" id="checkstyleaccordion{{$id}}">
   {{range .Files}}
+  {{if equal (len .Errors) 0}}
+  {{else}}
   {{$fileaddress := address .}}
   <div class="panel panel-default">
     <div class="panel-heading">
@@ -39,6 +41,7 @@
       </div>
     </div>
   </div>
+  {{end}}
   {{end}}
 </div>
 {{end}}

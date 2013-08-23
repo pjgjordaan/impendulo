@@ -5,14 +5,16 @@ import (
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
+	"strings"
 )
 
 type PMD struct {
 	cmd string
+	rules string
 }
 
-func New() *PMD {
-	return &PMD{config.GetConfig(config.PMD)}
+func New(rules []string) *PMD {
+	return &PMD{config.GetConfig(config.PMD), strings.Join(rules, ",")}
 }
 
 func (this *PMD) GetLang() string {
@@ -23,16 +25,21 @@ func (this *PMD) GetName() string {
 	return NAME
 }
 
-const RULES = "java-basic,java-braces,java-clone,java-codesize,java-comments," +
-	"java-controversial,java-design,java-empty,java-finalizers,java-imports," +
-	"java-j2ee,java-javabeans,java-junit,java-logging-jakarta-commons," +
-	"java-logging-java,java-migrating,java-naming,java-optimizations," +
-	"java-strictexception,java-strings,java-sunsecure,java-typeresolution," +
-	"java-unnecessary,java-unusedcode"
+func GetRules()[]string{
+	return []string{
+		"java-basic", "java-braces", "java-clone", "java-codesize",
+		"java-comments", "java-controversial", "java-design", "java-empty",
+		"java-finalizers", "java-imports", "java-j2ee", "java-javabeans", 
+		"java-junit", "java-logging-jakarta-commons", "java-logging-java",
+		"java-migrating", "java-naming", "java-optimizations",
+		"java-strictexception", "java-strings", "java-sunsecure", "java-typeresolution",
+		"java-unnecessary", "java-unusedcode",
+	}
+}
 
 func (this *PMD) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	args := []string{this.cmd, config.PMD, "-f", "xml", "-stress",
-		"-shortnames", "-rulesets", RULES, "-dir", ti.Dir}
+		"-shortnames", "-rulesets", this.rules, "-dir", ti.Dir}
 	execRes := tool.RunCommand(args, nil)
 	if execRes.HasStdOut() {
 		res, err = NewResult(fileId, execRes.StdOut)

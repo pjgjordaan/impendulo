@@ -4,13 +4,9 @@
 {{$fileName := .curFile.Name}}
 {{$sliced := slice .files $selected}}
 {{$adjustment := adjustment .files $selected}}
-<ul id="filePager" class="pagination">
-  {{if (equal $selected 0)}}
-  <li class="disabled"><a href="#">&laquo;</a></li>
-  {{else}}
+<ul id="filePager" class="pagination pagination-right">
   {{$prev := sum $selected -1}}
   <li><a href="displayresult?filename={{$fileName}}&currentIndex={{$prev}}&nextIndex={{$selected}}">&laquo;</a></li>
-  {{end}}
   {{range $index, $file := $sliced}}
   {{$actual := sum $index $adjustment}}
   {{$actualNext := sum $actual 1}}

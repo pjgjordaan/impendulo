@@ -10,33 +10,57 @@
   <li><a href="homeview">Home</a></li>
   {{if .ctx.Browse.IsUser}}
   <li><a href="userresult">Users</a></li>
-  <li><a href="getsubmissions?id={{.ctx.Browse.Uid}}&type=user">Submissions</a></li>
+  <li class="dropdown">
+    <a class="dropdown-toggle" data-toggle="dropdown">
+      User Submissions <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu" role="menu">
+      {{range .ctx.Users}}
+      <li><a href="getsubmissions?id={{.Name}}&type=user">{{.Name}}</a></li>
+      {{end}}
+    </ul>
+  </li>
+  <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">{{projectName .ctx.Browse.Pid}} Submission</a></li>
   {{else}}
   <li><a href="projectresult">Projects</a></li>
-  <li><a href="getsubmissions?id={{.ctx.Browse.Pid}}&type=project">Submissions</a></li>
+  <li class="dropdown">
+    <a class="dropdown-toggle" data-toggle="dropdown">
+      Project Submissions <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu" role="menu">
+      {{range .ctx.Projects}}
+      <li><a href="getsubmissions?id={{.Id.Hex}}&type=project">{{.Name}}</a></li>
+      {{end}}
+    </ul>
+  </li>
+  <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">{{.ctx.Browse.Uid}}'s Submission</a></li>
   {{end}}
-  <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">Snapshots</a></li>
-  <li class="active">Analysis</li>
+  <li class="dropdown">
+    <a class="dropdown-toggle" data-toggle="dropdown">
+      {{$resultName}} Analysis <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu" role="menu">
+      {{range $results}}  
+      <li>
+	<a href="displayresult?filename={{$curFile.Name}}&currentIndex={{$selected}}&nextIndex={{$neighbour}}&resultname={{.}}">
+	  {{.}}
+	</a>
+      </li>
+      {{end}}
+    </ul>
+  </li>
 </ul>
-<ul class="breadcrumb">
-  {{range $results}}
-  {{if equal . $resultName}}
-  <li class="active">{{$resultName}}</li>
-  {{else}}
-  <li><a href="displayresult?filename={{$curFile.Name}}&currentIndex={{$selected}}&nextIndex={{$neighbour}}&resultname={{.}}">
-      {{.}}
-  </a></li>
-  {{end}}
-  {{end}}
-</ul>
+<h2 class="text-center">
+  <small>user</small> {{.ctx.Browse.Uid}} 
+  <small>project</small> {{projectName .ctx.Browse.Pid}}
+  <small>file</small> {{ $fileName}} 
+  <small>tool</small> {{$resultName}}
+</h2>
 <div class="row">
-  <div class="col-md-4">  
-    <h2>{{ $fileName}} <small>- {{$resultName}}</small></h2>
-  </div>
-  <div class="col-md-5">
+  <div class="col-md-8">
     {{template "pager" .}}
   </div>
-  <div class="col-md-3">
+  <div class="col-md-4">
       <form role="form" class="form-padded form-inline" action="displayresult" method="get">
 	<div class="form-group">
 	  <label class="sr-only" for="currentIndex">First File</label>
@@ -118,11 +142,21 @@
 {{else}}
 <div class="row">
   <div class="col-md-6">
-    {{template "fileInfo" $curFile}}
+    <dl class="dl-horizontal text-info">
+      <dt>File Number</dt>
+      <dd>{{sum $selected 1}}</dd>
+      <dt>Date</dt>
+      <dd>{{date $curFile.Time}}</dd>
+    </dl>
     {{template "currentResult" .curResult}}
   </div>
   <div class="col-md-6">
-    {{template "fileInfo" $nextFile}}
+    <dl class="dl-horizontal text-info">
+      <dt>File Number</dt>
+      <dd>{{sum $neighbour 1}}</dd>
+      <dt>Date</dt>
+      <dd>{{date $nextFile.Time}}</dd>
+    </dl>
     {{template "nextResult" .nextResult}}
   </div>
 </div>

@@ -8,6 +8,7 @@ import (
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"io/ioutil"
@@ -143,7 +144,7 @@ func AddProject(req *http.Request, ctx *Context) (err error) {
 	if err != nil {
 		return
 	}
-	p := project.NewProject(name, username, lang, skeletonBytes)
+	p := project.NewProject(name, username, lang, pmd.GetRules(), skeletonBytes)
 	err = db.AddProject(p)
 	return
 }
@@ -254,16 +255,13 @@ func RetrieveFileInfo(req *http.Request, ctx *Context) (ret []*db.FileInfo, err 
 	if err != nil {
 		return
 	}
-	if ctx.Browse.IsUser {
-		//Load project id if browsing in user view.
-		var sub *project.Submission
-		sub, err = db.GetSubmission(bson.M{project.ID: subId},
-			bson.M{project.PROJECT_ID: 1})
-		if err != nil {
-			return
-		}
-		ctx.Browse.Pid = sub.ProjectId.Hex()
+	sub, err := db.GetSubmission(bson.M{project.ID: subId},
+		bson.M{project.PROJECT_ID: 1, project.USER: 1})
+	if err != nil {
+		return
 	}
+	ctx.Browse.Pid = sub.ProjectId.Hex()
+	ctx.Browse.Uid = sub.User
 	return
 }
 
@@ -340,14 +338,11 @@ func LoadSkeleton(req *http.Request) (path string, err error) {
 }
 
 //GetInt retrieves an integer value from a request form.
-func GetInt(req *http.Request, name string, maxSize int) (found int, err error) {
+func GetInt(req *http.Request, name string) (found int, err error) {
 	iStr := req.FormValue(name)
 	found, err = strconv.Atoi(iStr)
 	if err != nil {
 		return
-	}
-	if found > maxSize {
-		err = fmt.Errorf("Integer size %v too big.", found)
 	}
 	return
 }
@@ -428,13 +423,25 @@ func getFile(id bson.ObjectId) (file *project.File, err error) {
 	return
 }
 
-func getSelected(req *http.Request, maxSize int) (int, error) {
-	return GetInt(req, "currentIndex", maxSize)
+func getIndex(req *http.Request, name string, maxSize int) (ret int, err error) {
+	ret, err = GetInt(req, name)
+	if err != nil{
+		return
+	}
+	if ret > maxSize{
+		ret = 0
+	} else if ret < 0{
+		ret = maxSize
+	}
+	return
 }
 
-func getNeighbour(req *http.Request, maxSize int) (int, bool) {
-	val, err := GetInt(req, "nextIndex", maxSize)
-	return val, err == nil
+func getSelected(req *http.Request, maxSize int) (int, error){
+	return getIndex(req, "currentIndex", maxSize)
+}
+
+func getNeighbour(req *http.Request, maxSize int) (int, error) {
+	return getIndex(req, "nextIndex", maxSize)
 }
 
 func projectName(idStr string) (name string, err error) {

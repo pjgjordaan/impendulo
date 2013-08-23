@@ -3,13 +3,34 @@
   <li><a href="homeview">Home</a></li>  
   {{if .ctx.Browse.IsUser}}
   <li><a href="userresult">Users</a></li>
-  <li><a href="getsubmissions?id={{.ctx.Browse.Uid}}&type=user">Submissions</a></li>
+  <li class="dropdown">
+    <a class="dropdown-toggle" data-toggle="dropdown">
+      User Submissions <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu" role="menu">
+      {{range .ctx.Users}}
+      <li><a href="getsubmissions?id={{.Name}}&type=user">{{.Name}}</a></li>
+      {{end}}
+    </ul>
+  </li>
+  <li class="active">{{projectName .ctx.Browse.Pid}} Submission</li>
   {{else}}
   <li><a href="projectresult">Projects</a></li>
-  <li><a href="getsubmissions?id={{.ctx.Browse.Pid}}&type=project">Submissions</a></li>
+  <li class="dropdown">
+    <a class="dropdown-toggle" data-toggle="dropdown">
+      Project Submissions <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu" role="menu">
+      {{range .ctx.Projects}}
+      <li><a href="getsubmissions?id={{.Id.Hex}}&type=project">{{.Name}}</a></li>
+      {{end}}
+    </ul>
+  </li>
+  <li class="active">{{.ctx.Browse.Uid}}'s Submission</li>
   {{end}}
-  <li class="active">Files</li>
 </ul>
+<h2 class="text-center"><small>user</small> {{.ctx.Browse.Uid}} <br>
+  <small>project</small> {{projectName .ctx.Browse.Pid}}</h2>
 <ul class="list-unstyled">
   {{range .fileinfo}}
   <li>

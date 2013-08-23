@@ -217,6 +217,7 @@ func (this *ProcHelper) Handle(fileQueue *list.List) {
 //Processor is used to process individual submissions.
 type Processor struct {
 	sub     *project.Submission
+	project     *project.Project
 	tests   []*TestRunner
 	rootDir string
 	srcDir  string
@@ -229,9 +230,22 @@ func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
 	if err != nil {
 		return
 	}
+	matcher := bson.M{project.ID: sub.ProjectId}
+	p, err := db.GetProject(matcher, nil)
+	if err != nil{
+		return
+	}
+	if p.PMDRules == nil{
+		p.PMDRules = pmd.GetRules()
+		err = db.Update(db.PROJECTS, bson.M{project.ID: p.Id}, p)
+		if err != nil{
+			return
+		}
+	}
 	dir := filepath.Join(os.TempDir(), sub.Id.Hex())
 	proc = &Processor{
 		sub:     sub,
+		project: p,
 		rootDir: dir,
 		srcDir:  filepath.Join(dir, "src"),
 		toolDir: filepath.Join(dir, "tools"),
@@ -300,7 +314,10 @@ func (this *Processor) ProcessFile(file *project.File) (err error) {
 	case project.ARCHIVE:
 		err = this.Extract(file)
 	case project.SRC:
-		analyser := &Analyser{proc: this, file: file}
+		analyser := &Analyser{
+			proc: this, 
+			file: file,
+		}
 		err = analyser.Eval()
 	}
 	util.Log("Processed file:", file, err)
@@ -396,12 +413,8 @@ func (this *Analyser) Eval() error {
 //buildTarget saves a file to filesystem.
 //It returns file info used by tools & tests.
 func (this *Analyser) buildTarget() error {
-	matcher := bson.M{project.ID: this.proc.sub.ProjectId}
-	p, err := db.GetProject(matcher, nil)
-	if err != nil {
-		return err
-	}
-	this.target = tool.NewTarget(this.file.Name, p.Lang, this.file.Package, this.proc.srcDir)
+	this.target = tool.NewTarget(this.file.Name, 
+		this.proc.project.Lang, this.file.Package, this.proc.srcDir)
 	return util.SaveFile(this.target.FilePath(), this.file.Data)
 }
 
@@ -418,7 +431,7 @@ func (this *Analyser) compile() (bool, error) {
 
 //RunTools runs all available tools on a file, skipping previously run tools.
 func (this *Analyser) RunTools() {
-	tools := []tool.Tool{findbugs.New(), pmd.New(),
+	tools := []tool.Tool{findbugs.New(), pmd.New(this.proc.project.PMDRules),
 		jpf.New(this.proc.toolDir, this.proc.jpfPath),
 		checkstyle.New()}
 	for _, t := range tools {

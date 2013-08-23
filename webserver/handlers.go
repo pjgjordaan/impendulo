@@ -244,32 +244,29 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 	if err != nil {
 		return
 	}
-	res, err := GetResultData(ctx.Browse.Result, curFile.Id)
+	curRes, err := GetResultData(ctx.Browse.Result, curFile.Id)
 	if err != nil {
 		return
 	}
-	args = map[string]interface{}{"ctx": ctx, "files": files,
-		"selected": selected,
-		"curFile":  curFile, "curResult": res.GetData(),
-		"results": results}
-	neighbour, ok := getNeighbour(req, len(files)-1)
-	temps = []string{getNav(ctx), "fileInfo", res.Template(true)}
-	if !ok {
-		temps = append(temps, "singleResult", "singlePager")
+	neighbour, err := getNeighbour(req, len(files)-1)
+	if err != nil{
 		return
 	}
 	nextFile, err := getFile(files[neighbour].Id)
 	if err != nil {
 		return
 	}
-	res, err = GetResultData(ctx.Browse.Result, nextFile.Id)
+	nextRes, err := GetResultData(ctx.Browse.Result, nextFile.Id)
 	if err != nil {
 		return
 	}
-	args["nextFile"] = nextFile
-	args["nextResult"] = res.GetData()
-	args["neighbour"] = neighbour
-	temps = append(temps, "doubleResult", "doublePager", res.Template(false))
+	args = map[string]interface{}{"ctx": ctx, "files": files,
+		"selected": selected, "curFile":  curFile, 
+		"curResult": curRes.GetData(), "results": results, 
+		"nextFile": nextFile, "nextResult": nextRes.GetData(),
+		"neighbour": neighbour} 
+	temps = []string{getNav(ctx), "analysis", "pager", "fileInfo", 
+		curRes.Template(true), nextRes.Template(false)}
 	return
 }
 

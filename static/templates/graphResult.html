@@ -6,28 +6,52 @@
   <li><a href="homeview">Home</a></li>
   {{if .ctx.Browse.IsUser}}
   <li><a href="userresult">Users</a></li>
-  <li><a href="getsubmissions?id={{.ctx.Browse.Uid}}&type=user">Submissions</a></li>
+  <li class="dropdown">
+    <a class="dropdown-toggle" data-toggle="dropdown">
+      User Submissions <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu" role="menu">
+      {{range .ctx.Users}}
+      <li><a href="getsubmissions?id={{.Name}}&type=user">{{.Name}}</a></li>
+      {{end}}
+    </ul>
+  </li>
+  <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">{{projectName .ctx.Browse.Pid}} Submission</a></li>
   {{else}}
   <li><a href="projectresult">Projects</a></li>
-  <li><a href="getsubmissions?id={{.ctx.Browse.Pid}}&type=project">Submissions</a></li>
-  {{end}}
-  <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">Snapshots</a></li>
-  <li class="active">Graphs</li>
-</ul>
-<ul class="breadcrumb">
-  {{range $results}}
-  {{if equal . $resultName}}
-  <li class="active">{{$resultName}}</li>
-  {{else}}
-  <li>
-    <a href="displaygraph?filename={{$fileName}}&resultname={{.}}">
-      {{.}}
+  <li class="dropdown">
+    <a class="dropdown-toggle" data-toggle="dropdown">
+      Project Submissions <span class="caret"></span>
     </a>
+    <ul class="dropdown-menu" role="menu">
+      {{range .ctx.Projects}}
+      <li><a href="getsubmissions?id={{.Id.Hex}}&type=project">{{.Name}}</a></li>
+      {{end}}
+    </ul>
   </li>
+  <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">{{.ctx.Browse.Uid}}'s Submission</a></li>
   {{end}}
-  {{end}}
+  <li class="dropdown">
+    <a class="dropdown-toggle" data-toggle="dropdown">
+      {{$resultName}} Graph <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu" role="menu">
+      {{range $results}}  
+      <li>
+	<a href="displaygraph?filename={{$fileName}}&resultname={{.}}">
+	  {{.}}
+	</a>
+      </li>
+      {{end}}
+    </ul>
+  </li>
 </ul>
-<h2>{{$fileName}} - <small>{{$resultName}}</small></h2>
+<h2 class="text-center">
+  <small>user</small> {{.ctx.Browse.Uid}} 
+  <small>project</small> {{projectName .ctx.Browse.Pid}}
+  <small>file</small> {{ $fileName}} 
+  <small>tool</small> {{$resultName}}
+</h2>
 <script language="javascript" src="/static/js/jquery-2.0.2.min.js"></script>
 <script language="javascript" src="/static/js/d3.v3.min.js"></script>
 <script language="javascript" src="/static/js/rickshaw.js"></script>

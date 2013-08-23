@@ -12,6 +12,7 @@ type Project struct {
 	User     string        "user"
 	Lang     string        "lang"
 	Time     int64         "time"
+	PMDRules []string "pmdrules"
 	Skeleton []byte        "skeleton"
 }
 
@@ -25,7 +26,7 @@ func (this *Project) String() string {
 		"; Lang: " + this.Lang + "; Time: " + util.Date(this.Time)
 }
 
-func NewProject(name, user, lang string, data []byte) *Project {
+func NewProject(name, user, lang string, pmdRules []string, data []byte) *Project {
 	id := bson.NewObjectId()
-	return &Project{id, name, user, lang, util.CurMilis(), data}
+	return &Project{id, name, user, lang, util.CurMilis(), pmdRules, data}
 }
