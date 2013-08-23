@@ -4,7 +4,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/util"
 	"html/template"
 	"labix.org/v2/mgo/bson"
 	"math"
@@ -16,7 +15,6 @@ type CheckstyleResult struct {
 	Id     bson.ObjectId     "_id"
 	FileId bson.ObjectId     "fileid"
 	Name   string            "name"
-	Time   int64             "time"
 	Data   *CheckstyleReport "data"
 }
 
@@ -57,17 +55,22 @@ func (this *CheckstyleResult) Success() bool {
 	return true
 }
 
-func (this *CheckstyleResult) AddGraphData(max float64, graphData []map[string]interface{}) float64 {
+func (this *CheckstyleResult) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
 	if graphData[0] == nil {
 		graphData[0] = tool.CreateChart("Checkstyle Errors")
 	}
 	y := float64(this.Data.Errors)
-	tool.AddCoords(graphData[0], y)
+	tool.AddCoords(graphData[0], x, y)
 	return math.Max(max, y)
 }
 
+
 func NewResult(fileId bson.ObjectId, data []byte) (res *CheckstyleResult, err error) {
-	res = &CheckstyleResult{Id: bson.NewObjectId(), FileId: fileId, Name: NAME, Time: util.CurMilis()}
+	res = &CheckstyleResult{
+		Id: bson.NewObjectId(), 
+		FileId: fileId, 
+		Name: NAME, 
+	}
 	res.Data, err = genReport(res.Id, data)
 	return
 }

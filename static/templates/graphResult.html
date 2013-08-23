@@ -2,6 +2,7 @@
 {{$resultName := .ctx.Browse.Result}}
 {{$fileName := .fileName}}
 {{$results := .results}}
+{{$type := .type}}
 <ul class="breadcrumb">
   <li><a href="homeview">Home</a></li>
   {{if .ctx.Browse.IsUser}}
@@ -38,7 +39,7 @@
     <ul class="dropdown-menu" role="menu">
       {{range $results}}  
       <li>
-	<a href="displaygraph?filename={{$fileName}}&resultname={{.}}">
+	<a href="displaygraph?filename={{$fileName}}&resultname={{.}}&type=$type">
 	  {{.}}
 	</a>
       </li>
@@ -52,6 +53,28 @@
   <small>file</small> {{ $fileName}} 
   <small>tool</small> {{$resultName}}
 </h2>
+<div>
+<form role="form" class="center" action="displaygraph" method="get">
+  <label for="timeRadio" class="radio-inline">
+      <input type="radio" name="type" id="timeRadio" value="time" 
+	     {{if equal "time" $type}} checked{{end}}>
+      Time
+    </label>
+  <label for="numRadio" class="radio-inline">
+    <input type="radio" name="type" id="numRadio" value="num"
+	   {{if equal "num" $type}} checked{{end}}>
+      Normal
+  </label>
+  <input type="hidden" name="filename" value="{{$fileName}}"/>
+  <input type="hidden" name="resultname" value="{{$resultName}}"/>
+  <button type="submit" class="btn btn-default">
+    <span class="glyphicon glyphicon-arrow-right"></span>
+  </button>
+</form>
+</div>
+<div>
+<br>
+</div>
 <script language="javascript" src="/static/js/jquery-2.0.2.min.js"></script>
 <script language="javascript" src="/static/js/d3.v3.min.js"></script>
 <script language="javascript" src="/static/js/rickshaw.js"></script>
@@ -63,6 +86,6 @@
   <div class="x_axis" id="resultGraphX"></div> 
 </div>
 <script>
-  lineGraph({{.graphArgs}});
+  drawGraph({{.graphArgs}});
 </script>
 {{end}}

@@ -3,7 +3,6 @@ package javac
 import (
 	"bytes"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -13,7 +12,6 @@ type JavacResult struct {
 	Id     bson.ObjectId "_id"
 	FileId bson.ObjectId "fileid"
 	Name   string        "name"
-	Time   int64         "time"
 	Data   []byte        "data"
 }
 
@@ -62,7 +60,7 @@ func (this *JavacResult) Result() string {
 	return string(this.Data)
 }
 
-func (this *JavacResult) AddGraphData(max float64, graphData []map[string]interface{}) float64 {
+func (this *JavacResult) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
 	if graphData[0] == nil {
 		graphData[0] = tool.CreateChart("Compilation")
 	}
@@ -72,10 +70,10 @@ func (this *JavacResult) AddGraphData(max float64, graphData []map[string]interf
 	} else {
 		y = 0
 	}
-	tool.AddCoords(graphData[0], y)
+	tool.AddCoords(graphData[0], x, y)
 	return 1
 }
 
 func NewResult(fileId bson.ObjectId, data []byte) *JavacResult {
-	return &JavacResult{bson.NewObjectId(), fileId, NAME, util.CurMilis(), data}
+	return &JavacResult{bson.NewObjectId(), fileId, NAME, data}
 }

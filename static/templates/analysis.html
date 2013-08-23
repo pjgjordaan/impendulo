@@ -95,51 +95,6 @@
     </form>
   </div>
 </div>
-{{if isCode $resultName}}
-<div class="row">
-  <div class="col-md-6">
-    {{template "fileInfo" $curFile}}
-  </div>
-  <div class="col-md-6">
-    {{template "fileInfo" $nextFile}}
-  </div>
-</div>
-<div class="panel-group" id="codeaccordion">
-  <div class="panel panel-default">
-    <div class="panel-heading">
-      <a class="accordion-toggle" data-toggle="collapse" data-parent="#codeaccordion" href="#diff">Diff</a>
-    </div>
-    <div id="diff" class="panel-collapse collapse in">
-      <div class="accordion-inner">
-	{{$diff := diff .curResult .nextResult}}
-	{{$cur := sum $curFile.Num 1}}
-	{{$currHeader := createHeader $curFile $cur}}
-	{{$next := sum $nextFile.Num 1}}
-	{{$nextHeader := createHeader $nextFile $next}} 
-	{{$diff := diffHeader $diff $currHeader $nextHeader}}
-	{{diffHTML $diff}}
-      </div>
-    </div>
-  </div>
-  <div class="panel panel-default">
-    <div class="panel-heading">
-      <a class="accordion-toggle" data-toggle="collapse" data-parent="#codeaccordion" href="#code">Code</a>
-    </div>
-    <div id="code" class="panel-collapse collapse">
-      <div class="accordion-inner">
-	<div class="row">
-	  <div class="col-md-6">
-	    {{template "currentResult" .curResult}}
-	  </div>
-	  <div class="col-md-6">
-	    {{template "nextResult" .nextResult}}
-	  </div>
-	</div>
-      </div>
-    </div>
-  </div>
-</div>
-{{else}}
 <div class="row">
   <div class="col-md-6">
     <dl class="dl-horizontal text-info">
@@ -148,7 +103,6 @@
       <dt>Date</dt>
       <dd>{{date $curFile.Time}}</dd>
     </dl>
-    {{template "currentResult" .curResult}}
   </div>
   <div class="col-md-6">
     <dl class="dl-horizontal text-info">
@@ -157,8 +111,34 @@
       <dt>Date</dt>
       <dd>{{date $nextFile.Time}}</dd>
     </dl>
-    {{template "nextResult" .nextResult}}
+  </div>
+</div>
+{{if isCode $resultName}}
+<div class="panel-group" id="codeaccordion">
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <a class="accordion-toggle" data-toggle="collapse" data-parent="#codeaccordion" href="#diff">Diff</a>
+    </div>
+    <div id="diff" class="panel-collapse collapse in">
+      <div class="accordion-inner">
+	{{$diff := diff .curResult .nextResult}}
+	{{$cur := sum $selected 1}}
+	{{$currHeader := createHeader $curFile $cur}}
+	{{$next := sum $neighbour 1}}
+	{{$nextHeader := createHeader $nextFile $next}} 
+	{{$diff := diffHeader $diff $currHeader $nextHeader}}
+	{{diffHTML $diff}}
+      </div>
+    </div>
   </div>
 </div>
 {{end}}
+<div class="row">
+  <div class="col-md-6">
+    {{template "currentResult" .curResult}}
+  </div>
+  <div class="col-md-6">
+    {{template "nextResult" .nextResult}}
+  </div>
+</div>
 {{end}}

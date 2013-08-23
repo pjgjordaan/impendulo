@@ -301,9 +301,15 @@ func graphArgs(req *http.Request, ctx *Context) (args map[string]interface{}, er
 	if err != nil {
 		return
 	}
-	graphArgs := LoadResultGraphData(ctx.Browse.Result, files)
-	args = map[string]interface{}{"ctx": ctx, "files": files,
-		"results": results, "fileName": fileName, "graphArgs": graphArgs}
+	tipe, err := GetString(req, "type")
+	if err != nil {
+		return
+	}
+	graphArgs := LoadResultGraphData(ctx.Browse.Result, tipe, files)
+	args = map[string]interface{}{
+		"ctx": ctx, "files": files, "results": results, 
+		"fileName": fileName, "graphArgs": graphArgs, "type": tipe,
+	}
 	return
 }
 

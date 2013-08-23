@@ -16,15 +16,20 @@ const (
 
 //GraphResult is used to display result data in a graph.
 type GraphResult interface {
-	AddGraphData(curMax float64, graphData []map[string]interface{}) (newMax float64)
+	AddGraphData(curMax, x float64, graphData []map[string]interface{}) (newMax float64)
 	GetName() string
 }
 
-func AddCoords(chart map[string]interface{}, y float64) {
-	x := float64(len(chart["data"].([]map[string]float64)))
+func AddCoords(chart map[string]interface{}, x , y float64) {
+	if x < 0{
+		x = float64(len(chart["data"].([]map[string]float64)))
+	} else{
+		x = x/1000
+	}
 	chart["data"] = append(chart["data"].([]map[string]float64),
 		map[string]float64{"x": x, "y": y})
 }
+
 
 func CreateChart(name string) (chart map[string]interface{}) {
 	chart = make(map[string]interface{})

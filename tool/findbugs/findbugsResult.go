@@ -4,7 +4,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/util"
 	"html/template"
 	"labix.org/v2/mgo/bson"
 	"math"
@@ -18,7 +17,6 @@ type FindbugsResult struct {
 	Id     bson.ObjectId   "_id"
 	FileId bson.ObjectId   "fileid"
 	Name   string          "name"
-	Time   int64           "time"
 	Data   *FindbugsReport "data"
 }
 
@@ -58,7 +56,7 @@ func (this *FindbugsResult) Success() bool {
 	return true
 }
 
-func (this *FindbugsResult) AddGraphData(max float64, graphData []map[string]interface{}) float64 {
+func (this *FindbugsResult) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
 	if graphData[0] == nil {
 		graphData[0] = tool.CreateChart("Findbugs All")
 		graphData[1] = tool.CreateChart("Findbugs Priority 1")
@@ -69,10 +67,10 @@ func (this *FindbugsResult) AddGraphData(max float64, graphData []map[string]int
 	y1 := float64(this.Data.Summary.Priority1)
 	y2 := float64(this.Data.Summary.Priority2)
 	y3 := float64(this.Data.Summary.Priority3)
-	tool.AddCoords(graphData[0], yB)
-	tool.AddCoords(graphData[1], y1)
-	tool.AddCoords(graphData[2], y2)
-	tool.AddCoords(graphData[3], y3)
+	tool.AddCoords(graphData[0], x, yB)
+	tool.AddCoords(graphData[1], x, y1)
+	tool.AddCoords(graphData[2], x, y2)
+	tool.AddCoords(graphData[3], x, y3)
 	return math.Max(max, math.Max(y1, math.Max(y2, math.Max(y3, yB))))
 }
 
@@ -81,7 +79,7 @@ func NewResult(fileId bson.ObjectId, data []byte) (res *FindbugsResult, err erro
 		Id:     bson.NewObjectId(),
 		FileId: fileId,
 		Name:   NAME,
-		Time:   util.CurMilis()}
+	}
 	res.Data, err = genReport(res.Id, data)
 	return
 }

@@ -4,7 +4,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"math"
 	"strings"
@@ -16,7 +15,6 @@ type JUnitResult struct {
 	Id       bson.ObjectId "_id"
 	FileId   bson.ObjectId "fileid"
 	TestName string        "name"
-	Time     int64         "time"
 	Data     *TestSuite    "data"
 }
 
@@ -57,7 +55,7 @@ func (this *JUnitResult) Success() bool {
 	return this.Data.Success
 }
 
-func (this *JUnitResult) AddGraphData(max float64, graphData []map[string]interface{}) float64 {
+func (this *JUnitResult) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
 	if graphData[0] == nil {
 		graphData[0] = tool.CreateChart(this.GetName() + " Errors")
 		graphData[1] = tool.CreateChart(this.GetName() + " Failures")
@@ -66,14 +64,20 @@ func (this *JUnitResult) AddGraphData(max float64, graphData []map[string]interf
 	yE := float64(this.Data.Errors)
 	yF := float64(this.Data.Failures)
 	yS := float64(this.Data.Tests - this.Data.Failures - this.Data.Errors)
-	tool.AddCoords(graphData[0], yE)
-	tool.AddCoords(graphData[1], yF)
-	tool.AddCoords(graphData[2], yS)
+	tool.AddCoords(graphData[0], x, yE)
+	tool.AddCoords(graphData[1], x, yF)
+	tool.AddCoords(graphData[2], x, yS)
 	return math.Max(max, math.Max(yE, math.Max(yF, yS)))
 }
 
+
+
 func NewResult(fileId bson.ObjectId, name string, data []byte) (res *JUnitResult, err error) {
-	res = &JUnitResult{Id: bson.NewObjectId(), FileId: fileId, TestName: name, Time: util.CurMilis()}
+	res = &JUnitResult{
+		Id: bson.NewObjectId(), 
+		FileId: fileId, 
+		TestName: name,
+	}
 	res.Data, err = genReport(res.Id, data)
 	return
 }

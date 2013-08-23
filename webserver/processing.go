@@ -277,8 +277,8 @@ func RetrieveFiles(req *http.Request, ctx *Context) (ret []*project.File, err er
 	}
 	matcher := bson.M{project.SUBID: sid,
 		project.TYPE: project.SRC, project.NAME: name}
-	selector := bson.M{project.NUM: 1}
-	ret, err = db.GetFiles(matcher, selector, project.NUM)
+	selector := bson.M{project.TIME: 1}
+	ret, err = db.GetFiles(matcher, selector, project.TIME)
 	if err == nil && len(ret) == 0 {
 		err = fmt.Errorf("No files found with name %q.", name)
 	}
@@ -418,7 +418,7 @@ func GetResultData(resultName string, fileId bson.ObjectId) (res tool.DisplayRes
 }
 
 func getFile(id bson.ObjectId) (file *project.File, err error) {
-	selector := bson.M{project.NAME: 1, project.TIME: 1, project.NUM: 1}
+	selector := bson.M{project.NAME: 1, project.TIME: 1}
 	file, err = db.GetFile(bson.M{project.ID: id}, selector)
 	return
 }

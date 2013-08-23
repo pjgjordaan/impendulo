@@ -4,7 +4,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"math"
 	"strconv"
@@ -16,7 +15,6 @@ type JPFResult struct {
 	Id     bson.ObjectId "_id"
 	FileId bson.ObjectId "fileid"
 	Name   string        "name"
-	Time   int64         "time"
 	Data   *JPFReport    "data"
 }
 
@@ -56,7 +54,7 @@ func (this *JPFResult) Template(current bool) string {
 	}
 }
 
-func (this *JPFResult) AddGraphData(max float64, graphData []map[string]interface{}) float64 {
+func (this *JPFResult) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
 	if graphData[0] == nil {
 		graphData[0] = tool.CreateChart("JPF New States")
 		graphData[1] = tool.CreateChart("JPF Visited States")
@@ -67,16 +65,20 @@ func (this *JPFResult) AddGraphData(max float64, graphData []map[string]interfac
 	yV := float64(this.Data.Stats.VisitedStates)
 	yB := float64(this.Data.Stats.BacktrackedStates)
 	yE := float64(this.Data.Stats.EndStates)
-	tool.AddCoords(graphData[0], yN)
-	tool.AddCoords(graphData[1], yV)
-	tool.AddCoords(graphData[2], yB)
-	tool.AddCoords(graphData[3], yE)
+	tool.AddCoords(graphData[0], x, yN)
+	tool.AddCoords(graphData[1], x, yV)
+	tool.AddCoords(graphData[2], x, yB)
+	tool.AddCoords(graphData[3], x, yE)
 	return math.Max(max, math.Max(yN, math.Max(yV, math.Max(yB, yE))))
 }
 
 //NewResult
 func NewResult(fileId bson.ObjectId, data []byte) (res *JPFResult, err error) {
-	res = &JPFResult{Id: bson.NewObjectId(), FileId: fileId, Name: NAME, Time: util.CurMilis()}
+	res = &JPFResult{
+		Id: bson.NewObjectId(), 
+		FileId: fileId, 
+		Name: NAME,
+	}
 	res.Data, err = genReport(res.Id, data)
 	return
 }
