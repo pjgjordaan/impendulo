@@ -163,56 +163,6 @@ func TestArchive(t *testing.T) {
 	return
 }
 
-/*func TestStore(t *testing.T) {
-	fname := "test0.gob"
-	orig := genMap()
-	defer os.Remove(filepath.Join(util.BaseDir(), fname))
-	err := saveActive(fname, orig)
-	if err != nil {
-		t.Error(err)
-	}
-	ret := getStored(fname)
-	if !reflect.DeepEqual(orig, ret) {
-		t.Error("Maps not equal")
-	}
-}
-
-func TestMonitor(t *testing.T) {
-	fname := "test1.gob"
-	busy := make(chan bson.ObjectId)
-	done := make(chan bson.ObjectId)
-	quit := make(chan os.Signal)
-	completed := make(chan bool)
-	subMap := genMap()
-	defer os.Remove(filepath.Join(util.BaseDir(), fname))
-	go Monitor(fname, busy, done, quit)
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	count := 0
-	for k, v := range subMap {
-		busy <- k
-		if !v {
-			count++
-			go func(id bson.ObjectId) {
-				time.Sleep(time.Millisecond * time.Duration(r.Intn(100)))
-				done <- id
-				completed <- true
-			}(k)
-		}
-	}
-	for i := 0; i < count; i++ {
-		<-completed
-	}
-	quit <- os.Interrupt
-	//Have to wait for file to be
-	time.Sleep(time.Second)
-	retrieved := getStored(fname)
-	for k, v := range subMap {
-		if v != retrieved[k] {
-			t.Error("Map values did not match for submission:", k, v, retrieved[k])
-		}
-	}
-}*/
-
 func genMap() map[bson.ObjectId]bool {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	idMap := make(map[bson.ObjectId]bool)

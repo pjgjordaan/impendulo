@@ -106,7 +106,7 @@ func TestUnzip(t *testing.T) {
 	buff := bytes.NewBuffer(zipped)
 	dir := "/tmp/unzipped"
 	os.MkdirAll(dir, os.ModeDir|os.ModePerm)
-	defer os.Remove(dir)
+	defer os.RemoveAll(dir)
 	err = Unzip(dir, buff.Bytes())
 	if err != nil {
 		t.Error(err)
@@ -127,7 +127,7 @@ func TestExtractFile(t *testing.T) {
 	}
 	dir := "/tmp/extractFile"
 	os.MkdirAll(dir, os.ModeDir|os.ModePerm)
-	defer os.Remove(dir)
+	defer os.RemoveAll(dir)
 	for _, zf := range zr.File {
 		err := ExtractFile(zf, dir)
 		if err != nil {
