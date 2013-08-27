@@ -51,13 +51,13 @@ func TestRun(t *testing.T){
 	if err != nil{
 		t.Errorf("Could not save file %q", err)
 	}
-	_, err = junit.Run(bson.NewObjectId(), target)
+	_, err = junit.Run(bson.NewObjectId(), testTarget)
 	if err == nil{
 		t.Errorf("Expected error.")
 	}
 	target = tool.NewTarget("File.java", 
 		project.JAVA, "", location)
-	_, err = junit.Run(bson.NewObjectId(), target)
+	_, err = junit.Run(bson.NewObjectId(), testTarget)
 	if err == nil{
 		t.Error("Expected error")
 	}

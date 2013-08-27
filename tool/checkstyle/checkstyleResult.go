@@ -18,6 +18,11 @@ type CheckstyleResult struct {
 	Data   *CheckstyleReport "data"
 }
 
+func (this *CheckstyleResult) String()string{
+	return fmt.Sprintf("Id: %q; FileId: %q; Name: %s; \nData: %s\n", 
+		this.Id, this.FileId, this.Name, this.Data.String()) 
+}
+
 func (this *CheckstyleResult) GetName() string {
 	return this.Name
 }
@@ -94,9 +99,28 @@ type CheckstyleReport struct {
 	Errors  int
 	Files   []*File `xml:"file"`
 }
+
+func (this *CheckstyleReport) String()string{
+	files := ""
+	for _, f := range this.Files{
+		files += f.String()
+	}
+	return fmt.Sprintf("Id: %q; Version %s; Errors: %d; \nFiles: %s\n", 
+		this.Id, this.Version, this.Errors, files) 
+}
+
 type File struct {
 	Name   string   `xml:"name,attr"`
 	Errors []*Error `xml:"error"`
+}
+
+func (this *File) String()string{
+	errs := ""
+	for _, e := range this.Errors{
+		errs += e.String()
+	}
+	return fmt.Sprintf("Name: %s; \nErrors: %s\n", 
+		this.Name, errs) 
 }
 
 type Error struct {
@@ -105,4 +129,9 @@ type Error struct {
 	Severity string        `xml:"severity,attr"`
 	Message  template.HTML `xml:"message,attr"`
 	Source   string        `xml:"source,attr"`
+}
+
+func (this *Error) String()string{
+	return fmt.Sprintf("Line: %d; Column: %d; Severity: %s; Message: %q; Source: %s\n", 
+		this.Line, this.Column, this.Severity, this.Message, this.Source) 
 }
