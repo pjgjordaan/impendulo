@@ -172,18 +172,18 @@ type BugInstance struct {
 	Rank         int           `xml:"rank,attr"`
 	ShortMessage string        `xml:"ShortMessage"`
 	LongMessage  string        `xml:"LongMessage"`
-	Class        Class         `xml:"Class"`
-	Method       Method        `xml:"Method"`
-	Field        Field         `xml:"Field"`
-	Var          LocalVariable `xml:"LocalVariable"`
-	Line         SourceLine    `xml:"SourceLine"`
+	Class        *Class         `xml:"Class"`
+	Method       *Method        `xml:"Method"`
+	Field        *Field         `xml:"Field"`
+	Var          *LocalVariable `xml:"LocalVariable"`
+	Line         *SourceLine    `xml:"SourceLine"`
 	Properties   []*Property   `xml:"Property"`
 }
 
 type Class struct {
 	Name      string     `xml:"classname,attr"`
 	IsPrimary bool       `xml:"primary,attr"`
-	Line      SourceLine `xml:"SourceLine"`
+	Line      *SourceLine `xml:"SourceLine"`
 	Message   string     `xml:"Message"`
 }
 
@@ -204,7 +204,7 @@ type Method struct {
 	Signature string     `xml:"signature,attr"`
 	IsStatic  bool       `xml:"isStatic,attr"`
 	IsPrimary bool       `xml:"primary,attr"`
-	Line      SourceLine `xml:"SourceLine"`
+	Line      *SourceLine `xml:"SourceLine"`
 	Message   string     `xml:"Message"`
 }
 
@@ -215,7 +215,7 @@ type Field struct {
 	IsStatic  bool       `xml:"isStatic,attr"`
 	IsPrimary bool       `xml:"primary,attr"`
 	Role      string     `xml:"role,attr"`
-	Line      SourceLine `xml:"SourceLine"`
+	Line      *SourceLine `xml:"SourceLine"`
 	Message   string     `xml:"Message"`
 }
 

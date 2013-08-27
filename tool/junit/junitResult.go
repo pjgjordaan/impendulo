@@ -7,6 +7,7 @@ import (
 	"labix.org/v2/mgo/bson"
 	"math"
 	"strings"
+	"sort"
 )
 
 const NAME = "JUnit Test"
@@ -90,15 +91,29 @@ type TestSuite struct {
 	Name     string     `xml:"name,attr"`
 	Tests    int        `xml:"tests,attr"`
 	Time     float64    `xml:"time,attr"`
-	Results  []TestCase `xml:"testcase"`
+	Results  TestCases `xml:"testcase"`
 }
 
 type TestCase struct {
 	ClassName string  `xml:"classname,attr"`
 	Name      string  `xml:"name,attr"`
 	Time      float64 `xml:"time,attr"`
-	Fail      Failure `xml:"failure"`
+	Fail      *Failure `xml:"failure"`
 }
+
+type TestCases []*TestCase
+
+func (this TestCases) Len()int{
+	return len(this)
+} 
+
+func (this TestCases) Swap(i, j int){
+	this[i], this[j] = this[j], this[i]
+} 
+
+func (this TestCases) Less(i, j int) bool{
+	return this[i].Name < this[j].Name
+} 
 
 type Failure struct {
 	Message string `xml:"message,attr"`
@@ -119,6 +134,7 @@ func genReport(id bson.ObjectId, data []byte) (res *TestSuite, err error) {
 			err = nil
 		}
 	}
+	sort.Sort(res.Results)
 	if res.Errors == 0 && res.Failures == 0 {
 		res.Success = true
 	} else {

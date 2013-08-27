@@ -86,10 +86,10 @@ func NewResult(fileId bson.ObjectId, data []byte) (res *JPFResult, err error) {
 type JPFReport struct {
 	Id      bson.ObjectId
 	Version string       `xml:"jpf-version"`
-	Threads []Thread     `xml:"live-threads>thread"`
-	Trace   []Transition `xml:"trace>transition"`
-	Result  Result       `xml:"result"`
-	Stats   Statistics   `xml:"statistics"`
+	Threads []*Thread     `xml:"live-threads>thread"`
+	Trace   []*Transition `xml:"trace>transition"`
+	Result  *Result       `xml:"result"`
+	Stats   *Statistics   `xml:"statistics"`
 	Success bool
 }
 
@@ -105,11 +105,11 @@ type Thread struct {
 type Transition struct {
 	Id       int             `xml:"id,attr"`
 	ThreadId int             `xml:"thread,attr"`
-	CG       ChoiceGenerator `xml:"cg"`
-	Insns    []Instruction   `xml:"insn"`
+	CG       *ChoiceGenerator `xml:"cg"`
+	Insns    []*Instruction   `xml:"insn"`
 }
 
-func (this Transition) String() string {
+func (this *Transition) String() string {
 	return `Transition Id: ` + strconv.Itoa(this.Id) + `; Thread Id: ` + strconv.Itoa(this.ThreadId)
 }
 
@@ -125,7 +125,7 @@ type Instruction struct {
 
 type Result struct {
 	Findings string  `xml:"findings,attr"`
-	Errors   []Error `xml:"error"`
+	Errors   []*Error `xml:"error"`
 }
 
 type Error struct {

@@ -5,7 +5,10 @@ import (
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/javac"
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+	"os"
+	"path/filepath"
 )
 
 //JUnit is a tool.Tool used to run JUnit tests on a Java source file.
@@ -49,9 +52,11 @@ func (this *JUnit) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Tool
 	args := []string{config.GetConfig(config.JAVA), "-cp", this.cp,
 		this.runnerInfo.Executable(), ti.Executable(), this.datalocation}
 	execRes := tool.RunCommand(args, nil)
-	if execRes.HasStdOut() {
+	resFile, err := os.Open(filepath.Join(this.datalocation, "res.xml"))
+	if err == nil{
 		//Tests ran successfully.
-		res, err = NewResult(fileId, ti.Name, execRes.StdOut)
+		data := util.ReadBytes(resFile)
+		res, err = NewResult(fileId, ti.Name, data)
 	} else if execRes.HasStdErr() {
 		err = fmt.Errorf("Could not run junit: %q.", string(execRes.StdErr))
 	} else {
