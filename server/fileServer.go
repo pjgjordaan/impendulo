@@ -47,7 +47,7 @@ func (this *SubmissionHandler) End(err error) {
 	} else {
 		msg = OK
 	}
-	this.rwc.Write([]byte(msg))
+	this.write(msg)
 }
 
 //Handle manages a connection by authenticating it,
@@ -115,10 +115,9 @@ func (this *SubmissionHandler) Login() (err error) {
 		return
 	}
 	projects, err := db.GetProjects(nil)
-	if err != nil {
-		return
+	if err == nil {
+		err = this.writeJson(projects)
 	}
-	err = util.WriteJson(this.rwc, projects)
 	return
 }
 
@@ -157,11 +156,10 @@ func (this *SubmissionHandler) createSubmission(subInfo map[string]interface{}) 
 		return
 	}
 	err = db.AddSubmission(this.submission)
-	if err != nil {
-		return
+	if err == nil {
+		this.fileCount = 0
+		err = this.writeJson(this.submission)
 	}
-	this.fileCount = 0
-	err = util.WriteJson(this.rwc, this.submission)
 	return
 }
 
@@ -176,14 +174,14 @@ func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{}
 	}
 	this.submission, err = db.GetSubmission(bson.M{project.ID: id}, nil)
 	if err != nil {
-		return err
+		return
 	}
 	this.fileCount, err = db.Count(db.FILES,
 		bson.M{project.SUBID: this.submission.Id})
-	if err != nil {
-		return err
+	if err == nil {
+		err = this.writeJson(this.fileCount)
 	}
-	return util.WriteJson(this.rwc, this.fileCount)
+	return
 }
 
 //Read reads Files from the connection and sends them for processing.
@@ -197,7 +195,7 @@ func (this *SubmissionHandler) Read() (done bool, err error) {
 		return
 	}
 	if req == SEND {
-		_, err = this.rwc.Write([]byte(OK))
+		err = this.write(OK)
 		if err != nil {
 			return
 		}
@@ -206,7 +204,7 @@ func (this *SubmissionHandler) Read() (done bool, err error) {
 		if err != nil {
 			return
 		}
-		_, err = this.rwc.Write([]byte(OK))
+		err = this.write(OK)
 		if err != nil {
 			return
 		}
@@ -235,6 +233,24 @@ func (this *SubmissionHandler) Read() (done bool, err error) {
 		done = true
 	} else {
 		err = fmt.Errorf("Unknown request %q", req)
+	}
+	return
+}
+
+
+func (this *SubmissionHandler) writeJson(data interface{})(err error){
+	err = util.WriteJson(this.rwc, data)
+	if err == nil{
+		_, err = this.rwc.Write([]byte(util.EOT))
+	}
+	return
+}
+
+
+func (this *SubmissionHandler) write(data string)(err error){
+	_, err = this.rwc.Write([]byte(data))
+	if err == nil{
+		_, err = this.rwc.Write([]byte(util.EOT))
 	}
 	return
 }

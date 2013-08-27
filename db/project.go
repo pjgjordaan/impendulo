@@ -183,7 +183,7 @@ func GetProjects(matcher interface{}) (ret []*project.Project, err error) {
 	}
 	defer session.Close()
 	c := session.DB("").C(PROJECTS)
-	err = c.Find(matcher).Select(bson.M{project.SKELETON: 0}).All(&ret)
+	err = c.Find(matcher).Select(nil).All(&ret)//bson.M{project.NAME: 1, project.LANG: 1, project.USER: 1}).All(&ret)
 	if err != nil {
 		err = &DBGetError{"projects", err, matcher}
 	}

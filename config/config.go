@@ -9,6 +9,15 @@ import (
 
 var settings map[string]string
 
+func init(){
+	settings = make(map[string]string)
+	err := LoadConfigs(os.Getenv("GOPATH")+
+		"/src/github.com/godfried/impendulo/config.txt")
+	if err != nil{
+		fmt.Println(err)
+	}
+}
+
 //LoadConfigs loads configurations from a file.
 //Configurations are key-value pairs on different lines.
 //Keys are seperated from the value by a '='.
@@ -18,7 +27,6 @@ func LoadConfigs(fname string) error {
 		return err
 	}
 	scanner := bufio.NewScanner(f)
-	settings = make(map[string]string)
 	for scanner.Scan() {
 		vals := strings.Split(scanner.Text(), "=")
 		if len(vals) != 2 {

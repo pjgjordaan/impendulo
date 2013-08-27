@@ -1,52 +1,48 @@
 package tool
 
 import (
-	"github.com/godfried/impendulo/util"
 	"os"
-	"path/filepath"
 	"testing"
+	"errors"
 )
 
 func TestRunCommand(t *testing.T) {
 	failCmd := []string{"chmod", "777"}
-	_, _, err := RunCommand(failCmd, nil)
-	if err == nil {
-		t.Error("Command should have failed", err)
+	execRes := RunCommand(failCmd, nil)
+	if execRes.Err == nil {
+		t.Error("Command should have failed")
 	}
 	succeedCmd := []string{"ls", "-a", "-l"}
-	_, _, err = RunCommand(succeedCmd, nil)
-	if err != nil {
-		t.Error(err)
+	execRes = RunCommand(succeedCmd, nil)
+	if execRes.Err != nil {
+		t.Error(execRes.Err)
 	}
 	noCmd := []string{"lsa"}
-	_, _, err = RunCommand(noCmd, nil)
-	if _, ok := err.(*StartError); !ok {
-		t.Error("Command should not have started", err)
+	execRes = RunCommand(noCmd, nil)
+	if _, ok := execRes.Err.(*StartError); !ok {
+		t.Error("Command should not have started", execRes.Err)
 	}
+	SetTimeout(0)
+	longCmd := []string{"sleep", "100"}
+	execRes = RunCommand(longCmd, nil)
+	if !IsTimeOut(execRes.Err) {
+		t.Error("Expected timeout, got ", execRes.Err)
+	}
+	SetTimeout(10)
 }
 
-func setupTarget() (*TargetInfo, error) {
-	fileData := []byte(`package bermuda;
-
-public class Triangle {
-        public int maxpath(int[][] tri) {
-                int h = tri.length;
-                for (int j = h - 2; j >= 0; j--) {
-                        for (int i = 0; i <= j; i++) {
-                                tri[i][j] = Math.max(tri[i + 1][j], tri[i + 1][j + 1]);
-                        }
-                }
-                return tri[0][0];
-        }
-}`)
-	fname := "Triangle.java"
-	pkg := "bermuda"
-
-	dir := filepath.Join(os.TempDir(), "test")
-	ti := NewTarget(fname, "java", pkg, dir)
-	err := util.SaveFile(ti.FilePath(), fileData)
-	if err != nil {
-		return nil, err
+func TestErrorChecks(t *testing.T){
+	memErr := &os.PathError{
+		Err:errors.New("cannot allocate memory"),
 	}
-	return ti, nil
+	accessErr := &os.PathError{
+		Err:errors.New("bad file descriptor"),
+	}
+	if !MemoryError(memErr){
+		t.Error("Should be memory error.")
+	}
+	if !AccessError(accessErr){
+		t.Error("Should be access error.")
+	}
+	
 }

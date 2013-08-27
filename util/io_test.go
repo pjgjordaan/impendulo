@@ -109,7 +109,7 @@ func (this *ErrorReader) Read(b []byte) (int, error) {
 }
 
 func TestReadData(t *testing.T) {
-	tests := map[string][]byte{file1: []byte(file1), file2 + "eof": []byte(file2), file3: []byte(file3)}
+	tests := map[string][]byte{file1: []byte(file1), file2 + EOT: []byte(file2), file3: []byte(file3)}
 	for k, v := range tests {
 		data, err := ReadData(strings.NewReader(k))
 		if err != nil {

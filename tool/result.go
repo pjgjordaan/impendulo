@@ -14,6 +14,7 @@ const (
 	CODE     = "Code"
 )
 
+
 //GraphResult is used to display result data in a graph.
 type GraphResult interface {
 	AddGraphData(curMax, x float64, graphData []map[string]interface{}) (newMax float64)
@@ -21,6 +22,9 @@ type GraphResult interface {
 }
 
 func AddCoords(chart map[string]interface{}, x , y float64) {
+	if _, ok := chart["data"].([]map[string]float64); !ok{
+		return
+	}
 	if x < 0{
 		x = float64(len(chart["data"].([]map[string]float64)))
 	} else{

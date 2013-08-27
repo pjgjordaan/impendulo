@@ -105,7 +105,9 @@ func (this *TimeOutError) Error() string {
 }
 
 func IsTimeOut(err error) (ok bool) {
-	_, ok = err.(*TimeOutError)
+	if err != nil{
+		_, ok = err.(*TimeOutError)
+	}
 	return
 }
 

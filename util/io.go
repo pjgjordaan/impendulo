@@ -11,8 +11,11 @@ import (
 	"strings"
 )
 
-const DPERM = 0777
-const FPERM = os.O_WRONLY | os.O_CREATE | os.O_TRUNC
+const(
+	DPERM = 0777
+	FPERM = os.O_WRONLY | os.O_CREATE | os.O_TRUNC
+	EOT = "\u0004"
+)
 
 type IOError struct {
 	origin interface{}
@@ -40,7 +43,7 @@ func ReadData(r io.Reader) ([]byte, error) {
 		return nil, fmt.Errorf("Can't read from a nil io.Reader")
 	}
 	buffer := new(bytes.Buffer)
-	eof := []byte("eof")
+	eot := []byte(EOT)
 	p := make([]byte, 2048)
 	busy := true
 	for busy {
@@ -50,8 +53,8 @@ func ReadData(r io.Reader) ([]byte, error) {
 			busy = false
 		} else if err != nil {
 			return nil, &IOError{r, "reading from", err}
-		} else if bytes.HasSuffix(read, eof) {
-			read = read[:len(read)-len(eof)]
+		} else if bytes.HasSuffix(read, eot) {
+			read = read[:len(read)-len(eot)]
 			busy = false
 		}
 		buffer.Write(read)

@@ -265,7 +265,7 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 		"curResult": curRes.GetData(), "results": results, 
 		"nextFile": nextFile, "nextResult": nextRes.GetData(),
 		"neighbour": neighbour} 
-	temps = []string{getNav(ctx), "analysis", "pager", "fileInfo", 
+	temps = []string{getNav(ctx), "analysis", "pager", 
 		curRes.Template(true), nextRes.Template(false)}
 	return
 }

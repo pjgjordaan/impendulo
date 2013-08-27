@@ -6,6 +6,7 @@ import (
 	"errors"
 	"labix.org/v2/mgo/bson"
 	"testing"
+	"os"
 )
 
 func TestReadJson(t *testing.T) {
@@ -33,11 +34,13 @@ func TestMapStorage(t *testing.T) {
 	id3 := bson.NewObjectId()
 	id4 := bson.NewObjectId()
 	m1 := map[bson.ObjectId]bool{id1: true, id2: false, id3: false, id4: true}
-	err := SaveMap(m1, "test.gob")
+	gobFile := "test.gob"
+	err := SaveMap(m1, gobFile)
 	if err != nil {
 		t.Error(err, "Error saving map")
 	}
-	m2, err := LoadMap("test.gob")
+	defer os.Remove(gobFile)
+	m2, err := LoadMap(gobFile)
 	if err != nil {
 		t.Error(err, "Error loading map")
 	}

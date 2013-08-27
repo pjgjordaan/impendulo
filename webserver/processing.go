@@ -8,7 +8,6 @@ import (
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"io/ioutil"
@@ -144,7 +143,7 @@ func AddProject(req *http.Request, ctx *Context) (err error) {
 	if err != nil {
 		return
 	}
-	p := project.NewProject(name, username, lang, pmd.GetRules(), skeletonBytes)
+	p := project.NewProject(name, username, lang, skeletonBytes)
 	err = db.AddProject(p)
 	return
 }

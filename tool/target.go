@@ -46,5 +46,18 @@ func (ti *TargetInfo) Executable() string {
 //NewTarget
 func NewTarget(name, lang, pkg, dir string) *TargetInfo {
 	split := strings.Split(name, ".")
-	return &TargetInfo{split[0], lang, pkg, split[1], dir}
+	var ext string
+	if len(split) < 2{
+		ext = ""
+	} else{
+		name = split[0]
+		ext = split[1]
+	}
+	return &TargetInfo{
+		Name:name, 
+		Lang: lang, 
+		Package: pkg, 
+		Ext: ext, 
+		Dir: dir,
+	}
 }

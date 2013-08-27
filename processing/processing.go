@@ -235,13 +235,6 @@ func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
 	if err != nil{
 		return
 	}
-	if p.PMDRules == nil{
-		p.PMDRules = pmd.GetRules()
-		err = db.Update(db.PROJECTS, bson.M{project.ID: p.Id}, p)
-		if err != nil{
-			return
-		}
-	}
 	dir := filepath.Join(os.TempDir(), sub.Id.Hex())
 	proc = &Processor{
 		sub:     sub,
@@ -431,7 +424,7 @@ func (this *Analyser) compile() (bool, error) {
 
 //RunTools runs all available tools on a file, skipping previously run tools.
 func (this *Analyser) RunTools() {
-	tools := []tool.Tool{findbugs.New(), pmd.New(this.proc.project.PMDRules),
+	tools := []tool.Tool{findbugs.New(), pmd.New(pmd.GetRules()),
 		jpf.New(this.proc.toolDir, this.proc.jpfPath),
 		checkstyle.New()}
 	for _, t := range tools {
