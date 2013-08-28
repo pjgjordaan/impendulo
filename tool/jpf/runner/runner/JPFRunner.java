@@ -7,7 +7,6 @@ import gov.nasa.jpf.JPFException;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.PrintStream;
 
 public class JPFRunner {
 
@@ -16,14 +15,14 @@ public class JPFRunner {
 	 * @throws FileNotFoundException
 	 */
 	public static void main(String[] args) throws FileNotFoundException {
-		if (args.length != 3) {
+		if (args.length != 4) {
 			throw new IllegalArgumentException("Expected 3 arguments.");
 		}
 		if (!new File(args[0]).exists()) {
 			throw new FileNotFoundException("Could not find config file "
 					+ args[0]);
 		}
-		Exception e = run(createConfig(args[0], args[1], args[2]));
+		Exception e = run(createConfig(args[0], args[1], args[2], args[3]));
 		if (e != null) {
 			System.err.println(e.getMessage());
 		}
@@ -31,16 +30,8 @@ public class JPFRunner {
 
 	public static Exception run(Config config) {
 		try {
-			PrintStream tOut = System.out;
-			PrintStream tErr = System.out;
-			System.setOut(new PrintStream(new NullOutputStream()));
-			System.setErr(new PrintStream(new NullOutputStream()));
 			JPF jpf = new JPF(config);
 			jpf.run();
-			System.setOut(tOut);
-			System.setErr(tErr);
-			System.out.println(((ImpenduloPublisher) jpf.getReporter()
-					.getPublishers().get(0)).getStream().toString());
 			return null;
 		} catch (JPFConfigException cx) {
 			return cx;
@@ -50,11 +41,12 @@ public class JPFRunner {
 	}
 
 	public static Config createConfig(String configName, String target,
-			String targetLocation) {
+			String targetLocation, String outFile) {
 		Config config = JPF.createConfig(new String[] { configName });
 		config.setProperty("target", target);
 		config.setProperty("report.publisher", "xml");
-		config.setProperty("report.xml.class", "runner.ImpenduloPublisher");
+		config.setProperty("report.xml.class", "gov.nasa.jpf.report.XMLPublisher");
+		config.setProperty("report.xml.file", outFile);
 		config.setProperty("classpath",
 				targetLocation + ";" + config.getProperty("classpath"));
 		config.setProperty("report.xml.start", "jpf,sut");

@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"strings"
+	"os"
+	"path/filepath"
 )
 
 type PMD struct {
@@ -38,11 +41,16 @@ func GetRules()[]string{
 }
 
 func (this *PMD) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
+	outFile := filepath.Join(ti.Dir, "pmd.xml")
 	args := []string{this.cmd, config.PMD, "-f", "xml", "-stress",
-		"-shortnames", "-rulesets", this.rules, "-dir", ti.Dir}
+		"-shortnames", "-R", this.rules, "-r", outFile, "-d", ti.Dir}
+	defer os.Remove(outFile)
 	execRes := tool.RunCommand(args, nil)
-	if execRes.HasStdOut() {
-		res, err = NewResult(fileId, execRes.StdOut)
+	resFile, err := os.Open(outFile)
+	if err == nil{
+		//Tests ran successfully.
+		data := util.ReadBytes(resFile)
+		res, err = NewResult(fileId, data)
 	} else if execRes.HasStdErr() {
 		err = fmt.Errorf("Could not run pmd: %q.", string(execRes.StdErr))
 	} else {

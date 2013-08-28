@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+	"os"
+	"path/filepath"
 )
 
 type Checkstyle struct {
@@ -28,11 +31,17 @@ func (this *Checkstyle) GetName() string {
 }
 
 func (this *Checkstyle) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
+	outFile := filepath.Join(ti.Dir, "checkstyle.xml")
 	args := []string{this.java, "-jar", this.cmd,
-		"-f", "xml", "-c", this.configFile, "-r", ti.Dir}
+		"-f", "xml", "-c", this.configFile, 
+		"-o", outFile, "-r", ti.Dir}
+	defer os.Remove(outFile)
 	execRes := tool.RunCommand(args, nil)
-	if execRes.HasStdOut() {
-		res, err = NewResult(fileId, execRes.StdOut)
+	resFile, err := os.Open(outFile)
+	if err == nil{
+		//Tests ran successfully.
+		data := util.ReadBytes(resFile)
+		res, err = NewResult(fileId, data)
 	} else if execRes.HasStdErr() {
 		err = fmt.Errorf("Could not run checkstyle: %q.",
 			string(execRes.StdErr))

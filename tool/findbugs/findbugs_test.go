@@ -34,11 +34,12 @@ func TestRun(t *testing.T){
 	if err != nil{
 		t.Errorf("Expected success, got %q", err)
 	}
+	os.Remove(filepath.Join(location, "findbugs.xml"))
 	findbugsCfg := config.GetConfig(config.FINDBUGS)
 	defer config.SetConfig(config.FINDBUGS, findbugsCfg)
 	config.SetConfig(config.FINDBUGS, "")
-	findbugs = New()
-	res, err := findbugs.Run(bson.NewObjectId(), target)
+	findbugs2 := New()
+	res, err := findbugs2.Run(bson.NewObjectId(), target)
 	if err == nil{
 		t.Errorf("Expected error, got %s.", res)
 	}

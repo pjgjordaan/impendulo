@@ -44,7 +44,7 @@ func Listeners() (listeners []*Listener, err error) {
 //FindListeners searches for JPF Listeners in the jpf-core directory tree.
 func FindListeners() (found []byte, err error) {
 	target := tool.NewTarget("ListenerFinder.java", "java", "listener",
-		config.GetConfig(config.LISTENER_DIR))
+		config.GetConfig(config.JPF_LISTENER_DIR))
 	cp := filepath.Join(config.GetConfig(config.JPF_HOME), "build", "main") +
 		":" + target.Dir + ":" + config.GetConfig(config.GSON_JAR)
 	comp := javac.New(cp)

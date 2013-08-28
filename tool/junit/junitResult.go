@@ -19,6 +19,11 @@ type JUnitResult struct {
 	Data     *TestSuite    "data"
 }
 
+func (this *JUnitResult) String() string {
+	return fmt.Sprintf("Id: %q; FileId: %q; TestName: %s; \n Data: %s", 
+		this.Id, this.FileId, this.TestName, this.Data)
+} 
+
 func (this *JUnitResult) GetName() string {
 	return this.TestName
 }
@@ -94,11 +99,35 @@ type TestSuite struct {
 	Results  TestCases `xml:"testcase"`
 }
 
+
+func (this *TestSuite) String() string {
+	return fmt.Sprintf("Id: %q; Success: %t; Tests: %d; Errors: %d; Failures: %d; Name: %s; \n Results: %s", 
+		this.Id, this.Success, this.Tests, this.Errors, this.Failures, this.Name, this.Results)
+} 
+
+func (this *TestSuite) GetResults(num int) TestCases{
+	if len(this.Results) < num{
+		return this.Results
+	} else{
+		return this.Results[:num]
+	}
+}
+
 type TestCase struct {
 	ClassName string  `xml:"classname,attr"`
 	Name      string  `xml:"name,attr"`
 	Time      float64 `xml:"time,attr"`
 	Fail      *Failure `xml:"failure"`
+}
+
+
+func (this *TestCase) String() string {
+	return fmt.Sprintf("ClassName: %s; Name: %s; Time: %f; \n Failure: %s\n", 
+		this.ClassName, this.Name, this.Time, this.Fail)
+} 
+
+func (this *TestCase) IsFailure() bool{
+	return this.Fail != nil && len(strings.TrimSpace(this.Fail.Type)) > 0
 }
 
 type TestCases []*TestCase
@@ -115,15 +144,25 @@ func (this TestCases) Less(i, j int) bool{
 	return this[i].Name < this[j].Name
 } 
 
+
+func (this TestCases) String() (ret string) {
+	for _, t := range this{
+		ret += t.String()
+	}
+	return ret
+} 
+
 type Failure struct {
 	Message string `xml:"message,attr"`
 	Type    string `xml:"type,attr"`
 	Value   string `xml:",innerxml"`
 }
 
-func (this *Failure) IsFailure() bool {
-	return len(strings.TrimSpace(this.Type)) > 0
-}
+
+func (this *Failure) String() string {
+	return fmt.Sprintf("Message: %s; Type: %s; Value: %s", 
+		this.Message, this.Type, this.Value)
+} 
 
 func genReport(id bson.ObjectId, data []byte) (res *TestSuite, err error) {
 	if err = xml.Unmarshal(data, &res); err != nil {

@@ -14,7 +14,9 @@ public class TestRunner {
 		if (args.length != 2) {
 			throw new InvalidParameterException("Expected 2 arguments.");
 		}
-		String testName = args[0];
+		String testExec = args[0];
+		String[] split = testExec.split("\\.");
+		String testName = split[split.length - 1];
 		String dataLocation = args[1];
 		System.setProperty("data.location", dataLocation);
 		Project project = new Project();
@@ -33,8 +35,8 @@ public class TestRunner {
 			type.setValue("xml");
 			formater.setType(type);
 			task.addFormatter(formater);
-			JUnitTest test = new JUnitTest(testName);
-			test.setOutfile("res");
+			JUnitTest test = new JUnitTest(testExec);
+			test.setOutfile(testName+"_junit");
 			test.setTodir(new File(dataLocation));
 			task.addTest(test);
 			task.execute();

@@ -28,6 +28,7 @@ func TestRun(t *testing.T){
 	if err != nil{
 		t.Errorf("Expected success, got %q", err)
 	}
+	os.Remove(filepath.Join(location, "pmd.xml"))
 	pmd = New(nil)
 	res, err := pmd.Run(bson.NewObjectId(), target)
 	if err == nil{

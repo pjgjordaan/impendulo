@@ -1,55 +1,55 @@
 {{define "currentResult"}}
-{{$id := .Id.Hex}}
-{{$errors := equal .Errors 0}}
-{{$failures := equal .Failures 0}}
+{{$noErrors := equal .Errors 0}}
+{{$noFailures := equal .Failures 0}}
 <dl class="dl-horizontal">
   <dt>Tests</dt><dd>{{.Tests}}</dd>
   <dt>Errors</dt><dd>{{.Errors}}</dd>
   <dt>Failures</dt><dd>{{.Failures}}</dd>
   <dt>Time</dt><dd>{{.Time}}</dd>
 </dl>
-{{if and $errors $failures}}
+{{if and $noErrors $noFailures}}
 <p class="text-success">Passed all tests.</p>
 {{else}}
-<div class="panel-group" id="junitaccordion{{$id}}">
+<div class="panel-group" id="junitaccordionCurrent">
   <div class="panel panel-default">
     <div class="panel-heading">
       <a class="accordion-toggle" data-toggle="collapse"
-	 data-parent="#junitaccordion{{$id}}" href="#Failures{{$id}}">
+	 data-parent="#junitaccordionCurrent" href="#FailuresCurrent">
 	<h4>Failures<h4>
       </a>
     </div>
-    <div id="Failures{{$id}}" class="panel-collapse collapse in">
+    <div id="FailuresCurrent" class="panel-collapse collapse in">
       <div class="accordion-inner">
-	<div class="panel-group" id="junitresults{{$id}}">
-	  {{range .Results}}
+	<div class="panel-group" id="junitresultsCurrent">
+	  {{$results := .GetResults 10}}
+	  {{range $results}}
 	  {{$resultaddress := address .}}
-	  {{if .Fail.IsFailure}}
+	  {{if .IsFailure}}
 	  <div class="panel panel-default">
 	    <div class="panel-heading">
 	      <a class="accordion-toggle" data-toggle="collapse"
-	  data-parent="#junitresults{{$id}}" href="#Result{{$resultaddress}}{{$id}}">
+	  data-parent="#junitresultsCurrent" href="#Result{{$resultaddress}}Current">
 		<h5 class="text-center">{{base .Name}}</h5>
 	      </a>
 	    </div>
-	    <div id="Result{{$resultaddress}}{{$id}}" class="panel-collapse collapse">
+	    <div id="Result{{$resultaddress}}Current" class="panel-collapse collapse">
 	      <div class="accordion-inner">
 		<dl class="dl-horizontal">
 		  <dt>Time</dt><dd>{{.Time}}</dd>
 		  <dt>Message</dt><dd>{{.Fail.Message}}</dd>
 		  <dt>Type</dt><dd>{{.Fail.Type}}</dd>
 	  	</dl>
-		<div class="panel-group" id="traceaccordion{{$resultaddress}}{{$id}}">
+		<div class="panel-group" id="traceaccordion{{$resultaddress}}Current">
 		  <div class="panel panel-default">
 		    <div class="panel-heading">
 		      <a class="accordion-toggle"
 			 data-toggle="collapse"
-			 data-parent="#traceaccordion{{$resultaddress}}{{$id}}"
-			 href="#Trace{{$resultaddress}}{{$id}}">
+			 data-parent="#traceaccordion{{$resultaddress}}Current"
+			 href="#Trace{{$resultaddress}}Current">
 			<h6>Trace</h6>
 		      </a>
 		    </div>
-		    <div id="Trace{{$resultaddress}}{{$id}}" class="panel-collapse collapse">
+		    <div id="Trace{{$resultaddress}}Current" class="panel-collapse collapse">
 		      <div class="accordion-inner">
 			<p class="text-error">
 			  {{setBreaks .Fail.Value}}

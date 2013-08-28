@@ -18,6 +18,11 @@ type JPFResult struct {
 	Data   *JPFReport    "data"
 }
 
+func (this *JPFResult) String() string {
+	return fmt.Sprintf("Id: %q; FileId: %q; Name: %s; \nData: %s\n",
+		this.Id, this.FileId, this.Name, this.Data)
+}
+
 func (this *JPFResult) GetName() string {
 	return this.Name
 }
@@ -93,6 +98,12 @@ type JPFReport struct {
 	Success bool
 }
 
+
+func (this *JPFReport) String() string {
+	return fmt.Sprintf("Id: %q; Version: %s; \nResult: %s;\n Stats: %s",
+		this.Id, this.Version, this.Result, this.Stats)
+}
+
 type Thread struct {
 	Frames       []string `xml:"frame"`
 	RequestLocks []string `xml:"lock-request object,attr"`
@@ -128,6 +139,10 @@ type Result struct {
 	Errors   []*Error `xml:"error"`
 }
 
+func (this *Result) String() string {
+	return fmt.Sprintf("Findings: %s", this.Findings)
+}
+
 type Error struct {
 	Id       int    `xml:"id,attr"`
 	Property string `xml:"property"`
@@ -141,6 +156,12 @@ type Statistics struct {
 	BacktrackedStates int    `xml:"backtracked-states"`
 	EndStates         int    `xml:"end-states"`
 	Memory            int    `xml:"max-memory"`
+}
+
+
+func (this *Statistics) String() string {
+	return fmt.Sprintf("NewStates: %d; VisitedStates: %d; BacktrackedStates: %d; EndStates: %d;", 
+		this.NewStates, this.VisitedStates, this.BacktrackedStates, this.EndStates)
 }
 
 func genReport(id bson.ObjectId, data []byte) (res *JPFReport, err error) {

@@ -5,6 +5,9 @@ import (
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
+	"os"
+	"path/filepath"
+	"github.com/godfried/impendulo/util"
 )
 
 //Findbugs is a tool.Tool used to run the Findbugs static analysis tool on
@@ -27,11 +30,15 @@ func (this *FindBugs) GetName() string {
 }
 
 func (this *FindBugs) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
+	outFile := filepath.Join(ti.Dir, "findbugs.xml")
 	args := []string{config.GetConfig(config.JAVA), "-jar", this.cmd,
-		"-textui", "-low", "-xml:withMessages", ti.PackagePath()}
+		"-textui", "-low", "-xml:withMessages", "-output", outFile, ti.PackagePath()}
+	defer os.Remove(outFile)
 	execRes := tool.RunCommand(args, nil)
-	if execRes.HasStdOut() {
-		res, err = NewResult(fileId, execRes.StdOut)
+	resFile, err := os.Open(outFile)
+	if err == nil{
+		data := util.ReadBytes(resFile)
+		res, err = NewResult(fileId, data)
 	} else if execRes.HasStdErr() {
 		err = fmt.Errorf("Could not run findbugs: %q.",
 			string(execRes.StdErr))

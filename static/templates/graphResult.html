@@ -8,7 +8,7 @@
   {{if .ctx.Browse.IsUser}}
   <li><a href="userresult">Users</a></li>
   <li class="dropdown">
-    <a class="dropdown-toggle" data-toggle="dropdown">
+    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
       User Submissions <span class="caret"></span>
     </a>
     <ul class="dropdown-menu" role="menu">
@@ -21,7 +21,7 @@
   {{else}}
   <li><a href="projectresult">Projects</a></li>
   <li class="dropdown">
-    <a class="dropdown-toggle" data-toggle="dropdown">
+    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
       Project Submissions <span class="caret"></span>
     </a>
     <ul class="dropdown-menu" role="menu">
@@ -33,7 +33,7 @@
   <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">{{.ctx.Browse.Uid}}'s Submission</a></li>
   {{end}}
   <li class="dropdown">
-    <a class="dropdown-toggle" data-toggle="dropdown">
+    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
       {{$resultName}} Graph <span class="caret"></span>
     </a>
     <ul class="dropdown-menu" role="menu">

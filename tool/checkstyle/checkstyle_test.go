@@ -28,6 +28,7 @@ func TestRun(t *testing.T){
 	if err != nil{
 		t.Errorf("Expected success, got %q", err)
 	}
+	os.Remove(filepath.Join(location, "checkstyle.xml"))
 	checkCfg := config.GetConfig(config.CHECKSTYLE)
 	defer config.SetConfig(config.CHECKSTYLE, checkCfg)
 	config.SetConfig(config.CHECKSTYLE, "")

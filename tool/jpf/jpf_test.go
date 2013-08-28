@@ -8,7 +8,6 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/config"
-	"path/filepath"
 )
 
 func TestRun(t *testing.T){
@@ -21,16 +20,11 @@ func TestRun(t *testing.T){
 	if err != nil{
 		t.Errorf("Could not save file %q", err)
 	}
-	jpfPath := filepath.Join(location, "racer.jpf")
-	err = util.SaveFile(jpfPath, jpfFile)
+	jpfFile := project.NewJPFFile(bson.NewObjectId(), "racer.jpf", "user", jpfBytes)
+	jpf, err := New(jpfFile, location)
 	if err != nil{
-		t.Errorf("Could not save file %q", err)
+		t.Errorf("Could not load jpf %q", err)
 	}
-	err = util.Copy(location, config.GetConfig(config.RUNNER_DIR))
-	if err != nil {
-		t.Error(err)
-	}
-	jpf := New(location, jpfPath)
 	_, err = jpf.Run(bson.NewObjectId(), target)
 	if err != nil{
 		t.Errorf("Expected success, got %q", err)
@@ -38,7 +32,10 @@ func TestRun(t *testing.T){
 	jpfCfg := config.GetConfig(config.JPF_JAR)
 	defer config.SetConfig(config.JPF_JAR, jpfCfg)
 	config.SetConfig(config.JPF_JAR, "")
-	jpf = New(location, jpfPath)
+	jpf, err = New(jpfFile, location)
+	if err != nil{
+		t.Errorf("Could not load jpf %q", err)
+	}
 	res, err := jpf.Run(bson.NewObjectId(), target)
 	if err == nil{
 		t.Errorf("Expected error, got %s.", res)
@@ -72,6 +69,6 @@ public class Racer implements Runnable {
 }
 `)
 
-var jpfFile = []byte(`
+var jpfBytes = []byte(`
 listener=gov.nasa.jpf.listener.PreciseRaceDetector
 `)

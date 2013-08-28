@@ -3,7 +3,6 @@ package processing
 import (
 	"container/list"
 	"fmt"
-	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
@@ -181,6 +180,8 @@ func (this *ProcHelper) Handle(fileQueue *list.List) {
 	proc, err := NewProcessor(this.subId)
 	if err != nil {
 		util.Log(err, LOG_PROCESSING)
+		submissionProcessed()
+		return
 	}
 	go proc.Process(procChan, stopChan)
 	busy := false
@@ -223,6 +224,7 @@ type Processor struct {
 	srcDir  string
 	toolDir string
 	jpfPath string
+	tools []tool.Tool
 }
 
 func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
@@ -236,12 +238,36 @@ func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
 		return
 	}
 	dir := filepath.Join(os.TempDir(), sub.Id.Hex())
+	toolDir := filepath.Join(dir, "tools")
+	tools := []tool.Tool{
+		findbugs.New(), pmd.New(pmd.GetRules()),
+		checkstyle.New(),
+	}
+	jpfFile, jerr := db.GetJPF(
+		bson.M{project.PROJECT_ID: p.Id}, nil)
+	if jerr == nil {
+		var j tool.Tool
+		j, err = jpf.New(jpfFile, toolDir)
+		if err == nil{
+			tools = append(tools, j)
+		} else{
+			return
+		}
+	} else{
+		util.Log(jerr)
+	}
+	tests, terr := SetupTests(p.Id, toolDir)
+	if terr != nil {
+		util.Log(terr, LOG_PROCESSING)
+	}
 	proc = &Processor{
 		sub:     sub,
 		project: p,
 		rootDir: dir,
 		srcDir:  filepath.Join(dir, "src"),
-		toolDir: filepath.Join(dir, "tools"),
+		toolDir: toolDir,
+		tools: tools,
+		tests: tests,
 	}
 	return
 }
@@ -251,15 +277,6 @@ func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
 func (this *Processor) Process(fileChan chan bson.ObjectId, doneChan chan interface{}) {
 	util.Log("Processing submission", this.sub)
 	defer os.RemoveAll(this.rootDir)
-	//Configure the submission's environment.
-	err := this.SetupJPF()
-	if err != nil {
-		util.Log(err, LOG_PROCESSING)
-	}
-	this.tests, err = SetupTests(this.sub.ProjectId, this.toolDir)
-	if err != nil {
-		util.Log(err, LOG_PROCESSING)
-	}
 	//Processing loop.
 processing:
 	for {
@@ -283,21 +300,6 @@ processing:
 		}
 	}
 	util.Log("Processed submission", this.sub)
-}
-
-//SetupJPF sets up the project's JPF files.
-func (this *Processor) SetupJPF() error {
-	err := util.Copy(this.toolDir, config.GetConfig(config.RUNNER_DIR))
-	if err != nil {
-		return err
-	}
-	jpfFile, err := db.GetJPF(
-		bson.M{project.PROJECT_ID: this.sub.ProjectId}, nil)
-	if err != nil {
-		return err
-	}
-	this.jpfPath = filepath.Join(this.toolDir, jpfFile.Name)
-	return util.SaveFile(this.jpfPath, jpfFile.Data)
 }
 
 //ProcessFile processes a file according to its type.
@@ -424,10 +426,7 @@ func (this *Analyser) compile() (bool, error) {
 
 //RunTools runs all available tools on a file, skipping previously run tools.
 func (this *Analyser) RunTools() {
-	tools := []tool.Tool{findbugs.New(), pmd.New(pmd.GetRules()),
-		jpf.New(this.proc.toolDir, this.proc.jpfPath),
-		checkstyle.New()}
-	for _, t := range tools {
+	for _, t := range this.proc.tools {
 		if _, ok := this.file.Results[t.GetName()]; ok {
 			continue
 		}

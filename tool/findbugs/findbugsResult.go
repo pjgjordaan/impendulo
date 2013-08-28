@@ -20,6 +20,11 @@ type FindbugsResult struct {
 	Data   *FindbugsReport "data"
 }
 
+func (this *FindbugsResult) String() string {
+	return fmt.Sprintf("Id: %q; FileId: %q; TestName: %s; \n Data: %s", 
+		this.Id, this.FileId, this.Name, this.Data)
+} 
+
 func (this *FindbugsResult) GetName() string {
 	return this.Name
 }
@@ -99,13 +104,19 @@ func genReport(id bson.ObjectId, data []byte) (res *FindbugsReport, err error) {
 type FindbugsReport struct {
 	Id          bson.ObjectId
 	Time        int            `xml:"analysisTimestamp,attr"`
-	Summary     *FindBugsSummary `xml:"FindBugsSummary"`
+	Summary     *FindbugsSummary `xml:"FindBugsSummary"`
 	Instances   []*BugInstance   `xml:"BugInstance"`
 	Categories  []*BugCategory   `xml:"BugCategory"`
 	Patterns    []*BugPattern    `xml:"BugPattern"`
 	CategoryMap map[string]*BugCategory
 	PatternMap  map[string]*BugPattern
 }
+
+
+func (this *FindbugsReport) String() string {
+	return fmt.Sprintf("Id: %q; Summary: %s", 
+		this.Id, this.Summary)
+} 
 
 func (this *FindbugsReport) loadMaps() {
 	this.CategoryMap = make(map[string]*BugCategory)
@@ -118,7 +129,7 @@ func (this *FindbugsReport) loadMaps() {
 	}
 }
 
-type FindBugsSummary struct {
+type FindbugsSummary struct {
 	ClassCount     int             `xml:"total_classes,attr"`
 	ReferenceCount int             `xml:"referenced_classes,attr"`
 	BugCount       int             `xml:"total_bugs,attr"`
@@ -135,6 +146,11 @@ type FindBugsSummary struct {
 	Files          []*FileStats    `xml:"FileStats"`
 	Packages       []*PackageStats `xml:"PackageStats"`
 }
+
+func (this *FindbugsSummary) String() string {
+	return fmt.Sprintf("BugCount: %d; ClassCount: %d", 
+		this.BugCount, this.ClassCount)
+} 
 
 type FileStats struct {
 	Path     string `xml:"path,attr"`

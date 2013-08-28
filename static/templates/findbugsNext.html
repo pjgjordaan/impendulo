@@ -1,20 +1,19 @@
 {{ define "nextResult" }}
-{{$id := .Id.Hex}}
-<div class="panel-group" id="fbaccordion{{$id}}">
+<div class="panel-group" id="fbaccordionNext">
   <div class="panel panel-default">
     <div class="panel-heading">
-      <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbaccordion{{$id}}" href="#Summary{{$id}}"><h4>Summary</h4></a>
+      <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbaccordionNext" href="#SummaryNext"><h4>Summary</h4></a>
     </div>
-    <div id="Summary{{$id}}" class="panel-collapse collapse in">
+    <div id="SummaryNext" class="panel-collapse collapse in">
       <div class="accordion-inner">
-	<div class="panel-group" id="fbsummaryaccordion{{$id}}">
+	<div class="panel-group" id="fbsummaryaccordionNext">
 	  <div class="panel panel-default">
 	    <div class="panel-heading">
-	      <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbsummaryaccordion{{$id}}" href="#Overview{{$id}}">
+	      <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbsummaryaccordionNext" href="#OverviewNext">
 		<h5 class="text-center">Overview</h5>
 	      </a>
 	    </div>
-	    <div id="Overview{{$id}}" class="panel-collapse collapse">
+	    <div id="OverviewNext" class="panel-collapse collapse">
 	      <div class="accordion-inner">
 		<dl class="dl-horizontal">
 		  <dt>Classes Analyzed</dt><dd>{{.Summary.ClassCount}}</dd>
@@ -30,11 +29,11 @@
 	  </div>
 	  <div class="panel panel-default">
 	    <div class="panel-heading">
-	      <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbsummaryaccordion{{$id}}" href="#Files{{$id}}">
+	      <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbsummaryaccordionNext" href="#FilesNext">
 		<h5 class="text-center">Files</h5>
 	      </a>
 	    </div>
-	    <div id="Files{{$id}}" class="panel-collapse collapse">
+	    <div id="FilesNext" class="panel-collapse collapse">
 	      <div class="accordion-inner">
 		{{range .Summary.Files}}
 		<dl class="dl-horizontal">
@@ -47,20 +46,29 @@
 	  </div>
 	  <div class="panel panel-default">
 	    <div class="panel-heading">
-	      <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbsummaryaccordion{{$id}}" href="#Packages{{$id}}">
+	      <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbsummaryaccordionNext" href="#PackagesNext">
 		<h5 class="text-center">Packages</h5>
 	      </a>
 	    </div>
-	    <div id="Packages{{$id}}" class="panel-collapse collapse">
+	    <div id="PackagesNext" class="panel-collapse collapse">
 	      <div class="accordion-inner">
-		<div class="panel-group" id="fbpkgaccordion{{$id}}">
+		<div class="panel-group" id="fbpkgaccordionNext">
 		  {{range .Summary.Packages}}
 		  {{$pkgaddress := address .}} 
 		  <div class="panel panel-default">
 		    <div class="panel-heading">
-		      <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbpkgaccordion{{$id}}" href="#Package{{$pkgaddress}}{{$id}}">Name: {{.Name}}</a>
+		      {{$name := .Name}}
+		      {{if equal .Name ""}}
+		      {{$name := "Empty package"}}
+		      {{end}}
+		      <a class="accordion-toggle"
+		      data-toggle="collapse"
+		      data-parent="#fbpkgaccordionNext"
+		      href="#Package{{$pkgaddress}}Next">
+			<h5>{{$name}}</h5>
+		      </a>
 		    </div>
-		    <div id="Package{{$pkgaddress}}{{$id}}" class="panel-collapse collapse">
+		    <div id="Package{{$pkgaddress}}Next" class="panel-collapse collapse">
 		      <div class="accordion-inner">
 			<dl class="dl-horizontal">
 			  <dt>Number of Classes</dt><dd>{{.ClassCount}}</dd>
@@ -68,14 +76,19 @@
 			  <dt>Priority 1 Bugs Found</dt><dd>{{.Priority1}}</dd>
 			  <dt>Priority 2 Bugs Found</dt><dd>{{.Priority2}}</dd>
 			  <dt>Priority 3 Bugs Found</dt><dd>{{.Priority3}}</dd>
-			  <div class="panel-group" id="fbclass{{$pkgaddress}}{{$id}}">
+			  <div class="panel-group" id="fbclass{{$pkgaddress}}Next">
 			    {{range .Classes}}
 			    {{$classaddress := address .}} 
 			    <div class="panel panel-default">
 			      <div class="panel-heading">
-				<a class="accordion-toggle" data-toggle="collapse" data-parent="#fbclass{{$pkgaddress}}{{$id}}" href="#Class{{$classaddress}}{{$id}}">{{.Name}}</a>
+				<a class="accordion-toggle"
+			    data-toggle="collapse"
+			    data-parent="#fbclass{{$pkgaddress}}Next"
+			    href="#Class{{$classaddress}}Next">
+				  <h5 class="text-center">{{.Name}}</h5>
+				</a>
 			      </div>
-			      <div id="Class{{$classaddress}}{{$id}}" class="panel-collapse collapse">
+			      <div id="Class{{$classaddress}}Next" class="panel-collapse collapse">
 				<div class="accordion-inner">
 			  	  <dl class="dl-horizontal">
 				    <dt>Source File</dt><dd>{{.Source}}</dd>
@@ -107,11 +120,11 @@
   {{else}}
   <div class="panel panel-default">
     <div class="panel-heading">
-      <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbaccordion{{$id}}" href="#Bugs{{$id}}"><h4>Bugs</h4></a>
+      <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbaccordionNext" href="#BugsNext"><h4>Bugs</h4></a>
     </div>
-    <div id="Bugs{{$id}}" class="panel-collapse collapse">
+    <div id="BugsNext" class="panel-collapse collapse">
       <div class="accordion-inner">
-	<div class="panel-group" id="fbbugsaccordion{{$id}}">
+	<div class="panel-group" id="fbbugsaccordionNext">
 	  {{$patterns := .PatternMap}}
 	  {{$categories := .CategoryMap}}
 	  {{range .Instances}}
@@ -120,11 +133,11 @@
 	  <div class="panel panel-default">
 	    {{$bugaddress := address .}} 
 	    <div class="panel-heading">
-	      <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbbugsaccordion{{$id}}" href="#Bug{{$bugaddress}}{{$id}}">
+	      <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbbugsaccordionNext" href="#Bug{{$bugaddress}}Next">
 		<h5 class="text-center">{{$pattern.Description}}</h5>
 	      </a>
 	    </div>
-	    <div id="Bug{{$bugaddress}}{{$id}}" class="panel-collapse collapse">
+	    <div id="Bug{{$bugaddress}}Next" class="panel-collapse collapse">
 	      <div class="accordion-inner">
 		 <dl class="dl-horizontal">
 		   <dt>Priority</dt><dd>{{.Priority}}</dd>

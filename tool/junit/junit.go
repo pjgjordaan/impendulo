@@ -48,11 +48,13 @@ func (this *JUnit) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.Tool
 	if err != nil {
 		return
 	}
+	outFile := filepath.Join(this.datalocation, ti.Name+"_junit.xml")
 	//Run the tests.
 	args := []string{config.GetConfig(config.JAVA), "-cp", this.cp,
 		this.runnerInfo.Executable(), ti.Executable(), this.datalocation}
+	defer os.Remove(outFile)
 	execRes := tool.RunCommand(args, nil)
-	resFile, err := os.Open(filepath.Join(this.datalocation, "res.xml"))
+	resFile, err := os.Open(outFile)
 	if err == nil{
 		//Tests ran successfully.
 		data := util.ReadBytes(resFile)
