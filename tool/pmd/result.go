@@ -11,26 +11,26 @@ import (
 
 const NAME = "PMD"
 
-type PMDResult struct {
+type Result struct {
 	Id     bson.ObjectId "_id"
 	FileId bson.ObjectId "fileid"
 	Name   string        "name"
-	Data   *PMDReport    "data"
+	Data   *Report    "data"
 }
 
-func (this *PMDResult) GetName() string {
+func (this *Result) GetName() string {
 	return this.Name
 }
 
-func (this *PMDResult) GetId() bson.ObjectId {
+func (this *Result) GetId() bson.ObjectId {
 	return this.Id
 }
 
-func (this *PMDResult) GetFileId() bson.ObjectId {
+func (this *Result) GetFileId() bson.ObjectId {
 	return this.FileId
 }
 
-func (this *PMDResult) GetSummary() *tool.Summary {
+func (this *Result) GetSummary() *tool.Summary {
 	body := fmt.Sprintf("Errors: %d", this.Data.Errors)
 	return &tool.Summary{
 		Name: this.GetName(),
@@ -38,11 +38,11 @@ func (this *PMDResult) GetSummary() *tool.Summary {
 	}
 }
 
-func (this *PMDResult) GetData() interface{} {
+func (this *Result) GetData() interface{} {
 	return this.Data
 }
 
-func (this *PMDResult) Template(current bool) string {
+func (this *Result) Template(current bool) string {
 	if current {
 		return "pmdCurrent"
 	} else {
@@ -50,11 +50,11 @@ func (this *PMDResult) Template(current bool) string {
 	}
 }
 
-func (this *PMDResult) Success() bool {
+func (this *Result) Success() bool {
 	return true
 }
 
-func (this *PMDResult) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
+func (this *Result) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
 	if graphData[0] == nil {
 		graphData[0] = tool.CreateChart("PMD Errors")
 	}
@@ -64,8 +64,8 @@ func (this *PMDResult) AddGraphData(max, x float64, graphData []map[string]inter
 }
 
 
-func NewResult(fileId bson.ObjectId, data []byte) (res *PMDResult, err error) {
-	res = &PMDResult{
+func NewResult(fileId bson.ObjectId, data []byte) (res *Result, err error) {
+	res = &Result{
 		Id: bson.NewObjectId(), 
 		FileId: fileId, 
 		Name: NAME, 
@@ -74,7 +74,15 @@ func NewResult(fileId bson.ObjectId, data []byte) (res *PMDResult, err error) {
 	return
 }
 
-func genReport(id bson.ObjectId, data []byte) (res *PMDReport, err error) {
+func (this *Result) String() (ret string) {
+	if this.Data != nil {
+		ret = this.Data.String()
+	}
+	ret += this.Id.Hex()
+	return
+}
+
+func genReport(id bson.ObjectId, data []byte) (res *Report, err error) {
 	if err = xml.Unmarshal(data, &res); err != nil {
 		err = tool.NewXMLError(err, "pmd/pmdResult.go")
 		return
@@ -87,22 +95,14 @@ func genReport(id bson.ObjectId, data []byte) (res *PMDReport, err error) {
 	return
 }
 
-func (this *PMDResult) String() (ret string) {
-	if this.Data != nil {
-		ret = this.Data.String()
-	}
-	ret += this.Id.Hex()
-	return
-}
-
-type PMDReport struct {
+type Report struct {
 	Id      bson.ObjectId
 	Version string  `xml:"version,attr"`
 	Files   []*File `xml:"file"`
 	Errors  int
 }
 
-func (this *PMDReport) String() (ret string) {
+func (this *Report) String() (ret string) {
 	ret = fmt.Sprintf("Report{ Errors: %d\n.", this.Errors)
 	if this.Files != nil {
 		ret += "Files: \n"

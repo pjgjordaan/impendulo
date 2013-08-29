@@ -6,7 +6,6 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"math/rand"
@@ -15,35 +14,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+	"strconv"
 )
-
-func TestAddResult(t *testing.T) {
-	db.Setup(db.TEST_CONN)
-	defer db.DeleteDB(db.TEST_DB)
-	file, err := project.NewFile(bson.NewObjectId(), fileInfo, fileData)
-	if err != nil {
-		t.Error(err)
-	}
-	err = db.AddFile(file)
-	if err != nil {
-		t.Error(err)
-	}
-	res := javac.NewResult(file.Id, fileData)
-	err = AddResult(res)
-	if err != nil {
-		t.Error(err)
-	}
-	matcher := bson.M{project.ID: file.Id}
-	dbFile, err := db.GetFile(matcher, nil)
-	if dbFile.Results[javac.NAME] != res.Id {
-		t.Error("File not updated")
-	}
-	matcher = bson.M{project.ID: res.Id}
-	dbRes, err := db.GetJavacResult(matcher, nil)
-	if !reflect.DeepEqual(res, dbRes) {
-		t.Error("Result not added correctly")
-	}
-}
 
 func TestExtractFile(t *testing.T) {
 	db.Setup(db.TEST_CONN)
@@ -62,7 +34,10 @@ func TestExtractFile(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	proc, _ := NewProcessor(s.Id)
+	proc, err := NewProcessor(s.Id)
+	if err != nil {
+		t.Error(err)
+	}
 	defer os.RemoveAll(proc.rootDir)
 	analyser := &Analyser{proc: proc, file: file}
 	err = analyser.buildTarget()
@@ -112,9 +87,14 @@ func TestEval(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	proc, _ := NewProcessor(s.Id)
-	proc.SetupJPF()
-	proc.tests, _ = SetupTests(proc.sub.ProjectId, proc.toolDir)
+	proc, err := NewProcessor(s.Id)
+	if err != nil {
+		t.Error(err)
+	}
+	proc.tests, err = SetupTests(proc.sub.ProjectId, proc.toolDir)
+	if err != nil {
+		t.Error(err)
+	}
 	defer os.RemoveAll(proc.rootDir)
 	analyser := &Analyser{proc: proc, file: file}
 	err = analyser.Eval()
@@ -126,11 +106,19 @@ func TestEval(t *testing.T) {
 func TestArchive(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
-	file, err := os.Open("testArchive.zip")
+	name := "_za.ac.sun.ac.za.Triangle_src_triangle_Triangle.java_"
+	time := 1256033823717
+	num := 8583
+	toZip := make(map[string][]byte)
+	for i := 0; i < 10; i++{
+		t := strconv.Itoa(time+i*100)
+		n := strconv.Itoa(num+i)
+		toZip[name+t+"_"+n+"_c"] = fileData
+	}
+	zipped, err := util.ZipMap(toZip)
 	if err != nil {
 		t.Error(err)
 	}
-	bytes := util.ReadBytes(file)
 	p := project.NewProject("Test", "user", "java", []byte{})
 	err = db.AddProject(p)
 	if err != nil {
@@ -141,7 +129,7 @@ func TestArchive(t *testing.T) {
 	archives := make([]*project.File, n)
 	for i, _ := range subs {
 		sub := project.NewSubmission(p.Id, "user", project.ARCHIVE_MODE, util.CurMilis())
-		archive := project.NewArchive(sub.Id, bytes, project.ZIP)
+		archive := project.NewArchive(sub.Id, zipped, project.ZIP)
 		err = db.AddSubmission(sub)
 		if err != nil {
 			t.Error(err)
@@ -154,12 +142,14 @@ func TestArchive(t *testing.T) {
 		archives[i] = archive
 	}
 	go func() {
-		for _, sub := range subs {
-			DoSubmission(sub.Id)
+		for j, sub := range subs {
+			StartSubmission(sub.Id)
+			AddFile(archives[j])
+			EndSubmission(sub.Id)
 		}
-		Stop()
+		Shutdown()
 	}()
-	Serve()
+	Serve(10)
 	return
 }
 
@@ -172,7 +162,15 @@ func genMap() map[bson.ObjectId]bool {
 	return idMap
 }
 
-var fileInfo = bson.M{project.TIME: 1000, project.TYPE: project.SRC, project.MOD: "c", project.NAME: "Triangle.java", project.FTYPE: "java", project.PKG: "triangle", project.NUM: 1000}
+var fileInfo = bson.M{
+	project.TIME: 1000, 
+	project.TYPE: project.SRC, 
+	project.MOD: "c", 
+	project.NAME: "Triangle.java", 
+	project.FTYPE: "java", 
+	project.PKG: "triangle", 
+	project.NUM: 1000,
+}
 
 var fileData = []byte(`Ahm Knêma
 Hörr Néhêm

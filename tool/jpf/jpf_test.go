@@ -20,8 +20,8 @@ func TestRun(t *testing.T){
 	if err != nil{
 		t.Errorf("Could not save file %q", err)
 	}
-	jpfFile := project.NewJPFFile(bson.NewObjectId(), "racer.jpf", "user", jpfBytes)
-	jpf, err := New(jpfFile, location)
+	jpfConfig := NewConfig(bson.NewObjectId(), "racer.jpf", "user", jpfBytes)
+	jpf, err := New(jpfConfig, location)
 	if err != nil{
 		t.Errorf("Could not load jpf %q", err)
 	}
@@ -32,7 +32,7 @@ func TestRun(t *testing.T){
 	jpfCfg := config.GetConfig(config.JPF_JAR)
 	defer config.SetConfig(config.JPF_JAR, jpfCfg)
 	config.SetConfig(config.JPF_JAR, "")
-	jpf, err = New(jpfFile, location)
+	jpf, err = New(jpfConfig, location)
 	if err != nil{
 		t.Errorf("Could not load jpf %q", err)
 	}

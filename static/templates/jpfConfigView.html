@@ -1,27 +1,68 @@
 {{ define "view" }}
 <h3>Create JPF Configuration</h3>
-<form class="form-horizontal" action="createjpf" method="post" enctype="multipart/form-data">
+<form class="form-horizontal" action="createjpf" method="post">
   <div class="form-group">
-    <label class="col-lg-2 control-label" for="name">JPF Configuration Name</label>
+    <label class="col-lg-2 control-label" for="project">Project</label>
     <div class="col-lg-3">
-      <input name="name" type="text" id="name">
-    </div>
-  </div>
-  <div class="form-group">
-    <label class="col-lg-2 control-label" for="available">Listeners</label>
-    <div class="col-lg-3">
-      <select name="available" id="available" multiple="multiple">
-	{{ range .ctx.Listeners}}
-	<option value={{.Name}} onclick="movevalue('available', 'added', this)">{{.Name}}</option>
+      <select class="form-control" name="project" id="project">
+	{{ range .ctx.Projects}}
+	<option value={{.Id.Hex}}>{{.Name}}</option>
 	{{end}}
       </select>
-      <select name="added" id="added" multiple="multiple"></select>
     </div>
   </div>
   <div class="form-group">
+    <label class="col-lg-2 control-label" for="name">Name</label>
     <div class="col-lg-3">
+      <input name="name" type="text" id="name"></input>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="col-lg-2 control-label" for="availableL">Available Listeners</label>
+    <div class="col-lg-3">
+      <select class="form-control" name="availableL" id="availableL" multiple>
+	{{$listeners := listeners}}
+	{{range $listeners}}
+	<option value={{.Package}}{{.Name}}
+	onclick="movevalue('availableL', 'addedL', this)">
+	  {{.Package}}{{.Name}}
+	</option>
+	{{end}}
+      </select>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="col-lg-2 control-label" for="addedL">Added Listeners</label>
+    <div class="col-lg-3">
+      <select class="form-control" name="addedL" id="addedL" multiple></select>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="col-lg-2 control-label" for="availableS">Available Searches</label>
+    <div class="col-lg-3">
+      <select class="form-control" name="availableS" id="availableS" multiple>
+	{{$searches := searches}}
+	{{range $searches}}
+	<option value={{.Package}}{{.Name}}
+	onclick="replacevalue('availableS', 'addedS', this)">
+	  {{.Package}}{{.Name}}
+	</option>
+	{{end}}
+      </select>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="col-lg-2 control-label" for="addedS">Current Search</label>
+    <div class="col-lg-3">
+      <input type="text" class="form-control" name="addedS"
+      id="addedS" readonly></input>
+    </div>
+  </div>
+  <div class="form-group">
+    <div class="col-lg-offset-2 col-lg-3">
       <button type="submit" class="btn btn-default btn-inverse">Create</button>
     </div>
   </div>
+  <a hidden name="addedSearch" id="addedSearch" href=""><a/>
 </form>
 {{ end }}

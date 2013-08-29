@@ -100,6 +100,7 @@ var perms = map[string]int{
 	"logout": 1, "deleteproject": 1, "deleteuser": 1, "displaygraph": 0,
 	"displayresult": 0, "getfiles": 0, "getsubmissions": 0,
 	"skeleton.zip": 0, "index": 0, "favicon.ico": 0, "": 0, "statusview": 1,
+	"createjpf": 1,
 }
 
 //GenerateViews is used to load all the basic views used by our web app.
@@ -121,9 +122,11 @@ func LoadView(name, view string) Handler {
 	}
 }
 
-var posts = map[string]PostFunc{"addtest": AddTest, "addjpf": AddJPF,
+var posts = map[string]PostFunc{
+	"addtest": AddTest, "addjpf": AddJPF,
 	"addproject": AddProject, "changeskeleton": ChangeSkeleton,
-	"submitarchive": SubmitArchive}
+	"submitarchive": SubmitArchive, "createjpf": CreateJPF,
+}
 
 //GeneratePosts loads post request handlers.
 func GeneratePosts(router *pat.Router) {

@@ -8,13 +8,13 @@ import (
 	"testing"
 )
 
-func TestZip(t *testing.T) {
+func TestZipMap(t *testing.T) {
 	goodFiles := map[string][]byte{
 		"readme.txt": []byte("This archive contains some text files."),
 		"gopher.txt": []byte("Gopher names:\nGeorge\nGeoffrey\nGonzo"),
 		"todo.txt":   []byte("Get animal handling licence.\nWrite more examples."),
 	}
-	_, err := Zip(goodFiles)
+	_, err := ZipMap(goodFiles)
 	if err != nil {
 		t.Error(err)
 	}
@@ -26,7 +26,7 @@ func TestExtractBytes(t *testing.T) {
 		"gopher.txt": []byte("Gopher names:\nGeorge\nGeoffrey\nGonzo"),
 		"todo.txt":   []byte("Get animal handling licence.\nWrite more examples."),
 	}
-	zipped, err := Zip(files)
+	zipped, err := ZipMap(files)
 	r := bytes.NewReader(zipped)
 	zr, err := zip.NewReader(r, int64(r.Len()))
 	if err != nil {
@@ -55,7 +55,7 @@ func TestUnzipToMap(t *testing.T) {
 		"gopher.txt": []byte("Gopher names:\nGeorge\nGeoffrey\nGonzo"),
 		"todo.txt":   []byte("Get animal handling licence.\nWrite more examples."),
 	}
-	zipped, err := Zip(goodFiles)
+	zipped, err := ZipMap(goodFiles)
 	if err != nil {
 		t.Error(err)
 	}
@@ -73,7 +73,7 @@ func TestUnzipToMap(t *testing.T) {
 		"/root/sudo": []byte("Gopher names:\nGeorge\nGeoffrey\nGonzo"),
 		"\\hi":       nil,
 	}
-	zipped, err = Zip(badFiles)
+	zipped, err = ZipMap(badFiles)
 	if err != nil {
 		t.Error(err)
 	}
@@ -102,7 +102,7 @@ func TestUnzip(t *testing.T) {
 		"gopher.txt": []byte("Gopher names:\nGeorge\nGeoffrey\nGonzo"),
 		"todo.txt":   []byte("Get animal handling licence.\nWrite more examples."),
 	}
-	zipped, err := Zip(files)
+	zipped, err := ZipMap(files)
 	buff := bytes.NewBuffer(zipped)
 	dir := "/tmp/unzipped"
 	os.MkdirAll(dir, os.ModeDir|os.ModePerm)
@@ -119,7 +119,7 @@ func TestExtractFile(t *testing.T) {
 		"gopher.txt": []byte("Gopher names:\nGeorge\nGeoffrey\nGonzo"),
 		"todo.txt":   []byte("Get animal handling licence.\nWrite more examples."),
 	}
-	zipped, err := Zip(files)
+	zipped, err := ZipMap(files)
 	r := bytes.NewReader(zipped)
 	zr, err := zip.NewReader(r, int64(r.Len()))
 	if err != nil {

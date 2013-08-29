@@ -12,31 +12,31 @@ import (
 
 const NAME = "JUnit Test"
 
-type JUnitResult struct {
+type Result struct {
 	Id       bson.ObjectId "_id"
 	FileId   bson.ObjectId "fileid"
 	TestName string        "name"
-	Data     *TestSuite    "data"
+	Data     *Report    "data"
 }
 
-func (this *JUnitResult) String() string {
+func (this *Result) String() string {
 	return fmt.Sprintf("Id: %q; FileId: %q; TestName: %s; \n Data: %s", 
 		this.Id, this.FileId, this.TestName, this.Data)
 } 
 
-func (this *JUnitResult) GetName() string {
+func (this *Result) GetName() string {
 	return this.TestName
 }
 
-func (this *JUnitResult) GetId() bson.ObjectId {
+func (this *Result) GetId() bson.ObjectId {
 	return this.Id
 }
 
-func (this *JUnitResult) GetFileId() bson.ObjectId {
+func (this *Result) GetFileId() bson.ObjectId {
 	return this.FileId
 }
 
-func (this *JUnitResult) GetSummary() *tool.Summary {
+func (this *Result) GetSummary() *tool.Summary {
 	body := fmt.Sprintf("Tests: %d \n Failures: %d \n Errors: %d \n Time: %f",
 		this.Data.Tests, this.Data.Failures, this.Data.Errors, this.Data.Time)
 	return &tool.Summary{
@@ -45,11 +45,11 @@ func (this *JUnitResult) GetSummary() *tool.Summary {
 	}
 }
 
-func (this *JUnitResult) GetData() interface{} {
+func (this *Result) GetData() interface{} {
 	return this.Data
 }
 
-func (this *JUnitResult) Template(current bool) string {
+func (this *Result) Template(current bool) string {
 	if current {
 		return "junitCurrent"
 	} else {
@@ -57,11 +57,11 @@ func (this *JUnitResult) Template(current bool) string {
 	}
 }
 
-func (this *JUnitResult) Success() bool {
+func (this *Result) Success() bool {
 	return this.Data.Success
 }
 
-func (this *JUnitResult) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
+func (this *Result) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
 	if graphData[0] == nil {
 		graphData[0] = tool.CreateChart(this.GetName() + " Errors")
 		graphData[1] = tool.CreateChart(this.GetName() + " Failures")
@@ -78,8 +78,8 @@ func (this *JUnitResult) AddGraphData(max, x float64, graphData []map[string]int
 
 
 
-func NewResult(fileId bson.ObjectId, name string, data []byte) (res *JUnitResult, err error) {
-	res = &JUnitResult{
+func NewResult(fileId bson.ObjectId, name string, data []byte) (res *Result, err error) {
+	res = &Result{
 		Id: bson.NewObjectId(), 
 		FileId: fileId, 
 		TestName: name,
@@ -88,7 +88,7 @@ func NewResult(fileId bson.ObjectId, name string, data []byte) (res *JUnitResult
 	return
 }
 
-type TestSuite struct {
+type Report struct {
 	Id       bson.ObjectId
 	Success  bool
 	Errors   int        `xml:"errors,attr"`
@@ -100,12 +100,12 @@ type TestSuite struct {
 }
 
 
-func (this *TestSuite) String() string {
+func (this *Report) String() string {
 	return fmt.Sprintf("Id: %q; Success: %t; Tests: %d; Errors: %d; Failures: %d; Name: %s; \n Results: %s", 
 		this.Id, this.Success, this.Tests, this.Errors, this.Failures, this.Name, this.Results)
 } 
 
-func (this *TestSuite) GetResults(num int) TestCases{
+func (this *Report) GetResults(num int) TestCases{
 	if len(this.Results) < num{
 		return this.Results
 	} else{
@@ -164,7 +164,7 @@ func (this *Failure) String() string {
 		this.Message, this.Type, this.Value)
 } 
 
-func genReport(id bson.ObjectId, data []byte) (res *TestSuite, err error) {
+func genReport(id bson.ObjectId, data []byte) (res *Report, err error) {
 	if err = xml.Unmarshal(data, &res); err != nil {
 		if res == nil {
 			err = tool.NewXMLError(err, "junit/junitResult.go")

@@ -68,7 +68,7 @@ const (
 	JPF_RUNNER_DIR        = "jpf_runner_dir"
 	TESTING_DIR       = "testing_dir"
 	JPF_HOME          = "jpf_home"
-	JPF_LISTENER_DIR      = "jpf_listener_dir"
+	JPF_FINDER_DIR      = "jpf_finder_dir"
 	PMD               = "pmd"
 	CHECKSTYLE        = "checkstyle"
 	CHECKSTYLE_CONFIG = "checkstyle_config"

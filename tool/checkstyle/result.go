@@ -11,23 +11,23 @@ import (
 
 const NAME = "Checkstyle"
 
-type CheckstyleResult struct {
+type Result struct {
 	Id     bson.ObjectId     "_id"
 	FileId bson.ObjectId     "fileid"
 	Name   string            "name"
-	Data   *CheckstyleReport "data"
+	Data   *Report "data"
 }
 
-func (this *CheckstyleResult) String()string{
+func (this Result) String()string{
 	return fmt.Sprintf("Id: %q; FileId: %q; Name: %s; \nData: %s\n", 
 		this.Id, this.FileId, this.Name, this.Data.String()) 
 }
 
-func (this *CheckstyleResult) GetName() string {
+func (this *Result) GetName() string {
 	return this.Name
 }
 
-func (this *CheckstyleResult) GetSummary() *tool.Summary {
+func (this *Result) GetSummary() *tool.Summary {
 	body := fmt.Sprintf("Errors: %d",
 		this.Data.Errors)
 	return &tool.Summary{
@@ -36,19 +36,19 @@ func (this *CheckstyleResult) GetSummary() *tool.Summary {
 	}
 }
 
-func (this *CheckstyleResult) GetId() bson.ObjectId {
+func (this *Result) GetId() bson.ObjectId {
 	return this.Id
 }
 
-func (this *CheckstyleResult) GetFileId() bson.ObjectId {
+func (this *Result) GetFileId() bson.ObjectId {
 	return this.FileId
 }
 
-func (this *CheckstyleResult) GetData() interface{} {
+func (this *Result) GetData() interface{} {
 	return this.Data
 }
 
-func (this *CheckstyleResult) Template(current bool) string {
+func (this *Result) Template(current bool) string {
 	if current {
 		return "checkstyleCurrent"
 	} else {
@@ -56,11 +56,11 @@ func (this *CheckstyleResult) Template(current bool) string {
 	}
 }
 
-func (this *CheckstyleResult) Success() bool {
+func (this *Result) Success() bool {
 	return true
 }
 
-func (this *CheckstyleResult) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
+func (this *Result) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
 	if graphData[0] == nil {
 		graphData[0] = tool.CreateChart("Checkstyle Errors")
 	}
@@ -70,8 +70,8 @@ func (this *CheckstyleResult) AddGraphData(max, x float64, graphData []map[strin
 }
 
 
-func NewResult(fileId bson.ObjectId, data []byte) (res *CheckstyleResult, err error) {
-	res = &CheckstyleResult{
+func NewResult(fileId bson.ObjectId, data []byte) (res *Result, err error) {
+	res = &Result{
 		Id: bson.NewObjectId(), 
 		FileId: fileId, 
 		Name: NAME, 
@@ -80,7 +80,7 @@ func NewResult(fileId bson.ObjectId, data []byte) (res *CheckstyleResult, err er
 	return
 }
 
-func genReport(id bson.ObjectId, data []byte) (res *CheckstyleReport, err error) {
+func genReport(id bson.ObjectId, data []byte) (res *Report, err error) {
 	if err = xml.Unmarshal(data, &res); err != nil {
 		err = tool.NewXMLError(err, "checkstyle/checkstyleResult.go")
 		return
@@ -93,14 +93,14 @@ func genReport(id bson.ObjectId, data []byte) (res *CheckstyleReport, err error)
 	return
 }
 
-type CheckstyleReport struct {
+type Report struct {
 	Id      bson.ObjectId
 	Version string `xml:"version,attr"`
 	Errors  int
 	Files   []*File `xml:"file"`
 }
 
-func (this *CheckstyleReport) String()string{
+func (this *Report) String()string{
 	files := ""
 	for _, f := range this.Files{
 		files += f.String()

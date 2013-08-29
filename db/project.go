@@ -142,22 +142,6 @@ func GetTests(matcher, selector interface{}) (ret []*project.Test, err error) {
 	return
 }
 
-//GetJPF retrieves a JPF configuration file
-//matching the given interface from the active database.
-func GetJPF(matcher, selector interface{}) (ret *project.JPFFile, err error) {
-	session, err := getSession()
-	if err != nil {
-		return
-	}
-	defer session.Close()
-	c := session.DB("").C(JPF)
-	err = c.Find(matcher).Select(selector).One(&ret)
-	if err != nil {
-		err = &DBGetError{"jpf config file", err, matcher}
-	}
-	return
-}
-
 //GetProject retrieves a project matching
 //the given interface from the active database.
 func GetProject(matcher, selector interface{}) (ret *project.Project, err error) {
@@ -220,25 +204,6 @@ func AddTest(t *project.Test) error {
 	return nil
 }
 
-//AddJPF adds a new JPF configuration file to the active database.
-func AddJPF(jpf *project.JPFFile) error {
-	session, err := getSession()
-	if err != nil {
-		return err
-	}
-	defer session.Close()
-	col := session.DB("").C(JPF)
-	matcher := bson.M{project.PROJECT_ID: jpf.ProjectId}
-	_, err = col.RemoveAll(matcher)
-	if err != nil {
-		err = &DBRemoveError{"jpf config files", err, matcher}
-	}
-	err = col.Insert(jpf)
-	if err != nil {
-		err = &DBAddError{jpf.String(), err}
-	}
-	return nil
-}
 
 //AddSubmission adds a new submission to the active database.
 func AddSubmission(s *project.Submission) (err error) {
@@ -318,22 +283,6 @@ func RemoveSubmissionById(id interface{}) (err error) {
 	err = c.RemoveId(id)
 	if err != nil {
 		err = &DBRemoveError{"submission", err, id}
-	}
-	return
-}
-
-//RemoveJPFById removes a JPF configuration file matching
-//the given id from the active database.
-func RemoveJPFById(id interface{}) (err error) {
-	session, err := getSession()
-	if err != nil {
-		return
-	}
-	defer session.Close()
-	c := session.DB("").C(JPF)
-	err = c.RemoveId(id)
-	if err != nil {
-		err = &DBRemoveError{"jpf", err, id}
 	}
 	return
 }

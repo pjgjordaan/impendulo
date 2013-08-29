@@ -7,6 +7,7 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
@@ -120,10 +121,46 @@ func AddJPF(req *http.Request, ctx *Context) (err error) {
 	if err != nil {
 		return
 	}
-	jpf := project.NewJPFFile(projectId, name, username, data)
-	err = db.AddJPF(jpf)
+	jpfConfig := jpf.NewConfig(projectId, name, username, data)
+	err = db.AddJPF(jpfConfig)
 	return
 }
+
+//CreateJPF replaces a project's JPF configuration file.
+func CreateJPF(req *http.Request, ctx *Context) (err error) {
+	projectId, err := util.ReadId(req.FormValue("project"))
+	if err != nil {
+		return
+	}
+	name, err := GetString(req, "name")
+	if err != nil {
+		return
+	}
+	username, err := ctx.Username()
+	if err != nil {
+		return
+	}
+	listeners, err := GetStrings(req, "addedL")
+	if err != nil {
+		return
+	}
+	search, err := GetString(req, "addedS")
+	if err != nil {
+		return
+	}
+	vals := map[string][]string{
+		"search.class": []string{search},
+		"listener": listeners,
+	}
+	data, err := jpf.JPFBytes(vals)
+	if err != nil {
+		return
+	}
+	jpfConfig := jpf.NewConfig(projectId, name, username, data)
+	err = db.AddJPF(jpfConfig)
+	return
+}
+
 
 //AddProject creates a new Impendulo Project.
 func AddProject(req *http.Request, ctx *Context) (err error) {
@@ -345,6 +382,19 @@ func GetInt(req *http.Request, name string) (found int, err error) {
 	}
 	return
 }
+
+//GetStrings retrieves a string value from a request form.
+func GetStrings(req *http.Request, name string) (vals []string, err error) {
+	if req.Form == nil{
+		err = req.ParseForm()
+		if err != nil{
+			return
+		}
+	}
+	vals = req.Form[name]
+	return
+}
+
 
 //GetString retrieves a string value from a request form.
 func GetString(req *http.Request, name string) (val string, err error) {

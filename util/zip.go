@@ -96,7 +96,7 @@ func ExtractBytes(zf *zip.File) (ret []byte, err error) {
 
 //Zip creates a zip archive from a map which has file names as its keys and
 //file contents as its values.
-func Zip(files map[string][]byte) (ret []byte, err error) {
+func ZipMap(files map[string][]byte) (ret []byte, err error) {
 	buf := new(bytes.Buffer)
 	zw := zip.NewWriter(buf)
 	for name, data := range files {

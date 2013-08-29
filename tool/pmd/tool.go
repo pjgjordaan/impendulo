@@ -11,20 +11,23 @@ import (
 	"path/filepath"
 )
 
-type PMD struct {
+type Tool struct {
 	cmd string
 	rules string
 }
 
-func New(rules []string) *PMD {
-	return &PMD{config.GetConfig(config.PMD), strings.Join(rules, ",")}
+func New(rules []string) *Tool {
+	return &Tool{
+		cmd: config.GetConfig(config.PMD), 
+		rules: strings.Join(rules, ","),
+	}
 }
 
-func (this *PMD) GetLang() string {
+func (this *Tool) GetLang() string {
 	return "java"
 }
 
-func (this *PMD) GetName() string {
+func (this *Tool) GetName() string {
 	return NAME
 }
 
@@ -40,7 +43,7 @@ func GetRules()[]string{
 	}
 }
 
-func (this *PMD) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
+func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	outFile := filepath.Join(ti.Dir, "pmd.xml")
 	args := []string{this.cmd, config.PMD, "-f", "xml", "-stress",
 		"-shortnames", "-R", this.rules, "-r", outFile, "-d", ti.Dir}

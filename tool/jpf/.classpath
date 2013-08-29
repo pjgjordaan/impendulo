@@ -6,7 +6,7 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="src" path="runner"/>
-	<classpathentry kind="src" path="listener"/>
+	<classpathentry kind="src" path="finder"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="src" path="/jpf-core"/>
 	<classpathentry kind="output" path="bin"/>

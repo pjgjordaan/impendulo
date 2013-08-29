@@ -3,9 +3,7 @@ package db
 import (
 	"bytes"
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/javac"
-	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/user"
 	"labix.org/v2/mgo/bson"
 	"reflect"
@@ -14,18 +12,22 @@ import (
 )
 
 func TestSetup(t *testing.T) {
-	Setup(DEFAULT_CONN)
-	getSession().Close()
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
-	s := getSession()
+	s, err := getSession()
+	if err != nil{
+		t.Error(err)
+	}
 	defer s.Close()
 }
 
 func TestRemoveFile(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
-	s := getSession()
+	s, err := getSession()
+	if err != nil{
+		t.Error(err)
+	}
 	defer s.Close()
 	f, err := project.NewFile(bson.NewObjectId(), fileInfo, fileData)
 	if err != nil {
@@ -35,7 +37,7 @@ func TestRemoveFile(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	err = RemoveFileByID(f.Id)
+	err = RemoveFileById(f.Id)
 	if err != nil {
 		t.Error(err)
 	}
@@ -49,7 +51,10 @@ func TestRemoveFile(t *testing.T) {
 func TestGetFile(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
-	s := getSession()
+	s, err := getSession()
+	if err != nil{
+		t.Error(err)
+	}
 	defer s.Close()
 	f, err := project.NewFile(bson.NewObjectId(), fileInfo, fileData)
 	if err != nil {
@@ -72,10 +77,13 @@ func TestGetFile(t *testing.T) {
 func TestGetSubmission(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
-	s := getSession()
+	s, err := getSession()
+	if err != nil{
+		t.Error(err)
+	}
 	defer s.Close()
 	sub := project.NewSubmission(bson.NewObjectId(), "user", project.FILE_MODE, 1000)
-	err := AddSubmission(sub)
+	err = AddSubmission(sub)
 	if err != nil {
 		t.Error(err)
 	}
@@ -92,32 +100,44 @@ func TestGetSubmission(t *testing.T) {
 func TestGetResult(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
-	s := getSession()
-	defer s.Close()
-	results := []tool.Result{javac.NewResult(bson.NewObjectId(), fileData), junit.NewResult(bson.NewObjectId(), "Name", fileData)}
-	for _, res := range results {
-		err := AddResult(res)
-		if err != nil {
-			t.Error(err)
-		}
-		matcher := bson.M{"_id": res.GetId()}
-		dbRes, err := GetResult(res.GetName(), matcher, nil)
-		if err != nil {
-			t.Error(err)
-		}
-		if !reflect.DeepEqual(res, dbRes) {
-			t.Error("Results not equivalent")
-		}
+	s, err := getSession()
+	if err != nil{
+		t.Error(err)
 	}
-
+	defer s.Close()
+	file, err := project.NewFile(bson.NewObjectId(), fileInfo, fileData)
+	if err != nil {
+		t.Error(err)
+	}
+	err = AddFile(file)
+	if err != nil {
+		t.Error(err)
+	}
+	res := javac.NewResult(file.Id, fileData)
+	err = AddResult(res)
+	if err != nil {
+		t.Error(err)
+	}
+	matcher := bson.M{"_id": res.GetId()}
+	dbRes, err := GetToolResult(res.GetName(), matcher, nil)
+	if err != nil {
+		t.Error(err)
+	}
+	if !reflect.DeepEqual(res, dbRes) {
+		t.Error("Results not equivalent")
+	}
 }
+
 func TestGetUserById(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
-	s := getSession()
+	s, err := getSession()
+	if err != nil{
+		t.Error(err)
+	}	
 	defer s.Close()
-	u := user.NewUser("uname", "pword")
-	err := AddUser(u)
+	u := user.New("uname", "pword")
+	err = AddUser(u)
 	if err != nil {
 		t.Error(err)
 	}
@@ -133,10 +153,13 @@ func TestGetUserById(t *testing.T) {
 func TestGetTest(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
-	s := getSession()
+	s, err := getSession()
+	if err != nil{
+		t.Error(err)
+	}
 	defer s.Close()
 	test := project.NewTest(bson.NewObjectId(), "name", "user", "pkg", testData, fileData)
-	err := AddTest(test)
+	err = AddTest(test)
 	if err != nil {
 		t.Error(err)
 	}
@@ -152,7 +175,10 @@ func TestGetTest(t *testing.T) {
 func TestCount(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
-	s := getSession()
+	s, err := getSession()
+	if err != nil{
+		t.Error(err)
+	}	
 	defer s.Close()
 	num := 100
 	n, err := Count(PROJECTS, bson.M{})
@@ -164,7 +190,7 @@ func TestCount(t *testing.T) {
 	}
 	for i := 0; i < num; i++ {
 		var s int = i / 10
-		err = AddProject(project.NewProject("name"+strconv.Itoa(s), "user", "lang"))
+		err = AddProject(project.NewProject("name"+strconv.Itoa(s), "user", "lang", fileData))
 		if err != nil {
 			t.Error(err)
 		}

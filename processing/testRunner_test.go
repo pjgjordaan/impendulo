@@ -149,11 +149,11 @@ func getSubmission() *project.Submission {
 }
 
 func getTest(pId bson.ObjectId) (*project.Test, error) {
-	testZip, err := util.Zip(map[string][]byte{"testing/EasyTests.java": testData})
+	testZip, err := util.ZipMap(map[string][]byte{"testing/EasyTests.java": testData})
 	if err != nil {
 		return nil, err
 	}
-	dataZip, err := util.Zip(map[string][]byte{"0001.etxt": testCase})
+	dataZip, err := util.ZipMap(map[string][]byte{"0001.etxt": testCase})
 	if err != nil {
 		return nil, err
 	}

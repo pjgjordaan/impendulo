@@ -15,9 +15,9 @@ import (
 	"strings"
 )
 
-//GetCheckstyleResult retrieves a CheckstyleResult matching
+//GetCheckstyleResult retrieves a Result matching
 //the given interface from the active database.
-func GetCheckstyleResult(matcher, selector bson.M) (ret *checkstyle.CheckstyleResult, err error) {
+func GetCheckstyleResult(matcher, selector bson.M) (ret *checkstyle.Result, err error) {
 	session, err := getSession()
 	if err != nil {
 		return
@@ -32,9 +32,9 @@ func GetCheckstyleResult(matcher, selector bson.M) (ret *checkstyle.CheckstyleRe
 	return
 }
 
-//GetPMDResult retrieves a PMDResult matching
+//GetPMDResult retrieves a Result matching
 //the given interface from the active database.
-func GetPMDResult(matcher, selector bson.M) (ret *pmd.PMDResult, err error) {
+func GetPMDResult(matcher, selector bson.M) (ret *pmd.Result, err error) {
 	session, err := getSession()
 	if err != nil {
 		return
@@ -49,9 +49,9 @@ func GetPMDResult(matcher, selector bson.M) (ret *pmd.PMDResult, err error) {
 	return
 }
 
-//GetFindbugsResult retrieves a FindbugsResult matching
+//GetFindbugsResult retrieves a Result matching
 //the given interface from the active database.
-func GetFindbugsResult(matcher, selector bson.M) (ret *findbugs.FindbugsResult, err error) {
+func GetFindbugsResult(matcher, selector bson.M) (ret *findbugs.Result, err error) {
 	session, err := getSession()
 	if err != nil {
 		return
@@ -66,9 +66,9 @@ func GetFindbugsResult(matcher, selector bson.M) (ret *findbugs.FindbugsResult, 
 	return
 }
 
-//GetJPFResult retrieves a JPFResult matching
+//GetJPFResult retrieves a Result matching
 //the given interface from the active database.
-func GetJPFResult(matcher, selector bson.M) (ret *jpf.JPFResult, err error) {
+func GetJPFResult(matcher, selector bson.M) (ret *jpf.Result, err error) {
 	session, err := getSession()
 	if err != nil {
 		return
@@ -83,9 +83,9 @@ func GetJPFResult(matcher, selector bson.M) (ret *jpf.JPFResult, err error) {
 	return
 }
 
-//GetJUnitResult retrieves a JUnitResult matching
+//GetJUnitResult retrieves aResult matching
 //the given interface from the active database.
-func GetJUnitResult(matcher, selector bson.M) (ret *junit.JUnitResult, err error) {
+func GetJUnitResult(matcher, selector bson.M) (ret *junit.Result, err error) {
 	session, err := getSession()
 	if err != nil {
 		return
@@ -101,7 +101,7 @@ func GetJUnitResult(matcher, selector bson.M) (ret *junit.JUnitResult, err error
 
 //GetJavacResult retrieves a JavacResult matching
 //the given interface from the active database.
-func GetJavacResult(matcher, selector bson.M) (ret *javac.JavacResult, err error) {
+func GetJavacResult(matcher, selector bson.M) (ret *javac.Result, err error) {
 	session, err := getSession()
 	if err != nil {
 		return

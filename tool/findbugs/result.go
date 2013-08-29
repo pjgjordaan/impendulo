@@ -13,31 +13,31 @@ const NAME = "Findbugs"
 
 //FindBugsResult is a tool.ToolResult and a tool.DisplayResult.
 //It is used to store the output of running Findbugs.
-type FindbugsResult struct {
+type Result struct {
 	Id     bson.ObjectId   "_id"
 	FileId bson.ObjectId   "fileid"
 	Name   string          "name"
-	Data   *FindbugsReport "data"
+	Data   *Report "data"
 }
 
-func (this *FindbugsResult) String() string {
+func (this *Result) String() string {
 	return fmt.Sprintf("Id: %q; FileId: %q; TestName: %s; \n Data: %s", 
 		this.Id, this.FileId, this.Name, this.Data)
 } 
 
-func (this *FindbugsResult) GetName() string {
+func (this *Result) GetName() string {
 	return this.Name
 }
 
-func (this *FindbugsResult) GetId() bson.ObjectId {
+func (this *Result) GetId() bson.ObjectId {
 	return this.Id
 }
 
-func (this *FindbugsResult) GetFileId() bson.ObjectId {
+func (this *Result) GetFileId() bson.ObjectId {
 	return this.FileId
 }
 
-func (this *FindbugsResult) GetSummary() *tool.Summary {
+func (this *Result) GetSummary() *tool.Summary {
 	body := fmt.Sprintf("Bugs: %d", this.Data.Summary.BugCount)
 	return &tool.Summary{
 		Name: this.GetName(),
@@ -45,11 +45,11 @@ func (this *FindbugsResult) GetSummary() *tool.Summary {
 	}
 }
 
-func (this *FindbugsResult) GetData() interface{} {
+func (this *Result) GetData() interface{} {
 	return this.Data
 }
 
-func (this *FindbugsResult) Template(current bool) string {
+func (this *Result) Template(current bool) string {
 	if current {
 		return "findbugsCurrent"
 	} else {
@@ -57,11 +57,11 @@ func (this *FindbugsResult) Template(current bool) string {
 	}
 }
 
-func (this *FindbugsResult) Success() bool {
+func (this *Result) Success() bool {
 	return true
 }
 
-func (this *FindbugsResult) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
+func (this *Result) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
 	if graphData[0] == nil {
 		graphData[0] = tool.CreateChart("Findbugs All")
 		graphData[1] = tool.CreateChart("Findbugs Priority 1")
@@ -79,8 +79,8 @@ func (this *FindbugsResult) AddGraphData(max, x float64, graphData []map[string]
 	return math.Max(max, math.Max(y1, math.Max(y2, math.Max(y3, yB))))
 }
 
-func NewResult(fileId bson.ObjectId, data []byte) (res *FindbugsResult, err error) {
-	res = &FindbugsResult{
+func NewResult(fileId bson.ObjectId, data []byte) (res *Result, err error) {
+	res = &Result{
 		Id:     bson.NewObjectId(),
 		FileId: fileId,
 		Name:   NAME,
@@ -89,7 +89,7 @@ func NewResult(fileId bson.ObjectId, data []byte) (res *FindbugsResult, err erro
 	return
 }
 
-func genReport(id bson.ObjectId, data []byte) (res *FindbugsReport, err error) {
+func genReport(id bson.ObjectId, data []byte) (res *Report, err error) {
 	if err = xml.Unmarshal(data, &res); err != nil {
 		err = tool.NewXMLError(err, "findbugs/findbugsResult.go")
 		return
@@ -99,12 +99,12 @@ func genReport(id bson.ObjectId, data []byte) (res *FindbugsReport, err error) {
 	return
 }
 
-//FindbugsReport stores the results of running Findbugs. It is
+//Report stores the results of running Findbugs. It is
 //populated from XML output produced by findbugs.
-type FindbugsReport struct {
+type Report struct {
 	Id          bson.ObjectId
 	Time        int            `xml:"analysisTimestamp,attr"`
-	Summary     *FindbugsSummary `xml:"FindBugsSummary"`
+	Summary     *Summary `xml:"FindBugsSummary"`
 	Instances   []*BugInstance   `xml:"BugInstance"`
 	Categories  []*BugCategory   `xml:"BugCategory"`
 	Patterns    []*BugPattern    `xml:"BugPattern"`
@@ -113,12 +113,12 @@ type FindbugsReport struct {
 }
 
 
-func (this *FindbugsReport) String() string {
+func (this *Report) String() string {
 	return fmt.Sprintf("Id: %q; Summary: %s", 
 		this.Id, this.Summary)
 } 
 
-func (this *FindbugsReport) loadMaps() {
+func (this *Report) loadMaps() {
 	this.CategoryMap = make(map[string]*BugCategory)
 	this.PatternMap = make(map[string]*BugPattern)
 	for _, cat := range this.Categories {
@@ -129,7 +129,7 @@ func (this *FindbugsReport) loadMaps() {
 	}
 }
 
-type FindbugsSummary struct {
+type Summary struct {
 	ClassCount     int             `xml:"total_classes,attr"`
 	ReferenceCount int             `xml:"referenced_classes,attr"`
 	BugCount       int             `xml:"total_bugs,attr"`
@@ -147,7 +147,7 @@ type FindbugsSummary struct {
 	Packages       []*PackageStats `xml:"PackageStats"`
 }
 
-func (this *FindbugsSummary) String() string {
+func (this *Summary) String() string {
 	return fmt.Sprintf("BugCount: %d; ClassCount: %d", 
 		this.BugCount, this.ClassCount)
 } 

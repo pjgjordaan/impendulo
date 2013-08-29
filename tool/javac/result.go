@@ -8,26 +8,26 @@ import (
 
 const NAME = "Javac"
 
-type JavacResult struct {
+type Result struct {
 	Id     bson.ObjectId "_id"
 	FileId bson.ObjectId "fileid"
 	Name   string        "name"
 	Data   []byte        "data"
 }
 
-func (this *JavacResult) GetName() string {
+func (this *Result) GetName() string {
 	return this.Name
 }
 
-func (this *JavacResult) GetId() bson.ObjectId {
+func (this *Result) GetId() bson.ObjectId {
 	return this.Id
 }
 
-func (this *JavacResult) GetFileId() bson.ObjectId {
+func (this *Result) GetFileId() bson.ObjectId {
 	return this.FileId
 }
 
-func (this *JavacResult) GetSummary() *tool.Summary {
+func (this *Result) GetSummary() *tool.Summary {
 	var body string
 	if this.Success() {
 		body = "Compiled successfully."
@@ -40,11 +40,11 @@ func (this *JavacResult) GetSummary() *tool.Summary {
 	}
 }
 
-func (this *JavacResult) GetData() interface{} {
+func (this *Result) GetData() interface{} {
 	return this
 }
 
-func (this *JavacResult) Template(current bool) string {
+func (this *Result) Template(current bool) string {
 	if current {
 		return "javacCurrent"
 	} else {
@@ -52,15 +52,15 @@ func (this *JavacResult) Template(current bool) string {
 	}
 }
 
-func (this *JavacResult) Success() bool {
+func (this *Result) Success() bool {
 	return bytes.Equal(this.Data, []byte("Compiled successfully"))
 }
 
-func (this *JavacResult) Result() string {
+func (this *Result) Result() string {
 	return string(this.Data)
 }
 
-func (this *JavacResult) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
+func (this *Result) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
 	if graphData[0] == nil {
 		graphData[0] = tool.CreateChart("Compilation")
 	}
@@ -74,6 +74,11 @@ func (this *JavacResult) AddGraphData(max, x float64, graphData []map[string]int
 	return 1
 }
 
-func NewResult(fileId bson.ObjectId, data []byte) *JavacResult {
-	return &JavacResult{bson.NewObjectId(), fileId, NAME, data}
+func NewResult(fileId bson.ObjectId, data []byte) *Result {
+	return &Result{
+		Id: bson.NewObjectId(), 
+		FileId: fileId, 
+		Name: NAME, 
+		Data: data,
+	}
 }

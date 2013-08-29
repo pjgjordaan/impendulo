@@ -6,14 +6,13 @@ import (
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/util"
-	"github.com/godfried/impendulo/project"
 	"labix.org/v2/mgo/bson"
 	"path/filepath"
 	"os"
 )
 
 //JPF is a tool.Tool which runs a JPF on a Java source file.
-type JPF struct {
+type Tool struct {
 	cp      string
 	jpfPath string
 	jpfInfo *tool.TargetInfo
@@ -22,20 +21,20 @@ type JPF struct {
 //New creates a new JPF instance. jpfDir is the location of the
 //Java JPF runner files. configPath is the location of the JPF
 //configuration file.
-func New(jpfFile *project.JPFFile, jpfDir string) (jpf *JPF, err error) {
+func New(jpfConfig *Config, jpfDir string) (jpf *Tool, err error) {
 	err = util.Copy(jpfDir, config.GetConfig(config.JPF_RUNNER_DIR))
 	if err != nil {
 		return
 	}
-	jpfPath := filepath.Join(jpfDir, jpfFile.Name)
-	err = util.SaveFile(jpfPath, jpfFile.Data)
+	jpfPath := filepath.Join(jpfDir, jpfConfig.Name)
+	err = util.SaveFile(jpfPath, jpfConfig.Data)
 	if err != nil{
 		return
 	}
 	jpfInfo := tool.NewTarget("JPFRunner.java", "java", "runner", jpfDir)
 	cp := jpfDir + ":" + config.GetConfig(config.JPF_JAR) + ":" +
 		config.GetConfig(config.RUNJPF_JAR) + ":" + config.GetConfig(config.GSON_JAR)
-	jpf = &JPF{
+	jpf = &Tool{
 		cp:cp, 
 		jpfPath: jpfPath, 
 		jpfInfo: jpfInfo,
@@ -43,15 +42,15 @@ func New(jpfFile *project.JPFFile, jpfDir string) (jpf *JPF, err error) {
 	return
 }
 
-func (this *JPF) GetLang() string {
+func (this *Tool) GetLang() string {
 	return "java"
 }
 
-func (this *JPF) GetName() string {
+func (this *Tool) GetName() string {
 	return NAME
 }
 
-func (this *JPF) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
+func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	if this.jpfPath == "" {
 		err = fmt.Errorf("No jpf configuration file available.")
 		return

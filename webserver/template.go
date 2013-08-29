@@ -7,6 +7,7 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool/diff"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/tool/jpf"
 	"html/template"
 	"labix.org/v2/mgo/bson"
 	"path/filepath"
@@ -33,6 +34,8 @@ var funcs = template.FuncMap{
 	"getBusy":         processing.GetStatus,
 	"slice":           slice,
 	"adjustment":      adjustment,
+	"listeners": jpf.Listeners,
+	"searches": jpf.Searches,
 }
 
 const PAGER_SIZE = 10

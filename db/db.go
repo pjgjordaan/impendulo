@@ -26,11 +26,6 @@ const (
 var sessionChan chan *mgo.Session
 var requestChan chan bool
 
-func init() {
-	sessionChan = make(chan *mgo.Session)
-	requestChan = make(chan bool)
-}
-
 //Setup creates a mongodb session.
 //This must be called before using any other db functions.
 func Setup(conn string) error {
@@ -38,6 +33,8 @@ func Setup(conn string) error {
 	if err != nil {
 		return err
 	}
+	sessionChan = make(chan *mgo.Session)
+	requestChan = make(chan bool)
 	go serveSession(activeSession)
 	return nil
 }

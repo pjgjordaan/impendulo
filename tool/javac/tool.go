@@ -8,25 +8,28 @@ import (
 )
 
 //Javac is a tool.Tool used to compile Java source files.
-type Javac struct {
+type Tool struct {
 	cmd string
 	cp  string
 }
 
 //New creates a new Javac instance. cp is the classpath used when compiling.
-func New(cp string) *Javac {
-	return &Javac{config.GetConfig(config.JAVAC), cp}
+func New(cp string) *Tool {
+	return &Tool{
+		cmd: config.GetConfig(config.JAVAC), 
+		cp: cp,
+	}
 }
 
-func (this *Javac) GetLang() string {
+func (this *Tool) GetLang() string {
 	return "java"
 }
 
-func (this *Javac) GetName() string {
+func (this *Tool) GetName() string {
 	return NAME
 }
 
-func (this *Javac) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
+func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	args := []string{this.cmd, "-cp", this.cp + ":" + ti.Dir,
 		"-implicit:class", ti.FilePath()}
 	//Compile the file.

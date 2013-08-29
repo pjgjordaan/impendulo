@@ -11,32 +11,36 @@ import (
 	"path/filepath"
 )
 
-//JUnit is a tool.Tool used to run JUnit tests on a Java source file.
-type JUnit struct {
+//Tool is a tool.Tool used to run Tool tests on a Java source file.
+type Tool struct {
 	cp           string
 	datalocation string
 	runnerInfo   *tool.TargetInfo
 }
 
-//New creates a new JUnit instance. testDir is the location of the JUnit testing files.
+//New creates a new Tool instance. testDir is the location of the Tool testing files.
 //cp is the classpath used and datalocation is the location of data files used when running
 //the tests.
-func New(testDir, cp, datalocation string) *JUnit {
+func New(testDir, cp, datalocation string) *Tool {
 	runnerInfo := tool.NewTarget("TestRunner.java", "java", "testing", testDir)
 	cp += ":" + config.GetConfig(config.JUNIT_JAR) + ":" +
 		config.GetConfig(config.ANT_JUNIT) + ":" + config.GetConfig(config.ANT)
-	return &JUnit{cp, datalocation, runnerInfo}
+	return &Tool{
+		cp: cp, 
+		datalocation: datalocation, 
+		runnerInfo: runnerInfo,
+	}
 }
 
-func (this *JUnit) GetLang() string {
+func (this *Tool) GetLang() string {
 	return "java"
 }
 
-func (this *JUnit) GetName() string {
+func (this *Tool) GetName() string {
 	return NAME
 }
 
-func (this *JUnit) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
+func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	//First compile the files to be tested
 	comp := javac.New(this.cp)
 	_, err = comp.Run(fileId, ti)
