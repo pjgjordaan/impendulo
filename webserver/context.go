@@ -9,6 +9,7 @@ import (
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/user"
 	"net/http"
+	"labix.org/v2/mgo/bson"
 )
 
 func init() {
@@ -98,7 +99,8 @@ func (ctx *Context) AddUser(user string) {
 func (ctx *Context) Projects() ([]*project.Project, error) {
 	var err error
 	if ctx.projects == nil {
-		ctx.projects, err = db.GetProjects(nil)
+		ctx.projects, err = db.GetProjects(
+			nil, bson.M{project.SKELETON: 0}, project.NAME)
 	}
 	return ctx.projects, err
 }

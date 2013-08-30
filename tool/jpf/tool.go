@@ -26,7 +26,7 @@ func New(jpfConfig *Config, jpfDir string) (jpf *Tool, err error) {
 	if err != nil {
 		return
 	}
-	jpfPath := filepath.Join(jpfDir, jpfConfig.Name)
+	jpfPath := filepath.Join(jpfDir, "config.jpf")
 	err = util.SaveFile(jpfPath, jpfConfig.Data)
 	if err != nil{
 		return

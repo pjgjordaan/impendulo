@@ -8,10 +8,11 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/config"
+	"path/filepath"
 )
 
 func TestRun(t *testing.T){
-	location := "/tmp/Racer"
+	location := filepath.Join(os.TempDir(), "Racer")
 	os.Mkdir(location, util.DPERM)
 	defer os.RemoveAll(location)
 	target := tool.NewTarget("Racer.java", 
@@ -20,7 +21,7 @@ func TestRun(t *testing.T){
 	if err != nil{
 		t.Errorf("Could not save file %q", err)
 	}
-	jpfConfig := NewConfig(bson.NewObjectId(), "racer.jpf", "user", jpfBytes)
+	jpfConfig := NewConfig(bson.NewObjectId(), "user", jpfBytes)
 	jpf, err := New(jpfConfig, location)
 	if err != nil{
 		t.Errorf("Could not load jpf %q", err)

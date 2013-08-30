@@ -22,7 +22,7 @@ func TestRunCommand(t *testing.T) {
 	if _, ok := execRes.Err.(*StartError); !ok {
 		t.Error("Command should not have started", execRes.Err)
 	}
-	SetTimeout(0)
+	SetTimeout(1)
 	longCmd := []string{"sleep", "100"}
 	execRes = RunCommand(longCmd, nil)
 	if !IsTimeOut(execRes.Err) {

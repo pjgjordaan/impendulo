@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
 //File stores a single file's data from a submission.
@@ -17,9 +18,6 @@ type File struct {
 	Name     string        "name"
 	Package  string        "package"
 	Type     string        "type"
-	FileType string        "ftype"
-	Mod      string        "mod"
-	Num      int           "num"
 	Time     int64         "time"
 	Data     []byte        "data"
 	Results  bson.M        "results"
@@ -33,29 +31,7 @@ func (this *File) String() string {
 	return "Type: project.File; Id: " + this.Id.Hex() +
 		"; SubId: " + this.SubId.Hex() + "; Name: " + this.Name +
 		"; Package: " + this.Package + "; Type: " + this.Type +
-		"; FileType: " + this.FileType + "; Mod: " + this.Mod +
-		"; Num: " + strconv.Itoa(this.Num) + "; Time: " + util.Date(this.Time)
-}
-
-func (this *File) SetMod(mod string) {
-	switch mod {
-	case "b":
-		this.Mod = "Compiled"
-	case "c":
-		this.Mod = "Saved"
-	case "r":
-		this.Mod = "Removed"
-	case "l":
-		this.Mod = "Launched"
-	case "f":
-		this.Mod = "From"
-	case "t":
-		this.Mod = "To"
-	case "a":
-		this.Mod = "Added"
-	default:
-		this.Mod = "Unknown"
-	}
+		"; Time: " + util.Date(this.Time)
 }
 
 func (this *File) Equals(that *File) bool {
@@ -85,10 +61,6 @@ func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) (fil
 	if err != nil && util.IsCastError(err) {
 		return
 	}
-	file.FileType, err = util.GetString(info, FTYPE)
-	if err != nil && util.IsCastError(err) {
-		return
-	}
 	//Essential fields
 	file.Name, err = util.GetString(info, NAME)
 	if err != nil {
@@ -98,27 +70,17 @@ func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) (fil
 	if err != nil {
 		return
 	}
-	mod, err := util.GetString(info, MOD)
-	if err != nil {
-		return
-	}
-	file.SetMod(mod)
-	file.Num, err = util.GetInt(info, NUM)
-	if err != nil {
-		return
-	}
 	file.Time, err = util.GetInt64(info, TIME)
 	return
 }
 
 //NewArchive
-func NewArchive(subId bson.ObjectId, data []byte, ftype string) *File {
+func NewArchive(subId bson.ObjectId, data []byte) *File {
 	id := bson.NewObjectId()
 	return &File{
 		Id:       id,
 		SubId:    subId,
 		Data:     data,
-		FileType: ftype,
 		Type:     ARCHIVE,
 	}
 }
@@ -130,46 +92,48 @@ func NewArchive(subId bson.ObjectId, data []byte, ftype string) *File {
 //Where values between '[]' are optional, '*' indicates 0 to many,
 //values inside '""' are literals and values inside '<>'
 //describe the contents at that position.
-func ParseName(name string) (*File, error) {
+func ParseName(name string) (file *File, err error) {
 	elems := strings.Split(name, "_")
 	if len(elems) < 3 {
-		return nil, fmt.Errorf(
-			"Encoded name %q does not have enough parameters.", name)
+		err = fmt.Errorf("Encoded name %q does not have enough parameters.", name)
+		return
 	}
-	file := new(File)
+	file = new(File)
 	file.Id = bson.NewObjectId()
-	var err error
-	file.SetMod(elems[len(elems)-1])
-	file.Num, err = strconv.Atoi(elems[len(elems)-2])
-	if err != nil {
-		return nil, fmt.Errorf(
-			"%q in name %q could not be parsed as an int.",
-			elems[len(elems)-2], name)
+	mod := elems[len(elems)-1]
+	nextIndex := 3
+	if len(elems[len(elems)-2]) > 10{
+		nextIndex = 2
 	}
-	timeString := elems[len(elems)-3]
+	timeString := elems[len(elems)-nextIndex]
 	if len(timeString) == 13 {
 		file.Time, err = strconv.ParseInt(timeString, 10, 64)
 		if err != nil {
-			return nil, fmt.Errorf(
+			err = fmt.Errorf(
 				"%s in name %s could not be parsed as an int.",
 				timeString, name)
+			return
 		}
 	} else if timeString[0] == '2' && len(timeString) == 17 {
-		t, err := util.CalcTime(timeString)
+		var t time.Time
+		t, err = util.CalcTime(timeString)
 		if err != nil {
-			return nil, err
+			return
 		}
 		file.Time = util.GetMilis(t)
 	} else {
-		return nil, fmt.Errorf(
+		err = fmt.Errorf(
 			"Unknown time format %s in %s.",
 			timeString, name)
+		return
 	}
-	if len(elems) > 3 {
-		file.Name = elems[len(elems)-4]
-		for i := 0; i < len(elems)-4; i++ {
+	if len(elems) > nextIndex {
+		nextIndex ++
+		pos := len(elems)-nextIndex
+		file.Name = elems[pos]
+		for i := 0; i < pos; i++ {
 			file.Package += elems[i]
-			if i < len(elems)-5 {
+			if i < pos - 1 {
 				file.Package += "."
 			}
 			if isOutFolder(elems[i]) {
@@ -179,15 +143,12 @@ func ParseName(name string) (*File, error) {
 	}
 	if strings.HasSuffix(file.Name, JSRC) {
 		file.Type = SRC
-		file.FileType = JAVA
-	} else if strings.HasSuffix(file.Name, JCOMP) {
-		file.Type = EXEC
-		file.FileType = CLASS
-	} else {
-		file.Type = CHANGE
-		file.FileType = EMPTY
+	} else if mod == "l"{
+		file.Type = LAUNCH
+	} else{
+		err = fmt.Errorf("Unsupported file type in name %s", name)
 	}
-	return file, nil
+	return
 }
 
 //isOutFolder

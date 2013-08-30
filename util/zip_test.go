@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"testing"
+	"path/filepath"
 )
 
 func TestZipMap(t *testing.T) {
@@ -104,7 +105,7 @@ func TestUnzip(t *testing.T) {
 	}
 	zipped, err := ZipMap(files)
 	buff := bytes.NewBuffer(zipped)
-	dir := "/tmp/unzipped"
+	dir := filepath.Join(os.TempDir(), "unzipped")
 	os.MkdirAll(dir, os.ModeDir|os.ModePerm)
 	defer os.RemoveAll(dir)
 	err = Unzip(dir, buff.Bytes())
@@ -125,7 +126,7 @@ func TestExtractFile(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	dir := "/tmp/extractFile"
+	dir := filepath.Join(os.TempDir(), "extractFile")
 	os.MkdirAll(dir, os.ModeDir|os.ModePerm)
 	defer os.RemoveAll(dir)
 	for _, zf := range zr.File {

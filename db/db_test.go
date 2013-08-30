@@ -212,7 +212,12 @@ func TestCount(t *testing.T) {
 
 }
 
-var fileInfo = bson.M{project.TIME: 1000, project.TYPE: project.SRC, project.MOD: "c", project.NAME: "Triangle.java", project.FTYPE: "java", project.PKG: "triangle", project.NUM: 1000}
+var fileInfo = bson.M{
+	project.TIME: 1000, 
+	project.TYPE: project.SRC, 
+	project.NAME: "Triangle.java", 
+	project.PKG: "triangle",
+}
 
 var fileData = []byte(`[Faust:] "I, Johannes Faust, do call upon thee, Mephistopheles!"
 

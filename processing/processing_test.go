@@ -17,24 +17,21 @@ import (
 	"strconv"
 )
 
+func init(){
+	err := config.LoadConfigs("../config.txt")
+	if err != nil {
+		panic(err)
+	}
+}
+
 func TestExtractFile(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
-	p := project.NewProject("Triangle", "user", "java", []byte{})
-	err := db.AddProject(p)
+	file, err := setupFile()
 	if err != nil {
 		t.Error(err)
 	}
-	s := project.NewSubmission(p.Id, p.User, project.FILE_MODE, 1000)
-	err = db.AddSubmission(s)
-	if err != nil {
-		t.Error(err)
-	}
-	file, err := project.NewFile(s.Id, fileInfo, fileData)
-	if err != nil {
-		t.Error(err)
-	}
-	proc, err := NewProcessor(s.Id)
+	proc, err := NewProcessor(file.SubId)
 	if err != nil {
 		t.Error(err)
 	}
@@ -48,7 +45,8 @@ func TestExtractFile(t *testing.T) {
 	if !reflect.DeepEqual(expected, analyser.target) {
 		t.Error("Targets not equivalent")
 	}
-	stored, err := os.Open(filepath.Join(proc.srcDir, filepath.Join("triangle", "Triangle.java")))
+	stored, err := os.Open(filepath.Join(proc.srcDir, 
+		filepath.Join("triangle", "Triangle.java")))
 	if err != nil {
 		t.Error(err)
 	}
@@ -63,31 +61,13 @@ func TestExtractFile(t *testing.T) {
 }
 
 func TestEval(t *testing.T) {
-	err := config.LoadConfigs("../config.txt")
-	if err != nil {
-		t.Error(err)
-	}
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
-	p := project.NewProject("Triangle", "user", "java", []byte{})
-	err = db.AddProject(p)
+	file, err := setupFile()
 	if err != nil {
 		t.Error(err)
 	}
-	s := project.NewSubmission(p.Id, p.User, project.FILE_MODE, 1000)
-	err = db.AddSubmission(s)
-	if err != nil {
-		t.Error(err)
-	}
-	file, err := project.NewFile(s.Id, fileInfo, fileData)
-	if err != nil {
-		t.Error(err)
-	}
-	err = db.AddFile(file)
-	if err != nil {
-		t.Error(err)
-	}
-	proc, err := NewProcessor(s.Id)
+	proc, err := NewProcessor(file.SubId)
 	if err != nil {
 		t.Error(err)
 	}
@@ -124,12 +104,12 @@ func TestArchive(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	n := 50
+	n := 2
 	subs := make([]*project.Submission, n)
 	archives := make([]*project.File, n)
 	for i, _ := range subs {
 		sub := project.NewSubmission(p.Id, "user", project.ARCHIVE_MODE, util.CurMilis())
-		archive := project.NewArchive(sub.Id, zipped, project.ZIP)
+		archive := project.NewArchive(sub.Id, zipped)
 		err = db.AddSubmission(sub)
 		if err != nil {
 			t.Error(err)
@@ -153,6 +133,25 @@ func TestArchive(t *testing.T) {
 	return
 }
 
+func setupFile()(file *project.File, err error){
+	p := project.NewProject("Triangle", "user", "java", []byte{})
+	err = db.AddProject(p)
+	if err != nil {
+		return
+	}
+	s := project.NewSubmission(p.Id, p.User, project.FILE_MODE, 1000)
+	err = db.AddSubmission(s)
+	if err != nil {
+		return
+	}
+	file, err = project.NewFile(s.Id, fileInfo, fileData)
+	if err != nil {
+		return
+	}
+	err = db.AddFile(file)
+	return
+}
+
 func genMap() map[bson.ObjectId]bool {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	idMap := make(map[bson.ObjectId]bool)
@@ -164,64 +163,23 @@ func genMap() map[bson.ObjectId]bool {
 
 var fileInfo = bson.M{
 	project.TIME: 1000, 
-	project.TYPE: project.SRC, 
-	project.MOD: "c", 
+	project.TYPE: project.SRC,  
 	project.NAME: "Triangle.java", 
-	project.FTYPE: "java", 
 	project.PKG: "triangle", 
-	project.NUM: 1000,
 }
 
-var fileData = []byte(`Ahm Knêma
-Hörr Néhêm
-Ak Ëhntëhtt
-
-Hïm Ëk Oğërr-Ré
-Ïk Ün Zaahm
-Ëkëm M'd/ëm Zëhënn
-
-/ë ïlï /ë /ë
-
-Wi wëhlö soworï
-Wi wëhlö soworï
-
-Rind/ë, rind/ë
-
-Ô dëhndo dö wilëhndi
-Doweri ï dëhndö
-Döh wëh lëhndoï
-Dëh wilëhn dëh weloï
-Dowë lëh lëhndï
-Dowëleh
-Rind/ë dï ir
-Rind/ë wëh loï
-Rind/ë Rind/ë Rind/ë Rind/ë
-
-Ô dëhndi dö wilëhndoï
-Dowëlëh ô dëhndi
-Dowëh loï
-Dëh wilëhndi i
-Doweri sündo
-Dowelëh wëhloï
-Dowëri wëri wëh wëhloï
-Dö wëh wëri wï lëhndï
-Dowëh roï
-Dowï sëh dëh lëh leöss
-Dowëh rëhndï dö wo wï
-Ëpraah dö li lëhnd/ë dö li lëhnd/ë
-Dëh loï
-Öwi sëh wi lëh ïoss
-Dowëh rïn dï dö wo wï
-Ëpraah dö li lëhnd/ë dö li lëhnd/ë
-..Improvisation..
-
-Rind/ë rind/ë wëloï
-Ëhn dï ïowëh ïošaa
-Ëhn dëhndï loï
-Siwehn dëhn
-
-Loï wëhlö soworï
-Loï wëhlö soworï
-Lëhnsoï, dëh wö soworïn döwï
-Ö wëh rïn dö sündo loï dëh
-Rï dëhn dowëh roï `)
+var fileData = []byte(`
+package triangle;
+public class Triangle {
+	public int maxpath(int[][] triangle) {
+		int height = triangle.length - 2;
+		for (int i = height; i >= 1; i--) {
+			for (int j = 0; j <= i; j++) {
+				triangle[i][j] += triangle[i + 1][j + 1] > triangle[i + 1][j] ? triangle[i + 1][j + 1]
+						: triangle[i + 1][j];
+			}
+		}
+		return triangle[0][0];
+	}
+}
+`)

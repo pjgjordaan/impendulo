@@ -12,7 +12,6 @@ import (
 type Config struct {
 	Id        bson.ObjectId "_id"
 	ProjectId bson.ObjectId "projectid"
-	Name      string        "name"
 	User      string        "user"
 	Time      int64         "time"
 	Data      []byte        "data"
@@ -25,17 +24,15 @@ func (this *Config) TypeName() string {
 func (this *Config) String() string {
 	return "Type: project.Config; Id: " + this.Id.Hex() +
 		"; ProjectId: " + this.ProjectId.Hex() +
-		"; Name: " + this.Name + "; User: " + this.User +
-		"; Time: " + util.Date(this.Time)
+		"; User: " + this.User + "; Time: " + util.Date(this.Time)
 }
 
 //NewFile
-func NewConfig(projectId bson.ObjectId, name, user string, data []byte) *Config {
+func NewConfig(projectId bson.ObjectId, user string, data []byte) *Config {
 	id := bson.NewObjectId()
 	return &Config{
 		Id: id, 
-		ProjectId: projectId, 
-		Name: name, 
+		ProjectId: projectId,  
 		User: user, 
 		Time: util.CurMilis(), 
 		Data: data,

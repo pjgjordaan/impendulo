@@ -30,27 +30,35 @@ func init() {
 	statusChan = make(chan Status)
 }
 
-type Status int
+type Status struct{
+	Files int
+	Submissions int
+}
+
+func (this *Status) add(toAdd Status){
+	this.Files += toAdd.Files
+	this.Submissions += toAdd.Submissions
+}
 
 func ChangeStatus(change Status) {
 	statusChan <- change
 }
 
 func GetStatus() (ret Status) {
-	statusChan <- Status(0)
+	statusChan <- Status{0,0}
 	ret = <-statusChan
 	return
 }
 
 func monitorStatus() {
-	var status Status = 0
+	var status *Status = new(Status)
 	for {
 		val := <-statusChan
 		switch val {
-		case 0:
-			statusChan <- status
+		case Status{0,0}:
+			statusChan <- *status
 		default:
-			status += val
+			status.add(val)
 		}
 	}
 }
@@ -65,13 +73,14 @@ type ids struct {
 func AddFile(file *project.File) {
 	if file.CanProcess() {
 		idChan <- &ids{file.Id, file.SubId, true}
-		ChangeStatus(1)
+		ChangeStatus(Status{1, 0})
 	}
 }
 
 //StartSubmission signals that this submission has will now receive files.
 func StartSubmission(subId bson.ObjectId) {
 	idChan <- &ids{subId: subId, isFile: false}
+	ChangeStatus(Status{0, 1})
 }
 
 //EndSubmission signals that this submission has stopped receiving files.
@@ -80,7 +89,13 @@ func EndSubmission(subId bson.ObjectId) {
 }
 
 func submissionProcessed() {
+	ChangeStatus(Status{0, -1})
 	processedChan <- None()
+}
+
+
+func fileProcessed() {
+	ChangeStatus(Status{-1, 0})
 }
 
 //Shutdown stops Serve from running once all submissions have been processed.
@@ -207,7 +222,7 @@ func (this *ProcHelper) Handle(fileQueue *list.List) {
 		case <-procChan:
 			//Processor has finished with its current file.
 			busy = false
-			ChangeStatus(-1)
+			fileProcessed()
 		case <-this.doneChan:
 			//Submission will receive no more files.
 			this.done = true
@@ -336,22 +351,23 @@ func (this *Processor) Extract(archive *project.File) error {
 		util.Log(err, LOG_PROCESSING)
 	}
 	fIds, err := db.GetFiles(bson.M{project.SUBID: this.sub.Id},
-		bson.M{project.NUM: 1, project.ID: 1}, project.NUM)
+		bson.M{project.TIME: 1, project.ID: 1}, project.TIME)
 	if err != nil {
 		return err
 	}
-	ChangeStatus(Status(len(fIds)))
+	ChangeStatus(Status{len(fIds), 0})
 	//Process archive files.
 	for _, fId := range fIds {
 		file, err := db.GetFile(bson.M{project.ID: fId.Id}, nil)
 		if err != nil {
 			util.Log(err, LOG_PROCESSING)
-			continue
+		} else{
+			err = this.ProcessFile(file)
+			if err != nil {
+				util.Log(err, LOG_PROCESSING)
+			}
 		}
-		err = this.ProcessFile(file)
-		if err != nil {
-			util.Log(err, LOG_PROCESSING)
-		}
+		fileProcessed()
 	}
 	return nil
 }
@@ -361,7 +377,7 @@ func (this *Processor) storeFile(name string, data []byte) (err error) {
 	if err != nil {
 		return
 	}
-	matcher := bson.M{project.SUBID: this.sub.Id, project.TIME: file.Time}
+	matcher := bson.M{project.SUBID: this.sub.Id, project.TYPE: file.Type, project.TIME: file.Time}
 	if !db.Contains(db.FILES, matcher) {
 		file.SubId = this.sub.Id
 		file.Data = data

@@ -32,9 +32,9 @@
 	    {{if .Success}}
 	    <h5 class="text-success">No errors detected</h4>
 	    {{else}}
-	    {{$errCount := len .Result.Errors}}
+	    {{$errCount := len .Findings.Errors}}
 	    <h5 class="text-error">{{$errCount}} errors found</h4>
-	    {{range .Result.Errors}}
+	    {{range .Findings.Errors}}
 	    <h5 class="text-warning">{{.Property}}</h5>
 	    {{$details := setBreaks .Details}}
 	    <p>{{$details}}</p>

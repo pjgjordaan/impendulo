@@ -47,7 +47,7 @@ func SubmitArchive(req *http.Request, ctx *Context) (err error) {
 	if err != nil {
 		return
 	}
-	file := project.NewArchive(sub.Id, archiveBytes, project.ZIP)
+	file := project.NewArchive(sub.Id, archiveBytes)
 	err = db.AddFile(file)
 	if err != nil {
 		return
@@ -113,7 +113,7 @@ func AddJPF(req *http.Request, ctx *Context) (err error) {
 	if err != nil {
 		return
 	}
-	name, data, err := ReadFormFile(req, "jpf")
+	_, data, err := ReadFormFile(req, "jpf")
 	if err != nil {
 		return
 	}
@@ -121,7 +121,7 @@ func AddJPF(req *http.Request, ctx *Context) (err error) {
 	if err != nil {
 		return
 	}
-	jpfConfig := jpf.NewConfig(projectId, name, username, data)
+	jpfConfig := jpf.NewConfig(projectId, username, data)
 	err = db.AddJPF(jpfConfig)
 	return
 }
@@ -129,10 +129,6 @@ func AddJPF(req *http.Request, ctx *Context) (err error) {
 //CreateJPF replaces a project's JPF configuration file.
 func CreateJPF(req *http.Request, ctx *Context) (err error) {
 	projectId, err := util.ReadId(req.FormValue("project"))
-	if err != nil {
-		return
-	}
-	name, err := GetString(req, "name")
 	if err != nil {
 		return
 	}
@@ -156,7 +152,7 @@ func CreateJPF(req *http.Request, ctx *Context) (err error) {
 	if err != nil {
 		return
 	}
-	jpfConfig := jpf.NewConfig(projectId, name, username, data)
+	jpfConfig := jpf.NewConfig(projectId, username, data)
 	err = db.AddJPF(jpfConfig)
 	return
 }
@@ -314,7 +310,7 @@ func RetrieveFiles(req *http.Request, ctx *Context) (ret []*project.File, err er
 	matcher := bson.M{project.SUBID: sid,
 		project.TYPE: project.SRC, project.NAME: name}
 	selector := bson.M{project.TIME: 1}
-	ret, err = db.GetFiles(matcher, selector, project.TIME)
+	ret, err = db.GetFiles(matcher, selector,  project.TIME)
 	if err == nil && len(ret) == 0 {
 		err = fmt.Errorf("No files found with name %q.", name)
 	}
@@ -340,12 +336,12 @@ func RetrieveSubmissions(req *http.Request, ctx *Context) (subs []*project.Submi
 		ctx.Browse.Pid = idStr
 		ctx.Browse.IsUser = false
 		subs, err = db.GetSubmissions(
-			bson.M{project.PROJECT_ID: pid}, nil)
+			bson.M{project.PROJECT_ID: pid}, nil, "-"+project.TIME)
 	} else if tipe == "user" {
 		ctx.Browse.Uid = idStr
 		ctx.Browse.IsUser = true
 		subs, err = db.GetSubmissions(
-			bson.M{project.USER: ctx.Browse.Uid}, nil)
+			bson.M{project.USER: ctx.Browse.Uid}, nil, "-"+project.TIME)
 	} else {
 		err = fmt.Errorf("Unknown request type %q", tipe)
 	}

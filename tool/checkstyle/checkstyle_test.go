@@ -12,8 +12,8 @@ import (
 )
 
 func TestRun(t *testing.T){
-	location := "/tmp/Triangle"
-	srcLocation := filepath.Join("/tmp/Triangle", "triangle")
+	location := filepath.Join(os.TempDir(), "Triangle")
+	srcLocation := filepath.Join(location, "triangle")
 	os.Mkdir(location, util.DPERM)
 	defer os.RemoveAll(location)
 	os.Mkdir(srcLocation, util.DPERM)

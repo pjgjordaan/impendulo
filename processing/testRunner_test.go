@@ -161,7 +161,7 @@ func getTest(pId bson.ObjectId) (*project.Test, error) {
 }
 
 func getFile(subId bson.ObjectId) *project.File {
-	info := bson.M{project.TIME: 1000, project.TYPE: project.SRC, project.MOD: 'c', project.NAME: "Triangle.java", project.FTYPE: "java", project.PKG: "triangle", project.NUM: 100}
+	info := bson.M{project.TIME: 1000, project.TYPE: project.SRC, project.NAME: "Triangle.java", project.PKG: "triangle"}
 	file, _ := project.NewFile(subId, info, srcData)
 	return file
 }

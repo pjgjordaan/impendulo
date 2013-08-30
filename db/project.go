@@ -21,7 +21,7 @@ func GetFile(matcher, selector interface{}) (ret *project.File, err error) {
 }
 
 //GetFiles retrieves files matching the given interface from the active database.
-func GetFiles(matcher, selector interface{}, sort string) (ret []*project.File, err error) {
+func GetFiles(matcher, selector interface{}, sort ...string) (ret []*project.File, err error) {
 	session, err := getSession()
 	if err != nil {
 		return
@@ -29,8 +29,8 @@ func GetFiles(matcher, selector interface{}, sort string) (ret []*project.File, 
 	defer session.Close()
 	c := session.DB("").C(FILES)
 	q := c.Find(matcher)
-	if sort != "" {
-		q = q.Sort(sort)
+	if len(sort) > 0{
+		q = q.Sort(sort...)
 	}
 	err = q.Select(selector).All(&ret)
 	if err != nil {
@@ -97,14 +97,18 @@ func GetSubmission(matcher, selector interface{}) (ret *project.Submission, err 
 
 //GetSubmissions retrieves submissions matching
 //the given interface from the active database.
-func GetSubmissions(matcher, selector interface{}) (ret []*project.Submission, err error) {
+func GetSubmissions(matcher, selector interface{}, sort ...string) (ret []*project.Submission, err error) {
 	session, err := getSession()
 	if err != nil {
 		return
 	}
 	defer session.Close()
 	c := session.DB("").C(SUBMISSIONS)
-	err = c.Find(matcher).Select(selector).All(&ret)
+	q := c.Find(matcher)
+	if len(sort) > 0{
+		q = q.Sort(sort...)
+	}
+	err = q.Select(selector).All(&ret)
 	if err != nil {
 		err = &DBGetError{"submissions", err, matcher}
 	}
@@ -160,14 +164,18 @@ func GetProject(matcher, selector interface{}) (ret *project.Project, err error)
 
 //GetProjects retrieves projects matching
 //the given interface from the active database.
-func GetProjects(matcher interface{}) (ret []*project.Project, err error) {
+func GetProjects(matcher, selector interface{}, sort ...string) (ret []*project.Project, err error) {
 	session, err := getSession()
 	if err != nil {
 		return
 	}
 	defer session.Close()
 	c := session.DB("").C(PROJECTS)
-	err = c.Find(matcher).Select(nil).All(&ret)//bson.M{project.NAME: 1, project.LANG: 1, project.USER: 1}).All(&ret)
+	q := c.Find(matcher)
+	if len(sort) > 0{
+		q = q.Sort(sort...)
+	}
+	err = q.Select(selector).All(&ret)
 	if err != nil {
 		err = &DBGetError{"projects", err, matcher}
 	}

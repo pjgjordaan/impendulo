@@ -8,10 +8,11 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/config"
+	"path/filepath"
 )
 
 func TestRun(t *testing.T){
-	location := "/tmp/triangle"
+	location := filepath.Join(os.TempDir(), "triangle")
 	target := tool.NewTarget("Triangle.java", 
 		project.JAVA, "", location)
 	os.Mkdir(location, util.DPERM)

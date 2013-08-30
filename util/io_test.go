@@ -7,10 +7,11 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"path/filepath"
 )
 
 func TestCopier(t *testing.T) {
-	realDest := "/tmp/copy"
+	realDest := filepath.Join(os.TempDir(), "copy")
 	fakeDest := "/dummy"
 	realSrcFile := "data.txt"
 	realSrcDir := "folder/"
@@ -58,7 +59,7 @@ func TestExists(t *testing.T) {
 
 func TestSaveFile(t *testing.T) {
 	tests := map[string]bool{"/fake/fake/fake": false,
-		"/tmp": false, "/tmp/real": true,
+		os.TempDir(): false, filepath.Join(os.TempDir(), "real"): true,
 	}
 	for test, valid := range tests {
 		err := tsave(test, valid)
@@ -67,7 +68,7 @@ func TestSaveFile(t *testing.T) {
 		}
 
 	}
-	err := SaveFile("/tmp/real", nil)
+	err := SaveFile(filepath.Join(os.TempDir(), "real"), nil)
 	if err != nil {
 		t.Error(err)
 	}

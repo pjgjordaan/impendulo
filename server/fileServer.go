@@ -25,7 +25,6 @@ func (this *SubmissionSpawner) Spawn() RWCHandler {
 type SubmissionHandler struct {
 	rwc        io.ReadWriteCloser
 	submission *project.Submission
-	fileCount  int
 }
 
 //Start sets the connection, launches the Handle method
@@ -114,7 +113,7 @@ func (this *SubmissionHandler) Login() (err error) {
 			this.submission.User)
 		return
 	}
-	projects, err := db.GetProjects(nil)
+	projects, err := db.GetProjects(nil, bson.M{project.SKELETON: 0}, project.NAME)
 	if err == nil {
 		err = this.writeJson(projects)
 	}
@@ -157,7 +156,6 @@ func (this *SubmissionHandler) createSubmission(subInfo map[string]interface{}) 
 	}
 	err = db.AddSubmission(this.submission)
 	if err == nil {
-		this.fileCount = 0
 		err = this.writeJson(this.submission)
 	}
 	return
@@ -176,11 +174,7 @@ func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{}
 	if err != nil {
 		return
 	}
-	this.fileCount, err = db.Count(db.FILES,
-		bson.M{project.SUBID: this.submission.Id})
-	if err == nil {
-		err = this.writeJson(this.fileCount)
-	}
+	err = this.write(OK)
 	return
 }
 
@@ -209,13 +203,11 @@ func (this *SubmissionHandler) Read() (done bool, err error) {
 			return
 		}
 		delete(requestInfo, REQ)
-		requestInfo[project.NUM] = this.fileCount
-		this.fileCount++
 		var file *project.File
 		switch this.submission.Mode {
 		case project.ARCHIVE_MODE:
 			file = project.NewArchive(
-				this.submission.Id, buffer, project.ZIP)
+				this.submission.Id, buffer)
 		case project.FILE_MODE:
 			file, err = project.NewFile(
 				this.submission.Id, requestInfo, buffer)

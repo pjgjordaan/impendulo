@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-var timeLimit = 10 * time.Minute
+var timeLimit = 5 * time.Minute
 
 //SetTimeout sets the maximum time for which the RunCommand function can run.
 func SetTimeout(minutes int) {
