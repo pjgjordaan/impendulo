@@ -14,4 +14,4 @@ do
 	then
 	gocov test "$base""$d" | gocov report
 	fi
-done% 
+done
