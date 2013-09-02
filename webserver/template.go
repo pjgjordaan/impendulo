@@ -11,7 +11,6 @@ import (
 	"html/template"
 	"labix.org/v2/mgo/bson"
 	"path/filepath"
-	"strconv"
 	"strings"
 )
 
@@ -23,9 +22,7 @@ var funcs = template.FuncMap{
 	"base":            filepath.Base,
 	"shortname":       shortname,
 	"isCode":          isCode,
-	"diff":            diff.Diff,
-	"diffHTML":        diff.Diff2HTML,
-	"diffHeader":      diff.SetHeader,
+	"diff":            diff.CalcDiff,
 	"createHeader":    fileHeader,
 	"sum":             sum,
 	"equal":           equal,
@@ -84,8 +81,8 @@ func equal(a, b interface{}) bool {
 	return a == b
 }
 
-func fileHeader(file *project.File, num int) string {
-	return file.Name + ":" + strconv.Itoa(num) + " " + util.Date(file.Time)
+func fileHeader(file *project.File) string {
+	return file.Name + " " + util.Date(file.Time)
 }
 
 func sum(vals ...int) (ret int) {

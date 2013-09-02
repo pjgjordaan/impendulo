@@ -112,6 +112,9 @@ type Report struct {
 	PatternMap  map[string]*BugPattern
 }
 
+func (this *Report) Success() bool{
+	return len(this.Instances) == 0
+}
 
 func (this *Report) String() string {
 	return fmt.Sprintf("Id: %q; Summary: %s", 

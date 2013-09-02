@@ -1,4 +1,7 @@
 {{ define "nextResult" }}
+{{if .Success}}
+<h4 class="text-success">No bugs found</h4>
+{{else}}
 <div class="panel-group" id="fbaccordionNext">
   <div class="panel panel-default">
     <div class="panel-heading">
@@ -116,8 +119,6 @@
       </div>
     </div>
   </div>
-  {{if (equal (len .Instances) 0)}}
-  {{else}}
   <div class="panel panel-default">
     <div class="panel-heading">
       <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbaccordionNext" href="#BugsNext"><h4>Bugs</h4></a>
@@ -154,6 +155,6 @@
       </div>
     </div>
   </div>
-  {{end}}
 </div>
+{{end}}
 {{end}}

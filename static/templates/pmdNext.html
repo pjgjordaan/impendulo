@@ -1,4 +1,8 @@
 {{ define "nextResult" }}
+{{if .Success}}
+<h4 class="text-success">No problems detected.</h4>
+{{else}}
+<h4 class="text-danger">{{.Errors}} problems detected.</h4>
 <div class="panel-group" id="pmdaccordionNext">
   {{range .Files}}
   {{$fileaddress := address .}}
@@ -42,4 +46,5 @@
   </div>
   {{end}}
 </div>
+{{end}}
 {{end}}

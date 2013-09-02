@@ -18,6 +18,11 @@ func SetTimeout(minutes int) {
 	timeLimit = time.Duration(minutes) * time.Minute
 }
 
+func GetTimeout() int{
+	return int(timeLimit)
+}
+
+
 //Tool is an interface which represents various analysis tools used in Impendulo.
 type Tool interface {
 	//GetName retrieves the Tool's name.
@@ -90,23 +95,23 @@ func RunCommand(args []string, stdin io.Reader) (res *ExecResult) {
 		res.StdOut, res.StdErr = stdout.Bytes(), stderr.Bytes()
 	case <-time.After(timeLimit):
 		cmd.Process.Kill()
-		res.Err = &TimeOutError{args}
+		res.Err = &TimeoutError{args}
 	}
 	return
 }
 
-//TimeOutError is an error used to indicate that a command timed out.
-type TimeOutError struct {
+//TimeoutError is an error used to indicate that a command timed out.
+type TimeoutError struct {
 	args []string
 }
 
-func (this *TimeOutError) Error() string {
+func (this *TimeoutError) Error() string {
 	return fmt.Sprintf("Command %q timed out.", this.args)
 }
 
-func IsTimeOut(err error) (ok bool) {
+func IsTimeout(err error) (ok bool) {
 	if err != nil{
-		_, ok = err.(*TimeOutError)
+		_, ok = err.(*TimeoutError)
 	}
 	return
 }

@@ -1,8 +1,11 @@
 {{ define "currentResult" }}
+{{if .Success}}
+<h4 class="text-success">No problems detected.</h4>
+{{else}}
+<h4 class="text-danger">{{.Errors}} problems detected.</h4>
 <div class="panel-group" id="checkstyleaccordionCurrent">
   {{range .Files}}
-  {{if equal (len .Errors) 0}}
-  {{else}}
+  {{if .ShouldDisplay}}
   {{$fileaddress := address .}}
   <div class="panel panel-default">
     <div class="panel-heading">
@@ -43,4 +46,5 @@
   {{end}}
   {{end}}
 </div>
+{{end}}
 {{end}}

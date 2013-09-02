@@ -121,13 +121,9 @@
     </div>
     <div id="diff" class="panel-collapse collapse in">
       <div class="accordion-inner">
-	{{$diff := diff .curResult .nextResult}}
-	{{$cur := sum $selected 1}}
-	{{$currHeader := createHeader $curFile $cur}}
-	{{$next := sum $neighbour 1}}
-	{{$nextHeader := createHeader $nextFile $next}} 
-	{{$diff := diffHeader $diff $currHeader $nextHeader}}
-	{{diffHTML $diff}}
+	{{$currHeader := createHeader $curFile}}
+	{{$nextHeader := createHeader $nextFile}} 
+	{{diff $currHeader $nextHeader .curResult .nextResult}}
       </div>
     </div>
   </div>

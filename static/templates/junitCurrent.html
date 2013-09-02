@@ -1,15 +1,13 @@
 {{define "currentResult"}}
-{{$noErrors := equal .Errors 0}}
-{{$noFailures := equal .Failures 0}}
+{{if .Success}}
+<h4 class="text-success">Passed all tests.</h4>
+{{else}}
 <dl class="dl-horizontal">
   <dt>Tests</dt><dd>{{.Tests}}</dd>
   <dt>Errors</dt><dd>{{.Errors}}</dd>
   <dt>Failures</dt><dd>{{.Failures}}</dd>
   <dt>Time</dt><dd>{{.Time}}</dd>
 </dl>
-{{if and $noErrors $noFailures}}
-<p class="text-success">Passed all tests.</p>
-{{else}}
 <div class="panel-group" id="junitaccordionCurrent">
   <div class="panel panel-default">
     <div class="panel-heading">

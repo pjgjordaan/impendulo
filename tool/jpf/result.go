@@ -89,6 +89,15 @@ func NewResult(fileId bson.ObjectId, data []byte) (res *Result, err error) {
 	return
 }
 
+func genReport(id bson.ObjectId, data []byte) (res *Report, err error) {
+	if err = xml.Unmarshal(data, &res); err != nil {
+		err = tool.NewXMLError(err, "jpf/jpfResult.go")
+		return
+	}
+	res.Id = id
+	return
+}
+
 type Report struct {
 	Id      bson.ObjectId
 	Version string       `xml:"jpf-version"`
@@ -96,9 +105,11 @@ type Report struct {
 	Trace   []*Transition `xml:"trace>transition"`
 	Findings  *Findings       `xml:"result"`
 	Stats   *Statistics   `xml:"statistics"`
-	Success bool
 }
 
+func (this *Report) Success() bool {
+	return this.Findings.Description == "none"
+}
 
 func (this *Report) String() string {
 	return fmt.Sprintf("Id: %q; Version: %s; \nResult: %s;\n Stats: %s",
@@ -163,18 +174,4 @@ type Statistics struct {
 func (this *Statistics) String() string {
 	return fmt.Sprintf("NewStates: %d; VisitedStates: %d; BacktrackedStates: %d; EndStates: %d;", 
 		this.NewStates, this.VisitedStates, this.BacktrackedStates, this.EndStates)
-}
-
-func genReport(id bson.ObjectId, data []byte) (res *Report, err error) {
-	if err = xml.Unmarshal(data, &res); err != nil {
-		err = tool.NewXMLError(err, "jpf/jpfResult.go")
-		return
-	}
-	if res.Findings.Description == "none" {
-		res.Success = true
-	} else {
-		res.Success = false
-	}
-	res.Id = id
-	return
 }

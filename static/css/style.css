@@ -9,6 +9,9 @@
 .minus    { color: red;   background: #D7D7D7; }
 .only     { color: purple;                     }
 .form-padded{padding:20px 10px 25px;}
+.accordion-text{
+    padding-left:50px;
+}
 
 .chart_container {
     display: inline-block;

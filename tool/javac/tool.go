@@ -30,6 +30,9 @@ func (this *Tool) GetName() string {
 }
 
 func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
+	to := tool.GetTimeout() 
+	tool.SetTimeout(5)
+	defer tool.SetTimeout(to)
 	args := []string{this.cmd, "-cp", this.cp + ":" + ti.Dir,
 		"-implicit:class", ti.FilePath()}
 	//Compile the file.

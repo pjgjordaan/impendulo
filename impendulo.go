@@ -32,7 +32,7 @@ func init() {
 	flag.StringVar(&InfoLogging, "i", "f", "Specify where to log info to (default file).")
 	flag.StringVar(&Port, "p", "8010", "Specify the port to listen on for files.")
 	flag.StringVar(&UsersFile, "u", "", "Specify a file with new users.")
-	flag.StringVar(&ConfigFile, "c", "config.txt", "Specify a configuration file.")
+	flag.StringVar(&ConfigFile, "c", config.DEFAULT, "Specify a configuration file.")
 }
 
 func main() {

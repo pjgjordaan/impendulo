@@ -5,14 +5,18 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"path/filepath"
 )
 
-var settings map[string]string
+var(
+	settings map[string]string
+	DEFAULT = filepath.Join(os.Getenv("GOPATH"), "src", 
+	"github.com", "godfried", "impendulo", "config.txt")
+)
 
 func init(){
 	settings = make(map[string]string)
-	err := LoadConfigs(os.Getenv("GOPATH")+
-		"/src/github.com/godfried/impendulo/config.txt")
+	err := LoadConfigs(DEFAULT)
 	if err != nil{
 		fmt.Println(err)
 	}

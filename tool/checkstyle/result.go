@@ -100,6 +100,10 @@ type Report struct {
 	Files   []*File `xml:"file"`
 }
 
+func (this *Report) Success() bool{
+	return this.Errors == 0
+}
+
 func (this *Report) String()string{
 	files := ""
 	for _, f := range this.Files{
@@ -112,6 +116,10 @@ func (this *Report) String()string{
 type File struct {
 	Name   string   `xml:"name,attr"`
 	Errors []*Error `xml:"error"`
+}
+
+func (this *File) ShouldDisplay()bool{
+	return len(this.Errors) > 0 
 }
 
 func (this *File) String()string{

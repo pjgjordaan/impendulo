@@ -86,7 +86,7 @@ func (this *TimeoutResult) GetName() string {
 }
 
 func (this *TimeoutResult) GetData() interface{} {
-	return "A timeout occured during tool execution."
+	return "A timeout occured during execution."
 }
 
 func (this *TimeoutResult) Template(current bool) string {

@@ -102,6 +102,10 @@ type Report struct {
 	Errors  int
 }
 
+func (this *Report) Success() bool{
+	return this.Errors == 0
+}
+
 func (this *Report) String() (ret string) {
 	ret = fmt.Sprintf("Report{ Errors: %d\n.", this.Errors)
 	if this.Files != nil {

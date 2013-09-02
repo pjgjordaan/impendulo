@@ -30,12 +30,12 @@ func init() {
 	statusChan = make(chan Status)
 }
 
-type Status struct{
-	Files int
+type Status struct {
+	Files       int
 	Submissions int
 }
 
-func (this *Status) add(toAdd Status){
+func (this *Status) add(toAdd Status) {
 	this.Files += toAdd.Files
 	this.Submissions += toAdd.Submissions
 }
@@ -45,7 +45,7 @@ func ChangeStatus(change Status) {
 }
 
 func GetStatus() (ret Status) {
-	statusChan <- Status{0,0}
+	statusChan <- Status{0, 0}
 	ret = <-statusChan
 	return
 }
@@ -55,7 +55,7 @@ func monitorStatus() {
 	for {
 		val := <-statusChan
 		switch val {
-		case Status{0,0}:
+		case Status{0, 0}:
 			statusChan <- *status
 		default:
 			status.add(val)
@@ -92,7 +92,6 @@ func submissionProcessed() {
 	ChangeStatus(Status{0, -1})
 	processedChan <- None()
 }
-
 
 func fileProcessed() {
 	ChangeStatus(Status{-1, 0})
@@ -233,13 +232,13 @@ func (this *ProcHelper) Handle(fileQueue *list.List) {
 //Processor is used to process individual submissions.
 type Processor struct {
 	sub     *project.Submission
-	project     *project.Project
+	project *project.Project
 	tests   []*TestRunner
 	rootDir string
 	srcDir  string
 	toolDir string
 	jpfPath string
-	tools []tool.Tool
+	tools   []tool.Tool
 }
 
 func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
@@ -249,7 +248,7 @@ func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
 	}
 	matcher := bson.M{project.ID: sub.ProjectId}
 	p, err := db.GetProject(matcher, nil)
-	if err != nil{
+	if err != nil {
 		return
 	}
 	dir := filepath.Join(os.TempDir(), sub.Id.Hex())
@@ -263,12 +262,12 @@ func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
 	if jerr == nil {
 		var j tool.Tool
 		j, err = jpf.New(jpfFile, toolDir)
-		if err == nil{
+		if err == nil {
 			tools = append(tools, j)
-		} else{
+		} else {
 			return
 		}
-	} else{
+	} else {
 		util.Log(jerr)
 	}
 	tests, terr := SetupTests(p.Id, toolDir)
@@ -281,8 +280,8 @@ func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
 		rootDir: dir,
 		srcDir:  filepath.Join(dir, "src"),
 		toolDir: toolDir,
-		tools: tools,
-		tests: tests,
+		tools:   tools,
+		tests:   tests,
 	}
 	return
 }
@@ -325,7 +324,7 @@ func (this *Processor) ProcessFile(file *project.File) (err error) {
 		err = this.Extract(file)
 	case project.SRC:
 		analyser := &Analyser{
-			proc: this, 
+			proc: this,
 			file: file,
 		}
 		err = analyser.Eval()
@@ -361,7 +360,7 @@ func (this *Processor) Extract(archive *project.File) error {
 		file, err := db.GetFile(bson.M{project.ID: fId.Id}, nil)
 		if err != nil {
 			util.Log(err, LOG_PROCESSING)
-		} else{
+		} else {
 			err = this.ProcessFile(file)
 			if err != nil {
 				util.Log(err, LOG_PROCESSING)
@@ -424,7 +423,7 @@ func (this *Analyser) Eval() error {
 //buildTarget saves a file to filesystem.
 //It returns file info used by tools & tests.
 func (this *Analyser) buildTarget() error {
-	this.target = tool.NewTarget(this.file.Name, 
+	this.target = tool.NewTarget(this.file.Name,
 		this.proc.project.Lang, this.file.Package, this.proc.srcDir)
 	return util.SaveFile(this.target.FilePath(), this.file.Data)
 }
@@ -449,7 +448,7 @@ func (this *Analyser) RunTools() {
 		res, err := t.Run(this.file.Id, this.target)
 		if err != nil {
 			util.Log(err, LOG_PROCESSING)
-			if tool.IsTimeOut(err) {
+			if tool.IsTimeout(err) {
 				err = db.AddTimeoutResult(
 					this.file.Id, t.GetName())
 			} else {

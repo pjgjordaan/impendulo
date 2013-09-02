@@ -11,6 +11,20 @@ import (
 	"strings"
 )
 
+func CalcDiff(currHeader, nextHeader, currCode, nextCode string) (ret template.HTML){
+	diff, err := Diff(currCode, nextCode)
+	if err != nil{
+		util.Log(err)
+		return
+	}
+	diff = SetHeader(diff, currHeader, nextHeader)
+	ret, err = Diff2HTML(diff)
+	if err != nil{
+		util.Log(err)
+	}
+	return
+}	
+
 func Diff(orig, change string) (ret string, err error) {
 	origName := filepath.Join(util.BaseDir(),
 		fmt.Sprint(&orig)+fmt.Sprint(&change))

@@ -58,7 +58,7 @@ func (this *Result) Template(current bool) string {
 }
 
 func (this *Result) Success() bool {
-	return this.Data.Success
+	return this.Data.Success()
 }
 
 func (this *Result) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
@@ -88,9 +88,22 @@ func NewResult(fileId bson.ObjectId, name string, data []byte) (res *Result, err
 	return
 }
 
+func genReport(id bson.ObjectId, data []byte) (res *Report, err error) {
+	if err = xml.Unmarshal(data, &res); err != nil {
+		if res == nil {
+			err = tool.NewXMLError(err, "junit/junitResult.go")
+			return
+		} else {
+			err = nil
+		}
+	}
+	sort.Sort(res.Results)
+	res.Id = id
+	return
+}
+
 type Report struct {
 	Id       bson.ObjectId
-	Success  bool
 	Errors   int        `xml:"errors,attr"`
 	Failures int        `xml:"failures,attr"`
 	Name     string     `xml:"name,attr"`
@@ -99,6 +112,9 @@ type Report struct {
 	Results  TestCases `xml:"testcase"`
 }
 
+func (this *Report) Success() bool{
+	return this.Errors == 0 && this.Failures == 0
+}
 
 func (this *Report) String() string {
 	return fmt.Sprintf("Id: %q; Success: %t; Tests: %d; Errors: %d; Failures: %d; Name: %s; \n Results: %s", 
@@ -163,22 +179,3 @@ func (this *Failure) String() string {
 	return fmt.Sprintf("Message: %s; Type: %s; Value: %s", 
 		this.Message, this.Type, this.Value)
 } 
-
-func genReport(id bson.ObjectId, data []byte) (res *Report, err error) {
-	if err = xml.Unmarshal(data, &res); err != nil {
-		if res == nil {
-			err = tool.NewXMLError(err, "junit/junitResult.go")
-			return
-		} else {
-			err = nil
-		}
-	}
-	sort.Sort(res.Results)
-	if res.Errors == 0 && res.Failures == 0 {
-		res.Success = true
-	} else {
-		res.Success = false
-	}
-	res.Id = id
-	return
-}

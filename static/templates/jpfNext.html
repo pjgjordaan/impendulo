@@ -1,4 +1,7 @@
 {{ define "nextResult" }}
+{{if .Success}}
+<h4 class="text-success">No errors detected</h4>
+{{end}}
 <div class="panel-group" id="jpfaccordionNext">
   <div class="panel panel-default">
     <div class="panel-heading">
@@ -20,6 +23,7 @@
 	  </div>
 	</div>
   </div>
+  {{if not .Success}}
   <div class="panel panel-default">
     <div class="panel-heading">
       <a class="accordion-toggle" data-toggle="collapse"
@@ -29,16 +33,12 @@
     </div>
 	<div id="ErrorsNext" class="panel-collapse collapse">
 	  <div class="accordion-inner">
-	    {{if .Success}}
-	    <h5 class="text-success">No errors detected</h4>
-	    {{else}}
 	    {{$errCount := len .Findings.Errors}}
-	    <h5 class="text-error">{{$errCount}} errors found</h4>
+	    <h4 class="text-danger accordion-text">{{$errCount}} errors found</h4>
 	    {{range .Findings.Errors}}
-	    <h5 class="text-warning">{{.Property}}</h5>
+	    <h5 class="text-danger accordion-text">{{.Property}}</h5>
 	    {{$details := setBreaks .Details}}
-	    <p>{{$details}}</p>
-	    {{end}}
+	    <p class="text-warning accordion-text">{{$details}}</p>
 	    {{end}}
 	  </div>
 	</div>
@@ -98,5 +98,6 @@
       </div>
     </div>
   </div>
+  {{end}}
 </div>
 {{end}}
