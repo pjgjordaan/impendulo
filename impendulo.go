@@ -28,7 +28,7 @@ func init() {
 	flag.BoolVar(&Receiver, "r", true, "Specify whether to run the Intlola file receiver (default true).")
 	flag.BoolVar(&Processor, "s", true, "Specify whether to run the Intlola file processor (default true).")
 	flag.BoolVar(&Debug, "d", true, "Specify whether to run in debug mode (default true).")
-	flag.BoolVar(&Backup, "b", true, "Backup db (default false).")
+	flag.BoolVar(&Backup, "b", false, "Backup db (default false).")
 	flag.StringVar(&ErrorLogging, "e", "a", "Specify where to log errors to (default console & file).")
 	flag.StringVar(&InfoLogging, "i", "f", "Specify where to log info to (default file).")
 	flag.StringVar(&Port, "p", "8010", "Specify the port to listen on for files.")
@@ -81,9 +81,7 @@ func backupDB() (err error) {
 	}
 	defer db.Close()
 	err = db.CopyDB(db.DEFAULT_DB, db.BACKUP_DB)
-	if err != nil {
-		return
-	}
+	return
 }
 
 func setupConn(debug bool) (err error) {

@@ -81,7 +81,6 @@ func DeleteDB(db string) error {
 	if err != nil {
 		return err
 	}
-	defer Close()
 	return session.DB(db).DropDatabase()
 }
 
