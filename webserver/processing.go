@@ -7,8 +7,8 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"io/ioutil"
@@ -146,7 +146,14 @@ func CreateJPF(req *http.Request, ctx *Context) (err error) {
 	}
 	vals := map[string][]string{
 		"search.class": []string{search},
-		"listener": listeners,
+		"listener":     listeners,
+	}
+	other, err := GetString(req, "other")
+	if err == nil {
+		props := readProperties(other)
+		for k, v := range props {
+			vals[k] = v
+		}
 	}
 	data, err := jpf.JPFBytes(vals)
 	if err != nil {
@@ -157,6 +164,31 @@ func CreateJPF(req *http.Request, ctx *Context) (err error) {
 	return
 }
 
+func readProperties(raw string) (props map[string][]string) {
+	props = make(map[string][]string)
+	lines := strings.Split(raw, "\n")
+	for _, line := range lines {
+		params := strings.Split(util.RemoveEmpty(line), "=")
+		if len(params) == 2 {
+			key, val := params[0], params[1]
+			if len(key) > 0 && len(val) > 0 && jpf.Allowed(key) {
+				split := strings.Split(val, ",")
+				vals := make([]string, 0, len(split))
+				for _, v := range split {
+					if v != "" {
+						vals = append(vals, v)
+					}
+				}
+				if v, ok := props[key]; ok {
+					props[key] = append(v, vals...)
+				} else {
+					props[key] = vals
+				}
+			}
+		}
+	}
+	return
+}
 
 //AddProject creates a new Impendulo Project.
 func AddProject(req *http.Request, ctx *Context) (err error) {
@@ -310,7 +342,7 @@ func RetrieveFiles(req *http.Request, ctx *Context) (ret []*project.File, err er
 	matcher := bson.M{project.SUBID: sid,
 		project.TYPE: project.SRC, project.NAME: name}
 	selector := bson.M{project.TIME: 1}
-	ret, err = db.GetFiles(matcher, selector,  project.TIME)
+	ret, err = db.GetFiles(matcher, selector, project.TIME)
 	if err == nil && len(ret) == 0 {
 		err = fmt.Errorf("No files found with name %q.", name)
 	}
@@ -381,16 +413,15 @@ func GetInt(req *http.Request, name string) (found int, err error) {
 
 //GetStrings retrieves a string value from a request form.
 func GetStrings(req *http.Request, name string) (vals []string, err error) {
-	if req.Form == nil{
+	if req.Form == nil {
 		err = req.ParseForm()
-		if err != nil{
+		if err != nil {
 			return
 		}
 	}
 	vals = req.Form[name]
 	return
 }
-
 
 //GetString retrieves a string value from a request form.
 func GetString(req *http.Request, name string) (val string, err error) {
@@ -470,18 +501,18 @@ func getFile(id bson.ObjectId) (file *project.File, err error) {
 
 func getIndex(req *http.Request, name string, maxSize int) (ret int, err error) {
 	ret, err = GetInt(req, name)
-	if err != nil{
+	if err != nil {
 		return
 	}
-	if ret > maxSize{
+	if ret > maxSize {
 		ret = 0
-	} else if ret < 0{
+	} else if ret < 0 {
 		ret = maxSize
 	}
 	return
 }
 
-func getSelected(req *http.Request, maxSize int) (int, error){
+func getSelected(req *http.Request, maxSize int) (int, error) {
 	return getIndex(req, "currentIndex", maxSize)
 }
 

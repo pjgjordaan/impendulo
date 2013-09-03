@@ -21,6 +21,7 @@ const (
 	DEFAULT_DB   = "impendulo"
 	DEBUG_DB     = "impendulo_debug"
 	TEST_DB      = "impendulo_test"
+	BACKUP_DB    = "impendulo_backup"
 )
 
 var sessionChan chan *mgo.Session
@@ -39,6 +40,7 @@ func Setup(conn string) error {
 	return nil
 }
 
+//serveSession manages the active session.
 func serveSession(activeSession *mgo.Session) {
 	for {
 		req, ok := <-requestChan
@@ -83,7 +85,8 @@ func DeleteDB(db string) error {
 	return session.DB(db).DropDatabase()
 }
 
-//CopyDB
+//CopyDB is used to copy the contents of one database to a new
+//location.
 func CopyDB(from, to string) error {
 	session, err := getSession()
 	if err != nil {

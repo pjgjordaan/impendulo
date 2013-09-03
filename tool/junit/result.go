@@ -6,23 +6,25 @@ import (
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
 	"math"
-	"strings"
 	"sort"
+	"strings"
 )
 
 const NAME = "JUnit Test"
 
+//Result is an implementation of ToolResult, DisplayResult
+//and GraphResult for JUnit test results.
 type Result struct {
 	Id       bson.ObjectId "_id"
 	FileId   bson.ObjectId "fileid"
 	TestName string        "name"
-	Data     *Report    "data"
+	Data     *Report       "data"
 }
 
 func (this *Result) String() string {
-	return fmt.Sprintf("Id: %q; FileId: %q; TestName: %s; \n Data: %s", 
+	return fmt.Sprintf("Id: %q; FileId: %q; TestName: %s; \n Data: %s",
 		this.Id, this.FileId, this.TestName, this.Data)
-} 
+}
 
 func (this *Result) GetName() string {
 	return this.TestName
@@ -76,12 +78,10 @@ func (this *Result) AddGraphData(max, x float64, graphData []map[string]interfac
 	return math.Max(max, math.Max(yE, math.Max(yF, yS)))
 }
 
-
-
 func NewResult(fileId bson.ObjectId, name string, data []byte) (res *Result, err error) {
 	res = &Result{
-		Id: bson.NewObjectId(), 
-		FileId: fileId, 
+		Id:       bson.NewObjectId(),
+		FileId:   fileId,
 		TestName: name,
 	}
 	res.Data, err = genReport(res.Id, data)
@@ -102,71 +102,70 @@ func genReport(id bson.ObjectId, data []byte) (res *Report, err error) {
 	return
 }
 
+//Report is created from XML output by a Ant JUnit task.
 type Report struct {
 	Id       bson.ObjectId
-	Errors   int        `xml:"errors,attr"`
-	Failures int        `xml:"failures,attr"`
-	Name     string     `xml:"name,attr"`
-	Tests    int        `xml:"tests,attr"`
-	Time     float64    `xml:"time,attr"`
+	Errors   int       `xml:"errors,attr"`
+	Failures int       `xml:"failures,attr"`
+	Name     string    `xml:"name,attr"`
+	Tests    int       `xml:"tests,attr"`
+	Time     float64   `xml:"time,attr"`
 	Results  TestCases `xml:"testcase"`
 }
 
-func (this *Report) Success() bool{
+func (this *Report) Success() bool {
 	return this.Errors == 0 && this.Failures == 0
 }
 
 func (this *Report) String() string {
-	return fmt.Sprintf("Id: %q; Success: %t; Tests: %d; Errors: %d; Failures: %d; Name: %s; \n Results: %s", 
+	return fmt.Sprintf("Id: %q; Success: %t; Tests: %d; Errors: %d; Failures: %d; Name: %s; \n Results: %s",
 		this.Id, this.Success, this.Tests, this.Errors, this.Failures, this.Name, this.Results)
-} 
+}
 
-func (this *Report) GetResults(num int) TestCases{
-	if len(this.Results) < num{
+func (this *Report) GetResults(num int) TestCases {
+	if len(this.Results) < num {
 		return this.Results
-	} else{
+	} else {
 		return this.Results[:num]
 	}
 }
 
 type TestCase struct {
-	ClassName string  `xml:"classname,attr"`
-	Name      string  `xml:"name,attr"`
-	Time      float64 `xml:"time,attr"`
+	ClassName string   `xml:"classname,attr"`
+	Name      string   `xml:"name,attr"`
+	Time      float64  `xml:"time,attr"`
 	Fail      *Failure `xml:"failure"`
 }
 
-
 func (this *TestCase) String() string {
-	return fmt.Sprintf("ClassName: %s; Name: %s; Time: %f; \n Failure: %s\n", 
+	return fmt.Sprintf("ClassName: %s; Name: %s; Time: %f; \n Failure: %s\n",
 		this.ClassName, this.Name, this.Time, this.Fail)
-} 
+}
 
-func (this *TestCase) IsFailure() bool{
+func (this *TestCase) IsFailure() bool {
 	return this.Fail != nil && len(strings.TrimSpace(this.Fail.Type)) > 0
 }
 
 type TestCases []*TestCase
 
-func (this TestCases) Len()int{
+func (this TestCases) Len() int {
 	return len(this)
-} 
+}
 
-func (this TestCases) Swap(i, j int){
+func (this TestCases) Swap(i, j int) {
 	this[i], this[j] = this[j], this[i]
-} 
+}
 
-func (this TestCases) Less(i, j int) bool{
+func (this TestCases) Less(i, j int) bool {
 	return this[i].Name < this[j].Name
-} 
-
+}
 
 func (this TestCases) String() (ret string) {
-	for _, t := range this{
+	for _, t := range this {
 		ret += t.String()
 	}
 	return ret
-} 
+}
 
 type Failure struct {
 	Message string `xml:"message,attr"`
@@ -174,8 +173,7 @@ type Failure struct {
 	Value   string `xml:",innerxml"`
 }
 
-
 func (this *Failure) String() string {
-	return fmt.Sprintf("Message: %s; Type: %s; Value: %s", 
+	return fmt.Sprintf("Message: %s; Type: %s; Value: %s",
 		this.Message, this.Type, this.Value)
-} 
+}

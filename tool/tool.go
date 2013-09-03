@@ -18,10 +18,9 @@ func SetTimeout(minutes int) {
 	timeLimit = time.Duration(minutes) * time.Minute
 }
 
-func GetTimeout() int{
+func GetTimeout() int {
 	return int(timeLimit)
 }
-
 
 //Tool is an interface which represents various analysis tools used in Impendulo.
 type Tool interface {
@@ -110,7 +109,7 @@ func (this *TimeoutError) Error() string {
 }
 
 func IsTimeout(err error) (ok bool) {
-	if err != nil{
+	if err != nil {
 		_, ok = err.(*TimeoutError)
 	}
 	return
@@ -136,4 +135,11 @@ type EndError struct {
 func (this *EndError) Error() string {
 	return fmt.Sprintf("Encountered end error %q executing command %q",
 		this.err, this.args)
+}
+
+func IsEndError(err error) (ok bool) {
+	if err != nil {
+		_, ok = err.(*EndError)
+	}
+	return
 }

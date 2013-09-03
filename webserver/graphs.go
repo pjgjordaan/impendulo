@@ -49,10 +49,10 @@ func LoadResultGraphData(result, tipe string, files []*project.File) (graphArgs 
 	graphArgs = make(GraphArgs)
 	graphArgs["max"] = max + max*0.05
 	graphArgs["series"] = graphData
-	if result == javac.NAME {
+	/*	if result == javac.NAME {
 		graphArgs["yformat"] = map[string]interface{}{"0": "Failure", "1": "Success"}
 		graphArgs["min"] = -0.05
-	}
+	}*/
 	graphArgs["height"] = 400
 	graphArgs["width"] = 700
 	graphArgs["interpolation"] = "linear"
@@ -62,7 +62,8 @@ func LoadResultGraphData(result, tipe string, files []*project.File) (graphArgs 
 }
 
 func loadJavacGraphData(time bool, files []*project.File) (GraphData, float64) {
-	graphData := make(GraphData, 1)
+	graphData := make(GraphData, 2)
+	max := -1.0
 	for _, f := range files {
 		result, err := db.GetJavacResult(
 			bson.M{project.FILEID: f.Id}, nil)
@@ -70,12 +71,12 @@ func loadJavacGraphData(time bool, files []*project.File) (GraphData, float64) {
 			continue
 		}
 		var x float64 = -1
-		if time{
+		if time {
 			x = float64(f.Time)
 		}
-		result.AddGraphData(0, x, graphData)
+		max = result.AddGraphData(max, x, graphData)
 	}
-	return graphData, 1
+	return graphData, max
 }
 
 func loadJUnitGraphData(testName string, time bool, files []*project.File) (GraphData, float64) {
@@ -88,7 +89,7 @@ func loadJUnitGraphData(testName string, time bool, files []*project.File) (Grap
 			continue
 		}
 		var x float64 = -1
-		if time{
+		if time {
 			x = float64(f.Time)
 		}
 		max = result.AddGraphData(max, x, graphData)
@@ -97,7 +98,7 @@ func loadJUnitGraphData(testName string, time bool, files []*project.File) (Grap
 }
 
 func loadJPFGraphData(time bool, files []*project.File) (GraphData, float64) {
-	graphData := make(GraphData, 4)
+	graphData := make(GraphData, 1)
 	max := -1.0
 	for _, f := range files {
 		result, err := db.GetJPFResult(
@@ -105,7 +106,11 @@ func loadJPFGraphData(time bool, files []*project.File) (GraphData, float64) {
 		if err != nil {
 			continue
 		}
-		max = result.AddGraphData(max, -1, graphData)
+		var x float64 = -1
+		if time {
+			x = float64(f.Time)
+		}
+		max = result.AddGraphData(max, x, graphData)
 	}
 	return graphData, max
 }
@@ -120,7 +125,7 @@ func loadFindbugsGraphData(time bool, files []*project.File) (GraphData, float64
 			continue
 		}
 		var x float64 = -1
-		if time{
+		if time {
 			x = float64(f.Time)
 		}
 		max = result.AddGraphData(max, x, graphData)
@@ -138,7 +143,7 @@ func loadCheckstyleGraphData(time bool, files []*project.File) (GraphData, float
 			continue
 		}
 		var x float64 = -1
-		if time{
+		if time {
 			x = float64(f.Time)
 		}
 		max = result.AddGraphData(max, x, graphData)
@@ -156,7 +161,7 @@ func loadPMDGraphData(time bool, files []*project.File) (GraphData, float64) {
 			continue
 		}
 		var x float64 = -1
-		if time{
+		if time {
 			x = float64(f.Time)
 		}
 		max = result.AddGraphData(max, x, graphData)
@@ -173,7 +178,7 @@ func loadAllGraphData(time bool, files []*project.File) (GraphData, float64) {
 			continue
 		}
 		var x float64 = -1
-		if time{
+		if time {
 			x = float64(f.Time)
 		}
 		for _, result := range results {

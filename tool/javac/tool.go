@@ -16,8 +16,8 @@ type Tool struct {
 //New creates a new Javac instance. cp is the classpath used when compiling.
 func New(cp string) *Tool {
 	return &Tool{
-		cmd: config.GetConfig(config.JAVAC), 
-		cp: cp,
+		cmd: config.GetConfig(config.JAVAC),
+		cp:  cp,
 	}
 }
 
@@ -30,26 +30,23 @@ func (this *Tool) GetName() string {
 }
 
 func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
-	to := tool.GetTimeout() 
-	tool.SetTimeout(5)
-	defer tool.SetTimeout(to)
 	args := []string{this.cmd, "-cp", this.cp + ":" + ti.Dir,
-		"-implicit:class", ti.FilePath()}
+		"-implicit:class", "-Xlint", ti.FilePath()}
 	//Compile the file.
 	execRes := tool.RunCommand(args, nil)
-	if execRes.HasStdErr() {
-		//Unsuccessfull compile.
-		res = NewResult(fileId, execRes.StdErr)
-		err = &CompileError{ti.FullName(), string(execRes.StdErr)}
-	} else if execRes.Err != nil {
-		//Error occured when attempting to run tool.
-		err = execRes.Err
-	} else {
-		if !execRes.HasStdOut() {
-			//Successfull compile.
-			execRes.StdOut = []byte("Compiled successfully")
+	if execRes.Err != nil {
+		if !tool.IsEndError(execRes.Err) {
+			err = execRes.Err
+		} else {
+			//Unsuccessfull compile.
+			res = NewResult(fileId, execRes.StdErr)
+			err = &CompileError{ti.FullName(), string(execRes.StdErr)}
 		}
-		res = NewResult(fileId, execRes.StdOut)
+	} else if execRes.HasStdErr() {
+		//Compiler warnings.
+		res = NewResult(fileId, execRes.StdErr)
+	} else {
+		res = NewResult(fileId, compSuccess)
 	}
 	return
 }

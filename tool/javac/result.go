@@ -2,8 +2,11 @@ package javac
 
 import (
 	"bytes"
+	"errors"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
+	"math"
+	"strconv"
 )
 
 const NAME = "Javac"
@@ -52,8 +55,67 @@ func (this *Result) Template(current bool) string {
 	}
 }
 
+var (
+	compSuccess  = []byte("Compiled successfully")
+	compWarning  = []byte("warning")
+	compWarnings = []byte("warnings")
+	compError    = []byte("error")
+	compErrors   = []byte("errors")
+)
+
 func (this *Result) Success() bool {
-	return bytes.Equal(this.Data, []byte("Compiled successfully"))
+	return bytes.Equal(this.Data, compSuccess)
+}
+
+func (this *Result) Warnings() bool {
+	return bytes.HasSuffix(this.Data, compWarning) ||
+		bytes.HasSuffix(this.Data, compWarnings)
+}
+
+func (this *Result) Errors() bool {
+	return bytes.HasSuffix(this.Data, compError) ||
+		bytes.HasSuffix(this.Data, compErrors)
+}
+
+func (this *Result) Count() (n int, err error) {
+	if this.Success() {
+		err = errors.New("No count for successfull compile.")
+		return
+	}
+	split := bytes.Split(this.Data, []byte("\n"))
+	if len(split) < 1 {
+		err = errors.New("Can't find count line in message.")
+		return
+	}
+	split = bytes.Split(bytes.TrimSpace(split[len(split)-1]), []byte(" "))
+	if len(split) < 1 {
+		err = errors.New("Can't find count in last line.")
+		return
+	}
+	n, err = strconv.Atoi(string(split[0]))
+	return
+}
+
+func (this *Result) ResultHeader() (header string) {
+	if this.Success() {
+		header = string(this.Data)
+		return
+	} else {
+		count, err := this.Count()
+		if err != nil {
+			return "Could not retrieve compilation result."
+		}
+		header = strconv.Itoa(count) + " "
+		if this.Warnings() {
+			header += "Warning"
+		} else if this.Errors() {
+			header += "Error"
+		}
+		if count > 1 {
+			header += "s"
+		}
+	}
+	return
 }
 
 func (this *Result) Result() string {
@@ -62,23 +124,31 @@ func (this *Result) Result() string {
 
 func (this *Result) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
 	if graphData[0] == nil {
-		graphData[0] = tool.CreateChart("Compilation")
+		graphData[0] = tool.CreateChart(this.GetName() + " Errors")
+		graphData[1] = tool.CreateChart(this.GetName() + " Warnings")
 	}
-	var y float64
-	if this.Success() {
-		y = 1
-	} else {
-		y = 0
+	yE, yW := 0.0, 0.0
+	if this.Errors() {
+		n, err := this.Count()
+		if err == nil {
+			yE = float64(n)
+		}
+	} else if this.Warnings() {
+		n, err := this.Count()
+		if err == nil {
+			yW = float64(n)
+		}
 	}
-	tool.AddCoords(graphData[0], x, y)
-	return 1
+	tool.AddCoords(graphData[0], x, yE)
+	tool.AddCoords(graphData[1], x, yW)
+	return math.Max(max, math.Max(yE, yW))
 }
 
 func NewResult(fileId bson.ObjectId, data []byte) *Result {
 	return &Result{
-		Id: bson.NewObjectId(), 
-		FileId: fileId, 
-		Name: NAME, 
-		Data: data,
+		Id:     bson.NewObjectId(),
+		FileId: fileId,
+		Name:   NAME,
+		Data:   bytes.TrimSpace(data),
 	}
 }

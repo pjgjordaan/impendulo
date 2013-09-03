@@ -1,8 +1,15 @@
 {{define "currentResult"}}
-{{$res := setBreaks .Result}}
+{{$header := .ResultHeader}}
 {{if .Success}}
-<p class="text-success">{{$res}}</p>
+<h4 class="text-success">{{$header}}</h4>
 {{else}}
+{{$res := setBreaks .Result}}
+{{if .Warnings}}
+<h4 class="text-warning">{{$header}}</h4>
+<p class="text-warning">{{$res}}</p>
+{{else}}
+<h4 class="text-danger">{{$header}}</h4>
 <p class="text-danger">{{$res}}</p>
+{{end}}
 {{end}}
 {{end}}

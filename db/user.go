@@ -23,14 +23,18 @@ func GetUserById(id interface{}) (ret *user.User, err error) {
 }
 
 //GetUsers retrieves users matching the given interface from the active database.
-func GetUsers(matcher interface{}) (ret []*user.User, err error) {
+func GetUsers(matcher interface{}, sort ...string) (ret []*user.User, err error) {
 	session, err := getSession()
 	if err != nil {
 		return
 	}
 	defer session.Close()
 	c := session.DB("").C(USERS)
-	err = c.Find(matcher).Select(bson.M{user.ID: 1}).All(&ret)
+	q := c.Find(matcher)
+	if len(sort) > 0 {
+		q = q.Sort(sort...)
+	}
+	err = q.Select(bson.M{user.ID: 1}).All(&ret)
 	if err != nil {
 		err = &DBGetError{"users", err, matcher}
 	}

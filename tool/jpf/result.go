@@ -15,7 +15,7 @@ type Result struct {
 	Id     bson.ObjectId "_id"
 	FileId bson.ObjectId "fileid"
 	Name   string        "name"
-	Data   *Report    "data"
+	Data   *Report       "data"
 }
 
 func (this *Result) String() string {
@@ -36,7 +36,7 @@ func (this *Result) GetFileId() bson.ObjectId {
 }
 
 func (this *Result) GetSummary() *tool.Summary {
-	body := fmt.Sprintf("Result: %s \n Errors: %d", 
+	body := fmt.Sprintf("Result: %s \n Errors: %d",
 		this.Data.Findings.Description, len(this.Data.Findings.Errors))
 	return &tool.Summary{
 		Name: this.GetName(),
@@ -62,28 +62,19 @@ func (this *Result) Template(current bool) string {
 
 func (this *Result) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
 	if graphData[0] == nil {
-		graphData[0] = tool.CreateChart("JPF New States")
-		graphData[1] = tool.CreateChart("JPF Visited States")
-		graphData[2] = tool.CreateChart("JPF Backtracked States")
-		graphData[3] = tool.CreateChart("JPF End States")
+		graphData[0] = tool.CreateChart("JPF Errors")
 	}
-	yN := float64(this.Data.Stats.NewStates)
-	yV := float64(this.Data.Stats.VisitedStates)
-	yB := float64(this.Data.Stats.BacktrackedStates)
-	yE := float64(this.Data.Stats.EndStates)
-	tool.AddCoords(graphData[0], x, yN)
-	tool.AddCoords(graphData[1], x, yV)
-	tool.AddCoords(graphData[2], x, yB)
-	tool.AddCoords(graphData[3], x, yE)
-	return math.Max(max, math.Max(yN, math.Max(yV, math.Max(yB, yE))))
+	yE := float64(this.Data.Errors())
+	tool.AddCoords(graphData[0], x, yE)
+	return math.Max(max, yE)
 }
 
 //NewResult
 func NewResult(fileId bson.ObjectId, data []byte) (res *Result, err error) {
 	res = &Result{
-		Id: bson.NewObjectId(), 
-		FileId: fileId, 
-		Name: NAME,
+		Id:     bson.NewObjectId(),
+		FileId: fileId,
+		Name:   NAME,
 	}
 	res.Data, err = genReport(res.Id, data)
 	return
@@ -99,12 +90,19 @@ func genReport(id bson.ObjectId, data []byte) (res *Report, err error) {
 }
 
 type Report struct {
-	Id      bson.ObjectId
-	Version string       `xml:"jpf-version"`
-	Threads []*Thread     `xml:"live-threads>thread"`
-	Trace   []*Transition `xml:"trace>transition"`
-	Findings  *Findings       `xml:"result"`
-	Stats   *Statistics   `xml:"statistics"`
+	Id       bson.ObjectId
+	Version  string        `xml:"jpf-version"`
+	Threads  []*Thread     `xml:"live-threads>thread"`
+	Trace    []*Transition `xml:"trace>transition"`
+	Findings *Findings     `xml:"result"`
+	Stats    *Statistics   `xml:"statistics"`
+}
+
+func (this *Report) Errors() int {
+	if this.Success() {
+		return 0
+	}
+	return len(this.Findings.Errors)
 }
 
 func (this *Report) Success() bool {
@@ -126,8 +124,8 @@ type Thread struct {
 }
 
 type Transition struct {
-	Id       int             `xml:"id,attr"`
-	ThreadId int             `xml:"thread,attr"`
+	Id       int              `xml:"id,attr"`
+	ThreadId int              `xml:"thread,attr"`
 	CG       *ChoiceGenerator `xml:"cg"`
 	Insns    []*Instruction   `xml:"insn"`
 }
@@ -147,8 +145,8 @@ type Instruction struct {
 }
 
 type Findings struct {
-	Description string  `xml:"findings,attr"`
-	Errors   []*Error `xml:"error"`
+	Description string   `xml:"findings,attr"`
+	Errors      []*Error `xml:"error"`
 }
 
 func (this *Findings) String() string {
@@ -170,8 +168,7 @@ type Statistics struct {
 	Memory            int    `xml:"max-memory"`
 }
 
-
 func (this *Statistics) String() string {
-	return fmt.Sprintf("NewStates: %d; VisitedStates: %d; BacktrackedStates: %d; EndStates: %d;", 
+	return fmt.Sprintf("NewStates: %d; VisitedStates: %d; BacktrackedStates: %d; EndStates: %d;",
 		this.NewStates, this.VisitedStates, this.BacktrackedStates, this.EndStates)
 }

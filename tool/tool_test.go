@@ -1,9 +1,9 @@
 package tool
 
 import (
+	"errors"
 	"os"
 	"testing"
-	"errors"
 )
 
 func TestRunCommand(t *testing.T) {
@@ -25,24 +25,24 @@ func TestRunCommand(t *testing.T) {
 	SetTimeout(1)
 	longCmd := []string{"sleep", "100"}
 	execRes = RunCommand(longCmd, nil)
-	if !IsTimeOut(execRes.Err) {
+	if !IsTimeout(execRes.Err) {
 		t.Error("Expected timeout, got ", execRes.Err)
 	}
 	SetTimeout(10)
 }
 
-func TestErrorChecks(t *testing.T){
+func TestErrorChecks(t *testing.T) {
 	memErr := &os.PathError{
-		Err:errors.New("cannot allocate memory"),
+		Err: errors.New("cannot allocate memory"),
 	}
 	accessErr := &os.PathError{
-		Err:errors.New("bad file descriptor"),
+		Err: errors.New("bad file descriptor"),
 	}
-	if !MemoryError(memErr){
+	if !MemoryError(memErr) {
 		t.Error("Should be memory error.")
 	}
-	if !AccessError(accessErr){
+	if !AccessError(accessErr) {
 		t.Error("Should be access error.")
 	}
-	
+
 }

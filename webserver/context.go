@@ -8,8 +8,8 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/user"
-	"net/http"
 	"labix.org/v2/mgo/bson"
+	"net/http"
 )
 
 func init() {
@@ -18,10 +18,10 @@ func init() {
 
 //Context is used to keep track of the current user's session.
 type Context struct {
-	Session   *sessions.Session
-	projects  []*project.Project
-	users     []*user.User
-	Browse    *BrowseData
+	Session  *sessions.Session
+	projects []*project.Project
+	users    []*user.User
+	Browse   *BrowseData
 }
 
 //BrowseData is used to keep track of the user's browsing.
@@ -109,7 +109,7 @@ func (ctx *Context) Projects() ([]*project.Project, error) {
 func (ctx *Context) Users() ([]*user.User, error) {
 	var err error
 	if ctx.users == nil {
-		ctx.users, err = db.GetUsers(nil)
+		ctx.users, err = db.GetUsers(nil, user.ID)
 	}
 	return ctx.users, err
 }

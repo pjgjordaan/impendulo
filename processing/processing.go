@@ -30,6 +30,9 @@ func init() {
 	statusChan = make(chan Status)
 }
 
+//Status is used to indicate a change in the files or
+//submissions being processed. It is also used to retrieve the current
+//number of files and submissions being processed.
 type Status struct {
 	Files       int
 	Submissions int
@@ -40,10 +43,13 @@ func (this *Status) add(toAdd Status) {
 	this.Submissions += toAdd.Submissions
 }
 
+//ChangeStatus is used to update Impendulo's current
+//processing status.
 func ChangeStatus(change Status) {
 	statusChan <- change
 }
 
+//GetStatus retrieves Impendulo's current processing status.
 func GetStatus() (ret Status) {
 	statusChan <- Status{0, 0}
 	ret = <-statusChan
@@ -77,7 +83,7 @@ func AddFile(file *project.File) {
 	}
 }
 
-//StartSubmission signals that this submission has will now receive files.
+//StartSubmission signals that this submission will now receive files.
 func StartSubmission(subId bson.ObjectId) {
 	idChan <- &ids{subId: subId, isFile: false}
 	ChangeStatus(Status{0, 1})
@@ -102,6 +108,7 @@ func Shutdown() {
 	processedChan <- None()
 }
 
+//None provides an empty struct
 func None() interface{} {
 	type e struct{}
 	return e{}

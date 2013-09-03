@@ -15,7 +15,7 @@ import (
 
 //Flag variables for setting ports to listen on, users file to process and the mode to run in.
 var Port, UsersFile, ConfigFile, ErrorLogging, InfoLogging string
-var Web, Receiver, Processor, Debug bool
+var Web, Receiver, Processor, Debug, Backup bool
 var MaxProcs, Timeout int
 var conn string
 
@@ -28,6 +28,7 @@ func init() {
 	flag.BoolVar(&Receiver, "r", true, "Specify whether to run the Intlola file receiver (default true).")
 	flag.BoolVar(&Processor, "s", true, "Specify whether to run the Intlola file processor (default true).")
 	flag.BoolVar(&Debug, "d", true, "Specify whether to run in debug mode (default true).")
+	flag.BoolVar(&Backup, "b", true, "Backup db (default false).")
 	flag.StringVar(&ErrorLogging, "e", "a", "Specify where to log errors to (default console & file).")
 	flag.StringVar(&InfoLogging, "i", "f", "Specify where to log info to (default file).")
 	flag.StringVar(&Port, "p", "8010", "Specify the port to listen on for files.")
@@ -38,6 +39,13 @@ func init() {
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	flag.Parse()
+	if Backup {
+		err := backupDB()
+		if err != nil {
+			util.Log(err, LOG_IMPENDULO)
+			return
+		}
+	}
 	err := setupConn(Debug)
 	if err != nil {
 		util.Log(err, LOG_IMPENDULO)
@@ -66,25 +74,20 @@ func main() {
 	}
 }
 
+func backupDB() (err error) {
+	err = db.Setup(db.DEFAULT_CONN)
+	if err != nil {
+		return
+	}
+	defer db.Close()
+	err = db.CopyDB(db.DEFAULT_DB, db.BACKUP_DB)
+	if err != nil {
+		return
+	}
+}
+
 func setupConn(debug bool) (err error) {
 	if debug {
-		/*err = db.Setup(db.DEBUG_CONN)
-		if err != nil{
-			return
-		}
-		err = db.DeleteDB(db.DEBUG_DB)
-		if err != nil{
-			return
-		}
-		err = db.Setup(db.DEFAULT_CONN)
-		if err != nil{
-			return
-		}
-		err = db.CopyDB(db.DEFAULT_DB, db.DEBUG_DB)
-		if err != nil{
-			return
-		}
-		db.Close()*/
 		conn = db.DEBUG_CONN
 	} else {
 		conn = db.DEFAULT_CONN

@@ -7,8 +7,8 @@ import (
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
-	"path/filepath"
 	"os"
+	"path/filepath"
 )
 
 //JPF is a tool.Tool which runs a JPF on a Java source file.
@@ -28,15 +28,15 @@ func New(jpfConfig *Config, jpfDir string) (jpf *Tool, err error) {
 	}
 	jpfPath := filepath.Join(jpfDir, "config.jpf")
 	err = util.SaveFile(jpfPath, jpfConfig.Data)
-	if err != nil{
+	if err != nil {
 		return
 	}
 	jpfInfo := tool.NewTarget("JPFRunner.java", "java", "runner", jpfDir)
 	cp := jpfDir + ":" + config.GetConfig(config.JPF_JAR) + ":" +
 		config.GetConfig(config.RUNJPF_JAR) + ":" + config.GetConfig(config.GSON_JAR)
 	jpf = &Tool{
-		cp:cp, 
-		jpfPath: jpfPath, 
+		cp:      cp,
+		jpfPath: jpfPath,
 		jpfInfo: jpfInfo,
 	}
 	return
@@ -62,13 +62,13 @@ func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolR
 	}
 	outFile := filepath.Join(ti.Dir, "jpf")
 	args := []string{config.GetConfig(config.JAVA), "-cp", ti.Dir + ":" +
-		this.cp, this.jpfInfo.Executable(), this.jpfPath, ti.Executable(), 
+		this.cp, this.jpfInfo.Executable(), this.jpfPath, ti.Executable(),
 		ti.Dir, outFile}
-	outFile = outFile+".xml"
+	outFile = outFile + ".xml"
 	defer os.Remove(outFile)
 	execRes := tool.RunCommand(args, nil)
 	resFile, err := os.Open(outFile)
-	if err == nil{
+	if err == nil {
 		//Tests ran successfully.
 		data := util.ReadBytes(resFile)
 		res, err = NewResult(fileId, data)
@@ -78,4 +78,29 @@ func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolR
 		err = execRes.Err
 	}
 	return
+}
+
+func Allowed(key string) bool {
+	_, ok := reserved[key]
+	return !ok
+}
+
+type empty struct{}
+
+var reserved = map[string]empty{
+	"search.class":                  empty{},
+	"listener":                      empty{},
+	"target":                        empty{},
+	"report.publisher":              empty{},
+	"report.xml.class":              empty{},
+	"report.xml.file":               empty{},
+	"classpath":                     empty{},
+	"report.xml.start":              empty{},
+	"report.xml.transition":         empty{},
+	"report.xml.constraint":         empty{},
+	"report.xml.property_violation": empty{},
+	"report.xml.show_steps":         empty{},
+	"report.xml.show_method":        empty{},
+	"report.xml.show_code":          empty{},
+	"report.xml.finished":           empty{},
 }

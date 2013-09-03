@@ -6,7 +6,6 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
-
 //GetJPF retrieves a JPF configuration file
 //matching the given interface from the active database.
 func GetJPF(matcher, selector interface{}) (ret *jpf.Config, err error) {

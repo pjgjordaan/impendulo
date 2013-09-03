@@ -45,7 +45,8 @@ public class JPFRunner {
 		Config config = JPF.createConfig(new String[] { configName });
 		config.setProperty("target", target);
 		config.setProperty("report.publisher", "xml");
-		config.setProperty("report.xml.class", "gov.nasa.jpf.report.XMLPublisher");
+		config.setProperty("report.xml.class",
+				"gov.nasa.jpf.report.XMLPublisher");
 		config.setProperty("report.xml.file", outFile);
 		config.setProperty("classpath",
 				targetLocation + ";" + config.getProperty("classpath"));
@@ -58,7 +59,7 @@ public class JPFRunner {
 		config.setProperty("report.xml.show_method", "true");
 		config.setProperty("report.xml.show_code", "true");
 		config.setProperty("report.xml.finished", "result,statistics");
+		config.setProperty("search.multiple_errors", "true");
 		return config;
 	}
-
 }

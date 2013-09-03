@@ -12,12 +12,12 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
-	"strconv"
 )
 
-func init(){
+func init() {
 	err := config.LoadConfigs("../config.txt")
 	if err != nil {
 		panic(err)
@@ -45,7 +45,7 @@ func TestExtractFile(t *testing.T) {
 	if !reflect.DeepEqual(expected, analyser.target) {
 		t.Error("Targets not equivalent")
 	}
-	stored, err := os.Open(filepath.Join(proc.srcDir, 
+	stored, err := os.Open(filepath.Join(proc.srcDir,
 		filepath.Join("triangle", "Triangle.java")))
 	if err != nil {
 		t.Error(err)
@@ -90,9 +90,9 @@ func TestArchive(t *testing.T) {
 	time := 1256033823717
 	num := 8583
 	toZip := make(map[string][]byte)
-	for i := 0; i < 10; i++{
-		t := strconv.Itoa(time+i*100)
-		n := strconv.Itoa(num+i)
+	for i := 0; i < 10; i++ {
+		t := strconv.Itoa(time + i*100)
+		n := strconv.Itoa(num + i)
 		toZip[name+t+"_"+n+"_c"] = fileData
 	}
 	zipped, err := util.ZipMap(toZip)
@@ -133,7 +133,7 @@ func TestArchive(t *testing.T) {
 	return
 }
 
-func setupFile()(file *project.File, err error){
+func setupFile() (file *project.File, err error) {
 	p := project.NewProject("Triangle", "user", "java", []byte{})
 	err = db.AddProject(p)
 	if err != nil {
@@ -162,10 +162,10 @@ func genMap() map[bson.ObjectId]bool {
 }
 
 var fileInfo = bson.M{
-	project.TIME: 1000, 
-	project.TYPE: project.SRC,  
-	project.NAME: "Triangle.java", 
-	project.PKG: "triangle", 
+	project.TIME: 1000,
+	project.TYPE: project.SRC,
+	project.NAME: "Triangle.java",
+	project.PKG:  "triangle",
 }
 
 var fileData = []byte(`
