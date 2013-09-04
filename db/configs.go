@@ -3,6 +3,7 @@ package db
 import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool/jpf"
+	"github.com/godfried/impendulo/tool/pmd"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -23,21 +24,21 @@ func GetJPF(matcher, selector interface{}) (ret *jpf.Config, err error) {
 }
 
 //AddJPF adds a new JPF configuration file to the active database.
-func AddJPF(jpf *jpf.Config) error {
+func AddJPF(cfg *jpf.Config) error {
 	session, err := getSession()
 	if err != nil {
 		return err
 	}
 	defer session.Close()
 	col := session.DB("").C(JPF)
-	matcher := bson.M{project.PROJECT_ID: jpf.ProjectId}
+	matcher := bson.M{project.PROJECT_ID: cfg.ProjectId}
 	_, err = col.RemoveAll(matcher)
 	if err != nil {
 		err = &DBRemoveError{"jpf config files", err, matcher}
 	}
-	err = col.Insert(jpf)
+	err = col.Insert(cfg)
 	if err != nil {
-		err = &DBAddError{jpf.String(), err}
+		err = &DBAddError{cfg.String(), err}
 	}
 	return nil
 }
@@ -54,6 +55,53 @@ func RemoveJPFById(id interface{}) (err error) {
 	err = c.RemoveId(id)
 	if err != nil {
 		err = &DBRemoveError{"jpf", err, id}
+	}
+	return
+}
+
+func GetPMD(matcher, selector interface{}) (ret *pmd.Rules, err error) {
+	session, err := getSession()
+	if err != nil {
+		return
+	}
+	defer session.Close()
+	c := session.DB("").C(PMD)
+	err = c.Find(matcher).Select(selector).One(&ret)
+	if err != nil {
+		err = &DBGetError{"pmd rules", err, matcher}
+	}
+	return
+}
+
+func AddPMD(rules *pmd.Rules) error {
+	session, err := getSession()
+	if err != nil {
+		return err
+	}
+	defer session.Close()
+	col := session.DB("").C(PMD)
+	matcher := bson.M{project.PROJECT_ID: rules.ProjectId}
+	_, err = col.RemoveAll(matcher)
+	if err != nil {
+		err = &DBRemoveError{"pmd rules", err, matcher}
+	}
+	err = col.Insert(rules)
+	if err != nil {
+		err = &DBAddError{"pmd rules", err}
+	}
+	return nil
+}
+
+func RemovePMDById(id interface{}) (err error) {
+	session, err := getSession()
+	if err != nil {
+		return
+	}
+	defer session.Close()
+	c := session.DB("").C(PMD)
+	err = c.RemoveId(id)
+	if err != nil {
+		err = &DBRemoveError{"pmd", err, id}
 	}
 	return
 }

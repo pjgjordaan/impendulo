@@ -52,15 +52,15 @@ func GetClasses(tipe, fname string) (classes []*Class, err error) {
 //FindListeners searches for JPF Listeners in the jpf-core directory tree.
 func findClasses(tipe, fname string) (found []byte, err error) {
 	target := tool.NewTarget("JPFFinder.java", "java", "finder",
-		config.GetConfig(config.JPF_FINDER_DIR))
-	cp := filepath.Join(config.GetConfig(config.JPF_HOME), "build", "main") +
-		":" + target.Dir + ":" + config.GetConfig(config.GSON_JAR)
+		config.Config(config.JPF_FINDER_DIR))
+	cp := filepath.Join(config.Config(config.JPF_HOME), "build", "main") +
+		":" + target.Dir + ":" + config.Config(config.GSON_JAR)
 	comp := javac.New(cp)
 	_, err = comp.Run(bson.NewObjectId(), target)
 	if err != nil {
 		return
 	}
-	args := []string{config.GetConfig(config.JAVA), "-cp", cp,
+	args := []string{config.Config(config.JAVA), "-cp", cp,
 		target.Executable(), tipe, fname}
 	execRes := tool.RunCommand(args, nil)
 	resFile, err := os.Open(fname)

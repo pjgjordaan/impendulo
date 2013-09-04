@@ -14,6 +14,7 @@ const (
 	TESTS        = "tests"
 	PROJECTS     = "projects"
 	JPF          = "jpf"
+	PMD          = "pmd"
 	SET          = "$set"
 	DEFAULT_CONN = "mongodb://localhost/impendulo"
 	DEBUG_CONN   = "mongodb://localhost/impendulo_debug"

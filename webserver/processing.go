@@ -9,6 +9,7 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/jpf"
+	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"io/ioutil"
@@ -187,6 +188,20 @@ func readProperties(raw string) (props map[string][]string) {
 			}
 		}
 	}
+	return
+}
+
+func CreatePMD(req *http.Request, ctx *Context) (err error) {
+	projectId, err := util.ReadId(req.FormValue("project"))
+	if err != nil {
+		return
+	}
+	rules, err := GetStrings(req, "ruleid")
+	if err != nil {
+		return
+	}
+	pmdRules := pmd.NewRules(projectId, rules)
+	err = db.AddPMD(pmdRules)
 	return
 }
 

@@ -1,17 +1,16 @@
 package junit
 
 import (
-	"testing"
-	"os"
-	"labix.org/v2/mgo/bson"
-	"github.com/godfried/impendulo/util"
-	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/config"
+	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/util"
+	"labix.org/v2/mgo/bson"
+	"os"
 	"path/filepath"
+	"testing"
 )
 
-func TestRun(t *testing.T){
+func TestRun(t *testing.T) {
 	location := filepath.Join(os.TempDir(), "Triangle")
 	srcLocation := filepath.Join(location, "triangle")
 	testLocation := filepath.Join(location, "testing")
@@ -20,45 +19,45 @@ func TestRun(t *testing.T){
 	defer os.RemoveAll(location)
 	os.Mkdir(srcLocation, util.DPERM)
 	os.Mkdir(testLocation, util.DPERM)
-	err := util.Copy(location, config.GetConfig(config.TESTING_DIR))
-	if err != nil{
+	err := util.Copy(location, config.Config(config.TESTING_DIR))
+	if err != nil {
 		t.Errorf("Could not copy directory %q", err)
 	}
-	target := tool.NewTarget("Triangle.java", 
-		project.JAVA, "triangle", location)
-	testTarget := tool.NewTarget("AllTests.java", 
-		project.JAVA, "testing", location)
+	target := tool.NewTarget("Triangle.java",
+		tool.JAVA, "triangle", location)
+	testTarget := tool.NewTarget("AllTests.java",
+		tool.JAVA, "testing", location)
 	err = util.SaveFile(target.FilePath(), file)
-	if err != nil{
+	if err != nil {
 		t.Errorf("Could not save file %q", err)
 	}
 	err = util.SaveFile(testTarget.FilePath(), test)
-	if err != nil{
+	if err != nil {
 		t.Errorf("Could not save file %q", err)
 	}
-	for name, data := range testData{
+	for name, data := range testData {
 		err = util.SaveFile(filepath.Join(dataLocation, name), data)
-		if err != nil{
+		if err != nil {
 			t.Errorf("Could not save file %q", err)
 		}
 	}
-	junit := New(location, location, dataLocation)
-	_, err = junit.Run(bson.NewObjectId(), testTarget)
-	if err != nil{
+	junit := New(testTarget)
+	_, err = junit.Run(bson.NewObjectId(), target)
+	if err != nil {
 		t.Errorf("Expected success, got %q", err)
 	}
 	err = util.SaveFile(target.FilePath(), file2)
-	if err != nil{
+	if err != nil {
 		t.Errorf("Could not save file %q", err)
 	}
-	_, err = junit.Run(bson.NewObjectId(), testTarget)
-	if err == nil{
+	_, err = junit.Run(bson.NewObjectId(), target)
+	if err == nil {
 		t.Errorf("Expected error.")
 	}
-	target = tool.NewTarget("File.java", 
-		project.JAVA, "", location)
-	_, err = junit.Run(bson.NewObjectId(), testTarget)
-	if err == nil{
+	target = tool.NewTarget("File.java",
+		tool.JAVA, "", location)
+	_, err = junit.Run(bson.NewObjectId(), target)
+	if err == nil {
 		t.Error("Expected error")
 	}
 }
@@ -78,7 +77,6 @@ public class Triangle {
 	}
 }
 `)
-
 
 var file2 = []byte(`
 public class Triangle {

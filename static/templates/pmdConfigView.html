@@ -1,0 +1,46 @@
+{{ define "view" }}
+<h3>Choose PMD Rules</h3>
+<form class="form-horizontal" action="createpmd" method="post">
+  <div class="form-group">
+    <label class="col-lg-2 control-label" for="project">Project</label>
+    <div class="col-lg-4">
+      <select class="form-control" name="project" id="project">
+	{{ range .ctx.Projects}}
+	<option value={{.Id.Hex}}>{{.Name}}</option>
+	{{end}}
+      </select>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="col-lg-2 control-label"
+    for="availableRules">Available Rules</label>
+    <div class="col-lg-4">
+      <select class="form-control" name="availableRules" id="availableRules" size="10">
+	{{$rules := rules}}
+	{{range $rules}}
+	<option value={{.Id}}
+		ruleid={{.Id}} rulename={{.Name}} ruledescription={{.Description}}
+		onclick="showdescription('{{.Description}}')"
+		ondblclick="addalert('availableRules',
+		'addedRules', this)">
+	  {{.Name}}
+	</option>
+	{{end}}
+      </select>
+    </div>
+    <div class="col-lg-4">
+      <span id="description" class="help-block"></span>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="col-lg-2 control-label" for="addedRules">Added Rules</label>
+    <div class="col-lg-8">
+      <ul class="list-unstyled" name="addedRules" id="addedRules"></ul>
+  </div>
+  <div class="form-group">
+    <div class="col-lg-offset-2 col-lg-3">
+      <button type="submit" class="btn btn-default btn-inverse">Create</button>
+    </div>
+  </div>
+</form>
+{{ end }}

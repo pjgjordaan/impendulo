@@ -17,28 +17,28 @@ type Tool struct {
 }
 
 func New() *Tool {
-	return &Tool{config.GetConfig(config.JAVA),
-		config.GetConfig(config.CHECKSTYLE),
-		config.GetConfig(config.CHECKSTYLE_CONFIG)}
+	return &Tool{config.Config(config.JAVA),
+		config.Config(config.CHECKSTYLE),
+		config.Config(config.CHECKSTYLE_CONFIG)}
 }
 
-func (this *Tool) GetLang() string {
+func (this *Tool) Lang() string {
 	return "java"
 }
 
-func (this *Tool) GetName() string {
+func (this *Tool) Name() string {
 	return NAME
 }
 
 func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	outFile := filepath.Join(ti.Dir, "checkstyle.xml")
 	args := []string{this.java, "-jar", this.cmd,
-		"-f", "xml", "-c", this.configFile, 
+		"-f", "xml", "-c", this.configFile,
 		"-o", outFile, "-r", ti.Dir}
 	defer os.Remove(outFile)
 	execRes := tool.RunCommand(args, nil)
 	resFile, err := os.Open(outFile)
-	if err == nil{
+	if err == nil {
 		//Tests ran successfully.
 		data := util.ReadBytes(resFile)
 		res, err = NewResult(fileId, data)

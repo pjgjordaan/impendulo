@@ -88,6 +88,7 @@ var views = map[string]string{
 	"userResult": "home", "projectResult": "home",
 	"jpfConfigView": "submit", "archiveView": "submit",
 	"projectView": "submit", "statusView": "status",
+	"pmdConfigView": "submit",
 }
 
 var perms = map[string]int{
@@ -100,7 +101,7 @@ var perms = map[string]int{
 	"logout": 1, "deleteproject": 1, "deleteuser": 1, "displaygraph": 0,
 	"displayresult": 0, "getfiles": 0, "getsubmissions": 0,
 	"skeleton.zip": 0, "index": 0, "favicon.ico": 0, "": 0, "statusview": 1,
-	"createjpf": 1,
+	"createjpf": 1, "pmdconfigview": 1, "createpmd": 1,
 }
 
 //GenerateViews is used to load all the basic views used by our web app.
@@ -126,6 +127,7 @@ var posts = map[string]PostFunc{
 	"addtest": AddTest, "addjpf": AddJPF,
 	"addproject": AddProject, "changeskeleton": ChangeSkeleton,
 	"submitarchive": SubmitArchive, "createjpf": CreateJPF,
+	"createpmd": CreatePMD,
 }
 
 //GeneratePosts loads post request handlers.
@@ -252,7 +254,7 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 		return
 	}
 	neighbour, err := getNeighbour(req, len(files)-1)
-	if err != nil{
+	if err != nil {
 		return
 	}
 	nextFile, err := getFile(files[neighbour].Id)
@@ -264,11 +266,11 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 		return
 	}
 	args = map[string]interface{}{"ctx": ctx, "files": files,
-		"selected": selected, "curFile":  curFile, 
-		"curResult": curRes.GetData(), "results": results, 
+		"selected": selected, "curFile": curFile,
+		"curResult": curRes.GetData(), "results": results,
 		"nextFile": nextFile, "nextResult": nextRes.GetData(),
-		"neighbour": neighbour} 
-	temps = []string{getNav(ctx), "analysis", "pager", 
+		"neighbour": neighbour}
+	temps = []string{getNav(ctx), "analysis", "pager",
 		curRes.Template(true), nextRes.Template(false)}
 	return
 }
@@ -310,7 +312,7 @@ func graphArgs(req *http.Request, ctx *Context) (args map[string]interface{}, er
 	}
 	graphArgs := LoadResultGraphData(ctx.Browse.Result, tipe, files)
 	args = map[string]interface{}{
-		"ctx": ctx, "files": files, "results": results, 
+		"ctx": ctx, "files": files, "results": results,
 		"fileName": fileName, "graphArgs": graphArgs, "type": tipe,
 	}
 	return

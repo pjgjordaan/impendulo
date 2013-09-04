@@ -5,9 +5,11 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/diff"
-	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/tool/jpf"
+	"github.com/godfried/impendulo/tool/pmd"
+	"github.com/godfried/impendulo/util"
 	"html/template"
 	"labix.org/v2/mgo/bson"
 	"path/filepath"
@@ -26,13 +28,14 @@ var funcs = template.FuncMap{
 	"createHeader":    fileHeader,
 	"sum":             sum,
 	"equal":           equal,
-	"langs":           langs,
+	"langs":           tool.Langs,
 	"submissionCount": submissionCount,
 	"getBusy":         processing.GetStatus,
 	"slice":           slice,
 	"adjustment":      adjustment,
-	"listeners": jpf.Listeners,
-	"searches": jpf.Searches,
+	"listeners":       jpf.Listeners,
+	"searches":        jpf.Searches,
+	"rules":           pmd.RuleSet,
 }
 
 const PAGER_SIZE = 10
@@ -45,8 +48,7 @@ func slice(files []*project.File, selected int) (ret []*project.File) {
 	} else if selected+PAGER_SIZE/2 >= len(files) {
 		ret = files[len(files)-PAGER_SIZE:]
 	} else {
-		ret = files[selected-PAGER_SIZE/2: 
-			selected+PAGER_SIZE/2]
+		ret = files[selected-PAGER_SIZE/2 : selected+PAGER_SIZE/2]
 	}
 	return
 }
@@ -71,10 +73,6 @@ func submissionCount(id interface{}) (int, error) {
 	default:
 		return -1, fmt.Errorf("Unknown id type %q.", id)
 	}
-}
-
-func langs() []string {
-	return []string{"Java"}
 }
 
 func equal(a, b interface{}) bool {

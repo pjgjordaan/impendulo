@@ -22,7 +22,7 @@ type Tool struct {
 //Java JPF runner files. configPath is the location of the JPF
 //configuration file.
 func New(jpfConfig *Config, jpfDir string) (jpf *Tool, err error) {
-	err = util.Copy(jpfDir, config.GetConfig(config.JPF_RUNNER_DIR))
+	err = util.Copy(jpfDir, config.Config(config.JPF_RUNNER_DIR))
 	if err != nil {
 		return
 	}
@@ -32,8 +32,8 @@ func New(jpfConfig *Config, jpfDir string) (jpf *Tool, err error) {
 		return
 	}
 	jpfInfo := tool.NewTarget("JPFRunner.java", "java", "runner", jpfDir)
-	cp := jpfDir + ":" + config.GetConfig(config.JPF_JAR) + ":" +
-		config.GetConfig(config.RUNJPF_JAR) + ":" + config.GetConfig(config.GSON_JAR)
+	cp := jpfDir + ":" + config.Config(config.JPF_JAR) + ":" +
+		config.Config(config.RUNJPF_JAR) + ":" + config.Config(config.GSON_JAR)
 	jpf = &Tool{
 		cp:      cp,
 		jpfPath: jpfPath,
@@ -42,11 +42,11 @@ func New(jpfConfig *Config, jpfDir string) (jpf *Tool, err error) {
 	return
 }
 
-func (this *Tool) GetLang() string {
+func (this *Tool) Lang() string {
 	return "java"
 }
 
-func (this *Tool) GetName() string {
+func (this *Tool) Name() string {
 	return NAME
 }
 
@@ -61,7 +61,7 @@ func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolR
 		return
 	}
 	outFile := filepath.Join(ti.Dir, "jpf")
-	args := []string{config.GetConfig(config.JAVA), "-cp", ti.Dir + ":" +
+	args := []string{config.Config(config.JAVA), "-cp", ti.Dir + ":" +
 		this.cp, this.jpfInfo.Executable(), this.jpfPath, ti.Executable(),
 		ti.Dir, outFile}
 	outFile = outFile + ".xml"

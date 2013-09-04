@@ -1,40 +1,39 @@
 package checkstyle
 
 import (
-	"testing"
-	"os"
-	"labix.org/v2/mgo/bson"
-	"github.com/godfried/impendulo/util"
-	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/config"
+	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/util"
+	"labix.org/v2/mgo/bson"
+	"os"
 	"path/filepath"
+	"testing"
 )
 
-func TestRun(t *testing.T){
+func TestRun(t *testing.T) {
 	location := filepath.Join(os.TempDir(), "Triangle")
 	srcLocation := filepath.Join(location, "triangle")
 	os.Mkdir(location, util.DPERM)
 	defer os.RemoveAll(location)
 	os.Mkdir(srcLocation, util.DPERM)
-	target := tool.NewTarget("Triangle.java", 
-		project.JAVA, "triangle", location)
+	target := tool.NewTarget("Triangle.java",
+		tool.JAVA, "triangle", location)
 	err := util.SaveFile(target.FilePath(), file)
-	if err != nil{
+	if err != nil {
 		t.Errorf("Could not save file %q", err)
 	}
 	check := New()
 	_, err = check.Run(bson.NewObjectId(), target)
-	if err != nil{
+	if err != nil {
 		t.Errorf("Expected success, got %q", err)
 	}
 	os.Remove(filepath.Join(location, "checkstyle.xml"))
-	checkCfg := config.GetConfig(config.CHECKSTYLE)
+	checkCfg := config.Config(config.CHECKSTYLE)
 	defer config.SetConfig(config.CHECKSTYLE, checkCfg)
 	config.SetConfig(config.CHECKSTYLE, "")
 	check2 := New()
 	res, err := check2.Run(bson.NewObjectId(), target)
-	if err == nil{
+	if err == nil {
 		t.Errorf("Expected error, got %s.", res)
 	}
 }

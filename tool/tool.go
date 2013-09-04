@@ -11,6 +11,14 @@ import (
 	"time"
 )
 
+const (
+	JAVA = "Java"
+)
+
+func Langs() []string {
+	return []string{JAVA}
+}
+
 var timeLimit = 5 * time.Minute
 
 //SetTimeout sets the maximum time for which the RunCommand function can run.
@@ -18,16 +26,16 @@ func SetTimeout(minutes int) {
 	timeLimit = time.Duration(minutes) * time.Minute
 }
 
-func GetTimeout() int {
+func Timeout() int {
 	return int(timeLimit)
 }
 
 //Tool is an interface which represents various analysis tools used in Impendulo.
 type Tool interface {
-	//GetName retrieves the Tool's name.
-	GetName() string
-	//GetLang retrieves the language which the Tool is used for.
-	GetLang() string
+	//Name retrieves the Tool's name.
+	Name() string
+	//Lang retrieves the language which the Tool is used for.
+	Lang() string
 	//Run runs the tool on a given file.
 	Run(fileId bson.ObjectId, target *TargetInfo) (ToolResult, error)
 }
@@ -141,5 +149,28 @@ func IsEndError(err error) (ok bool) {
 	if err != nil {
 		_, ok = err.(*EndError)
 	}
+	return
+}
+
+//CompileError is used to indicate that compilation failed.
+type CompileError struct {
+	name string
+	msg  string
+}
+
+func NewCompileError(name, msg string) *CompileError {
+	return &CompileError{
+		name: name,
+		msg:  msg,
+	}
+}
+
+func (this *CompileError) Error() string {
+	return fmt.Sprintf("Could not compile %q due to: %q.", this.name, this.msg)
+}
+
+//IsCompileError checks whether an error is a CompileError.
+func IsCompileError(err error) (ok bool) {
+	_, ok = err.(*CompileError)
 	return
 }

@@ -6,11 +6,6 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/tool/checkstyle"
-	"github.com/godfried/impendulo/tool/findbugs"
-	"github.com/godfried/impendulo/tool/javac"
-	"github.com/godfried/impendulo/tool/jpf"
-	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"os"
@@ -238,14 +233,14 @@ func (this *ProcHelper) Handle(fileQueue *list.List) {
 
 //Processor is used to process individual submissions.
 type Processor struct {
-	sub     *project.Submission
-	project *project.Project
-	tests   []*TestRunner
-	rootDir string
-	srcDir  string
-	toolDir string
-	jpfPath string
-	tools   []tool.Tool
+	sub      *project.Submission
+	project  *project.Project
+	rootDir  string
+	srcDir   string
+	toolDir  string
+	jpfPath  string
+	compiler tool.Tool
+	tools    []tool.Tool
 }
 
 func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
@@ -254,42 +249,24 @@ func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
 		return
 	}
 	matcher := bson.M{project.ID: sub.ProjectId}
-	p, err := db.GetProject(matcher, nil)
+	proj, err := db.GetProject(matcher, nil)
 	if err != nil {
 		return
 	}
 	dir := filepath.Join(os.TempDir(), sub.Id.Hex())
 	toolDir := filepath.Join(dir, "tools")
-	tools := []tool.Tool{
-		findbugs.New(), pmd.New(pmd.GetRules()),
-		checkstyle.New(),
-	}
-	jpfFile, jerr := db.GetJPF(
-		bson.M{project.PROJECT_ID: p.Id}, nil)
-	if jerr == nil {
-		var j tool.Tool
-		j, err = jpf.New(jpfFile, toolDir)
-		if err == nil {
-			tools = append(tools, j)
-		} else {
-			return
-		}
-	} else {
-		util.Log(jerr)
-	}
-	tests, terr := SetupTests(p.Id, toolDir)
-	if terr != nil {
-		util.Log(terr, LOG_PROCESSING)
-	}
 	proc = &Processor{
 		sub:     sub,
-		project: p,
+		project: proj,
 		rootDir: dir,
 		srcDir:  filepath.Join(dir, "src"),
 		toolDir: toolDir,
-		tools:   tools,
-		tests:   tests,
 	}
+	proc.compiler, err = Compiler(proc)
+	if err != nil {
+		return
+	}
+	proc.tools, err = Tools(proc)
 	return
 }
 
@@ -399,57 +376,36 @@ type Analyser struct {
 	target *tool.TargetInfo
 }
 
-//Eval evaluates a source file by attempting to run tests and tools on it.
-func (this *Analyser) Eval() error {
-	err := this.buildTarget()
+//Eval evaluates a source file by attempting to run tools on it.
+func (this *Analyser) Eval() (err error) {
+	err = this.buildTarget()
 	if err != nil {
-		return err
-	}
-	var compileErr bool
-	compileErr, err = this.compile()
-	if err != nil {
-		return err
-	} else if compileErr {
-		return nil
-	}
-	//Reload file after compiling.
-	this.file, err = db.GetFile(bson.M{project.ID: this.file.Id}, nil)
-	if err != nil {
-		return err
-	}
-	for _, test := range this.proc.tests {
-		err = test.Run(this.file, this.proc.srcDir)
-		if err != nil {
-			util.Log(err, LOG_PROCESSING)
-		}
+		return
 	}
 	this.RunTools()
-	return nil
+	return
 }
 
 //buildTarget saves a file to filesystem.
-//It returns file info used by tools & tests.
+//It returns file info used by tools.
 func (this *Analyser) buildTarget() error {
 	this.target = tool.NewTarget(this.file.Name,
 		this.proc.project.Lang, this.file.Package, this.proc.srcDir)
 	return util.SaveFile(this.target.FilePath(), this.file.Data)
 }
 
-//compile compiles a java source file and saves the results thereof.
-func (this *Analyser) compile() (bool, error) {
-	comp := javac.New(this.target.Dir)
-	res, err := comp.Run(this.file.Id, this.target)
-	compileErr := javac.IsCompileError(err)
-	if err != nil && !compileErr {
-		return false, err
-	}
-	return compileErr, db.AddResult(res)
-}
-
 //RunTools runs all available tools on a file, skipping previously run tools.
 func (this *Analyser) RunTools() {
+	res, err := this.proc.compiler.Run(this.file.Id, this.target)
+	if err != nil {
+		if tool.IsCompileError(err) {
+			db.AddResult(res)
+		}
+		return
+	}
+	db.AddResult(res)
 	for _, t := range this.proc.tools {
-		if _, ok := this.file.Results[t.GetName()]; ok {
+		if _, ok := this.file.Results[t.Name()]; ok {
 			continue
 		}
 		res, err := t.Run(this.file.Id, this.target)
@@ -457,14 +413,14 @@ func (this *Analyser) RunTools() {
 			util.Log(err, LOG_PROCESSING)
 			if tool.IsTimeout(err) {
 				err = db.AddTimeoutResult(
-					this.file.Id, t.GetName())
+					this.file.Id, t.Name())
 			} else {
 				continue
 			}
 		} else if res != nil {
 			err = db.AddResult(res)
 		} else {
-			err = db.AddNoResult(this.file.Id, t.GetName())
+			err = db.AddNoResult(this.file.Id, t.Name())
 		}
 		if err != nil {
 			util.Log(err, LOG_PROCESSING)

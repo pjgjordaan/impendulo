@@ -41,7 +41,7 @@ func TestExtractFile(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	expected := tool.NewTarget("Triangle.java", "java", "triangle", proc.srcDir)
+	expected := tool.NewTarget("Triangle.java", tool.JAVA, "triangle", proc.srcDir)
 	if !reflect.DeepEqual(expected, analyser.target) {
 		t.Error("Targets not equivalent")
 	}
@@ -71,10 +71,6 @@ func TestEval(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	proc.tests, err = SetupTests(proc.sub.ProjectId, proc.toolDir)
-	if err != nil {
-		t.Error(err)
-	}
 	defer os.RemoveAll(proc.rootDir)
 	analyser := &Analyser{proc: proc, file: file}
 	err = analyser.Eval()
@@ -99,7 +95,7 @@ func TestArchive(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	p := project.NewProject("Test", "user", "java", []byte{})
+	p := project.NewProject("Test", "user", tool.JAVA, []byte{})
 	err = db.AddProject(p)
 	if err != nil {
 		t.Error(err)
@@ -134,7 +130,7 @@ func TestArchive(t *testing.T) {
 }
 
 func setupFile() (file *project.File, err error) {
-	p := project.NewProject("Triangle", "user", "java", []byte{})
+	p := project.NewProject("Triangle", "user", tool.JAVA, []byte{})
 	err = db.AddProject(p)
 	if err != nil {
 		return

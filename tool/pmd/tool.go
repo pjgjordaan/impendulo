@@ -1,46 +1,35 @@
 package pmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
-	"strings"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type Tool struct {
-	cmd string
+	cmd   string
 	rules string
 }
 
 func New(rules []string) *Tool {
 	return &Tool{
-		cmd: config.GetConfig(config.PMD), 
+		cmd:   config.Config(config.PMD),
 		rules: strings.Join(rules, ","),
 	}
 }
 
-func (this *Tool) GetLang() string {
+func (this *Tool) Lang() string {
 	return "java"
 }
 
-func (this *Tool) GetName() string {
+func (this *Tool) Name() string {
 	return NAME
-}
-
-func GetRules()[]string{
-	return []string{
-		"java-basic", "java-braces", "java-clone", "java-codesize",
-		"java-comments", "java-controversial", "java-design", "java-empty",
-		"java-finalizers", "java-imports", "java-j2ee", "java-javabeans", 
-		"java-junit", "java-logging-jakarta-commons", "java-logging-java",
-		"java-migrating", "java-naming", "java-optimizations",
-		"java-strictexception", "java-strings", "java-sunsecure", "java-typeresolution",
-		"java-unnecessary", "java-unusedcode",
-	}
 }
 
 func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
@@ -50,7 +39,7 @@ func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolR
 	defer os.Remove(outFile)
 	execRes := tool.RunCommand(args, nil)
 	resFile, err := os.Open(outFile)
-	if err == nil{
+	if err == nil {
 		//Tests ran successfully.
 		data := util.ReadBytes(resFile)
 		res, err = NewResult(fileId, data)
@@ -60,4 +49,53 @@ func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolR
 		err = execRes.Err
 	}
 	return
+}
+
+type Rule struct {
+	Id          string
+	Name        string
+	Description string
+	Default     bool
+}
+
+var ruleSet []Rule
+
+type Rules struct {
+	Id        bson.ObjectId "_id"
+	ProjectId bson.ObjectId "projectid"
+	Rules     []string      "rules"
+}
+
+func NewRules(projectId bson.ObjectId, rules []string) *Rules {
+	return &Rules{
+		Id:        bson.NewObjectId(),
+		ProjectId: projectId,
+		Rules:     rules,
+	}
+}
+
+func RuleSet() ([]Rule, error) {
+	if ruleSet != nil {
+		return ruleSet, nil
+	}
+	cfg, err := os.Open(config.Config(config.PMD_RULES))
+	if err == nil {
+		data := util.ReadBytes(cfg)
+		err = json.Unmarshal(data, &ruleSet)
+	}
+	return ruleSet, err
+}
+
+func DefaultRules(projectId bson.ObjectId) *Rules {
+	set, err := RuleSet()
+	rules := NewRules(projectId, make([]string, 0, len(set)))
+	if err != nil {
+		return rules
+	}
+	for _, r := range set {
+		if r.Default {
+			rules.Rules = append(rules.Rules, r.Id)
+		}
+	}
+	return rules
 }

@@ -4,20 +4,20 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"strings"
 	"path/filepath"
+	"strings"
 )
 
-var(
+var (
 	settings map[string]string
-	DEFAULT = filepath.Join(os.Getenv("GOPATH"), "src", 
-	"github.com", "godfried", "impendulo", "config.txt")
+	DEFAULT  = filepath.Join(os.Getenv("GOPATH"), "src",
+		"github.com", "godfried", "impendulo", "config.txt")
 )
 
-func init(){
+func init() {
 	settings = make(map[string]string)
 	err := LoadConfigs(DEFAULT)
-	if err != nil{
+	if err != nil {
 		fmt.Println(err)
 	}
 }
@@ -43,8 +43,8 @@ func LoadConfigs(fname string) error {
 	return scanner.Err()
 }
 
-//GetConfig attempts to retrieve the named config.
-func GetConfig(name string) string {
+//Config attempts to retrieve the named config.
+func Config(name string) string {
 	ret, ok := settings[name]
 	if !ok {
 		panic("Config not found: " + name)
@@ -69,11 +69,12 @@ const (
 	JPF_JAR           = "jpf_jar"
 	RUNJPF_JAR        = "runjpf_jar"
 	GSON_JAR          = "gson_jar"
-	JPF_RUNNER_DIR        = "jpf_runner_dir"
+	JPF_RUNNER_DIR    = "jpf_runner_dir"
 	TESTING_DIR       = "testing_dir"
 	JPF_HOME          = "jpf_home"
-	JPF_FINDER_DIR      = "jpf_finder_dir"
+	JPF_FINDER_DIR    = "jpf_finder_dir"
 	PMD               = "pmd"
+	PMD_RULES         = "pmd_rules"
 	CHECKSTYLE        = "checkstyle"
 	CHECKSTYLE_CONFIG = "checkstyle_config"
 	DIFF2HTML         = "diff2html"
