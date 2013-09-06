@@ -29,7 +29,7 @@ func GetFiles(matcher, selector interface{}, sort ...string) (ret []*project.Fil
 	defer session.Close()
 	c := session.DB("").C(FILES)
 	q := c.Find(matcher)
-	if len(sort) > 0{
+	if len(sort) > 0 {
 		q = q.Sort(sort...)
 	}
 	err = q.Select(selector).All(&ret)
@@ -105,7 +105,7 @@ func GetSubmissions(matcher, selector interface{}, sort ...string) (ret []*proje
 	defer session.Close()
 	c := session.DB("").C(SUBMISSIONS)
 	q := c.Find(matcher)
-	if len(sort) > 0{
+	if len(sort) > 0 {
 		q = q.Sort(sort...)
 	}
 	err = q.Select(selector).All(&ret)
@@ -172,7 +172,7 @@ func GetProjects(matcher, selector interface{}, sort ...string) (ret []*project.
 	defer session.Close()
 	c := session.DB("").C(PROJECTS)
 	q := c.Find(matcher)
-	if len(sort) > 0{
+	if len(sort) > 0 {
 		q = q.Sort(sort...)
 	}
 	err = q.Select(selector).All(&ret)
@@ -212,7 +212,6 @@ func AddTest(t *project.Test) error {
 	return nil
 }
 
-
 //AddSubmission adds a new submission to the active database.
 func AddSubmission(s *project.Submission) (err error) {
 	session, err := getSession()
@@ -250,6 +249,9 @@ func RemoveFileById(id interface{}) (err error) {
 		return
 	}
 	for _, resId := range file.Results {
+		if _, ok := resId.(bson.ObjectId); !ok {
+			continue
+		}
 		err = RemoveResultById(resId)
 		if err != nil {
 			return
@@ -272,7 +274,7 @@ func RemoveFileById(id interface{}) (err error) {
 //the given id from the active database.
 func RemoveSubmissionById(id interface{}) (err error) {
 	files, err := GetFiles(bson.M{project.SUBID: id},
-		bson.M{project.ID: 1}, "")
+		bson.M{project.ID: 1})
 	if err != nil {
 		return
 	}
@@ -338,6 +340,10 @@ func RemoveProjectById(id interface{}) (err error) {
 	jpfConfig, err := GetJPF(projectMatch, idSelect)
 	if err == nil {
 		RemoveJPFById(jpfConfig.Id)
+	}
+	pmdRules, err := GetPMD(projectMatch, idSelect)
+	if err == nil {
+		RemovePMDById(pmdRules.Id)
 	}
 	session, err := getSession()
 	if err != nil {

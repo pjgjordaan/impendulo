@@ -7,6 +7,9 @@ import gov.nasa.jpf.JPFException;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 
 public class JPFRunner {
 
@@ -29,7 +32,16 @@ public class JPFRunner {
 	}
 
 	public static Exception run(Config config) {
+		PrintStream out = System.out;
+		PrintStream err = System.err;
+		System.setOut(new PrintStream(new OutputStream() {
+		    @Override public void write(int b) throws IOException {}
+		}));
+		System.setErr(new PrintStream(new OutputStream() {
+		    @Override public void write(int b) throws IOException {}
+		}));
 		try {
+
 			JPF jpf = new JPF(config);
 			jpf.run();
 			return null;
@@ -37,6 +49,9 @@ public class JPFRunner {
 			return cx;
 		} catch (JPFException jx) {
 			return jx;
+		} finally{
+		    System.setOut(out);
+		    System.setErr(err);
 		}
 	}
 
@@ -59,7 +74,14 @@ public class JPFRunner {
 		config.setProperty("report.xml.show_method", "true");
 		config.setProperty("report.xml.show_code", "true");
 		config.setProperty("report.xml.finished", "result,statistics");
-		config.setProperty("search.multiple_errors", "true");
+		//config.setProperty("search.multiple_errors", "true");
 		return config;
 	}
 }
+
+
+
+
+
+
+

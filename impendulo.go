@@ -14,10 +14,12 @@ import (
 )
 
 //Flag variables for setting ports to listen on, users file to process and the mode to run in.
-var Port, UsersFile, ConfigFile, ErrorLogging, InfoLogging string
-var Web, Receiver, Processor, Debug, Backup bool
-var MaxProcs, Timeout int
-var conn string
+var (
+	Port, UsersFile, ConfigFile, ErrorLogging, InfoLogging string
+	Web, Receiver, Processor, Debug, Backup                bool
+	MaxProcs, Timeout                                      int
+	conn                                                   string
+)
 
 const LOG_IMPENDULO = "impendulo.go"
 
@@ -33,7 +35,7 @@ func init() {
 	flag.StringVar(&InfoLogging, "i", "f", "Specify where to log info to (default file).")
 	flag.StringVar(&Port, "p", "8010", "Specify the port to listen on for files.")
 	flag.StringVar(&UsersFile, "u", "", "Specify a file with new users.")
-	flag.StringVar(&ConfigFile, "c", config.DEFAULT, "Specify a configuration file.")
+	flag.StringVar(&ConfigFile, "c", config.DefaultConfig(), "Specify a configuration file.")
 }
 
 func main() {

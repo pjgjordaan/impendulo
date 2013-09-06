@@ -3,23 +3,32 @@ package config
 import (
 	"bufio"
 	"fmt"
+	"github.com/godfried/impendulo/util"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
 var (
-	settings map[string]string
-	DEFAULT  = filepath.Join(os.Getenv("GOPATH"), "src",
-		"github.com", "godfried", "impendulo", "config.txt")
+	settings      map[string]string
+	defaultConfig string
 )
 
 func init() {
 	settings = make(map[string]string)
-	err := LoadConfigs(DEFAULT)
+	err := LoadConfigs(DefaultConfig())
 	if err != nil {
 		fmt.Println(err)
 	}
+}
+
+func DefaultConfig() string {
+	if defaultConfig != "" {
+		return defaultConfig
+	}
+	defaultConfig = filepath.Join(util.InstallPath(), "config.txt")
+	return defaultConfig
+
 }
 
 //LoadConfigs loads configurations from a file.

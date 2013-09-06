@@ -1,6 +1,7 @@
 package db
 
 import (
+	"encoding/gob"
 	"fmt"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
@@ -10,6 +11,7 @@ import (
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/tool/pmd"
+	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 	"sort"
 	"strings"
@@ -29,6 +31,17 @@ func GetCheckstyleResult(matcher, selector bson.M) (ret *checkstyle.Result, err 
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
 	}
+	if (selector == nil || selector[project.DATA] == 1) && ret.OnGridFS() {
+		fs := session.DB("").GridFS("fs")
+		var file *mgo.GridFile
+		file, err = fs.OpenId(ret.GetId())
+		if err != nil {
+			return
+		}
+		defer file.Close()
+		dec := gob.NewDecoder(file)
+		err = dec.Decode(&ret.Data)
+	}
 	return
 }
 
@@ -45,6 +58,17 @@ func GetPMDResult(matcher, selector bson.M) (ret *pmd.Result, err error) {
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
+	}
+	if (selector == nil || selector[project.DATA] == 1) && ret.OnGridFS() {
+		fs := session.DB("").GridFS("fs")
+		var file *mgo.GridFile
+		file, err = fs.OpenId(ret.GetId())
+		if err != nil {
+			return
+		}
+		defer file.Close()
+		dec := gob.NewDecoder(file)
+		err = dec.Decode(&ret.Data)
 	}
 	return
 }
@@ -63,6 +87,17 @@ func GetFindbugsResult(matcher, selector bson.M) (ret *findbugs.Result, err erro
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
 	}
+	if (selector == nil || selector[project.DATA] == 1) && ret.OnGridFS() {
+		fs := session.DB("").GridFS("fs")
+		var file *mgo.GridFile
+		file, err = fs.OpenId(ret.GetId())
+		if err != nil {
+			return
+		}
+		defer file.Close()
+		dec := gob.NewDecoder(file)
+		err = dec.Decode(&ret.Data)
+	}
 	return
 }
 
@@ -80,6 +115,17 @@ func GetJPFResult(matcher, selector bson.M) (ret *jpf.Result, err error) {
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
 	}
+	if (selector == nil || selector[project.DATA] == 1) && ret.OnGridFS() {
+		fs := session.DB("").GridFS("fs")
+		var file *mgo.GridFile
+		file, err = fs.OpenId(ret.GetId())
+		if err != nil {
+			return
+		}
+		defer file.Close()
+		dec := gob.NewDecoder(file)
+		err = dec.Decode(&ret.Data)
+	}
 	return
 }
 
@@ -95,6 +141,17 @@ func GetJUnitResult(matcher, selector bson.M) (ret *junit.Result, err error) {
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
+	}
+	if (selector == nil || selector[project.DATA] == 1) && ret.OnGridFS() {
+		fs := session.DB("").GridFS("fs")
+		var file *mgo.GridFile
+		file, err = fs.OpenId(ret.GetId())
+		if err != nil {
+			return
+		}
+		defer file.Close()
+		dec := gob.NewDecoder(file)
+		err = dec.Decode(&ret.Data)
 	}
 	return
 }
@@ -113,6 +170,32 @@ func GetJavacResult(matcher, selector bson.M) (ret *javac.Result, err error) {
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
 	}
+	if (selector == nil || selector[project.DATA] == 1) && ret.OnGridFS() {
+		fs := session.DB("").GridFS("fs")
+		var file *mgo.GridFile
+		file, err = fs.OpenId(ret.GetId())
+		if err != nil {
+			return
+		}
+		defer file.Close()
+		var temp *javac.Result
+		dec := gob.NewDecoder(file)
+		err = dec.Decode(&temp)
+		ret.Data = temp.Data
+	}
+	return
+}
+
+func getGridFile(session *mgo.Session, id interface{}) (holder interface{}, err error) {
+	fs := session.DB("").GridFS("fs")
+	var file *mgo.GridFile
+	file, err = fs.OpenId(id)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+	dec := gob.NewDecoder(file)
+	err = dec.Decode(holder)
 	return
 }
 
@@ -202,6 +285,22 @@ func AddResult(res tool.ToolResult) (err error) {
 		return
 	}
 	defer session.Close()
+	if res.OnGridFS() {
+		fs := session.DB("").GridFS("fs")
+		var file *mgo.GridFile
+		file, err = fs.Create("")
+		if err != nil {
+			return
+		}
+		defer file.Close()
+		file.SetId(res.GetId())
+		enc := gob.NewEncoder(file)
+		err = enc.Encode(res.GetData())
+		if err != nil {
+			return
+		}
+		res.SetData(nil)
+	}
 	col := session.DB("").C(RESULTS)
 	err = col.Insert(res)
 	if err != nil {

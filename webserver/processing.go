@@ -2,14 +2,11 @@
 package webserver
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/tool/jpf"
-	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"io/ioutil"
@@ -20,9 +17,6 @@ import (
 	"strings"
 	"time"
 )
-
-//A function used to add data to the database.
-type PostFunc func(*http.Request, *Context) error
 
 //SubmitArchive adds an Intlola archive to the database.
 func SubmitArchive(req *http.Request, ctx *Context) (err error) {
@@ -72,136 +66,6 @@ func ChangeSkeleton(req *http.Request, ctx *Context) (err error) {
 	}
 	err = db.Update(db.PROJECTS, bson.M{project.ID: projectId},
 		bson.M{db.SET: bson.M{project.SKELETON: data}})
-	return
-}
-
-//AddTest adds a new test to a project.
-func AddTest(req *http.Request, ctx *Context) (err error) {
-	projectId, err := util.ReadId(req.FormValue("project"))
-	if err != nil {
-		return
-	}
-	testName, testBytes, err := ReadFormFile(req, "test")
-	if err != nil {
-		return
-	}
-	hasData := req.FormValue("data-check")
-	var dataBytes []byte
-	if hasData == "" {
-		dataBytes = make([]byte, 0)
-	} else if hasData == "true" {
-		//Read data files if provided.
-		_, dataBytes, err = ReadFormFile(req, "data")
-		if err != nil {
-			return
-		}
-	}
-	//Read package name from file.
-	pkg := util.GetPackage(bytes.NewReader(testBytes))
-	username, err := ctx.Username()
-	if err != nil {
-		return
-	}
-	test := project.NewTest(projectId, testName, username,
-		pkg, testBytes, dataBytes)
-	err = db.AddTest(test)
-	return
-}
-
-//AddJPF replaces a project's JPF configuration file.
-func AddJPF(req *http.Request, ctx *Context) (err error) {
-	projectId, err := util.ReadId(req.FormValue("project"))
-	if err != nil {
-		return
-	}
-	_, data, err := ReadFormFile(req, "jpf")
-	if err != nil {
-		return
-	}
-	username, err := ctx.Username()
-	if err != nil {
-		return
-	}
-	jpfConfig := jpf.NewConfig(projectId, username, data)
-	err = db.AddJPF(jpfConfig)
-	return
-}
-
-//CreateJPF replaces a project's JPF configuration file.
-func CreateJPF(req *http.Request, ctx *Context) (err error) {
-	projectId, err := util.ReadId(req.FormValue("project"))
-	if err != nil {
-		return
-	}
-	username, err := ctx.Username()
-	if err != nil {
-		return
-	}
-	listeners, err := GetStrings(req, "addedL")
-	if err != nil {
-		return
-	}
-	search, err := GetString(req, "addedS")
-	if err != nil {
-		return
-	}
-	vals := map[string][]string{
-		"search.class": []string{search},
-		"listener":     listeners,
-	}
-	other, err := GetString(req, "other")
-	if err == nil {
-		props := readProperties(other)
-		for k, v := range props {
-			vals[k] = v
-		}
-	}
-	data, err := jpf.JPFBytes(vals)
-	if err != nil {
-		return
-	}
-	jpfConfig := jpf.NewConfig(projectId, username, data)
-	err = db.AddJPF(jpfConfig)
-	return
-}
-
-func readProperties(raw string) (props map[string][]string) {
-	props = make(map[string][]string)
-	lines := strings.Split(raw, "\n")
-	for _, line := range lines {
-		params := strings.Split(util.RemoveEmpty(line), "=")
-		if len(params) == 2 {
-			key, val := params[0], params[1]
-			if len(key) > 0 && len(val) > 0 && jpf.Allowed(key) {
-				split := strings.Split(val, ",")
-				vals := make([]string, 0, len(split))
-				for _, v := range split {
-					if v != "" {
-						vals = append(vals, v)
-					}
-				}
-				if v, ok := props[key]; ok {
-					props[key] = append(v, vals...)
-				} else {
-					props[key] = vals
-				}
-			}
-		}
-	}
-	return
-}
-
-func CreatePMD(req *http.Request, ctx *Context) (err error) {
-	projectId, err := util.ReadId(req.FormValue("project"))
-	if err != nil {
-		return
-	}
-	rules, err := GetStrings(req, "ruleid")
-	if err != nil {
-		return
-	}
-	pmdRules := pmd.NewRules(projectId, rules)
-	err = db.AddPMD(pmdRules)
 	return
 }
 
@@ -488,7 +352,7 @@ func GetResultData(resultName string, fileId bson.ObjectId) (res tool.DisplayRes
 			//Retrieve result from the db.
 			matcher = bson.M{project.ID: val}
 			res, err = db.GetDisplayResult(resultName,
-				matcher, bson.M{project.DATA: 1})
+				matcher, nil)
 		case string:
 			//Error, so create new error result.
 			switch val {

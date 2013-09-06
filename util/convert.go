@@ -4,16 +4,7 @@ import (
 	"fmt"
 	"labix.org/v2/mgo/bson"
 	"strconv"
-	"strings"
 )
-
-func RemoveEmpty(toChange string) string {
-	symbs := []string{" ", "\n", "\t", "\r"}
-	for _, symb := range symbs {
-		toChange = strings.Replace(toChange, symb, "", -1)
-	}
-	return toChange
-}
 
 //ReadId tries to read a bson.ObjectId from a string.
 func ReadId(idStr string) (id bson.ObjectId, err error) {

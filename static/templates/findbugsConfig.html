@@ -1,0 +1,45 @@
+{{define "config"}}
+<h3>Setup Findbugs Configuration</h3>
+<form class="form-horizontal" action="createfindbugs" method="post">
+  <div class="form-group">
+    <label class="col-lg-2 control-label" for="project">Project</label>
+    <div class="col-lg-4">
+      <select class="form-control" name="project" id="project">
+	{{range .ctx.Projects}}
+	<option value={{.Id.Hex}}>{{.Name}}</option>
+	{{end}}
+      </select>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="col-lg-2 control-label"
+    for="effort">Effort</label>
+    <div class="col-lg-4">
+      <select class="form-control" name="effort" id="effort" size="1">
+	<option value="max">Maximum</option>
+	<option value="more">More</option>
+	<option value="default">Default</option>
+	<option value="less">Less</option>
+	<option value="min">Minimum</option>
+      </select>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="col-lg-2 control-label"
+    for="confidence">Confidence</label>
+    <div class="col-lg-4">
+      <select class="form-control" name="confidence" id="confidence" size="1">
+	<option value="high">High</option>
+	<option value="medium">Medium</option>
+	<option value="low">Low</option>
+	<option value="experimental">Experimental</option>
+      </select>
+    </div>
+  </div>
+  <div class="form-group">
+    <div class="col-lg-offset-2 col-lg-3">
+      <button type="submit" class="btn btn-default btn-inverse">Create</button>
+    </div>
+  </div>
+</form>
+{{end}}

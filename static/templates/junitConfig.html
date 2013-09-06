@@ -1,11 +1,11 @@
-{{ define "view" }}
-<h3>Add Project Tests</h3>
-<form class="form-horizontal" action="addtest" method="post" enctype="multipart/form-data">
+{{define "config"}}
+<h3>Create JUnit Test</h3>
+<form class="form-horizontal" action="createjunit" method="post" enctype="multipart/form-data">
   <div class="form-group">
     <label class="col-lg-2 control-label" for="project">Project</label>
     <div class="col-lg-3">
       <select class="form-control" name="project" id="project">
-	{{ range .ctx.Projects}}
+	{{range .ctx.Projects}}
 	<option value={{.Id.Hex}}>{{.Name}}</option>
 	{{end}}
       </select>
@@ -42,4 +42,4 @@
     </div>
   </div>
 </form>
-{{ end }}
+{{end}}

@@ -1,11 +1,11 @@
-{{ define "title" }}Impendulo{{ end }}
-{{ define "content" }}
+{{define "title"}}Impendulo{{end}}
+{{define "content"}}
 <div class="row">
   <div class="col-md-12">
     <div id="navbar" class="row">
       <div class="col-md-1"></div>
       <div class="col-md-10">
-	{{ template "navbar" . }}
+	{{template "navbar" .}}
       </div>
       <div class="col-md-1"></div>
     </div>
@@ -13,14 +13,14 @@
       <div class="col-md-1"></div>
       <div class="col-md-10">
 	<div id="messages" class="row">
-	  {{ template "messages" .}}
+	  {{template "messages" .}}
 	</div>
 	<div id="view" class="row">
-	{{ template "view" .}}
+	{{template "view" .}}
 	</div>
       </div>
       <div class="col-md-1"></div>
     </div>
   </div>
 </div>
-{{ end }}
+{{end}}

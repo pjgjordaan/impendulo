@@ -1,6 +1,9 @@
 package testing;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.security.InvalidParameterException;
 
 import org.apache.tools.ant.Project;
@@ -14,6 +17,18 @@ public class TestRunner {
 		if (args.length != 2) {
 			throw new InvalidParameterException("Expected 2 arguments.");
 		}
+		PrintStream out = System.out;
+		PrintStream err = System.err;
+		System.setOut(new PrintStream(new OutputStream() {
+			@Override
+			public void write(int b) throws IOException {
+			}
+		}));
+		System.setErr(new PrintStream(new OutputStream() {
+			@Override
+			public void write(int b) throws IOException {
+			}
+		}));
 		String testExec = args[0];
 		String[] split = testExec.split("\\.");
 		String testName = split[split.length - 1];
@@ -36,15 +51,20 @@ public class TestRunner {
 			formater.setType(type);
 			task.addFormatter(formater);
 			JUnitTest test = new JUnitTest(testExec);
-			test.setOutfile(testName+"_junit");
+			test.setOutfile(testName + "_junit");
 			test.setTodir(new File(dataLocation));
 			task.addTest(test);
 			task.execute();
-			System.exit(0);
 		} catch (Exception e) {
-			e.printStackTrace();
+			try {
+				err.write(e.getMessage().getBytes());
+			} catch (IOException e1) {
+			}
+		} finally {
+			System.setOut(out);
+			System.setErr(err);
+			System.exit(0);
 		}
-
 	}
 
 }

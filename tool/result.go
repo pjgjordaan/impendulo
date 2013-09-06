@@ -46,6 +46,9 @@ type ToolResult interface {
 	GetFileId() bson.ObjectId
 	GetSummary() *Summary
 	GetName() string
+	OnGridFS() bool
+	GetData() interface{}
+	SetData(interface{})
 }
 
 //DisplayResult is used to display result data.

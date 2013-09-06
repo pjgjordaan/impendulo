@@ -2,6 +2,7 @@ package javac
 
 import (
 	"bytes"
+	"encoding/gob"
 	"errors"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
@@ -11,11 +12,28 @@ import (
 
 const NAME = "Javac"
 
+func init() {
+	gob.Register([]byte{})
+}
+
 type Result struct {
 	Id     bson.ObjectId "_id"
 	FileId bson.ObjectId "fileid"
 	Name   string        "name"
 	Data   []byte        "data"
+	GridFS bool          "gridfs"
+}
+
+func (this *Result) SetData(data interface{}) {
+	if data == nil {
+		this.Data = nil
+	} else {
+		this.Data = data.([]byte)
+	}
+}
+
+func (this *Result) OnGridFS() bool {
+	return this.GridFS
 }
 
 func (this *Result) GetName() string {
@@ -145,10 +163,12 @@ func (this *Result) AddGraphData(max, x float64, graphData []map[string]interfac
 }
 
 func NewResult(fileId bson.ObjectId, data []byte) *Result {
+	gridFS := len(data) > tool.MAX_SIZE
 	return &Result{
 		Id:     bson.NewObjectId(),
 		FileId: fileId,
 		Name:   NAME,
+		GridFS: gridFS,
 		Data:   bytes.TrimSpace(data),
 	}
 }

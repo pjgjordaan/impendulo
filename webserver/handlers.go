@@ -1,7 +1,6 @@
 package webserver
 
 import (
-	"code.google.com/p/gorilla/pat"
 	"code.google.com/p/gorilla/sessions"
 	"fmt"
 	"github.com/godfried/impendulo/db"
@@ -11,7 +10,9 @@ import (
 	"strings"
 )
 
-var store sessions.Store
+var (
+	store sessions.Store
+)
 
 const LOG_HANDLERS = "webserver/handlers.go"
 
@@ -67,6 +68,7 @@ func checkAccess(url *url.URL, ctx *Context) error {
 		return fmt.Errorf("Invalid request %s", url.Path)
 	}
 	name := url.Path[start:end]
+	perms := Permissions()
 	val, ok := perms[name]
 	if !ok {
 		return fmt.Errorf("Could not find request %s", url.Path)
@@ -78,79 +80,6 @@ func checkAccess(url *url.URL, ctx *Context) error {
 		return fmt.Errorf("Insufficient permissions to access %s", url.Path)
 	}
 	return nil
-}
-
-var views = map[string]string{
-	"homeView": "home", "testView": "submit",
-	"skeletonView": "submit", "jpfFileView": "submit",
-	"registerView": "register", "projectDownloadView": "download",
-	"projectDeleteView": "delete", "userDeleteView": "delete",
-	"userResult": "home", "projectResult": "home",
-	"jpfConfigView": "submit", "archiveView": "submit",
-	"projectView": "submit", "statusView": "status",
-	"pmdConfigView": "submit",
-}
-
-var perms = map[string]int{
-	"homeview": 0, "testview": 1, "skeletonview": 1,
-	"jpffileview": 1, "registerview": 0, "projectdownloadview": 1,
-	"projectdeleteview": 1, "userdeleteview": 1, "userresult": 0,
-	"projectresult": 0, "jpfconfigview": 1, "archiveview": 1,
-	"projectview": 1, "addtest": 1, "addjpf": 1, "addproject": 1,
-	"changeskeleton": 1, "submitarchive": 1, "login": 0, "register": 0,
-	"logout": 1, "deleteproject": 1, "deleteuser": 1, "displaygraph": 0,
-	"displayresult": 0, "getfiles": 0, "getsubmissions": 0,
-	"skeleton.zip": 0, "index": 0, "favicon.ico": 0, "": 0, "statusview": 1,
-	"createjpf": 1, "pmdconfigview": 1, "createpmd": 1,
-}
-
-//GenerateViews is used to load all the basic views used by our web app.
-func GenerateViews(router *pat.Router) {
-	for name, view := range views {
-		handleFunc := LoadView(name, view)
-		lname := strings.ToLower(name)
-		pattern := "/" + lname
-		router.Add("GET", pattern, Handler(handleFunc)).Name(lname)
-	}
-}
-
-//LoadView loads a view so that it is accessible in our web app.
-func LoadView(name, view string) Handler {
-	return func(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-		ctx.Browse.View = views[name]
-		args := map[string]interface{}{"ctx": ctx}
-		return T(getNav(ctx), name).Execute(w, args)
-	}
-}
-
-var posts = map[string]PostFunc{
-	"addtest": AddTest, "addjpf": AddJPF,
-	"addproject": AddProject, "changeskeleton": ChangeSkeleton,
-	"submitarchive": SubmitArchive, "createjpf": CreateJPF,
-	"createpmd": CreatePMD,
-}
-
-//GeneratePosts loads post request handlers.
-func GeneratePosts(router *pat.Router) {
-	for name, fn := range posts {
-		handleFunc := CreatePost(fn)
-		pattern := "/" + name
-		router.Add("POST", pattern, Handler(handleFunc)).Name(name)
-	}
-}
-
-//CreatePost loads a post request handler.
-func CreatePost(postFunc PostFunc) Handler {
-	return func(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-		err := postFunc(req, ctx)
-		if err != nil {
-			ctx.AddMessage("Could not complete submission.", true)
-		} else {
-			ctx.AddMessage("Successfully completed submission.", false)
-		}
-		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
-		return err
-	}
 }
 
 func deleteProject(w http.ResponseWriter, req *http.Request, ctx *Context) error {
@@ -202,6 +131,16 @@ func getSubmissions(w http.ResponseWriter, req *http.Request, ctx *Context) erro
 	ctx.Browse.View = "home"
 	return T(getNav(ctx), temp).Execute(w, map[string]interface{}{"ctx": ctx,
 		"subRes": subs})
+}
+
+func configView(w http.ResponseWriter, req *http.Request, ctx *Context) error {
+	tool, err := GetString(req, "tool")
+	if err != nil {
+		tool = "none"
+	}
+	ctx.Browse.View = "submit"
+	return T(getNav(ctx), "configView", toolTemplate(tool)).Execute(w,
+		map[string]interface{}{"ctx": ctx, "tool": tool})
 }
 
 func getFiles(w http.ResponseWriter, req *http.Request, ctx *Context) error {

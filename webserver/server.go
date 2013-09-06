@@ -7,7 +7,10 @@ import (
 	"path/filepath"
 )
 
-var router *pat.Router
+var (
+	router    *pat.Router
+	staticDir string
+)
 
 const LOG_SERVER = "webserver/server.go"
 
@@ -23,13 +26,23 @@ func init() {
 
 	GenerateViews(router)
 
+	router.Add("GET", "/configview", Handler(configView)).Name("configview")
+
 	router.Add("GET", "/displaygraph", Handler(displayGraph)).Name("displaygraph")
 	router.Add("GET", "/displayresult", Handler(displayResult)).Name("displayresult")
 	router.Add("GET", "/getfiles", Handler(getFiles)).Name("getfiles")
 	router.Add("GET", "/getsubmissions", Handler(getSubmissions)).Name("getsubmissions")
 	router.Add("GET", "/skeleton.zip", Handler(downloadProject))
-	router.Add("GET", "/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
+	router.Add("GET", "/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(StaticDir()))))
 	router.Add("GET", "/", Handler(LoadView("homeView", "home"))).Name("index")
+}
+
+func StaticDir() string {
+	if staticDir != "" {
+		return staticDir
+	}
+	staticDir = filepath.Join(util.InstallPath(), "static")
+	return staticDir
 }
 
 func getRoute(name string) string {

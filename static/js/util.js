@@ -81,7 +81,7 @@ function addalert(srcParent, destParent, src) {
     destButton.setAttribute("onclick", "movedescriptionvalue('"+destParent+"','"+srcParent+"', '"+id+"')");
     destButton.innerHTML = "&times;";
     var destName = document.createElement("strong");
-    destName.innerHTML = name;
+    destName.innerHTML = name+": ";
     var destDescription = document.createElement("small");
     destDescription.setAttribute("class", "text-muted");
     destDescription.innerHTML = description;

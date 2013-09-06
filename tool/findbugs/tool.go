@@ -31,8 +31,8 @@ func (this *FindBugs) Name() string {
 
 func (this *FindBugs) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	outFile := filepath.Join(ti.Dir, "findbugs.xml")
-	args := []string{config.Config(config.JAVA), "-jar", this.cmd,
-		"-textui", "-low", "-xml:withMessages", "-output", outFile, ti.PackagePath()}
+	args := []string{config.Config(config.JAVA), "-jar", this.cmd, "-textui", "-effort:max",
+		"-experimental", "-xml:withMessages", "-relaxed", "-output", outFile, ti.PackagePath()}
 	defer os.Remove(outFile)
 	execRes := tool.RunCommand(args, nil)
 	resFile, err := os.Open(outFile)

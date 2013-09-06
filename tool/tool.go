@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	JAVA = "Java"
+	JAVA     = "Java"
+	MAX_SIZE = 16000000
 )
 
 func Langs() []string {

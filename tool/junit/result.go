@@ -1,6 +1,7 @@
 package junit
 
 import (
+	"encoding/gob"
 	"encoding/xml"
 	"fmt"
 	"github.com/godfried/impendulo/tool"
@@ -12,6 +13,10 @@ import (
 
 const NAME = "JUnit Test"
 
+func init() {
+	gob.Register(new(Report))
+}
+
 //Result is an implementation of ToolResult, DisplayResult
 //and GraphResult for JUnit test results.
 type Result struct {
@@ -19,6 +24,19 @@ type Result struct {
 	FileId   bson.ObjectId "fileid"
 	TestName string        "name"
 	Data     *Report       "data"
+	GridFS   bool          "gridfs"
+}
+
+func (this *Result) SetData(data interface{}) {
+	if data == nil {
+		this.Data = nil
+	} else {
+		this.Data = data.(*Report)
+	}
+}
+
+func (this *Result) OnGridFS() bool {
+	return this.GridFS
 }
 
 func (this *Result) String() string {
@@ -79,10 +97,12 @@ func (this *Result) AddGraphData(max, x float64, graphData []map[string]interfac
 }
 
 func NewResult(fileId bson.ObjectId, name string, data []byte) (res *Result, err error) {
+	gridFS := len(data) > tool.MAX_SIZE
 	res = &Result{
 		Id:       bson.NewObjectId(),
 		FileId:   fileId,
 		TestName: name,
+		GridFS:   gridFS,
 	}
 	res.Data, err = genReport(res.Id, data)
 	return

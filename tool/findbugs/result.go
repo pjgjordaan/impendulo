@@ -1,6 +1,7 @@
 package findbugs
 
 import (
+	"encoding/gob"
 	"encoding/xml"
 	"fmt"
 	"github.com/godfried/impendulo/tool"
@@ -11,19 +12,36 @@ import (
 
 const NAME = "Findbugs"
 
+func init() {
+	gob.Register(new(Report))
+}
+
 //FindBugsResult is a tool.ToolResult and a tool.DisplayResult.
 //It is used to store the output of running Findbugs.
 type Result struct {
-	Id     bson.ObjectId   "_id"
-	FileId bson.ObjectId   "fileid"
-	Name   string          "name"
-	Data   *Report "data"
+	Id     bson.ObjectId "_id"
+	FileId bson.ObjectId "fileid"
+	Name   string        "name"
+	Data   *Report       "data"
+	GridFS bool          "gridfs"
+}
+
+func (this *Result) SetData(data interface{}) {
+	if data == nil {
+		this.Data = nil
+	} else {
+		this.Data = data.(*Report)
+	}
+}
+
+func (this *Result) OnGridFS() bool {
+	return this.GridFS
 }
 
 func (this *Result) String() string {
-	return fmt.Sprintf("Id: %q; FileId: %q; TestName: %s; \n Data: %s", 
+	return fmt.Sprintf("Id: %q; FileId: %q; TestName: %s; \n Data: %s",
 		this.Id, this.FileId, this.Name, this.Data)
-} 
+}
 
 func (this *Result) GetName() string {
 	return this.Name
@@ -80,10 +98,12 @@ func (this *Result) AddGraphData(max, x float64, graphData []map[string]interfac
 }
 
 func NewResult(fileId bson.ObjectId, data []byte) (res *Result, err error) {
+	gridFS := len(data) > tool.MAX_SIZE
 	res = &Result{
 		Id:     bson.NewObjectId(),
 		FileId: fileId,
 		Name:   NAME,
+		GridFS: gridFS,
 	}
 	res.Data, err = genReport(res.Id, data)
 	return
@@ -104,22 +124,22 @@ func genReport(id bson.ObjectId, data []byte) (res *Report, err error) {
 type Report struct {
 	Id          bson.ObjectId
 	Time        int            `xml:"analysisTimestamp,attr"`
-	Summary     *Summary `xml:"FindBugsSummary"`
-	Instances   []*BugInstance   `xml:"BugInstance"`
-	Categories  []*BugCategory   `xml:"BugCategory"`
-	Patterns    []*BugPattern    `xml:"BugPattern"`
+	Summary     *Summary       `xml:"FindBugsSummary"`
+	Instances   []*BugInstance `xml:"BugInstance"`
+	Categories  []*BugCategory `xml:"BugCategory"`
+	Patterns    []*BugPattern  `xml:"BugPattern"`
 	CategoryMap map[string]*BugCategory
 	PatternMap  map[string]*BugPattern
 }
 
-func (this *Report) Success() bool{
+func (this *Report) Success() bool {
 	return len(this.Instances) == 0
 }
 
 func (this *Report) String() string {
-	return fmt.Sprintf("Id: %q; Summary: %s", 
+	return fmt.Sprintf("Id: %q; Summary: %s",
 		this.Id, this.Summary)
-} 
+}
 
 func (this *Report) loadMaps() {
 	this.CategoryMap = make(map[string]*BugCategory)
@@ -151,9 +171,9 @@ type Summary struct {
 }
 
 func (this *Summary) String() string {
-	return fmt.Sprintf("BugCount: %d; ClassCount: %d", 
+	return fmt.Sprintf("BugCount: %d; ClassCount: %d",
 		this.BugCount, this.ClassCount)
-} 
+}
 
 type FileStats struct {
 	Path     string `xml:"path,attr"`
@@ -184,26 +204,26 @@ type ClassStats struct {
 }
 
 type BugInstance struct {
-	Type         string        `xml:"type,attr"`
-	Priority     int           `xml:"priority,attr"`
-	Abbreviation string        `xml:"abbrev,attr"`
-	Category     string        `xml:"category,attr"`
-	Rank         int           `xml:"rank,attr"`
-	ShortMessage string        `xml:"ShortMessage"`
-	LongMessage  string        `xml:"LongMessage"`
+	Type         string         `xml:"type,attr"`
+	Priority     int            `xml:"priority,attr"`
+	Abbreviation string         `xml:"abbrev,attr"`
+	Category     string         `xml:"category,attr"`
+	Rank         int            `xml:"rank,attr"`
+	ShortMessage string         `xml:"ShortMessage"`
+	LongMessage  string         `xml:"LongMessage"`
 	Class        *Class         `xml:"Class"`
 	Method       *Method        `xml:"Method"`
 	Field        *Field         `xml:"Field"`
 	Var          *LocalVariable `xml:"LocalVariable"`
 	Line         *SourceLine    `xml:"SourceLine"`
-	Properties   []*Property   `xml:"Property"`
+	Properties   []*Property    `xml:"Property"`
 }
 
 type Class struct {
-	Name      string     `xml:"classname,attr"`
-	IsPrimary bool       `xml:"primary,attr"`
+	Name      string      `xml:"classname,attr"`
+	IsPrimary bool        `xml:"primary,attr"`
 	Line      *SourceLine `xml:"SourceLine"`
-	Message   string     `xml:"Message"`
+	Message   string      `xml:"Message"`
 }
 
 type SourceLine struct {
@@ -218,24 +238,24 @@ type SourceLine struct {
 }
 
 type Method struct {
-	Name      string     `xml:"name,attr"`
-	Class     string     `xml:"classname,attr"`
-	Signature string     `xml:"signature,attr"`
-	IsStatic  bool       `xml:"isStatic,attr"`
-	IsPrimary bool       `xml:"primary,attr"`
+	Name      string      `xml:"name,attr"`
+	Class     string      `xml:"classname,attr"`
+	Signature string      `xml:"signature,attr"`
+	IsStatic  bool        `xml:"isStatic,attr"`
+	IsPrimary bool        `xml:"primary,attr"`
 	Line      *SourceLine `xml:"SourceLine"`
-	Message   string     `xml:"Message"`
+	Message   string      `xml:"Message"`
 }
 
 type Field struct {
-	Name      string     `xml:"name,attr"`
-	Class     string     `xml:"classname,attr"`
-	Signature string     `xml:"signature,attr"`
-	IsStatic  bool       `xml:"isStatic,attr"`
-	IsPrimary bool       `xml:"primary,attr"`
-	Role      string     `xml:"role,attr"`
+	Name      string      `xml:"name,attr"`
+	Class     string      `xml:"classname,attr"`
+	Signature string      `xml:"signature,attr"`
+	IsStatic  bool        `xml:"isStatic,attr"`
+	IsPrimary bool        `xml:"primary,attr"`
+	Role      string      `xml:"role,attr"`
 	Line      *SourceLine `xml:"SourceLine"`
-	Message   string     `xml:"Message"`
+	Message   string      `xml:"Message"`
 }
 
 type LocalVariable struct {

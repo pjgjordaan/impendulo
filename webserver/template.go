@@ -36,9 +36,15 @@ var funcs = template.FuncMap{
 	"listeners":       jpf.Listeners,
 	"searches":        jpf.Searches,
 	"rules":           pmd.RuleSet,
+	"tools":           tools,
 }
 
 const PAGER_SIZE = 10
+
+var (
+	templateDir   string
+	baseTemplates []string
+)
 
 func slice(files []*project.File, selected int) (ret []*project.File) {
 	if len(files) < PAGER_SIZE {
@@ -115,17 +121,33 @@ func _setBreaks(val string) string {
 	return strings.Replace(val, "\n", "<br>", -1)
 }
 
-var dir = filepath.Join("static", "templates")
-var basicT = []string{filepath.Join(dir, "base.html"),
-	filepath.Join(dir, "index.html"), filepath.Join(dir, "messages.html")}
+func TemplateDir() string {
+	if templateDir != "" {
+		return templateDir
+	}
+	templateDir = filepath.Join(StaticDir(), "templates")
+	return templateDir
+}
+
+func BaseTemplates() []string {
+	if baseTemplates != nil {
+		return baseTemplates
+	}
+	baseTemplates = []string{
+		filepath.Join(TemplateDir(), "base.html"),
+		filepath.Join(TemplateDir(), "index.html"),
+		filepath.Join(TemplateDir(), "messages.html"),
+	}
+	return baseTemplates
+}
 
 //T creates a new HTML template from the given files.
 func T(names ...string) *template.Template {
 	t := template.New("base.html").Funcs(funcs)
-	all := make([]string, len(basicT)+len(names))
-	end := copy(all, basicT)
+	all := make([]string, len(BaseTemplates())+len(names))
+	end := copy(all, BaseTemplates())
 	for i, name := range names {
-		all[i+end] = filepath.Join(dir, name+".html")
+		all[i+end] = filepath.Join(TemplateDir(), name+".html")
 	}
 	t = template.Must(t.ParseFiles(all...))
 	return t

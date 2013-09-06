@@ -1,6 +1,7 @@
 package jpf
 
 import (
+	"encoding/gob"
 	"encoding/xml"
 	"fmt"
 	"github.com/godfried/impendulo/tool"
@@ -11,11 +12,28 @@ import (
 
 const NAME = "JPF"
 
+func init() {
+	gob.Register(new(Report))
+}
+
 type Result struct {
 	Id     bson.ObjectId "_id"
 	FileId bson.ObjectId "fileid"
 	Name   string        "name"
 	Data   *Report       "data"
+	GridFS bool          "gridfs"
+}
+
+func (this *Result) SetData(data interface{}) {
+	if data == nil {
+		this.Data = nil
+	} else {
+		this.Data = data.(*Report)
+	}
+}
+
+func (this *Result) OnGridFS() bool {
+	return this.GridFS
 }
 
 func (this *Result) String() string {
@@ -71,10 +89,12 @@ func (this *Result) AddGraphData(max, x float64, graphData []map[string]interfac
 
 //NewResult
 func NewResult(fileId bson.ObjectId, data []byte) (res *Result, err error) {
+	gridFS := len(data) > tool.MAX_SIZE
 	res = &Result{
 		Id:     bson.NewObjectId(),
 		FileId: fileId,
 		Name:   NAME,
+		GridFS: gridFS,
 	}
 	res.Data, err = genReport(res.Id, data)
 	return

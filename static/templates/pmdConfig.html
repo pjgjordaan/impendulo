@@ -1,11 +1,11 @@
-{{ define "view" }}
+{{define "config"}}
 <h3>Choose PMD Rules</h3>
 <form class="form-horizontal" action="createpmd" method="post">
   <div class="form-group">
     <label class="col-lg-2 control-label" for="project">Project</label>
     <div class="col-lg-4">
       <select class="form-control" name="project" id="project">
-	{{ range .ctx.Projects}}
+	{{range .ctx.Projects}}
 	<option value={{.Id.Hex}}>{{.Name}}</option>
 	{{end}}
       </select>
@@ -43,4 +43,4 @@
     </div>
   </div>
 </form>
-{{ end }}
+{{end}}

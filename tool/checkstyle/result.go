@@ -1,6 +1,7 @@
 package checkstyle
 
 import (
+	"encoding/gob"
 	"encoding/xml"
 	"fmt"
 	"github.com/godfried/impendulo/tool"
@@ -11,16 +12,33 @@ import (
 
 const NAME = "Checkstyle"
 
-type Result struct {
-	Id     bson.ObjectId     "_id"
-	FileId bson.ObjectId     "fileid"
-	Name   string            "name"
-	Data   *Report "data"
+func init() {
+	gob.Register(new(Report))
 }
 
-func (this Result) String()string{
-	return fmt.Sprintf("Id: %q; FileId: %q; Name: %s; \nData: %s\n", 
-		this.Id, this.FileId, this.Name, this.Data.String()) 
+type Result struct {
+	Id     bson.ObjectId "_id"
+	FileId bson.ObjectId "fileid"
+	Name   string        "name"
+	Data   *Report       "data"
+	GridFS bool          "gridfs"
+}
+
+func (this *Result) SetData(data interface{}) {
+	if data == nil {
+		this.Data = nil
+	} else {
+		this.Data = data.(*Report)
+	}
+}
+
+func (this *Result) OnGridFS() bool {
+	return this.GridFS
+}
+
+func (this *Result) String() string {
+	return fmt.Sprintf("Id: %q; FileId: %q; Name: %s; \nData: %s\n",
+		this.Id, this.FileId, this.Name, this.Data.String())
 }
 
 func (this *Result) GetName() string {
@@ -69,12 +87,13 @@ func (this *Result) AddGraphData(max, x float64, graphData []map[string]interfac
 	return math.Max(max, y)
 }
 
-
 func NewResult(fileId bson.ObjectId, data []byte) (res *Result, err error) {
+	gridFS := len(data) > tool.MAX_SIZE
 	res = &Result{
-		Id: bson.NewObjectId(), 
-		FileId: fileId, 
-		Name: NAME, 
+		Id:     bson.NewObjectId(),
+		FileId: fileId,
+		Name:   NAME,
+		GridFS: gridFS,
 	}
 	res.Data, err = genReport(res.Id, data)
 	return
@@ -100,17 +119,17 @@ type Report struct {
 	Files   []*File `xml:"file"`
 }
 
-func (this *Report) Success() bool{
+func (this *Report) Success() bool {
 	return this.Errors == 0
 }
 
-func (this *Report) String()string{
+func (this *Report) String() string {
 	files := ""
-	for _, f := range this.Files{
+	for _, f := range this.Files {
 		files += f.String()
 	}
-	return fmt.Sprintf("Id: %q; Version %s; Errors: %d; \nFiles: %s\n", 
-		this.Id, this.Version, this.Errors, files) 
+	return fmt.Sprintf("Id: %q; Version %s; Errors: %d; \nFiles: %s\n",
+		this.Id, this.Version, this.Errors, files)
 }
 
 type File struct {
@@ -118,17 +137,17 @@ type File struct {
 	Errors []*Error `xml:"error"`
 }
 
-func (this *File) ShouldDisplay()bool{
-	return len(this.Errors) > 0 
+func (this *File) ShouldDisplay() bool {
+	return len(this.Errors) > 0
 }
 
-func (this *File) String()string{
+func (this *File) String() string {
 	errs := ""
-	for _, e := range this.Errors{
+	for _, e := range this.Errors {
 		errs += e.String()
 	}
-	return fmt.Sprintf("Name: %s; \nErrors: %s\n", 
-		this.Name, errs) 
+	return fmt.Sprintf("Name: %s; \nErrors: %s\n",
+		this.Name, errs)
 }
 
 type Error struct {
@@ -139,7 +158,7 @@ type Error struct {
 	Source   string        `xml:"source,attr"`
 }
 
-func (this *Error) String()string{
-	return fmt.Sprintf("Line: %d; Column: %d; Severity: %s; Message: %q; Source: %s\n", 
-		this.Line, this.Column, this.Severity, this.Message, this.Source) 
+func (this *Error) String() string {
+	return fmt.Sprintf("Line: %d; Column: %d; Severity: %s; Message: %q; Source: %s\n",
+		this.Line, this.Column, this.Severity, this.Message, this.Source)
 }
