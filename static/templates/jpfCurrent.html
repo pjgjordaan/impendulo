@@ -88,7 +88,7 @@
 	      <div class="accordion-inner">
 		<h5>Instructions</h5>
 		<ol>
-		  {{range .Insns}}<li>{{.Value}} ({{.Source}})</li>{{end}}
+		  {{range .Insns}}<li>{{unescape .Value}} ({{unescape .Source}})</li>{{end}}
 		</ol>
 	      </div>
 	    </div>

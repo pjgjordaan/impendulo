@@ -18,11 +18,25 @@
   <thead><tr class="info">
       <th>Project</th>
       <th>Created</th>
+      <th>Snapshots</th>
+      <th>Launches</th>
   </tr></thead>
   <tbody data-provides="rowlink" >
     {{ range .subRes}}
-    <tr class="success"><td><a class="rowlink" href="getfiles?subid={{.Id.Hex}}" >{{projectName .ProjectId.Hex}}</a></td>
-      <td><a class="rowlink" href="getfiles?subid={{.Id.Hex}}" >{{date .Time}}</a></td></tr>
+    <tr class="success">
+      <td><a class="rowlink" href="getfiles?subid={{.Id.Hex}}">
+	  {{projectName .ProjectId.Hex}}
+      </a></td>
+      <td><a class="rowlink" href="getfiles?subid={{.Id.Hex}}" >
+	  {{date .Time}}
+      </a></td>
+      <td><a class="rowlink" href="getfiles?subid={{.Id.Hex}}">
+	  {{snapshots .Id}}
+      </a></td>
+      <td><a class="rowlink" href="getfiles?subid={{.Id.Hex}}">
+	  {{launches .Id}}
+      </a></td>
+    </tr>
     {{end}}
   </tbody>
 </table>

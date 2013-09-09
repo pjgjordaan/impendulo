@@ -10,6 +10,7 @@ import (
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/util"
+	"html"
 	"html/template"
 	"labix.org/v2/mgo/bson"
 	"path/filepath"
@@ -37,6 +38,9 @@ var funcs = template.FuncMap{
 	"searches":        jpf.Searches,
 	"rules":           pmd.RuleSet,
 	"tools":           tools,
+	"unescape":        html.UnescapeString,
+	"snapshots":       snapshots,
+	"launches":        launches,
 }
 
 const PAGER_SIZE = 10
@@ -45,6 +49,14 @@ var (
 	templateDir   string
 	baseTemplates []string
 )
+
+func snapshots(subId bson.ObjectId) (int, error) {
+	return db.Count(db.FILES, bson.M{project.SUBID: subId, project.TYPE: project.SRC})
+}
+
+func launches(subId bson.ObjectId) (int, error) {
+	return db.Count(db.FILES, bson.M{project.SUBID: subId, project.TYPE: project.LAUNCH})
+}
 
 func slice(files []*project.File, selected int) (ret []*project.File) {
 	if len(files) < PAGER_SIZE {

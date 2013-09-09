@@ -30,7 +30,7 @@ func PostFuncs() map[string]PostFunc {
 func defaultPostFuncs() map[string]PostFunc {
 	return map[string]PostFunc{
 		"addproject": AddProject, "changeskeleton": ChangeSkeleton,
-		"submitarchive": SubmitArchive,
+		"submitarchive": SubmitArchive, "runtool": RunTool,
 	}
 }
 
@@ -73,7 +73,7 @@ func defaultViews() map[string]string {
 		"projectDeleteView": "delete", "userDeleteView": "delete",
 		"userResult": "home", "projectResult": "home",
 		"archiveView": "submit", "projectView": "submit",
-		"statusView": "status",
+		"statusView": "status", "runToolView": "tool",
 	}
 }
 
@@ -99,7 +99,7 @@ func defaultPermissions() map[string]int {
 		"login": 0, "register": 0, "logout": 1, "deleteproject": 1,
 		"deleteuser": 1, "displaygraph": 0, "displayresult": 0, "getfiles": 0,
 		"getsubmissions": 0, "skeleton.zip": 0, "index": 0, "favicon.ico": 0,
-		"": 0, "statusview": 1,
+		"": 0, "statusview": 1, "runtoolview": 1, "runtool": 1,
 	}
 }
 

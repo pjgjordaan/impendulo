@@ -25,8 +25,10 @@ const (
 	BACKUP_DB    = "impendulo_backup"
 )
 
-var sessionChan chan *mgo.Session
-var requestChan chan bool
+var (
+	sessionChan chan *mgo.Session
+	requestChan chan bool
+)
 
 //Setup creates a mongodb session.
 //This must be called before using any other db functions.

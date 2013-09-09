@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
@@ -14,11 +15,12 @@ import (
 )
 
 var templates = map[string]string{
-	jpf.NAME:      "jpfConfig",
-	pmd.NAME:      "pmdConfig",
-	junit.NAME:    "junitConfig",
-	findbugs.NAME: "findbugsConfig",
-	"none":        "noConfig",
+	jpf.NAME:        "jpfConfig",
+	pmd.NAME:        "pmdConfig",
+	junit.NAME:      "junitConfig",
+	findbugs.NAME:   "findbugsConfig",
+	checkstyle.NAME: "checkstyleConfig",
+	"none":          "noConfig",
 }
 
 func toolTemplate(tool string) string {
@@ -27,32 +29,36 @@ func toolTemplate(tool string) string {
 
 func toolPermissions() map[string]int {
 	return map[string]int{
-		"createjpf":      1,
-		"createpmd":      1,
-		"createjunit":    1,
-		"createfindbugs": 1,
+		"createjpf":        1,
+		"createpmd":        1,
+		"createjunit":      1,
+		"createfindbugs":   1,
+		"createcheckstyle": 1,
 	}
 }
 
 func toolPostFuncs() map[string]PostFunc {
 	return map[string]PostFunc{
-		"createpmd":      CreatePMD,
-		"createjpf":      CreateJPF,
-		"createjunit":    CreateJUnit,
-		"createfindbugs": CreateFindbugs,
+		"createpmd":        CreatePMD,
+		"createjpf":        CreateJPF,
+		"createjunit":      CreateJUnit,
+		"createfindbugs":   CreateFindbugs,
+		"createcheckstyle": CreateCheckstyle,
 	}
 }
 
 func tools() []string {
-	return []string{jpf.NAME, junit.NAME, pmd.NAME, findbugs.NAME}
+	return []string{jpf.NAME, junit.NAME, pmd.NAME, findbugs.NAME, checkstyle.NAME}
 }
 
-//AddTest adds a new test to a project.
+func CreateCheckstyle(req *http.Request, ctx *Context) (err error) {
+	return nil
+}
+
 func CreateFindbugs(req *http.Request, ctx *Context) (err error) {
 	return nil
 }
 
-//AddTest adds a new test to a project.
 func CreateJUnit(req *http.Request, ctx *Context) (err error) {
 	projectId, err := util.ReadId(req.FormValue("project"))
 	if err != nil {
@@ -114,17 +120,14 @@ func CreateJPF(req *http.Request, ctx *Context) (err error) {
 	if err != nil {
 		return
 	}
+	vals := make(map[string][]string)
 	listeners, err := GetStrings(req, "addedL")
-	if err != nil {
-		return
+	if err == nil {
+		vals["listener"] = listeners
 	}
 	search, err := GetString(req, "addedS")
-	if err != nil {
-		return
-	}
-	vals := map[string][]string{
-		"search.class": []string{search},
-		"listener":     listeners,
+	if err == nil {
+		vals["search.class"] = []string{search}
 	}
 	other, err := GetString(req, "other")
 	if err == nil {

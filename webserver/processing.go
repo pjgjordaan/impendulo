@@ -18,6 +18,64 @@ import (
 	"time"
 )
 
+func RunTool(req *http.Request, ctx *Context) (err error) {
+	projectId, err := util.ReadId(req.FormValue("project"))
+	if err != nil {
+		return
+	}
+	tool, err := GetString(req, "tool")
+	if err != nil {
+		return
+	}
+	submissions, err := db.GetSubmissions(bson.M{project.PROJECT_ID: projectId}, bson.M{project.ID: 1})
+	if err != nil {
+		return
+	}
+	var runAll bool
+	if req.FormValue("runempty-check") == "true" {
+		runAll = false
+	} else {
+		runAll = true
+	}
+	for _, submission := range submissions {
+		files, err := db.GetFiles(bson.M{project.SUBID: submission.Id}, bson.M{project.DATA: 0})
+		if err != nil {
+			util.Log(err)
+			continue
+		}
+		err = processing.StartSubmission(submission.Id)
+		if err != nil {
+			util.Log(err)
+			continue
+		}
+		for _, file := range files {
+			if resultId, ok := file.Results[tool]; ok && runAll {
+				err = db.RemoveResultById(resultId)
+				if err != nil {
+					util.Log(resultId, err)
+					continue
+				}
+				delete(file.Results, tool)
+				change := bson.M{db.SET: bson.M{project.RESULTS: file.Results}}
+				err = db.Update(db.FILES, bson.M{project.ID: file.Id}, change)
+				if err != nil {
+					util.Log(err)
+					continue
+				}
+			}
+			err = processing.AddFile(file)
+			if err != nil {
+				util.Log(err)
+			}
+		}
+		err = processing.EndSubmission(submission.Id)
+		if err != nil {
+			util.Log(err)
+		}
+	}
+	return
+}
+
 //SubmitArchive adds an Intlola archive to the database.
 func SubmitArchive(req *http.Request, ctx *Context) (err error) {
 	projectId, err := util.ReadId(req.FormValue("project"))
@@ -48,9 +106,15 @@ func SubmitArchive(req *http.Request, ctx *Context) (err error) {
 		return
 	}
 	//Send file to be analysed.
-	processing.StartSubmission(sub.Id)
-	processing.AddFile(file)
-	processing.EndSubmission(sub.Id)
+	err = processing.StartSubmission(sub.Id)
+	if err != nil {
+		return
+	}
+	err = processing.AddFile(file)
+	if err != nil {
+		return
+	}
+	err = processing.EndSubmission(sub.Id)
 	return
 }
 

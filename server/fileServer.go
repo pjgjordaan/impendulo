@@ -60,7 +60,10 @@ func (this *SubmissionHandler) Handle() (err error) {
 	if err != nil {
 		return
 	}
-	processing.StartSubmission(this.submission.Id)
+	err = processing.StartSubmission(this.submission.Id)
+	if err != nil {
+		return
+	}
 	defer func() { processing.EndSubmission(this.submission.Id) }()
 	done := false
 	for err == nil && !done {
@@ -220,7 +223,7 @@ func (this *SubmissionHandler) Read() (done bool, err error) {
 			return
 		}
 		//Send file to be processed.
-		processing.AddFile(file)
+		err = processing.AddFile(file)
 	} else if req == LOGOUT {
 		done = true
 	} else {
@@ -229,19 +232,17 @@ func (this *SubmissionHandler) Read() (done bool, err error) {
 	return
 }
 
-
-func (this *SubmissionHandler) writeJson(data interface{})(err error){
+func (this *SubmissionHandler) writeJson(data interface{}) (err error) {
 	err = util.WriteJson(this.rwc, data)
-	if err == nil{
+	if err == nil {
 		_, err = this.rwc.Write([]byte(util.EOT))
 	}
 	return
 }
 
-
-func (this *SubmissionHandler) write(data string)(err error){
+func (this *SubmissionHandler) write(data string) (err error) {
 	_, err = this.rwc.Write([]byte(data))
-	if err == nil{
+	if err == nil {
 		_, err = this.rwc.Write([]byte(util.EOT))
 	}
 	return

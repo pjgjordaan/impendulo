@@ -41,6 +41,15 @@
 	      <li><a href="userdeleteview">Users</a></li>
 	    </ul>
           </li>
+	  <li {{if (.ctx.IsView "tool")}} class="dropdown active" {{else}} class="dropdown" {{end}}>
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+	      <span class="glyphicon glyphicon-wrench"></span> Tools
+	      <b class="caret"></b>
+	    </a>
+            <ul class="dropdown-menu">
+              <li><a href="runtoolview">Run</a></li>
+	    </ul>
+          </li>
 	  <li {{if (.ctx.IsView "status")}} class="active" {{end}}>
 	    <a href="statusview">
 	      <span class="glyphicon glyphicon-heart-empty"></span> Status
@@ -49,7 +58,7 @@
 	</ul>
 	<form class="navbar-form pull-right" action="logout" method="POST">
           <button type="submit" class="btn btn-default">
-	   <span class="glyphicon glyphicon-log-out"></span> Logout
+	    <span class="glyphicon glyphicon-log-out"></span> Logout
 	  </button>
 	</form>
       </div>
