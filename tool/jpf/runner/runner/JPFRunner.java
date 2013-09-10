@@ -61,7 +61,7 @@ public class JPFRunner {
 		config.setProperty("target", target);
 		config.setProperty("report.publisher", "xml");
 		config.setProperty("report.xml.class",
-				"gov.nasa.jpf.report.XMLPublisher");
+				"runner.ImpenduloPublisher");
 		config.setProperty("report.xml.file", outFile);
 		config.setProperty("classpath",
 				targetLocation + ";" + config.getProperty("classpath"));

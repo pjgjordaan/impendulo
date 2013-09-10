@@ -15,7 +15,8 @@
     <label class="col-lg-2 control-label" for="availableL">Listeners</label>
     <div class="col-lg-4">
     <label>Available</label>
-      <select class="form-control" name="availableL" id="availableL" size="5">
+      <select class="form-control" name="availableL" id="availableL"
+	      size="5">
 	{{$listeners := listeners}}
 	{{range $listeners}}
 	<option value={{.Package}}.{{.Name}}
@@ -27,7 +28,8 @@
     </div>
     <div class="col-lg-4">
     <label>Added</label>
-      <select class="form-control" name="addedL" id="addedL" size="5"></select>
+      <select class="form-control" name="addedL" id="addedL" size="5" added="true" 
+	      multiple></select>
     </div>
   </div>
   <div class="form-group">
@@ -50,14 +52,14 @@
 	     id="addedS" readonly placeholder="None"></input>
     </div>
   </div>
-   <div class="form-group">
+  <div class="form-group">
     <label class="col-lg-2 control-label" for="other">Other Properties</label>
     <div class="col-lg-8">
       <textarea class="form-control" name="other"
 		id="other" rows="5" placeholder="Example: target.args = 2,4,1"></textarea>
     </div>
-   </div>
-   <div class="form-group">
+  </div>
+  <div class="form-group">
     <div class="col-lg-offset-2 col-lg-3">
       <button type="submit" class="btn btn-default btn-inverse">Create</button>
     </div>

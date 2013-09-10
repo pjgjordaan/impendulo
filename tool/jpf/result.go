@@ -80,11 +80,16 @@ func (this *Result) Template(current bool) string {
 
 func (this *Result) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
 	if graphData[0] == nil {
-		graphData[0] = tool.CreateChart("JPF Errors")
+		graphData[0] = tool.CreateChart("JPF Error Detection Time")
 	}
-	yE := float64(this.Data.Errors())
-	tool.AddCoords(graphData[0], x, yE)
-	return math.Max(max, yE)
+	var yT float64
+	if this.Data.Errors() == 0 {
+		yT = 0
+	} else {
+		yT = float64(this.Data.Stats.Time)
+	}
+	tool.AddCoords(graphData[0], x, yT)
+	return math.Max(max, yT)
 }
 
 //NewResult
@@ -180,12 +185,12 @@ type Error struct {
 }
 
 type Statistics struct {
-	Time              string `xml:"elapsed-time"`
-	NewStates         int    `xml:"new-states"`
-	VisitedStates     int    `xml:"visited-states"`
-	BacktrackedStates int    `xml:"backtracked-states"`
-	EndStates         int    `xml:"end-states"`
-	Memory            int    `xml:"max-memory"`
+	Time              int64 `xml:"elapsed-time"`
+	NewStates         int   `xml:"new-states"`
+	VisitedStates     int   `xml:"visited-states"`
+	BacktrackedStates int   `xml:"backtracked-states"`
+	EndStates         int   `xml:"end-states"`
+	Memory            int   `xml:"max-memory"`
 }
 
 func (this *Statistics) String() string {

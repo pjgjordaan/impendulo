@@ -46,8 +46,7 @@
 }
 
 
-.center
-{
+.center{
     margin-left:auto;
     margin-right:auto;
     width:30%;
@@ -55,4 +54,8 @@
 
 .pagination-right {
     float: right;
+}
+
+.accordion-inner{
+    overflow:auto;
 }

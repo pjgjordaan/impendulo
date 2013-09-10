@@ -61,37 +61,37 @@
     {{template "pager" .}}
   </div>
   <div class="col-md-4">
-      <form role="form" class="form-padded form-inline" action="displayresult" method="get">
-	<div class="form-group">
-	  <label class="sr-only" for="currentIndex">First File</label>
-	  <select class="form-control" name="currentIndex" id="currentIndex">
-	    {{range $index, $file := .files}} 
-	    {{$dispIndex := sum $index 1}}
-	    {{if $curFile.Same $file}}
-	    <option selected value="{{$index}}">{{$dispIndex}}</option>
-	    {{else}}
-	    <option value="{{$index}}">{{$dispIndex}}</option>
-	    {{end}}
-	    {{end}}
-	  </select>
-	</div>
-	<div class="form-group">
-	  <label class="sr-only" for="nextIndex">Second File</label>
-	  <select class="form-control" name="nextIndex" id="nextIndex">
-	    {{range $index, $file := .files}} 
-	    {{$dispIndex := sum $index 1}}
-	    {{if equal $neighbour $index}}
-	    <option selected value="{{$index}}">{{$dispIndex}}</option>
-	    {{else}}
-	    <option value="{{$index}}">{{$dispIndex}}</option>
-	    {{end}}
-	    {{end}}
-	  </select>
-	</div>
-	<input type="hidden" name="filename" value="{{$fileName}}"/>
-	<button type="submit" class="btn btn-default">
-	  <span class="glyphicon glyphicon-arrow-right"></span>
-	</button>
+    <form role="form" class="form-padded form-inline" action="displayresult" method="get">
+      <div class="form-group">
+	<label class="sr-only" for="currentIndex">First File</label>
+	<select class="form-control" name="currentIndex" id="currentIndex">
+	  {{range $index, $file := .files}} 
+	  {{$dispIndex := sum $index 1}}
+	  {{if $curFile.Same $file}}
+	  <option selected value="{{$index}}">{{$dispIndex}}</option>
+	  {{else}}
+	  <option value="{{$index}}">{{$dispIndex}}</option>
+	  {{end}}
+	  {{end}}
+	</select>
+      </div>
+      <div class="form-group">
+	<label class="sr-only" for="nextIndex">Second File</label>
+	<select class="form-control" name="nextIndex" id="nextIndex">
+	  {{range $index, $file := .files}} 
+	  {{$dispIndex := sum $index 1}}
+	  {{if equal $neighbour $index}}
+	  <option selected value="{{$index}}">{{$dispIndex}}</option>
+	  {{else}}
+	  <option value="{{$index}}">{{$dispIndex}}</option>
+	  {{end}}
+	  {{end}}
+	</select>
+      </div>
+      <input type="hidden" name="filename" value="{{$fileName}}"/>
+      <button type="submit" class="btn btn-default">
+	<span class="glyphicon glyphicon-arrow-right"></span>
+      </button>
     </form>
   </div>
 </div>

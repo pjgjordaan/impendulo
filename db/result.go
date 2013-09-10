@@ -30,8 +30,7 @@ func GetCheckstyleResult(matcher, selector bson.M) (ret *checkstyle.Result, err 
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
-	}
-	if (selector == nil || selector[project.DATA] == 1) && ret.OnGridFS() {
+	} else if hasGridFile(ret, selector) {
 		fs := session.DB("").GridFS("fs")
 		var file *mgo.GridFile
 		file, err = fs.OpenId(ret.GetId())
@@ -58,8 +57,7 @@ func GetPMDResult(matcher, selector bson.M) (ret *pmd.Result, err error) {
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
-	}
-	if (selector == nil || selector[project.DATA] == 1) && ret.OnGridFS() {
+	} else if hasGridFile(ret, selector) {
 		fs := session.DB("").GridFS("fs")
 		var file *mgo.GridFile
 		file, err = fs.OpenId(ret.GetId())
@@ -86,8 +84,7 @@ func GetFindbugsResult(matcher, selector bson.M) (ret *findbugs.Result, err erro
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
-	}
-	if (selector == nil || selector[project.DATA] == 1) && ret.OnGridFS() {
+	} else if hasGridFile(ret, selector) {
 		fs := session.DB("").GridFS("fs")
 		var file *mgo.GridFile
 		file, err = fs.OpenId(ret.GetId())
@@ -114,8 +111,7 @@ func GetJPFResult(matcher, selector bson.M) (ret *jpf.Result, err error) {
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
-	}
-	if (selector == nil || selector[project.DATA] == 1) && ret.OnGridFS() {
+	} else if hasGridFile(ret, selector) {
 		fs := session.DB("").GridFS("fs")
 		var file *mgo.GridFile
 		file, err = fs.OpenId(ret.GetId())
@@ -141,8 +137,7 @@ func GetJUnitResult(matcher, selector bson.M) (ret *junit.Result, err error) {
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
-	}
-	if (selector == nil || selector[project.DATA] == 1) && ret.OnGridFS() {
+	} else if hasGridFile(ret, selector) {
 		fs := session.DB("").GridFS("fs")
 		var file *mgo.GridFile
 		file, err = fs.OpenId(ret.GetId())
@@ -169,8 +164,7 @@ func GetJavacResult(matcher, selector bson.M) (ret *javac.Result, err error) {
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
-	}
-	if (selector == nil || selector[project.DATA] == 1) && ret.OnGridFS() {
+	} else if hasGridFile(ret, selector) {
 		fs := session.DB("").GridFS("fs")
 		var file *mgo.GridFile
 		file, err = fs.OpenId(ret.GetId())
@@ -184,6 +178,10 @@ func GetJavacResult(matcher, selector bson.M) (ret *javac.Result, err error) {
 		ret.Data = temp.Data
 	}
 	return
+}
+
+func hasGridFile(result tool.ToolResult, selector bson.M) bool {
+	return (selector == nil || selector[project.DATA] == 1) && result.OnGridFS()
 }
 
 func getGridFile(session *mgo.Session, id interface{}) (holder interface{}, err error) {

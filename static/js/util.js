@@ -1,13 +1,22 @@
-function movevalue(srcParent, destParent, src) {
+function movevalue(srcParentId, destParentId, src) {
     var dest = document.createElement("option");
-    dest.innerHTML = src.value;
+    dest.innerHTML = src.innerHTML;
     dest.setAttribute("value", src.value);
-    dest.setAttribute("onclick", "movevalue('"+destParent+"', '"+srcParent+"', this)");
-    if(destParent == "addedL"){
+    dest.setAttribute("onclick", "movevalue('"+destParentId+"', '"+srcParentId+"', this)");
+    var destParent = document.getElementById(destParentId);
+    var srcParent = document.getElementById(srcParentId);
+    srcParent.removeChild(src);
+    if(destParent.getAttribute("added") === "true"){
 	dest.setAttribute("selected", true);
+    } else{
+	var nodes = srcParent.childNodes;
+	for(var i=0; i<nodes.length; i++) {
+	    if (nodes[i].nodeName.toLowerCase() == 'option') {
+		nodes[i].setAttribute("selected", true);
+	    }
+	}
     }
-    document.getElementById(destParent).appendChild(dest);
-    document.getElementById(srcParent).removeChild(src);
+    destParent.appendChild(dest);
 }
 
 function unhide(it, box) {

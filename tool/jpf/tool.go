@@ -13,9 +13,7 @@ import (
 
 //JPF is a tool.Tool which runs a JPF on a Java source file.
 type Tool struct {
-	cp      string
-	jpfPath string
-	jpfInfo *tool.TargetInfo
+	cp, jpfPath, exec string
 }
 
 //New creates a new JPF instance. jpfDir is the location of the
@@ -31,13 +29,24 @@ func New(jpfConfig *Config, jpfDir string) (jpf *Tool, err error) {
 	if err != nil {
 		return
 	}
-	jpfInfo := tool.NewTarget("JPFRunner.java", "java", "runner", jpfDir)
 	cp := jpfDir + ":" + config.Config(config.JPF_JAR) + ":" +
 		config.Config(config.RUNJPF_JAR) + ":" + config.Config(config.GSON_JAR)
+	jpfInfo := tool.NewTarget("JPFRunner.java", "java", "runner", jpfDir)
+	pubInfo := tool.NewTarget("ImpenduloPublisher.java", "java", "runner", jpfDir)
+	comp := javac.New(cp)
+	id := bson.NewObjectId()
+	_, err = comp.Run(id, jpfInfo)
+	if err != nil {
+		return
+	}
+	_, err = comp.Run(id, pubInfo)
+	if err != nil {
+		return
+	}
 	jpf = &Tool{
 		cp:      cp,
 		jpfPath: jpfPath,
-		jpfInfo: jpfInfo,
+		exec:    jpfInfo.Executable(),
 	}
 	return
 }
@@ -51,18 +60,9 @@ func (this *Tool) Name() string {
 }
 
 func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
-	if this.jpfPath == "" {
-		err = fmt.Errorf("No jpf configuration file available.")
-		return
-	}
-	comp := javac.New(this.cp)
-	_, err = comp.Run(fileId, this.jpfInfo)
-	if err != nil {
-		return
-	}
 	outFile := filepath.Join(ti.Dir, "jpf")
 	args := []string{config.Config(config.JAVA), "-cp", ti.Dir + ":" +
-		this.cp, this.jpfInfo.Executable(), this.jpfPath, ti.Executable(),
+		this.cp, this.exec, this.jpfPath, ti.Executable(),
 		ti.Dir, outFile}
 	outFile = outFile + ".xml"
 	defer os.Remove(outFile)
