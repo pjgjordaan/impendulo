@@ -204,11 +204,15 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 	if err != nil {
 		return
 	}
+	currentLines := GetLines(req, "current")
+	nextLines := GetLines(req, "next")
 	args = map[string]interface{}{"ctx": ctx, "files": files,
 		"selected": selected, "curFile": curFile,
 		"curResult": curRes.GetData(), "results": results,
 		"nextFile": nextFile, "nextResult": nextRes.GetData(),
-		"neighbour": neighbour}
+		"neighbour": neighbour, "currentlines": currentLines,
+		"nextlines": nextLines,
+	}
 	temps = []string{getNav(ctx), "analysis", "pager",
 		curRes.Template(true), nextRes.Template(false)}
 	return

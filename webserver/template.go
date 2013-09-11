@@ -6,7 +6,6 @@ import (
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/tool/diff"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/util"
@@ -24,9 +23,6 @@ var funcs = template.FuncMap{
 	"address":         address,
 	"base":            filepath.Base,
 	"shortname":       shortname,
-	"isCode":          isCode,
-	"diff":            diff.CalcDiff,
-	"createHeader":    fileHeader,
 	"sum":             sum,
 	"equal":           equal,
 	"langs":           tool.Langs,
@@ -41,6 +37,7 @@ var funcs = template.FuncMap{
 	"unescape":        html.UnescapeString,
 	"snapshots":       snapshots,
 	"launches":        launches,
+	"html":            toHTML,
 }
 
 const PAGER_SIZE = 10
@@ -49,6 +46,10 @@ var (
 	templateDir   string
 	baseTemplates []string
 )
+
+func toHTML(val string) template.HTML {
+	return template.HTML(val)
+}
 
 func snapshots(subId bson.ObjectId) (int, error) {
 	return db.Count(db.FILES, bson.M{project.SUBID: subId, project.TYPE: project.SRC})
@@ -95,10 +96,6 @@ func submissionCount(id interface{}) (int, error) {
 
 func equal(a, b interface{}) bool {
 	return a == b
-}
-
-func fileHeader(file *project.File) string {
-	return file.Name + " " + util.Date(file.Time)
 }
 
 func sum(vals ...int) (ret int) {

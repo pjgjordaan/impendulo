@@ -1,6 +1,16 @@
 {{ define "nextResult" }}
-{{if .Success}}
+{{$result := .nextResult}}
+{{if $result.Success}}
 <h4 class="text-success">No errors detected</h4>
+{{else}}
+{{$errCount := len $result.Findings.Errors}}
+<h4 class="text-danger accordion-text">
+  {{if equal $errCount 1}}
+  Error found
+  {{else}}
+  {{$errCount}} errors found
+  {{end}}
+</h4>
 {{end}}
 <div class="panel-group" id="jpfaccordionNext">
   <div class="panel panel-default">
@@ -10,49 +20,47 @@
 	<h4>Statistics</h4>
       </a>
     </div>
-	<div id="StatisticsNext" class="panel-collapse collapse in">
-	  <div class="accordion-inner">
-	    <dl class="dl-horizontal">
-	      <dt>Elapsed time</dt><dd>{{.Stats.Time}} ms</dd>
-	      <dt>New States</dt><dd>{{.Stats.NewStates}}</dd>
-	      <dt>Visited States</dt><dd>{{.Stats.VisitedStates}}</dd>
-	      <dt>BackTracked States</dt><dd>{{.Stats.BacktrackedStates}}</dd>
-	      <dt>End States</dt><dd>{{.Stats.EndStates}}</dd>
-	      <dt>Memory Usage</dt><dd>{{.Stats.Memory}} MB</dd>
-	    </dl>
-	  </div>
-	</div>
+    <div id="StatisticsNext" class="panel-collapse collapse in">
+      <div class="accordion-inner">
+	<dl class="dl-horizontal">
+	  <dt>Elapsed time</dt><dd>{{$result.Stats.Time}} ms</dd>
+	  <dt>New States</dt><dd>{{$result.Stats.NewStates}}</dd>
+	  <dt>Visited States</dt><dd>{{$result.Stats.VisitedStates}}</dd>
+	  <dt>BackTracked States</dt><dd>{{$result.Stats.BacktrackedStates}}</dd>
+	  <dt>End States</dt><dd>{{$result.Stats.EndStates}}</dd>
+	  <dt>Memory Usage</dt><dd>{{$result.Stats.Memory}} MB</dd>
+	</dl>
+      </div>
+    </div>
   </div>
-  {{if not .Success}}
+  {{if not $result.Success}}
   <div class="panel panel-default">
     <div class="panel-heading">
       <a class="accordion-toggle" data-toggle="collapse"
 	 data-parent="#jpfaccordionNext" href="#ErrorsNext">
 	<h4>Errors</h4>
-    </a>
+      </a>
     </div>
-	<div id="ErrorsNext" class="panel-collapse collapse">
-	  <div class="accordion-inner">
-	    {{$errCount := len .Findings.Errors}}
-	    <h4 class="text-danger accordion-text">{{$errCount}} errors found</h4>
-	    {{range .Findings.Errors}}
-	    <h5 class="text-danger accordion-text">{{.Property}}</h5>
-	    {{$details := setBreaks .Details}}
-	    <p class="text-warning accordion-text">{{$details}}</p>
-	    {{end}}
-	  </div>
-	</div>
+    <div id="ErrorsNext" class="panel-collapse collapse">
+      <div class="accordion-inner">
+	{{range $result.Findings.Errors}}
+	<h5 class="text-danger accordion-text">{{.Property}}</h5>
+	{{$details := setBreaks .Details}}
+	<p class="text-warning accordion-text">{{$details}}</p>
+	{{end}}
+      </div>
+    </div>
   </div>
   <div class="panel panel-default">
     <div class="panel-heading">
       <a class="accordion-toggle" data-toggle="collapse"
-	    data-parent="#jpfaccordionNext" href="#ThreadsNext">
+	 data-parent="#jpfaccordionNext" href="#ThreadsNext">
 	<h4>Threads</h4>
       </a>
     </div>
     <div id="ThreadsNext" class="panel-collapse collapse">
       <div class="accordion-inner">
-	{{range .Threads}}
+	{{range $result.Threads}}
 	<dl class="dl-horizontal">
 	  <dt>Name</dt><dd>{{.Name}}</dd>
 	  <dt>Identifier</dt><dd>{{.Id}}</dd>
@@ -74,13 +82,13 @@
     <div id="TraceNext" class="panel-collapse collapse">
       <div class="accordion-inner">
 	<div class="panel-group" id="jpftraceaccordionNext">
-	  {{range .Trace}}
+	  {{range $result.Trace}}
 	  {{$transaddress := address .}}
 	  <div class="panel panel-default">
 	    <div class="panel-heading">
 	      <a class="accordion-toggle" data-toggle="collapse"
-	  data-parent="#jpftraceaccordionNext"
-	  href="#trans{{$transaddress}}Next">
+		 data-parent="#jpftraceaccordionNext"
+		 href="#trans{{$transaddress}}Next">
 		<h5 class="text-center">{{.String}}</h5>
 	      </a>
 	    </div>

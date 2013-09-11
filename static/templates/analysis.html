@@ -6,6 +6,7 @@
 {{$results := .results}}
 {{$selected := .selected}}
 {{$neighbour := .neighbour}}
+{{$project := projectName .ctx.Browse.Pid}}
 <ul class="breadcrumb">
   <li><a href="homeview">Home</a></li>
   {{if .ctx.Browse.IsUser}}
@@ -20,7 +21,6 @@
       {{end}}
     </ul>
   </li>
-  <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">{{projectName .ctx.Browse.Pid}} Submission</a></li>
   {{else}}
   <li><a href="projectresult">Projects</a></li>
   <li class="dropdown">
@@ -33,11 +33,12 @@
       {{end}}
     </ul>
   </li>
-  <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">{{.ctx.Browse.Uid}}'s Submission</a></li>
   {{end}}
+  <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">{{.ctx.Browse.Uid}}'s
+      {{$project}} Submission</a></li>
   <li class="dropdown">
     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-      {{$resultName}} Analysis <span class="caret"></span>
+      {{$resultName}} <span class="caret"></span>
     </a>
     <ul class="dropdown-menu" role="menu">
       {{range $results}}  
@@ -52,7 +53,7 @@
 </ul>
 <h2 class="text-center">
   <small>user</small> {{.ctx.Browse.Uid}} 
-  <small>project</small> {{projectName .ctx.Browse.Pid}}
+  <small>project</small> {{$project}}
   <small>file</small> {{ $fileName}} 
   <small>tool</small> {{$resultName}}
 </h2>
@@ -113,28 +114,29 @@
     </dl>
   </div>
 </div>
-{{if isCode $resultName}}
-<div class="panel-group" id="codeaccordion">
-  <div class="panel panel-default">
-    <div class="panel-heading">
-      <a class="accordion-toggle" data-toggle="collapse" data-parent="#codeaccordion" href="#diff">Diff</a>
-    </div>
-    <div id="diff" class="panel-collapse collapse in">
-      <div class="accordion-inner">
-	{{$currHeader := createHeader $curFile}}
-	{{$nextHeader := createHeader $nextFile}} 
-	{{diff $currHeader $nextHeader .curResult .nextResult}}
-      </div>
-    </div>
-  </div>
-</div>
-{{end}}
+{{if (equal $resultName "Diff")}}
+{{$data := .curResult.Create .nextResult}}
+{{template "currentResult"  $data}}
+{{else}}
 <div class="row">
   <div class="col-md-6">
-    {{template "currentResult" .curResult}}
+    {{template "currentResult"  .}}
   </div>
   <div class="col-md-6">
-    {{template "nextResult" .nextResult}}
+    {{template "nextResult"  .}}
   </div>
 </div>
+{{if (equal $resultName "Code")}}
+<script type="text/javascript">
+  SyntaxHighlighter.all();
+  window.onload = function(){
+  var lines = document.getElementsByClassName("highlighted");
+  console.log(lines[0]);
+  if(lines[0] != undefined){
+  lines[0].scrollIntoView();
+  }
+  };
+</script>
+{{end}}
+{{end}}
 {{end}}

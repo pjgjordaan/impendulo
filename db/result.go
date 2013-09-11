@@ -6,6 +6,7 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/checkstyle"
+	"github.com/godfried/impendulo/tool/diff"
 	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/jpf"
@@ -359,7 +360,7 @@ func GetResultNames(projectId bson.ObjectId, nonTool bool) (ret []string, err er
 	ret = append(ret, checkstyle.NAME, findbugs.NAME,
 		javac.NAME, jpf.NAME, pmd.NAME)
 	if nonTool {
-		ret = append(ret, tool.CODE, tool.SUMMARY)
+		ret = append(ret, tool.CODE, diff.NAME, tool.SUMMARY)
 	}
 	sort.Strings(ret)
 	return

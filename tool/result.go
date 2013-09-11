@@ -12,6 +12,7 @@ const (
 	SUMMARY  = "Summary"
 	ERROR    = "Error"
 	CODE     = "Code"
+	DIFF     = "Diff"
 )
 
 //GraphResult is used to display result data in a graph.

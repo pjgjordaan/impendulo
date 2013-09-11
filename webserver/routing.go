@@ -91,7 +91,7 @@ func Permissions() map[string]int {
 
 func defaultPermissions() map[string]int {
 	return map[string]int{
-		"homeview": 1, "skeletonview": 1, "configview": 1,
+		"homeview": 0, "skeletonview": 1, "configview": 1,
 		"registerview": 0, "projectdownloadview": 1,
 		"projectdeleteview": 1, "userdeleteview": 1, "userresult": 0,
 		"projectresult": 0, "archiveview": 1, "projectview": 1,

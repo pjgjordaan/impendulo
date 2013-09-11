@@ -18,7 +18,7 @@ func init() {
 	settings = make(map[string]string)
 	err := LoadConfigs(DefaultConfig())
 	if err != nil {
-		fmt.Println(err)
+		util.Log(err)
 	}
 }
 

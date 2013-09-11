@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"labix.org/v2/mgo/bson"
 	"math"
+	"strings"
 )
 
 const NAME = "Checkstyle"
@@ -119,6 +120,15 @@ type Report struct {
 	Files   []*File `xml:"file"`
 }
 
+func (this *Report) File(name string) *File {
+	for _, f := range this.Files {
+		if strings.HasSuffix(f.Name, name) {
+			return f
+		}
+	}
+	return nil
+}
+
 func (this *Report) Success() bool {
 	return this.Errors == 0
 }
@@ -148,6 +158,24 @@ func (this *File) String() string {
 	}
 	return fmt.Sprintf("Name: %s; \nErrors: %s\n",
 		this.Name, errs)
+}
+
+func (this *File) Problems() map[string]*Problem {
+	problems := make(map[string]*Problem)
+	for _, e := range this.Errors {
+		p, ok := problems[e.Source]
+		if !ok {
+			problems[e.Source] = &Problem{e, make([]int, 0, len(this.Errors))}
+			p = problems[e.Source]
+		}
+		p.Lines = append(p.Lines, e.Line)
+	}
+	return problems
+}
+
+type Problem struct {
+	*Error
+	Lines []int
 }
 
 type Error struct {

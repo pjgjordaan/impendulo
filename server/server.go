@@ -19,38 +19,6 @@ const (
 )
 const LOG_SERVER = "server/server.go"
 
-/*type connStruct struct{
-	conn net.Conn
-	add bool
-}
-
-var connChan chan connStruct
-var allowChan chan bool
-
-func manageConnections(){
-	connChan = make(chan connStruct)
-	allowChan = make(chan bool)
-	connected := make(map[string]bool)
-	for{
-		conn, ok := <- connChan
-		fmt.Println(conn)
-		if !ok{
-			break
-		}
-		host, _, err := net.SplitHostPort(conn.conn.LocalAddr().String())
-		if conn.add{
-			if err != nil || connected[host]{
-				allowChan <- false
-			} else{
-				connected[host] = true
-				allowChan <- true
-			}
-		} else{
-			delete(connected, host)
-		}
-	}
-}*/
-
 //Run is used to listen for new tcp connections and
 //spawn a new goroutine for each connection.
 //Each goroutine launched will handle its connection and

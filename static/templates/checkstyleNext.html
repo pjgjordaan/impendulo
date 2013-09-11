@@ -1,49 +1,43 @@
-{{ define "nextResult" }}
-{{if .Success}}
+{{define "nextResult" }}
+{{$result := .curResult}}
+{{if $result.Success}}
 <h4 class="text-success">No problems detected.</h4>
 {{else}}
-<h4 class="text-danger">{{.Errors}} problems detected.</h4>
+{{$fileName:= .nextFile.Name}}
+{{$selected := .selected}}
+{{$neighbour := .neighbour}}
+{{$file := $result.File $fileName}}
+{{$count := len $file.Errors}}
+<h4 class="text-danger">{{$count}} problems detected.</h4>
 <div class="panel-group" id="checkstyleaccordionNext">
-  {{range .Files}}
-  {{if .ShouldDisplay}}
-  {{$fileaddress := address .}}
+  {{$errors := $file.Problems}}
+  {{range $errors}}
+  {{$erroraddress := address .}}
   <div class="panel panel-default">
     <div class="panel-heading">
       <a class="accordion-toggle" data-toggle="collapse"
-  data-parent="#checkstyleaccordionNext"
-  href="#File{{$fileaddress}}Next">
-	<h4>{{base .Name}}</h4>
+	 data-parent="#checkstyleaccordionNext"
+	 href="#Error{{$erroraddress}}Next">
+	<h5 class="text-center">{{shortname .Source}}</h5>
       </a>
     </div>
-    <div id="File{{$fileaddress}}Next" class="panel-collapse collapse">
+    <div id="Error{{$erroraddress}}Next" class="panel-collapse collapse">
       <div class="accordion-inner">
-	<div class="panel-group" id="errors{{$fileaddress}}Next">
-	  {{range .Errors}}
-	  {{$erroraddress := address .}}
-	  <div class="panel panel-default">
-	    <div class="panel-heading">
-	      <a class="accordion-toggle" data-toggle="collapse"
-	  data-parent="#errors{{$fileaddress}}Next"
-	  href="#Error{{$erroraddress}}Next">
-		<h5 class="text-center">{{shortname .Source}}</h5>
-	      </a>
-	    </div>
-	    <div id="Error{{$erroraddress}}Next" class="panel-collapse collapse">
-	      <div class="accordion-inner">
-		<dl class="dl-horizontal">
-		  <dt>Location</dt><dd>Line {{.Line}} Column {{.Column}}</dd>
-		  <dt>Severity</dt><dd>{{.Severity}}</dd>
-		  <dt>Description</dt><dd>{{.Message}}</dd>
-		</dl>
-	      </div>
-	    </div>
-	  </div>
-	  {{end}}
-	</div>
+	<dl class="dl-horizontal">
+	  <dt>Locations</dt>
+	  <dd>
+	    {{range .Lines}}
+	    <a href="displayresult?filename={{$fileName}}&currentIndex={{$selected}}&nextIndex={{$neighbour}}&resultname=Code&nextfocusstart={{.}}">
+	      Line {{.}};
+	    </a>
+	    {{end}}
+	  </dd>	
+	  <dt>Severity</dt><dd>{{.Severity}}</dd>
+	  <dt>Description</dt><dd>{{.Message}}</dd>
+	</dl>
       </div>
     </div>
   </div>
-  {{end}}
   {{end}}
 </div>
 {{end}}

@@ -142,6 +142,26 @@ type File struct {
 	Violations []*Violation `xml:"violation"`
 }
 
+func (this *File) Problems() map[string]*Problem {
+	problems := make(map[string]*Problem)
+	for _, v := range this.Violations {
+		p, ok := problems[v.Rule]
+		if !ok {
+			problems[v.Rule] = &Problem{v,
+				make([]int, 0, len(this.Violations)), make([]int, 0, len(this.Violations))}
+			p = problems[v.Rule]
+		}
+		p.Starts = append(p.Starts, v.Begin)
+		p.Ends = append(p.Ends, v.End)
+	}
+	return problems
+}
+
+type Problem struct {
+	*Violation
+	Starts, Ends []int
+}
+
 func (this *File) String() (ret string) {
 	ret = fmt.Sprintf("File{ Name: %s\n.", this.Name)
 	if this.Violations != nil {

@@ -33,12 +33,8 @@ func TestRun(t *testing.T) {
 	defer config.SetConfig(config.JPF_JAR, jpfCfg)
 	config.SetConfig(config.JPF_JAR, "")
 	jpf, err = New(jpfConfig, location)
-	if err != nil {
-		t.Errorf("Could not load jpf %q", err)
-	}
-	res, err := jpf.Run(bson.NewObjectId(), target)
 	if err == nil {
-		t.Errorf("Expected error, got %s.", res)
+		t.Error("Expected error.")
 	}
 }
 

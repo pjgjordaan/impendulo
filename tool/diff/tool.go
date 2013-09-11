@@ -11,20 +11,6 @@ import (
 	"strings"
 )
 
-func CalcDiff(currHeader, nextHeader, currCode, nextCode string) (ret template.HTML){
-	diff, err := Diff(currCode, nextCode)
-	if err != nil{
-		util.Log(err)
-		return
-	}
-	diff = SetHeader(diff, currHeader, nextHeader)
-	ret, err = Diff2HTML(diff)
-	if err != nil{
-		util.Log(err)
-	}
-	return
-}	
-
 func Diff(orig, change string) (ret string, err error) {
 	origName := filepath.Join(util.BaseDir(),
 		fmt.Sprint(&orig)+fmt.Sprint(&change))
@@ -40,6 +26,10 @@ func Diff(orig, change string) (ret string, err error) {
 }
 
 func Diff2HTML(diff string) (ret template.HTML, err error) {
+	if diff == "" {
+		ret = template.HTML("<h4 class=\"text-success\">Files equivalent.<h4>")
+		return
+	}
 	args := []string{config.Config(config.DIFF2HTML)}
 	execRes := tool.RunCommand(args, strings.NewReader(diff))
 	if execRes.HasStdErr() {
@@ -55,7 +45,7 @@ func Diff2HTML(diff string) (ret template.HTML, err error) {
 func SetHeader(diff, orig, change string) string {
 	i := strings.Index(diff, "@@")
 	if i == -1 || i >= len(diff) {
-		return "Files equivalent."
+		return ""
 	}
 	diff = diff[i:]
 	header := "--- " + orig + "\n" + "+++ " + change + "\n"

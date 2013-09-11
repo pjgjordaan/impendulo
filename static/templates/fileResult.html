@@ -1,4 +1,5 @@
 {{define "view"}}
+{{$project := projectName .ctx.Browse.Pid}}
 <ul class="breadcrumb">
   <li><a href="homeview">Home</a></li>  
   {{if .ctx.Browse.IsUser}}
@@ -13,7 +14,6 @@
       {{end}}
     </ul>
   </li>
-  <li class="active">{{projectName .ctx.Browse.Pid}} Submission</li>
   {{else}}
   <li><a href="projectresult">Projects</a></li>
   <li class="dropdown">
@@ -26,11 +26,11 @@
       {{end}}
     </ul>
   </li>
-  <li class="active">{{.ctx.Browse.Uid}}'s Submission</li>
   {{end}}
+  <li class="active">{{.ctx.Browse.Uid}}'s {{$project}} Submission</li>
 </ul>
 <h2 class="text-center"><small>user</small> {{.ctx.Browse.Uid}} <br>
-  <small>project</small> {{projectName .ctx.Browse.Pid}}</h2>
+  <small>project</small> {{$project}}</h2>
 <ul class="list-unstyled">
   {{range .fileinfo}}
   <li>

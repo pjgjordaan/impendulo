@@ -1,7 +1,11 @@
 {{ define "nextResult" }}
-{{if .Success}}
+{{$result := .nextResult}}
+{{if $result.Success}}
 <h4 class="text-success">No bugs found</h4>
 {{else}}
+{{$fileName := .nextFile.Name}}
+{{$selected := .selected}}
+{{$neighbour := .neighbour}}
 <div class="panel-group" id="fbaccordionNext">
   <div class="panel panel-default">
     <div class="panel-heading">
@@ -19,13 +23,13 @@
 	    <div id="OverviewNext" class="panel-collapse collapse">
 	      <div class="accordion-inner">
 		<dl class="dl-horizontal">
-		  <dt>Classes Analyzed</dt><dd>{{.Summary.ClassCount}}</dd>
-		  <dt>Packages Analyzed</dt><dd>{{.Summary.PackageCount}}</dd>
-		  <dt>Classes Referenced</dt><dd>{{.Summary.ReferenceCount}}</dd>
-		  <dt>Total Bugs Found</dt><dd>{{.Summary.BugCount}}</dd>
-		  <dt>Priority 1 Bugs Found</dt><dd>{{.Summary.Priority1}}</dd>
-		  <dt>Priority 2 Bugs Found</dt><dd>{{.Summary.Priority2}}</dd>
-		  <dt>Priority 3 Bugs Found</dt><dd>{{.Summary.Priority3}}</dd>
+		  <dt>Classes Analyzed</dt><dd>{{$result.Summary.ClassCount}}</dd>
+		  <dt>Packages Analyzed</dt><dd>{{$result.Summary.PackageCount}}</dd>
+		  <dt>Classes Referenced</dt><dd>{{$result.Summary.ReferenceCount}}</dd>
+		  <dt>Total Bugs Found</dt><dd>{{$result.Summary.BugCount}}</dd>
+		  <dt>Priority 1 Bugs Found</dt><dd>{{$result.Summary.Priority1}}</dd>
+		  <dt>Priority 2 Bugs Found</dt><dd>{{$result.Summary.Priority2}}</dd>
+		  <dt>Priority 3 Bugs Found</dt><dd>{{$result.Summary.Priority3}}</dd>
 		</dl>
 	      </div>
 	    </div>
@@ -38,7 +42,7 @@
 	    </div>
 	    <div id="FilesNext" class="panel-collapse collapse">
 	      <div class="accordion-inner">
-		{{range .Summary.Files}}
+		{{range $result.Summary.Files}}
 		<dl class="dl-horizontal">
 		  <dt>Path</dt><dd>{{.Path}}</dd>
 		  <dt>Bugs Found</dt><dd>{{.BugCount}}</dd>
@@ -56,7 +60,7 @@
 	    <div id="PackagesNext" class="panel-collapse collapse">
 	      <div class="accordion-inner">
 		<div class="panel-group" id="fbpkgaccordionNext">
-		  {{range .Summary.Packages}}
+		  {{range $result.Summary.Packages}}
 		  {{$pkgaddress := address .}} 
 		  <div class="panel panel-default">
 		    <div class="panel-heading">
@@ -65,9 +69,9 @@
 		      {{$name := "Empty package"}}
 		      {{end}}
 		      <a class="accordion-toggle"
-		      data-toggle="collapse"
-		      data-parent="#fbpkgaccordionNext"
-		      href="#Package{{$pkgaddress}}Next">
+			 data-toggle="collapse"
+			 data-parent="#fbpkgaccordionNext"
+			 href="#Package{{$pkgaddress}}Next">
 			<h5>{{$name}}</h5>
 		      </a>
 		    </div>
@@ -85,9 +89,9 @@
 			    <div class="panel panel-default">
 			      <div class="panel-heading">
 				<a class="accordion-toggle"
-			    data-toggle="collapse"
-			    data-parent="#fbclass{{$pkgaddress}}Next"
-			    href="#Class{{$classaddress}}Next">
+				   data-toggle="collapse"
+				   data-parent="#fbclass{{$pkgaddress}}Next"
+				   href="#Class{{$classaddress}}Next">
 				  <h5 class="text-center">{{.Name}}</h5>
 				</a>
 			      </div>
@@ -126,9 +130,9 @@
     <div id="BugsNext" class="panel-collapse collapse">
       <div class="accordion-inner">
 	<div class="panel-group" id="fbbugsaccordionNext">
-	  {{$patterns := .PatternMap}}
-	  {{$categories := .CategoryMap}}
-	  {{range .Instances}}
+	  {{$patterns := $result.PatternMap}}
+	  {{$categories := $result.CategoryMap}}
+	  {{range $result.Instances}}
 	  {{$pattern := index $patterns .Type}}
 	  {{$category := index $categories .Category}}
 	  <div class="panel panel-default">
@@ -140,13 +144,20 @@
 	    </div>
 	    <div id="Bug{{$bugaddress}}Next" class="panel-collapse collapse">
 	      <div class="accordion-inner">
-		 <dl class="dl-horizontal">
-		   <dt>Priority</dt><dd>{{.Priority}}</dd>
-		   <dt>Category</dt><dd>{{$category.Description}}</dd>
-		   <dt>Rank</dt><dd>{{.Rank}}</dd>
-		   <dt>Description</dt><dd>{{.LongMessage}}</dd>
-		   <dt>Source Line</dt><dd>{{.Line.Message}}</dd>
-		 </dl>
+		<dl class="dl-horizontal">
+		  <dt>Priority</dt><dd>{{.Priority}}</dd>
+		  <dt>Category</dt><dd>{{$category.Description}}</dd>
+		  <dt>Rank</dt><dd>{{.Rank}}</dd>
+		  <dt>Description</dt><dd>{{.LongMessage}}</dd>
+		  <dt>
+		    Source Line
+		  </dt>
+		  <dd>
+		    <a href="displayresult?filename={{$fileName}}&currentIndex={{$selected}}&nextIndex={{$neighbour}}&resultname=Code&nextfocusstart={{.Line.Start}}&nextfocusend={{.Line.End}}">
+		      {{.Line.Message}}
+		    </a>
+		  </dd>
+		</dl>
 	      </div>
 	    </div>
 	  </div>

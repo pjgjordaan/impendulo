@@ -7,6 +7,7 @@ import (
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/diff"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"io/ioutil"
@@ -348,10 +349,25 @@ func LoadSkeleton(req *http.Request) (path string, err error) {
 func GetInt(req *http.Request, name string) (found int, err error) {
 	iStr := req.FormValue(name)
 	found, err = strconv.Atoi(iStr)
-	if err != nil {
-		return
-	}
 	return
+}
+
+func GetLines(req *http.Request, name string) []int {
+	start, err := GetInt(req, name+"focusstart")
+	if err != nil {
+		err = nil
+		start = 0
+	}
+	end, err := GetInt(req, name+"focusend")
+	if err != nil {
+		err = nil
+		end = start
+	}
+	lines := make([]int, end-start+1)
+	for i := start; i <= end; i++ {
+		lines[i-start] = i
+	}
+	return lines
 }
 
 //GetStrings retrieves a string value from a request form.
@@ -378,21 +394,17 @@ func GetString(req *http.Request, name string) (val string, err error) {
 //GetResultData retrieves a DisplayResult for a given file and result name.
 func GetResultData(resultName string, fileId bson.ObjectId) (res tool.DisplayResult, err error) {
 	var file *project.File
-	var fileSelector bson.M
 	matcher := bson.M{project.ID: fileId}
-	if resultName == tool.CODE {
-		//Need to load file's source code (data).
-		fileSelector = bson.M{project.DATA: 1}
-	} else {
-		fileSelector = bson.M{project.RESULTS: 1}
-	}
-	file, err = db.GetFile(matcher, fileSelector)
+	file, err = db.GetFile(matcher, nil)
 	if err != nil {
 		return
 	}
-	if resultName == tool.CODE {
+	switch resultName {
+	case tool.CODE:
 		res = tool.NewCodeResult(file.Data)
-	} else if resultName == tool.SUMMARY {
+	case diff.NAME:
+		res = diff.NewDiffResult(file)
+	case tool.SUMMARY:
 		res = tool.NewSummaryResult()
 		//Load summary for each available result.
 		for name, resid := range file.Results {
@@ -404,7 +416,7 @@ func GetResultData(resultName string, fileId bson.ObjectId) (res tool.DisplayRes
 			}
 			res.(*tool.SummaryResult).AddSummary(currentRes)
 		}
-	} else {
+	default:
 		ival, ok := file.Results[resultName]
 		if !ok {
 			res = tool.NewErrorResult(

@@ -1,10 +1,11 @@
 {{define "nextResult"}}
-{{$header := .ResultHeader}}
-{{if .Success}}
+{{$result := .nextResult}}
+{{$header := $result.ResultHeader}}
+{{if $result.Success}}
 <h4 class="text-success">{{$header}}</h4>
 {{else}}
-{{$res := setBreaks .Result}}
-{{if .Warnings}}
+{{$res := setBreaks $result.Result}}
+{{if $result.Warnings}}
 <h4 class="text-warning">{{$header}}</h4>
 <p class="text-warning">{{$res}}</p>
 {{else}}
