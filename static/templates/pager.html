@@ -1,6 +1,6 @@
 {{define "pager"}}
-{{$selected := .selected}}
-{{$neighbour := .neighbour}}
+{{$selected := .ctx.Browse.Selected}}
+{{$neighbour := .ctx.Browse.Next}}
 {{$fileName := .curFile.Name}}
 {{$sliced := slice .files $selected}}
 {{$adjustment := adjustment .files $selected}}

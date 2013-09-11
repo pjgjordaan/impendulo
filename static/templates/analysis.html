@@ -1,11 +1,11 @@
 {{define "view"}}
 {{$curFile := .curFile}}
 {{$nextFile := .nextFile}}
-{{$resultName := .ctx.Browse.Result}}
+{{$resultName := .ctx.Browse.ResultName}}
 {{$fileName := $curFile.Name}}
 {{$results := .results}}
-{{$selected := .selected}}
-{{$neighbour := .neighbour}}
+{{$selected := .ctx.Browse.Selected}}
+{{$neighbour := .ctx.Browse.Next}}
 {{$project := projectName .ctx.Browse.Pid}}
 <ul class="breadcrumb">
   <li><a href="homeview">Home</a></li>
@@ -34,7 +34,7 @@
     </ul>
   </li>
   {{end}}
-  <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">{{.ctx.Browse.Uid}}'s
+  <li><a href="getfiles">{{.ctx.Browse.Uid}}'s
       {{$project}} Submission</a></li>
   <li class="dropdown">
     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
@@ -43,7 +43,7 @@
     <ul class="dropdown-menu" role="menu">
       {{range $results}}  
       <li>
-	<a href="displayresult?filename={{$curFile.Name}}&currentIndex={{$selected}}&nextIndex={{$neighbour}}&resultname={{.}}">
+	<a href="displayresult?resultname={{.}}">
 	  {{.}}
 	</a>
       </li>
@@ -89,7 +89,6 @@
 	  {{end}}
 	</select>
       </div>
-      <input type="hidden" name="filename" value="{{$fileName}}"/>
       <button type="submit" class="btn btn-default">
 	<span class="glyphicon glyphicon-arrow-right"></span>
       </button>

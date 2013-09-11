@@ -3,14 +3,10 @@
 {{if $result.Success}}
 <h4 class="text-success">No problems detected.</h4>
 {{else}}
-{{$fileName:= .curFile.Name}}
-{{$selected := .selected}}
-{{$neighbour := .neighbour}}
-{{$file := $result.File $fileName}}
+{{$file := $result.File .ctx.Browse.FileName}}
 {{$count := len $file.Errors}}
 <h4 class="text-danger">{{$count}} problems detected.</h4>
 <div class="panel-group" id="checkstyleaccordionCurrent">
-  {{$file := $result.File $fileName}}
   {{$errors := $file.Problems}}
   {{range $errors}}
   {{$erroraddress := address .}}
@@ -28,7 +24,7 @@
 	  <dt>Locations</dt>
 	  <dd>
 	    {{range .Lines}}
-	    <a href="displayresult?filename={{$fileName}}&currentIndex={{$selected}}&nextIndex={{$neighbour}}&resultname=Code&currentfocusstart={{.}}">
+	    <a href="displayresult?resultname=Code&currentfocusstart={{.}}">
 	      Line {{.}};
 	    </a>
 	    {{end}}

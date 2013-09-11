@@ -14,6 +14,7 @@ import (
 
 func init() {
 	gob.Register(new(BrowseData))
+	gob.Register(new(bson.ObjectId))
 }
 
 //Context is used to keep track of the current user's session.
@@ -26,12 +27,10 @@ type Context struct {
 
 //BrowseData is used to keep track of the user's browsing.
 type BrowseData struct {
-	IsUser bool
-	Pid    string
-	Uid    string
-	Sid    string
-	Result string
-	View   string
+	IsUser                          bool
+	Pid, Sid                        bson.ObjectId
+	Uid, FileName, ResultName, View string
+	Selected, Next                  int
 }
 
 //Close closes a session.
@@ -118,10 +117,10 @@ func (ctx *Context) Users() ([]*user.User, error) {
 func (ctx *Context) SetResult(req *http.Request) {
 	name := req.FormValue("resultname")
 	if name != "" {
-		ctx.Browse.Result = name
+		ctx.Browse.ResultName = name
 	}
-	if ctx.Browse.Result == "" {
-		ctx.Browse.Result = tool.CODE
+	if ctx.Browse.ResultName == "" {
+		ctx.Browse.ResultName = tool.CODE
 	}
 }
 

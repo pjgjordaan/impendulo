@@ -1,11 +1,8 @@
-{{ define "currentResult" }}
+{{define "currentResult"}}
 {{$result := .curResult}}
 {{if $result.Success}}
 <h4 class="text-success">No bugs found</h4>
 {{else}}
-{{$fileName:= .curFile.Name}}
-{{$selected := .selected}}
-{{$neighbour := .neighbour}}
 <div class="panel-group" id="fbaccordionCurrent">
   <div class="panel panel-default">
     <div class="panel-heading">
@@ -153,7 +150,7 @@
 		    Source Line
 		  </dt>
 		  <dd>
-		    <a href="displayresult?filename={{$fileName}}&currentIndex={{$selected}}&nextIndex={{$neighbour}}&resultname=Code&currentfocusstart={{.Line.Start}}&currentfocusend={{.Line.End}}">
+		    <a href="displayresult?resultname=Code&currentfocusstart={{.Line.Start}}&currentfocusend={{.Line.End}}">
 		      {{.Line.Message}}
 		    </a>
 		  </dd>

@@ -1,11 +1,8 @@
-{{ define "nextResult" }}
+{{define "nextResult"}}
 {{$result := .nextResult}}
 {{if $result.Success}}
 <h4 class="text-success">No bugs found</h4>
 {{else}}
-{{$fileName := .nextFile.Name}}
-{{$selected := .selected}}
-{{$neighbour := .neighbour}}
 <div class="panel-group" id="fbaccordionNext">
   <div class="panel panel-default">
     <div class="panel-heading">
@@ -23,13 +20,13 @@
 	    <div id="OverviewNext" class="panel-collapse collapse">
 	      <div class="accordion-inner">
 		<dl class="dl-horizontal">
-		  <dt>Classes Analyzed</dt><dd>{{$result.Summary.ClassCount}}</dd>
-		  <dt>Packages Analyzed</dt><dd>{{$result.Summary.PackageCount}}</dd>
-		  <dt>Classes Referenced</dt><dd>{{$result.Summary.ReferenceCount}}</dd>
-		  <dt>Total Bugs Found</dt><dd>{{$result.Summary.BugCount}}</dd>
-		  <dt>Priority 1 Bugs Found</dt><dd>{{$result.Summary.Priority1}}</dd>
-		  <dt>Priority 2 Bugs Found</dt><dd>{{$result.Summary.Priority2}}</dd>
-		  <dt>Priority 3 Bugs Found</dt><dd>{{$result.Summary.Priority3}}</dd>
+		  <dt>Classes Analyzed</dt><dd>{{.Summary.ClassCount}}</dd>
+		  <dt>Packages Analyzed</dt><dd>{{.Summary.PackageCount}}</dd>
+		  <dt>Classes Referenced</dt><dd>{{.Summary.ReferenceCount}}</dd>
+		  <dt>Total Bugs Found</dt><dd>{{.Summary.BugCount}}</dd>
+		  <dt>Priority 1 Bugs Found</dt><dd>{{.Summary.Priority1}}</dd>
+		  <dt>Priority 2 Bugs Found</dt><dd>{{.Summary.Priority2}}</dd>
+		  <dt>Priority 3 Bugs Found</dt><dd>{{.Summary.Priority3}}</dd>
 		</dl>
 	      </div>
 	    </div>
@@ -42,7 +39,7 @@
 	    </div>
 	    <div id="FilesNext" class="panel-collapse collapse">
 	      <div class="accordion-inner">
-		{{range $result.Summary.Files}}
+		{{range .Summary.Files}}
 		<dl class="dl-horizontal">
 		  <dt>Path</dt><dd>{{.Path}}</dd>
 		  <dt>Bugs Found</dt><dd>{{.BugCount}}</dd>
@@ -60,7 +57,7 @@
 	    <div id="PackagesNext" class="panel-collapse collapse">
 	      <div class="accordion-inner">
 		<div class="panel-group" id="fbpkgaccordionNext">
-		  {{range $result.Summary.Packages}}
+		  {{range .Summary.Packages}}
 		  {{$pkgaddress := address .}} 
 		  <div class="panel panel-default">
 		    <div class="panel-heading">
@@ -130,9 +127,9 @@
     <div id="BugsNext" class="panel-collapse collapse">
       <div class="accordion-inner">
 	<div class="panel-group" id="fbbugsaccordionNext">
-	  {{$patterns := $result.PatternMap}}
-	  {{$categories := $result.CategoryMap}}
-	  {{range $result.Instances}}
+	  {{$patterns := .PatternMap}}
+	  {{$categories := .CategoryMap}}
+	  {{range .Instances}}
 	  {{$pattern := index $patterns .Type}}
 	  {{$category := index $categories .Category}}
 	  <div class="panel panel-default">
@@ -153,7 +150,7 @@
 		    Source Line
 		  </dt>
 		  <dd>
-		    <a href="displayresult?filename={{$fileName}}&currentIndex={{$selected}}&nextIndex={{$neighbour}}&resultname=Code&nextfocusstart={{.Line.Start}}&nextfocusend={{.Line.End}}">
+		    <a href="displayresult?resultname=Code&nextfocusstart={{.Line.Start}}&nextfocusend={{.Line.End}}">
 		      {{.Line.Message}}
 		    </a>
 		  </dd>

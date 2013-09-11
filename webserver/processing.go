@@ -226,69 +226,39 @@ func DeleteUser(req *http.Request, ctx *Context) (err error) {
 	return
 }
 
-//RetrieveNames fetches all filenames in a submission.
-func RetrieveNames(req *http.Request, ctx *Context) (ret []string, err error) {
-	ctx.Browse.Sid = req.FormValue("subid")
-	subId, err := util.ReadId(ctx.Browse.Sid)
-	if err != nil {
-		return
-	}
-	matcher := bson.M{project.SUBID: subId, project.TYPE: project.SRC}
-	ret, err = db.GetFileNames(matcher)
-	if err != nil {
-		return
-	}
-	if ctx.Browse.IsUser {
-		//Load project id if browsing in user view.
-		var sub *project.Submission
-		sub, err = db.GetSubmission(bson.M{project.ID: subId},
-			bson.M{project.PROJECT_ID: 1})
-		if err != nil {
-			return
-		}
-		ctx.Browse.Pid = sub.ProjectId.Hex()
-	}
-	return
-}
-
 //RetrieveFileInfo fetches all filenames in a submission.
 func RetrieveFileInfo(req *http.Request, ctx *Context) (ret []*db.FileInfo, err error) {
-	ctx.Browse.Sid = req.FormValue("subid")
-	subId, err := util.ReadId(ctx.Browse.Sid)
-	if err != nil {
-		return
+	subId, serr := util.ReadId(req.FormValue("subid"))
+	if serr == nil {
+		ctx.Browse.Sid = subId
 	}
-	matcher := bson.M{project.SUBID: subId, project.TYPE: project.SRC}
+	matcher := bson.M{project.SUBID: ctx.Browse.Sid, project.TYPE: project.SRC}
 	ret, err = db.GetFileInfo(matcher)
 	if err != nil {
 		return
 	}
-	sub, err := db.GetSubmission(bson.M{project.ID: subId},
+	sub, err := db.GetSubmission(bson.M{project.ID: ctx.Browse.Sid},
 		bson.M{project.PROJECT_ID: 1, project.USER: 1})
 	if err != nil {
 		return
 	}
-	ctx.Browse.Pid = sub.ProjectId.Hex()
+	ctx.Browse.Pid = sub.ProjectId
 	ctx.Browse.Uid = sub.User
 	return
 }
 
 //RetrieveFiles fetches all files in a submission with a given name.
 func RetrieveFiles(req *http.Request, ctx *Context) (ret []*project.File, err error) {
-	name, err := GetString(req, "filename")
-	if err != nil {
-		return
+	name, ferr := GetString(req, "filename")
+	if ferr == nil {
+		ctx.Browse.FileName = name
 	}
-	sid, err := util.ReadId(ctx.Browse.Sid)
-	if err != nil {
-		return
-	}
-	matcher := bson.M{project.SUBID: sid,
-		project.TYPE: project.SRC, project.NAME: name}
+	matcher := bson.M{project.SUBID: ctx.Browse.Sid,
+		project.TYPE: project.SRC, project.NAME: ctx.Browse.FileName}
 	selector := bson.M{project.TIME: 1}
 	ret, err = db.GetFiles(matcher, selector, project.TIME)
 	if err == nil && len(ret) == 0 {
-		err = fmt.Errorf("No files found with name %q.", name)
+		err = fmt.Errorf("No files found with name %q.", ctx.Browse.FileName)
 	}
 	return
 }
@@ -309,7 +279,7 @@ func RetrieveSubmissions(req *http.Request, ctx *Context) (subs []*project.Submi
 		if err != nil {
 			return
 		}
-		ctx.Browse.Pid = idStr
+		ctx.Browse.Pid = pid
 		ctx.Browse.IsUser = false
 		subs, err = db.GetSubmissions(
 			bson.M{project.PROJECT_ID: pid}, nil, "-"+project.TIME)
@@ -475,14 +445,8 @@ func getNeighbour(req *http.Request, maxSize int) (int, error) {
 	return getIndex(req, "nextIndex", maxSize)
 }
 
-func projectName(idStr string) (name string, err error) {
-	var id bson.ObjectId
-	id, err = util.ReadId(idStr)
-	if err != nil {
-		return
-	}
-	var proj *project.Project
-	proj, err = db.GetProject(bson.M{project.ID: id},
+func projectName(id bson.ObjectId) (name string, err error) {
+	proj, err := db.GetProject(bson.M{project.ID: id},
 		bson.M{project.NAME: 1})
 	if err != nil {
 		return

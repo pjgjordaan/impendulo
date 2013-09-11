@@ -25,52 +25,22 @@
   </thead>
   <tbody data-provides="rowlink" >
     {{ range .subRes}}
+    {{$subId := .Id.Hex}}
     <tr class="success">
-      <td><a class="rowlink" href="getfiles?subid={{.Id.Hex}}">
+      <td><a class="rowlink" href="getfiles?subid={{$subId}}">
 	  {{.User}}
       </a></td>
-      <td><a class="rowlink" href="getfiles?subid={{.Id.Hex}}" >
+      <td><a class="rowlink" href="getfiles?subid={{$subId}}" >
 	  {{date .Time}}
       </a></td>
-      <td><a class="rowlink" href="getfiles?subid={{.Id.Hex}}">
+      <td><a class="rowlink" href="getfiles?subid={{$subId}}">
 	  {{snapshots .Id}}
       </a></td>
-      <td><a class="rowlink" href="getfiles?subid={{.Id.Hex}}">
+      <td><a class="rowlink" href="getfiles?subid={{$subId}}">
 	  {{launches .Id}}
       </a></td>
     </tr>
     {{end}}
   </tbody>
 </table>
-<!--
-<form role="form" class="form-horizontal" action="displayresult" method="get">
-  <div class="form-group">
-    <label class="col-lg-2" >Compare Submissions</label>
-  </div>
-  <div class="form-group">
-    <div class="col-lg-4">
-      <label class="sr-only" for="available">Available Submissions</label>
-      <select class="form-control" name="available" id="available" size="5">
-	{{range .subRes}}
-	<option value="{{.Id.Hex}}" 
-		onclick="movevalue('available', 'added', this)">
-	  {{.User}} {{date .Time}}
-	</option>
-	{{end}}
-      </select>
-    </div>
-    <div class="col-lg-4">
-      <select class="form-control" name="added" id="added" size="5"
-	      added="true" multiple></select>
-    </div>
-  </div>
-  <div class="form-group">
-    <div class="col-lg-3">
-      <button type="submit" class="btn btn-default">
-	Compare  <span class="glyphicon glyphicon-arrow-right"></span>
-      </button>
-    </div>
-  </div>
-</form>
--->
 {{end}}

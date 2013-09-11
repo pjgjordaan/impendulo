@@ -172,45 +172,40 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 	if err != nil {
 		return
 	}
-	selected, err := getSelected(req, len(files)-1)
+	selected, serr := getSelected(req, len(files)-1)
+	if serr == nil {
+		ctx.Browse.Selected = selected
+	}
+	curFile, err := getFile(files[ctx.Browse.Selected].Id)
 	if err != nil {
 		return
 	}
-	curFile, err := getFile(files[selected].Id)
+	results, err := db.GetResultNames(ctx.Browse.Pid, true)
 	if err != nil {
 		return
 	}
-	projectId, err := util.ReadId(ctx.Browse.Pid)
+	curRes, err := GetResultData(ctx.Browse.ResultName, curFile.Id)
 	if err != nil {
 		return
 	}
-	results, err := db.GetResultNames(projectId, true)
+	neighbour, nerr := getNeighbour(req, len(files)-1)
+	if nerr == nil {
+		ctx.Browse.Next = neighbour
+	}
+	nextFile, err := getFile(files[ctx.Browse.Next].Id)
 	if err != nil {
 		return
 	}
-	curRes, err := GetResultData(ctx.Browse.Result, curFile.Id)
-	if err != nil {
-		return
-	}
-	neighbour, err := getNeighbour(req, len(files)-1)
-	if err != nil {
-		return
-	}
-	nextFile, err := getFile(files[neighbour].Id)
-	if err != nil {
-		return
-	}
-	nextRes, err := GetResultData(ctx.Browse.Result, nextFile.Id)
+	nextRes, err := GetResultData(ctx.Browse.ResultName, nextFile.Id)
 	if err != nil {
 		return
 	}
 	currentLines := GetLines(req, "current")
 	nextLines := GetLines(req, "next")
 	args = map[string]interface{}{"ctx": ctx, "files": files,
-		"selected": selected, "curFile": curFile,
-		"curResult": curRes.GetData(), "results": results,
-		"nextFile": nextFile, "nextResult": nextRes.GetData(),
-		"neighbour": neighbour, "currentlines": currentLines,
+		"curFile": curFile, "curResult": curRes.GetData(),
+		"results": results, "nextFile": nextFile,
+		"nextResult": nextRes.GetData(), "currentlines": currentLines,
 		"nextlines": nextLines,
 	}
 	temps = []string{getNav(ctx), "analysis", "pager",
@@ -232,19 +227,15 @@ func displayGraph(w http.ResponseWriter, req *http.Request, ctx *Context) error 
 }
 
 func graphArgs(req *http.Request, ctx *Context) (args map[string]interface{}, err error) {
-	fileName, err := GetString(req, "filename")
-	if err != nil {
-		return
+	fileName, ferr := GetString(req, "filename")
+	if ferr == nil {
+		ctx.Browse.FileName = fileName
 	}
 	files, err := RetrieveFiles(req, ctx)
 	if err != nil {
 		return
 	}
-	projectId, err := util.ReadId(ctx.Browse.Pid)
-	if err != nil {
-		return
-	}
-	results, err := db.GetResultNames(projectId, false)
+	results, err := db.GetResultNames(ctx.Browse.Pid, false)
 	results = append(results, "All")
 	if err != nil {
 		return
@@ -253,10 +244,10 @@ func graphArgs(req *http.Request, ctx *Context) (args map[string]interface{}, er
 	if err != nil {
 		return
 	}
-	graphArgs := LoadResultGraphData(ctx.Browse.Result, tipe, files)
+	graphArgs := LoadResultGraphData(ctx.Browse.ResultName, tipe, files)
 	args = map[string]interface{}{
 		"ctx": ctx, "files": files, "results": results,
-		"fileName": fileName, "graphArgs": graphArgs, "type": tipe,
+		"graphArgs": graphArgs, "type": tipe,
 	}
 	return
 }

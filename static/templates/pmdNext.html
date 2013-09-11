@@ -1,11 +1,8 @@
-{{ define "nextResult" }}
+{{define "nextResult"}}
 {{$result := .nextResult}}
 {{if $result.Success}}
 <h4 class="text-success">No problems detected.</h4>
 {{else}}
-{{$fileName := .nextFile.Name}}
-{{$selected := .selected}}
-{{$neighbour := .neighbour}}
 <h4 class="text-danger">{{$result.Errors}} problems detected.</h4>
 <div class="panel-group" id="pmdaccordionNext">
   {{range $result.Files}}
@@ -40,7 +37,7 @@
 		    {{$ends := .Ends}}
 		    {{range $i, $start :=  .Starts}}
 		    {{$end := index $ends $i}}
-		    <a href="displayresult?filename={{$fileName}}&currentIndex={{$selected}}&nextIndex={{$neighbour}}&resultname=Code&nextfocusstart={{$start}}&nextfocusend={{$end}}">
+		    <a href="displayresult?resultname=Code&nextfocusstart={{$start}}&nextfocusend={{$end}}">
 		      {{$start}} to {{$end}}; 
 		    </a>
 		    {{end}}

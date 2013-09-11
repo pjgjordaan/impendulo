@@ -23,17 +23,18 @@
   </tr></thead>
   <tbody data-provides="rowlink" >
     {{ range .subRes}}
+    {{$subId := .Id.Hex}}
     <tr class="success">
-      <td><a class="rowlink" href="getfiles?subid={{.Id.Hex}}">
+      <td><a class="rowlink" href="getfiles?subid={{$subId}}">
 	  {{projectName .ProjectId.Hex}}
       </a></td>
-      <td><a class="rowlink" href="getfiles?subid={{.Id.Hex}}" >
+      <td><a class="rowlink" href="getfiles?subid={{$subId}}" >
 	  {{date .Time}}
       </a></td>
-      <td><a class="rowlink" href="getfiles?subid={{.Id.Hex}}">
+      <td><a class="rowlink" href="getfiles?subid={{$subId}}">
 	  {{snapshots .Id}}
       </a></td>
-      <td><a class="rowlink" href="getfiles?subid={{.Id.Hex}}">
+      <td><a class="rowlink" href="getfiles?subid={{$subId}}">
 	  {{launches .Id}}
       </a></td>
     </tr>
