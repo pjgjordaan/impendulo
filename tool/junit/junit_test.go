@@ -14,7 +14,6 @@ func TestRun(t *testing.T) {
 	location := filepath.Join(os.TempDir(), "Triangle")
 	srcLocation := filepath.Join(location, "triangle")
 	testLocation := filepath.Join(location, "testing")
-	dataLocation := filepath.Join(testLocation, "data")
 	os.Mkdir(location, util.DPERM)
 	defer os.RemoveAll(location)
 	os.Mkdir(srcLocation, util.DPERM)
@@ -25,28 +24,24 @@ func TestRun(t *testing.T) {
 	}
 	target := tool.NewTarget("Triangle.java",
 		tool.JAVA, "triangle", location)
-	testTarget := tool.NewTarget("AllTests.java",
-		tool.JAVA, "testing", location)
-	err = util.SaveFile(target.FilePath(), file)
+	err = util.SaveFile(target.FilePath(), validFile)
 	if err != nil {
 		t.Errorf("Could not save file %q", err)
 	}
-	err = util.SaveFile(testTarget.FilePath(), test)
+	dataBytes, err := util.ZipMap(dataMap)
 	if err != nil {
-		t.Errorf("Could not save file %q", err)
+		t.Errorf("Could not zip map %q", err)
 	}
-	for name, data := range testData {
-		err = util.SaveFile(filepath.Join(dataLocation, name), data)
-		if err != nil {
-			t.Errorf("Could not save file %q", err)
-		}
+	test := NewTest(bson.NewObjectId(), "AllTests.java", "user", "testing", testBytes, dataBytes)
+	junit, err := New(test, location)
+	if err != nil {
+		t.Errorf("Expected success, got %q", err)
 	}
-	junit := New(testTarget)
 	_, err = junit.Run(bson.NewObjectId(), target)
 	if err != nil {
 		t.Errorf("Expected success, got %q", err)
 	}
-	err = util.SaveFile(target.FilePath(), file2)
+	err = util.SaveFile(target.FilePath(), invalidFile)
 	if err != nil {
 		t.Errorf("Could not save file %q", err)
 	}
@@ -62,7 +57,7 @@ func TestRun(t *testing.T) {
 	}
 }
 
-var file = []byte(`
+var validFile = []byte(`
 package triangle;
 public class Triangle {
 	public int maxpath(int[][] triangle) {
@@ -78,7 +73,7 @@ public class Triangle {
 }
 `)
 
-var file2 = []byte(`
+var invalidFile = []byte(`
 public class Triangle {
 	public int maxpath(int[][] triangle) {
 		int height = triangle.length - 2;
@@ -93,7 +88,7 @@ public class Triangle {
 
 `)
 
-var test = []byte(`
+var testBytes = []byte(`
 package testing;
 
 import java.io.BufferedReader;
@@ -205,10 +200,10 @@ public class AllTests {
 
 }`)
 
-var testData = map[string][]byte{
-	"0001.txt": []byte("5 \n 1 \n 2 3 \n 4 5 6 \n 7 8 9 10 \n 11 12 13 14 15 \n 35"),
-	"0002.txt": []byte("2 \n 3 \n 3 3 \n 6"),
-	"0003.txt": []byte("1 \n 9 \n 9"),
-	"0004.txt": []byte("4 \n 6 \n 6 7 \n 3 7 1 \n 8 1 1 1 \n 23"),
-	"0005.txt": []byte("2 \n 2552 \n 8988 2808 \n 11540"),
+var dataMap = map[string][]byte{
+	"data/0001.txt": []byte("5 \n 1 \n 2 3 \n 4 5 6 \n 7 8 9 10 \n 11 12 13 14 15 \n 35"),
+	"data/0002.txt": []byte("2 \n 3 \n 3 3 \n 6"),
+	"data/0003.txt": []byte("1 \n 9 \n 9"),
+	"data/0004.txt": []byte("4 \n 6 \n 6 7 \n 3 7 1 \n 8 1 1 1 \n 23"),
+	"data/0005.txt": []byte("2 \n 2552 \n 8988 2808 \n 11540"),
 }

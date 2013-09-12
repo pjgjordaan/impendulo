@@ -115,37 +115,6 @@ func GetSubmissions(matcher, selector interface{}, sort ...string) (ret []*proje
 	return
 }
 
-//GetTest retrieves a test matching the given interface from the active database.
-func GetTest(matcher, selector interface{}) (ret *project.Test, err error) {
-	session, err := getSession()
-	if err != nil {
-		return
-	}
-	defer session.Close()
-	c := session.DB("").C(TESTS)
-	err = c.Find(matcher).Select(selector).One(&ret)
-	if err != nil {
-		err = &DBGetError{"test", err, matcher}
-	}
-	return
-}
-
-//GetTest retrieves tests matching
-//the given interface from the active database.
-func GetTests(matcher, selector interface{}) (ret []*project.Test, err error) {
-	session, err := getSession()
-	if err != nil {
-		return
-	}
-	defer session.Close()
-	c := session.DB("").C(TESTS)
-	err = c.Find(matcher).Select(selector).All(&ret)
-	if err != nil {
-		err = &DBGetError{"tests", err, matcher}
-	}
-	return
-}
-
 //GetProject retrieves a project matching
 //the given interface from the active database.
 func GetProject(matcher, selector interface{}) (ret *project.Project, err error) {
@@ -195,21 +164,6 @@ func AddFile(f *project.File) (err error) {
 		err = &DBAddError{f.String(), err}
 	}
 	return
-}
-
-//AddTest adds a new test to the active database.
-func AddTest(t *project.Test) error {
-	session, err := getSession()
-	if err != nil {
-		return err
-	}
-	defer session.Close()
-	col := session.DB("").C(TESTS)
-	err = col.Insert(t)
-	if err != nil {
-		err = &DBAddError{t.String(), err}
-	}
-	return nil
 }
 
 //AddSubmission adds a new submission to the active database.

@@ -21,21 +21,33 @@ type Tool struct {
 //New creates a new Tool instance. testDir is the location of the Tool testing files.
 //cp is the classpath used and datalocation is the location of data files used when running
 //the tests.
-func New(testInfo *tool.TargetInfo) *Tool {
+func New(test *Test, dir string) (junit *Tool, err error) {
+	testInfo := tool.NewTarget(test.Name, tool.JAVA, test.Package, dir)
+	err = util.SaveFile(testInfo.FilePath(), test.Test)
+	if err != nil {
+		return
+	}
+	if len(test.Data) != 0 {
+		err = util.Unzip(testInfo.PackagePath(), test.Data)
+		if err != nil {
+			return
+		}
+	}
 	dataLocation := filepath.Join(testInfo.PackagePath(), "data")
 	runnerInfo := tool.NewTarget("TestRunner.java", "java", "testing", testInfo.Dir)
 	cp := testInfo.Dir + ":" + config.Config(config.JUNIT_JAR) + ":" +
 		config.Config(config.ANT_JUNIT) + ":" + config.Config(config.ANT)
-	return &Tool{
+	junit = &Tool{
 		cp:           cp,
 		dataLocation: dataLocation,
 		testInfo:     testInfo,
 		runnerInfo:   runnerInfo,
 	}
+	return
 }
 
 func (this *Tool) Lang() string {
-	return "java"
+	return tool.JAVA
 }
 
 func (this *Tool) Name() string {

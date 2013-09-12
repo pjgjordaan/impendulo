@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool/javac"
+	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/user"
 	"labix.org/v2/mgo/bson"
 	"reflect"
@@ -15,7 +16,7 @@ func TestSetup(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
 	s, err := getSession()
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	defer s.Close()
@@ -25,7 +26,7 @@ func TestRemoveFile(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
 	s, err := getSession()
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	defer s.Close()
@@ -52,7 +53,7 @@ func TestGetFile(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
 	s, err := getSession()
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	defer s.Close()
@@ -78,7 +79,7 @@ func TestGetSubmission(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
 	s, err := getSession()
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	defer s.Close()
@@ -101,7 +102,7 @@ func TestGetResult(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
 	s, err := getSession()
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	defer s.Close()
@@ -132,9 +133,9 @@ func TestGetUserById(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
 	s, err := getSession()
-	if err != nil{
+	if err != nil {
 		t.Error(err)
-	}	
+	}
 	defer s.Close()
 	u := user.New("uname", "pword")
 	err = AddUser(u)
@@ -154,11 +155,11 @@ func TestGetTest(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
 	s, err := getSession()
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 	defer s.Close()
-	test := project.NewTest(bson.NewObjectId(), "name", "user", "pkg", testData, fileData)
+	test := junit.NewTest(bson.NewObjectId(), "name", "user", "pkg", testData, fileData)
 	err = AddTest(test)
 	if err != nil {
 		t.Error(err)
@@ -176,9 +177,9 @@ func TestCount(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
 	s, err := getSession()
-	if err != nil{
+	if err != nil {
 		t.Error(err)
-	}	
+	}
 	defer s.Close()
 	num := 100
 	n, err := Count(PROJECTS, bson.M{})
@@ -213,10 +214,10 @@ func TestCount(t *testing.T) {
 }
 
 var fileInfo = bson.M{
-	project.TIME: 1000, 
-	project.TYPE: project.SRC, 
-	project.NAME: "Triangle.java", 
-	project.PKG: "triangle",
+	project.TIME: 1000,
+	project.TYPE: project.SRC,
+	project.NAME: "Triangle.java",
+	project.PKG:  "triangle",
 }
 
 var fileData = []byte(`[Faust:] "I, Johannes Faust, do call upon thee, Mephistopheles!"

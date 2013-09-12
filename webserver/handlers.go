@@ -253,21 +253,19 @@ func graphArgs(req *http.Request, ctx *Context) (args map[string]interface{}, er
 }
 
 func login(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	err := Login(req, ctx)
-	if err != nil {
-		ctx.AddMessage("Invalid username or password.", true)
-	}
+	msg, err := Login(req, ctx)
+	ctx.AddMessage(msg, err != nil)
 	http.Redirect(w, req, getRoute("index"), http.StatusSeeOther)
 	return err
 }
 
 func register(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	err := Register(req, ctx)
+	msg, err := Register(req, ctx)
 	if err != nil {
-		ctx.AddMessage("Invalid credentials.", true)
+		ctx.AddMessage(msg, true)
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 	} else {
-		ctx.AddMessage("Successfully registered.", false)
+		ctx.AddMessage(msg, false)
 		http.Redirect(w, req, getRoute("index"), http.StatusSeeOther)
 	}
 	return err

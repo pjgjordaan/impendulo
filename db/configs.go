@@ -3,6 +3,7 @@ package db
 import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool/jpf"
+	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/tool/pmd"
 	"labix.org/v2/mgo/bson"
 )
@@ -104,4 +105,50 @@ func RemovePMDById(id interface{}) (err error) {
 		err = &DBRemoveError{"pmd", err, id}
 	}
 	return
+}
+
+//GetTest retrieves a test matching the given interface from the active database.
+func GetTest(matcher, selector interface{}) (ret *junit.Test, err error) {
+	session, err := getSession()
+	if err != nil {
+		return
+	}
+	defer session.Close()
+	c := session.DB("").C(TESTS)
+	err = c.Find(matcher).Select(selector).One(&ret)
+	if err != nil {
+		err = &DBGetError{"test", err, matcher}
+	}
+	return
+}
+
+//GetTest retrieves tests matching
+//the given interface from the active database.
+func GetTests(matcher, selector interface{}) (ret []*junit.Test, err error) {
+	session, err := getSession()
+	if err != nil {
+		return
+	}
+	defer session.Close()
+	c := session.DB("").C(TESTS)
+	err = c.Find(matcher).Select(selector).All(&ret)
+	if err != nil {
+		err = &DBGetError{"tests", err, matcher}
+	}
+	return
+}
+
+//AddTest adds a new test to the active database.
+func AddTest(t *junit.Test) error {
+	session, err := getSession()
+	if err != nil {
+		return err
+	}
+	defer session.Close()
+	col := session.DB("").C(TESTS)
+	err = col.Insert(t)
+	if err != nil {
+		err = &DBAddError{t.String(), err}
+	}
+	return nil
 }

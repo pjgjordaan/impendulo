@@ -13,14 +13,14 @@ import (
 
 //File stores a single file's data from a submission.
 type File struct {
-	Id       bson.ObjectId "_id"
-	SubId    bson.ObjectId "subid"
-	Name     string        "name"
-	Package  string        "package"
-	Type     string        "type"
-	Time     int64         "time"
-	Data     []byte        "data"
-	Results  bson.M        "results"
+	Id      bson.ObjectId "_id"
+	SubId   bson.ObjectId "subid"
+	Name    string        "name"
+	Package string        "package"
+	Type    string        "type"
+	Time    int64         "time"
+	Data    []byte        "data"
+	Results bson.M        "results"
 }
 
 func (this *File) TypeName() string {
@@ -78,10 +78,10 @@ func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) (fil
 func NewArchive(subId bson.ObjectId, data []byte) *File {
 	id := bson.NewObjectId()
 	return &File{
-		Id:       id,
-		SubId:    subId,
-		Data:     data,
-		Type:     ARCHIVE,
+		Id:    id,
+		SubId: subId,
+		Data:  data,
+		Type:  ARCHIVE,
 	}
 }
 
@@ -102,7 +102,7 @@ func ParseName(name string) (file *File, err error) {
 	file.Id = bson.NewObjectId()
 	mod := elems[len(elems)-1]
 	nextIndex := 3
-	if len(elems[len(elems)-2]) > 10{
+	if len(elems[len(elems)-2]) > 10 {
 		nextIndex = 2
 	}
 	timeString := elems[len(elems)-nextIndex]
@@ -128,12 +128,12 @@ func ParseName(name string) (file *File, err error) {
 		return
 	}
 	if len(elems) > nextIndex {
-		nextIndex ++
-		pos := len(elems)-nextIndex
+		nextIndex++
+		pos := len(elems) - nextIndex
 		file.Name = elems[pos]
 		for i := 0; i < pos; i++ {
 			file.Package += elems[i]
-			if i < pos - 1 {
+			if i < pos-1 {
 				file.Package += "."
 			}
 			if isOutFolder(elems[i]) {
@@ -143,9 +143,9 @@ func ParseName(name string) (file *File, err error) {
 	}
 	if strings.HasSuffix(file.Name, JSRC) {
 		file.Type = SRC
-	} else if mod == "l"{
+	} else if mod == "l" {
 		file.Type = LAUNCH
-	} else{
+	} else {
 		err = fmt.Errorf("Unsupported file type in name %s", name)
 	}
 	return

@@ -134,7 +134,7 @@ func TemplateDir() string {
 	if templateDir != "" {
 		return templateDir
 	}
-	templateDir = filepath.Join(StaticDir(), "templates")
+	templateDir = filepath.Join(StaticDir(), "html")
 	return templateDir
 }
 

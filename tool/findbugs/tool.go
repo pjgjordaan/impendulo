@@ -22,7 +22,7 @@ func New() *FindBugs {
 }
 
 func (this *FindBugs) Lang() string {
-	return "java"
+	return tool.JAVA
 }
 
 func (this *FindBugs) Name() string {

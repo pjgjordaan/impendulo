@@ -7,28 +7,38 @@ import (
 )
 
 var (
-	postFuncs   map[string]PostFunc
+	posters     map[string]Poster
 	viewRoutes  map[string]string
 	permissions map[string]int
 )
 
 //A function used to add data to the database.
-type PostFunc func(*http.Request, *Context) error
+type Poster func(*http.Request, *Context) (string, error)
 
-func PostFuncs() map[string]PostFunc {
-	if postFuncs != nil {
-		return postFuncs
+//CreatePost loads a post request handler.
+func (this Poster) CreatePost() Handler {
+	return func(w http.ResponseWriter, req *http.Request, ctx *Context) error {
+		msg, err := this(req, ctx)
+		ctx.AddMessage(msg, err != nil)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
 	}
-	postFuncs = toolPostFuncs()
-	defualt := defaultPostFuncs()
-	for k, v := range defualt {
-		postFuncs[k] = v
-	}
-	return postFuncs
 }
 
-func defaultPostFuncs() map[string]PostFunc {
-	return map[string]PostFunc{
+func Posters() map[string]Poster {
+	if posters != nil {
+		return posters
+	}
+	posters = toolPosters()
+	defualt := defaultPosters()
+	for k, v := range defualt {
+		posters[k] = v
+	}
+	return posters
+}
+
+func defaultPosters() map[string]Poster {
+	return map[string]Poster{
 		"addproject": AddProject, "changeskeleton": ChangeSkeleton,
 		"submitarchive": SubmitArchive, "runtool": RunTool,
 	}
@@ -36,25 +46,11 @@ func defaultPostFuncs() map[string]PostFunc {
 
 //GeneratePosts loads post request handlers.
 func GeneratePosts(router *pat.Router) {
-	posts := PostFuncs()
+	posts := Posters()
 	for name, fn := range posts {
-		handleFunc := CreatePost(fn)
+		handleFunc := fn.CreatePost()
 		pattern := "/" + name
 		router.Add("POST", pattern, Handler(handleFunc)).Name(name)
-	}
-}
-
-//CreatePost loads a post request handler.
-func CreatePost(postFunc PostFunc) Handler {
-	return func(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-		err := postFunc(req, ctx)
-		if err != nil {
-			ctx.AddMessage("Could not complete submission.", true)
-		} else {
-			ctx.AddMessage("Successfully completed submission.", false)
-		}
-		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
-		return err
 	}
 }
 

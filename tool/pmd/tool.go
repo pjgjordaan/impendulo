@@ -25,7 +25,7 @@ func New(rules []string) *Tool {
 }
 
 func (this *Tool) Lang() string {
-	return "java"
+	return tool.JAVA
 }
 
 func (this *Tool) Name() string {

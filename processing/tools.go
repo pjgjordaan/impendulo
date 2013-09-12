@@ -32,20 +32,20 @@ func javaTools(proc *Processor) []tool.Tool {
 		findbugs.New(),
 		checkstyle.New(),
 	}
-	j, err := JPF(proc)
+	jpfTool, err := JPF(proc)
 	if err == nil {
-		tools = append(tools, j)
+		tools = append(tools, jpfTool)
 	} else {
 		util.Log(err)
 	}
-	p, err := PMD(proc)
+	pmdTool, err := PMD(proc)
 	if err == nil {
-		tools = append(tools, p)
+		tools = append(tools, pmdTool)
 	} else {
 		util.Log(err)
 	}
 	tests, err := JUnit(proc)
-	if err == nil {
+	if err == nil && len(tests) > 0 {
 		tools = append(tools, tests...)
 	} else {
 		util.Log(err)
@@ -64,23 +64,23 @@ func Compiler(proc *Processor) (compiler tool.Tool, err error) {
 	return
 }
 
-func JPF(proc *Processor) (j tool.Tool, err error) {
+func JPF(proc *Processor) (runnable tool.Tool, err error) {
 	jpfFile, err := db.GetJPF(
 		bson.M{project.PROJECT_ID: proc.project.Id}, nil)
 	if err != nil {
 		return
 	}
-	j, err = jpf.New(jpfFile, proc.toolDir)
+	runnable, err = jpf.New(jpfFile, proc.toolDir)
 	return
 }
 
-func PMD(proc *Processor) (p tool.Tool, err error) {
+func PMD(proc *Processor) (runnable tool.Tool, err error) {
 	rules, err := db.GetPMD(bson.M{project.PROJECT_ID: proc.project.Id}, nil)
 	if err != nil {
 		rules = pmd.DefaultRules(proc.project.Id)
 		err = db.AddPMD(rules)
 	}
-	p = pmd.New(rules.Rules)
+	runnable = pmd.New(rules.Rules)
 	return
 }
 
@@ -89,22 +89,18 @@ func JUnit(proc *Processor) (ret []tool.Tool, err error) {
 	if err != nil {
 		return
 	}
-	ret = make([]tool.Tool, len(tests))
-	for i, test := range tests {
-		ti := tool.NewTarget(test.Name, proc.project.Lang, test.Package, proc.toolDir)
-		ret[i] = junit.New(ti)
-		err = util.SaveFile(ti.FilePath(), test.Test)
-		if err != nil {
-			return
-		}
-		if len(test.Data) == 0 {
-			continue
-		}
-		err = util.Unzip(ti.PackagePath(), test.Data)
-		if err != nil {
-			return
+	err = util.Copy(proc.toolDir, config.Config(config.TESTING_DIR))
+	if err != nil {
+		return
+	}
+	ret = make([]tool.Tool, 0, len(tests))
+	for _, test := range tests {
+		unitTest, terr := junit.New(test, proc.toolDir)
+		if terr != nil {
+			util.Log(terr)
+		} else {
+			ret = append(ret, unitTest)
 		}
 	}
-	err = util.Copy(proc.toolDir, config.Config(config.TESTING_DIR))
 	return
 }
