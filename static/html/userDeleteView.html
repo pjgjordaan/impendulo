@@ -2,9 +2,9 @@
 <h3>Delete Users</h3>
 <form class="form-horizontal" action="deleteuser" method="post">
   <div class="form-group">
-    <label class="col-lg-2 control-label" for="user">User</label>
+    <label class="col-lg-2 control-label" for="username">User</label>
     <div class="col-lg-3">
-      <select class="form-control" name="user" id="user">
+      <select class="form-control" name="username" id="username">
 	{{ range .ctx.Users}}
 	<option value={{.Name}}>{{.Name}}</option>
 	{{end}}

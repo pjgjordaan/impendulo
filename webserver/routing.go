@@ -25,6 +25,7 @@ func (this Poster) CreatePost() Handler {
 	}
 }
 
+//Posters
 func Posters() map[string]Poster {
 	if posters != nil {
 		return posters
@@ -37,10 +38,12 @@ func Posters() map[string]Poster {
 	return posters
 }
 
+//defaultPosters
 func defaultPosters() map[string]Poster {
 	return map[string]Poster{
 		"addproject": AddProject, "changeskeleton": ChangeSkeleton,
 		"submitarchive": SubmitArchive, "runtool": RunTool,
+		"deleteproject": DeleteProject, "deleteuser": DeleteUser,
 	}
 }
 
@@ -54,6 +57,7 @@ func GeneratePosts(router *pat.Router) {
 	}
 }
 
+//Views
 func Views() map[string]string {
 	if viewRoutes != nil {
 		return viewRoutes
@@ -62,6 +66,7 @@ func Views() map[string]string {
 	return viewRoutes
 }
 
+//defaultViews
 func defaultViews() map[string]string {
 	return map[string]string{
 		"homeView": "home", "skeletonView": "submit",
@@ -73,6 +78,7 @@ func defaultViews() map[string]string {
 	}
 }
 
+//Permissions
 func Permissions() map[string]int {
 	if permissions != nil {
 		return permissions
@@ -85,6 +91,7 @@ func Permissions() map[string]int {
 	return permissions
 }
 
+//defaultPermissions
 func defaultPermissions() map[string]int {
 	return map[string]int{
 		"homeview": 0, "skeletonview": 1, "configview": 1,

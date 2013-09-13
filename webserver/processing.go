@@ -3,7 +3,9 @@ package webserver
 
 import (
 	"fmt"
+	"github.com/godfried/impendulo/util"
 	"io/ioutil"
+	"labix.org/v2/mgo/bson"
 	"net/http"
 	"strconv"
 	"strings"
@@ -27,6 +29,9 @@ func GetInt(req *http.Request, name string) (found int, err error) {
 	return
 }
 
+//GetLines retrieves an array of size m-n+1 with values
+//starting at n and ending at m where n and m are start and end
+//values retrieved from req.
 func GetLines(req *http.Request, name string) []int {
 	start, err := GetInt(req, name+"focusstart")
 	if err != nil {
@@ -66,6 +71,7 @@ func GetString(req *http.Request, name string) (val string, err error) {
 	return
 }
 
+//getIndex
 func getIndex(req *http.Request, name string, maxSize int) (ret int, err error) {
 	ret, err = GetInt(req, name)
 	if err != nil {
@@ -79,10 +85,39 @@ func getIndex(req *http.Request, name string, maxSize int) (ret int, err error) 
 	return
 }
 
+//getSelected
 func getSelected(req *http.Request, maxSize int) (int, error) {
 	return getIndex(req, "currentIndex", maxSize)
 }
 
+//getNeighbour
 func getNeighbour(req *http.Request, maxSize int) (int, error) {
 	return getIndex(req, "nextIndex", maxSize)
+}
+
+//getProjectId
+func getProjectId(req *http.Request) (id bson.ObjectId, msg string, err error) {
+	id, err = util.ReadId(req.FormValue("project"))
+	if err != nil {
+		msg = "Could not read project."
+	}
+	return
+}
+
+//getUser
+func getUser(ctx *Context) (user, msg string, err error) {
+	user, err = ctx.Username()
+	if err != nil {
+		msg = "Could not retrieve user."
+	}
+	return
+}
+
+//getString.
+func getString(req *http.Request, name string) (val, msg string, err error) {
+	val, err = GetString(req, name)
+	if err != nil {
+		msg = fmt.Sprintf("Could not read %s.", name)
+	}
+	return
 }

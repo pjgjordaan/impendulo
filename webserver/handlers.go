@@ -14,12 +14,15 @@ var (
 	store sessions.Store
 )
 
-const LOG_HANDLERS = "webserver/handlers.go"
+const (
+	LOG_HANDLERS = "webserver/handlers.go"
+)
 
 func init() {
 	store = sessions.NewCookieStore(util.CookieKeys())
 }
 
+//getNav
 func getNav(ctx *Context) string {
 	if _, err := ctx.Username(); err != nil {
 		return "outNavbar"
@@ -38,7 +41,8 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		util.Log(err, LOG_HANDLERS)
 	}
-	ctx := NewContext(sess)
+	//Load our context from session
+	ctx := LoadContext(sess)
 	buf := new(HttpBuffer)
 	err = checkAccess(req.URL, ctx)
 	if err != nil {
@@ -58,7 +62,9 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	buf.Apply(w)
 }
 
+//checkAccess verifies that a user is allowed access to a url.
 func checkAccess(url *url.URL, ctx *Context) error {
+	//Rertieve the location they are requesting
 	start := strings.LastIndex(url.Path, "/") + 1
 	end := strings.Index(url.Path, "?")
 	if end < 0 {
@@ -69,6 +75,7 @@ func checkAccess(url *url.URL, ctx *Context) error {
 	}
 	name := url.Path[start:end]
 	perms := Permissions()
+	//Get the permission and check it.
 	val, ok := perms[name]
 	if !ok {
 		return fmt.Errorf("Could not find request %s", url.Path)
@@ -82,28 +89,7 @@ func checkAccess(url *url.URL, ctx *Context) error {
 	return nil
 }
 
-func deleteProject(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	err := DeleteProject(req, ctx)
-	if err != nil {
-		ctx.AddMessage("Could not delete project.", true)
-	} else {
-		ctx.AddMessage("Successfully deleted project.", false)
-	}
-	http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
-	return err
-}
-
-func deleteUser(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	err := DeleteUser(req, ctx)
-	if err != nil {
-		ctx.AddMessage("Could not delete user.", true)
-	} else {
-		ctx.AddMessage("Successfully deleted user.", false)
-	}
-	http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
-	return err
-}
-
+//downloadProject
 func downloadProject(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	path, err := LoadSkeleton(req)
 	if err == nil {
@@ -115,6 +101,7 @@ func downloadProject(w http.ResponseWriter, req *http.Request, ctx *Context) err
 	return err
 }
 
+//getSubmissions
 func getSubmissions(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	subs, err := RetrieveSubmissions(req, ctx)
 	if err != nil {
@@ -133,6 +120,7 @@ func getSubmissions(w http.ResponseWriter, req *http.Request, ctx *Context) erro
 		"subRes": subs})
 }
 
+//configView
 func configView(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	tool, err := GetString(req, "tool")
 	if err != nil {
@@ -143,6 +131,7 @@ func configView(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 		map[string]interface{}{"ctx": ctx, "tool": tool})
 }
 
+//getFiles
 func getFiles(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	fileinfo, err := RetrieveFileInfo(req, ctx)
 	if err != nil {
@@ -155,6 +144,7 @@ func getFiles(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 		map[string]interface{}{"ctx": ctx, "fileinfo": fileinfo})
 }
 
+//displayResult
 func displayResult(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	ctx.SetResult(req)
 	ctx.Browse.View = "home"
@@ -167,6 +157,7 @@ func displayResult(w http.ResponseWriter, req *http.Request, ctx *Context) error
 	return T(temps...).Execute(w, args)
 }
 
+//analysisArgs
 func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{}, temps []string, err error) {
 	files, err := RetrieveFiles(req, ctx)
 	if err != nil {
@@ -213,6 +204,7 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 	return
 }
 
+//displayGraph
 func displayGraph(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	ctx.Browse.View = "home"
 	ctx.SetResult(req)
@@ -226,6 +218,7 @@ func displayGraph(w http.ResponseWriter, req *http.Request, ctx *Context) error 
 	return T(temps...).Execute(w, args)
 }
 
+//graphArgs
 func graphArgs(req *http.Request, ctx *Context) (args map[string]interface{}, err error) {
 	fileName, ferr := GetString(req, "filename")
 	if ferr == nil {
@@ -252,6 +245,7 @@ func graphArgs(req *http.Request, ctx *Context) (args map[string]interface{}, er
 	return
 }
 
+//login
 func login(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	msg, err := Login(req, ctx)
 	ctx.AddMessage(msg, err != nil)
@@ -259,6 +253,7 @@ func login(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	return err
 }
 
+//register
 func register(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	msg, err := Register(req, ctx)
 	if err != nil {
@@ -271,6 +266,7 @@ func register(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	return err
 }
 
+//logout
 func logout(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	delete(ctx.Session.Values, "user")
 	http.Redirect(w, req, getRoute("index"), http.StatusSeeOther)

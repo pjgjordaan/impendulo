@@ -16,58 +16,75 @@ import (
 
 //SubmitArchive adds an Intlola archive to the database.
 func SubmitArchive(req *http.Request, ctx *Context) (msg string, err error) {
-	projectId, err := util.ReadId(req.FormValue("project"))
+	projectId, msg, err := getProjectId(req)
 	if err != nil {
 		return
 	}
-	uname, err := GetString(req, "user")
+	username, msg, err := getUser(ctx)
 	if err != nil {
 		return
 	}
-	if !db.Contains(db.USERS, bson.M{user.ID: uname}) {
-		err = fmt.Errorf("User %q not found.", uname)
+	if !db.Contains(db.USERS, bson.M{user.ID: username}) {
+		err = fmt.Errorf("User %s not found.", username)
+		msg = err.Error()
 		return
 	}
 	_, archiveBytes, err := ReadFormFile(req, "archive")
 	if err != nil {
+		msg = "Could not read archive."
 		return
 	}
-	sub := project.NewSubmission(projectId, uname, project.ARCHIVE_MODE,
+	sub := project.NewSubmission(projectId, username, project.ARCHIVE_MODE,
 		util.CurMilis())
 	err = db.AddSubmission(sub)
 	if err != nil {
+		msg = "Could not create submission."
 		return
 	}
 	file := project.NewArchive(sub.Id, archiveBytes)
 	err = db.AddFile(file)
 	if err != nil {
+		msg = "Could not store archive."
 		return
 	}
 	//Send file to be analysed.
 	err = processing.StartSubmission(sub.Id)
 	if err != nil {
+		msg = "Could not start archive submission."
 		return
 	}
 	err = processing.AddFile(file)
 	if err != nil {
+		msg = "Could not start archive submission."
 		return
 	}
 	err = processing.EndSubmission(sub.Id)
+	if err != nil {
+		msg = "Could not complete archive submission."
+	} else {
+		msg = "Archive submitted successfully."
+	}
 	return
 }
 
 //ChangeSkeleton replaces a project's skeleton file.
 func ChangeSkeleton(req *http.Request, ctx *Context) (msg string, err error) {
-	projectId, err := util.ReadId(req.FormValue("project"))
+	projectId, msg, err := getProjectId(req)
 	if err != nil {
 		return
 	}
 	_, data, err := ReadFormFile(req, "skeleton")
 	if err != nil {
+		msg = "Could not read skeleton file."
 		return
 	}
 	err = db.Update(db.PROJECTS, bson.M{project.ID: projectId},
 		bson.M{db.SET: bson.M{project.SKELETON: data}})
+	if err != nil {
+		msg = "Could not update skeleton file."
+	} else {
+		msg = "Successfully updated skeleton file."
+	}
 	return
 }
 
@@ -75,30 +92,44 @@ func ChangeSkeleton(req *http.Request, ctx *Context) (msg string, err error) {
 func AddProject(req *http.Request, ctx *Context) (msg string, err error) {
 	name, err := GetString(req, "name")
 	if err != nil {
+		msg = "Could not read project name."
 		return
 	}
 	lang, err := GetString(req, "lang")
 	if err != nil {
+		msg = "Could not read project language."
 		return
 	}
-	username, err := ctx.Username()
+	username, msg, err := getUser(ctx)
 	if err != nil {
 		return
 	}
 	_, skeletonBytes, err := ReadFormFile(req, "skeleton")
 	if err != nil {
+		msg = "Could not read skeleton file."
 		return
 	}
 	p := project.NewProject(name, username, lang, skeletonBytes)
 	err = db.AddProject(p)
+	if err != nil {
+		msg = "Could not add project."
+	} else {
+		msg = "Successfully added project."
+	}
 	return
 }
 
 //DeleteProject removes a project and all data associated with it from the system.
-func DeleteProject(req *http.Request, ctx *Context) (err error) {
-	projectId, err := util.ReadId(req.FormValue("project"))
-	if err == nil {
-		err = db.RemoveProjectById(projectId)
+func DeleteProject(req *http.Request, ctx *Context) (msg string, err error) {
+	projectId, msg, err := getProjectId(req)
+	if err != nil {
+		return
+	}
+	err = db.RemoveProjectById(projectId)
+	if err != nil {
+		msg = "Could not delete project."
+	} else {
+		msg = "Successfully deleted project."
 	}
 	return
 }
@@ -150,7 +181,8 @@ func RetrieveSubmissions(req *http.Request, ctx *Context) (subs []*project.Submi
 	if err != nil {
 		return
 	}
-	if tipe == "project" {
+	switch tipe {
+	case "project":
 		var pid bson.ObjectId
 		pid, err = util.ReadId(idStr)
 		if err != nil {
@@ -160,12 +192,12 @@ func RetrieveSubmissions(req *http.Request, ctx *Context) (subs []*project.Submi
 		ctx.Browse.IsUser = false
 		subs, err = db.GetSubmissions(
 			bson.M{project.PROJECT_ID: pid}, nil, "-"+project.TIME)
-	} else if tipe == "user" {
+	case "user":
 		ctx.Browse.Uid = idStr
 		ctx.Browse.IsUser = true
 		subs, err = db.GetSubmissions(
 			bson.M{project.USER: ctx.Browse.Uid}, nil, "-"+project.TIME)
-	} else {
+	default:
 		err = fmt.Errorf("Unknown request type %q", tipe)
 	}
 	return
@@ -192,12 +224,14 @@ func LoadSkeleton(req *http.Request) (path string, err error) {
 	return
 }
 
+//getFile
 func getFile(id bson.ObjectId) (file *project.File, err error) {
 	selector := bson.M{project.NAME: 1, project.TIME: 1}
 	file, err = db.GetFile(bson.M{project.ID: id}, selector)
 	return
 }
 
+//projectName
 func projectName(id bson.ObjectId) (name string, err error) {
 	proj, err := db.GetProject(bson.M{project.ID: id},
 		bson.M{project.NAME: 1})

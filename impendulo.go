@@ -13,7 +13,7 @@ import (
 	"runtime"
 )
 
-//Flag variables for setting ports to listen on, users file to process and the mode to run in.
+//Flag variables for setting ports to listen on, users file to process, mode to run in, etc.
 var (
 	Port, UsersFile, ConfigFile, ErrorLogging, InfoLogging, Backup string
 	Web, Receiver, Processor, Debug                                bool
@@ -21,7 +21,9 @@ var (
 	conn                                                           string
 )
 
-const LOG_IMPENDULO = "impendulo.go"
+const (
+	LOG_IMPENDULO = "impendulo.go"
+)
 
 func init() {
 	flag.IntVar(&Timeout, "t", 5, "Specify the time limit for a tool to run in, in minutes (default 10).")
@@ -115,6 +117,7 @@ func AddUsers() {
 
 }
 
+//RunWebServer
 func RunWebServer(inRoutine bool) {
 	if inRoutine {
 		go webserver.Run()
@@ -123,6 +126,7 @@ func RunWebServer(inRoutine bool) {
 	}
 }
 
+//RunFileReceiver
 func RunFileReceiver(inRoutine bool) {
 	if inRoutine {
 		go server.Run(Port, new(server.SubmissionSpawner))
@@ -131,6 +135,7 @@ func RunFileReceiver(inRoutine bool) {
 	}
 }
 
+//RunFileProcessor
 func RunFileProcessor(inRoutine bool) {
 	if inRoutine {
 		go processing.Serve(MaxProcs)

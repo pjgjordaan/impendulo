@@ -26,6 +26,8 @@ type Processor struct {
 	tools    []tool.Tool
 }
 
+//NewProcessor creates a Processor and sets up the environment and
+//tools for it.
 func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
 	sub, err := db.GetSubmission(bson.M{project.ID: subId}, nil)
 	if err != nil {
@@ -53,8 +55,7 @@ func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
 	return
 }
 
-//Process processes a new submission.
-//It listens for incoming files and processes them.
+//Process listens for a submission's incoming files and processes them.
 func (this *Processor) Process(fileChan chan bson.ObjectId, doneChan chan interface{}) {
 	util.Log("Processing submission", this.sub)
 	defer os.RemoveAll(this.rootDir)
@@ -83,7 +84,7 @@ processing:
 	util.Log("Processed submission", this.sub)
 }
 
-//ProcessFile processes a file according to its type.
+//ProcessFile extracts archives and evaluates source files.
 func (this *Processor) ProcessFile(file *project.File) (err error) {
 	util.Log("Processing file:", file)
 	switch file.Type {
@@ -100,8 +101,9 @@ func (this *Processor) ProcessFile(file *project.File) (err error) {
 	return
 }
 
-//Extract extracts files from an archive and processes them.
+//Extract extracts files from an archive, stores and processes them.
 func (this *Processor) Extract(archive *project.File) error {
+	//Extract and store the files.
 	files, err := util.UnzipToMap(archive.Data)
 	if err != nil {
 		return err
@@ -112,6 +114,7 @@ func (this *Processor) Extract(archive *project.File) error {
 			util.Log(err, LOG_PROCESSOR)
 		}
 	}
+	//We don't need the archive anymore
 	err = db.RemoveFileById(archive.Id)
 	if err != nil {
 		util.Log(err, LOG_PROCESSOR)
@@ -138,6 +141,8 @@ func (this *Processor) Extract(archive *project.File) error {
 	return nil
 }
 
+//storeFile creates a new project.File given an encoded file name and file data.
+//The new project.File is then saved in the database.
 func (this *Processor) storeFile(name string, data []byte) (err error) {
 	file, err := project.ParseName(name)
 	if err != nil {

@@ -10,9 +10,8 @@ import (
 
 //Login signs a user into the web app.
 func Login(req *http.Request, ctx *Context) (msg string, err error) {
-	uname, pword, err := getCredentials(req)
+	uname, pword, msg, err := getCredentials(req)
 	if err != nil {
-		msg = "Could not read credentials."
 		return
 	}
 	u, err := db.GetUserById(uname)
@@ -32,9 +31,8 @@ func Login(req *http.Request, ctx *Context) (msg string, err error) {
 
 //Register registers a new user with Impendulo.
 func Register(req *http.Request, ctx *Context) (msg string, err error) {
-	uname, pword, err := getCredentials(req)
+	uname, pword, msg, err := getCredentials(req)
 	if err != nil {
-		msg = "Could not read credentials."
 		return
 	}
 	u := user.New(uname, pword)
@@ -48,20 +46,27 @@ func Register(req *http.Request, ctx *Context) (msg string, err error) {
 	return
 }
 
-func getCredentials(req *http.Request) (uname, pword string, err error) {
-	uname, err = GetString(req, "username")
+//getCredentials
+func getCredentials(req *http.Request) (uname, pword, msg string, err error) {
+	uname, msg, err = getString(req, "username")
 	if err != nil {
 		return
 	}
-	pword, err = GetString(req, "password")
+	pword, msg, err = getString(req, "password")
 	return
 }
 
 //DeleteUser removes a user and all data associated with them from the system.
-func DeleteUser(req *http.Request, ctx *Context) (err error) {
-	uname, err := GetString(req, "user")
-	if err == nil {
-		err = db.RemoveUserById(uname)
+func DeleteUser(req *http.Request, ctx *Context) (msg string, err error) {
+	uname, msg, err := getString(req, "username")
+	if err != nil {
+		return
+	}
+	err = db.RemoveUserById(uname)
+	if err != nil {
+		msg = fmt.Sprintf("Could not delete user %s.", uname)
+	} else {
+		msg = fmt.Sprintf("Successfully deleted user %s.", uname)
 	}
 	return
 }

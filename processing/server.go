@@ -8,7 +8,9 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
-const LOG_SERVER = "processing/server.go"
+const (
+	LOG_SERVER = "processing/server.go"
+)
 
 var (
 	fileChan, startSubmissionChan, endSubmissionChan chan *Request
@@ -16,9 +18,11 @@ var (
 	statusChan                                       chan Status
 )
 
+//Request is used to carry requests to process submissions and files.
 type Request struct {
 	Id, ParentId bson.ObjectId
-	Response     chan error
+	//Used to return errors
+	Response chan error
 }
 
 func init() {
@@ -37,6 +41,7 @@ type Status struct {
 	Submissions int
 }
 
+//add adds the value of toAdd to this Status.
 func (this *Status) add(toAdd Status) {
 	this.Files += toAdd.Files
 	this.Submissions += toAdd.Submissions
@@ -55,12 +60,15 @@ func GetStatus() (ret Status) {
 	return
 }
 
+//monitorStatus keeps track of Impendulo's current processing status.
 func monitorStatus() {
+	//This is Impendulo's actual processing status.
 	var status *Status = new(Status)
 	for {
 		val := <-statusChan
 		switch val {
 		case Status{0, 0}:
+			//A zeroed Status indicates a request for the current Status.
 			statusChan <- *status
 		default:
 			status.add(val)
@@ -69,37 +77,31 @@ func monitorStatus() {
 }
 
 //AddFile sends a file id to be processed.
-func AddFile(file *project.File) (err error) {
+func AddFile(file *project.File) error {
+	//We only need to process source files  and archives.
 	if !file.CanProcess() {
-		return
+		return nil
 	}
 	errChan := make(chan error)
+	//We send the file's db id as well as the id of the submission to which it belongs.
 	fileChan <- &Request{
 		Id:       file.Id,
 		ParentId: file.SubId,
 		Response: errChan,
 	}
-	err = <-errChan
-	if err != nil {
-		return
-	}
-	ChangeStatus(Status{1, 0})
-	return
+	//Return any errors which occured while adding the file.
+	return <-errChan
 }
 
 //StartSubmission signals that this submission will now receive files.
-func StartSubmission(subId bson.ObjectId) (err error) {
+func StartSubmission(subId bson.ObjectId) error {
 	errChan := make(chan error)
+	//We send the submission's db id as a reference.
 	startSubmissionChan <- &Request{
 		Id:       subId,
 		Response: errChan,
 	}
-	err = <-errChan
-	if err != nil {
-		return
-	}
-	ChangeStatus(Status{0, 1})
-	return
+	return <-errChan
 }
 
 //EndSubmission signals that this submission has stopped receiving files.
@@ -112,11 +114,13 @@ func EndSubmission(subId bson.ObjectId) error {
 	return <-errChan
 }
 
+//submissionProcessed
 func submissionProcessed() {
 	ChangeStatus(Status{0, -1})
 	processedChan <- None()
 }
 
+//fileProcessed
 func fileProcessed() {
 	ChangeStatus(Status{-1, 0})
 }
@@ -135,6 +139,7 @@ func None() interface{} {
 //Serve spawns new processing routines for each submission started.
 //Added files are received here and then sent to the relevant submission goroutine.
 func Serve(maxProcs int) {
+	//Begin monitoring processing status
 	go monitorStatus()
 	helpers := make(map[bson.ObjectId]*ProcHelper)
 	fileQueues := make(map[bson.ObjectId]*list.List)
@@ -154,6 +159,8 @@ func Serve(maxProcs int) {
 			delete(fileQueues, subId)
 			busy++
 		} else if busy < 0 {
+			//This will only occur when Shutdown() has been called and
+			//all submissions have been completed and processed.
 			break
 		}
 		select {
@@ -168,8 +175,10 @@ func Serve(maxProcs int) {
 					//Add file to queue if not.
 					fileQueues[request.ParentId].PushBack(request.Id)
 				}
+				ChangeStatus(Status{1, 0})
 			} else {
-				err = fmt.Errorf("No submission %q found for file %q.", request.ParentId, request.Id)
+				err = fmt.Errorf("No submission %q found for file %q.",
+					request.ParentId, request.Id)
 			}
 			request.Response <- err
 		case request := <-startSubmissionChan:
@@ -179,6 +188,7 @@ func Serve(maxProcs int) {
 				subQueue.PushBack(request.Id)
 				helpers[request.Id] = NewProcHelper(request.Id)
 				fileQueues[request.Id] = list.New()
+				ChangeStatus(Status{0, 1})
 			} else {
 				err = fmt.Errorf("Can't start submission %q, already being processed.", request.Id)
 			}
@@ -196,14 +206,10 @@ func Serve(maxProcs int) {
 			}
 			request.Response <- err
 		case <-processedChan:
+			//A submission has been processed so one less goroutine to worry about.
 			busy--
 		}
 	}
-}
-
-func NewProcHelper(subId bson.ObjectId) *ProcHelper {
-	return &ProcHelper{subId, make(chan bson.ObjectId),
-		make(chan interface{}), false, false}
 }
 
 //ProcHelper is used to help handle a submission's files.
@@ -215,28 +221,46 @@ type ProcHelper struct {
 	done      bool
 }
 
+//NewProcHelper
+func NewProcHelper(subId bson.ObjectId) *ProcHelper {
+	return &ProcHelper{
+		subId:     subId,
+		serveChan: make(chan bson.ObjectId),
+		doneChan:  make(chan interface{}),
+		started:   false,
+		done:      false,
+	}
+}
+
 //SetDone indicates that this submission will receive no more files.
 func (this *ProcHelper) SetDone() {
-	if this.started {
+	if this.Started() {
+		//If it has started send on its channel.
 		this.doneChan <- None()
 	} else {
+		//Otherwise simply set done to true.
 		this.done = true
 	}
 }
 
+//Done
 func (this *ProcHelper) Done() bool {
 	return this.done
 }
 
+//SetStarted
 func (this *ProcHelper) SetStarted() {
 	this.started = true
 }
 
+//Started
 func (this *ProcHelper) Started() bool {
 	return this.started
 }
 
 //Handle helps manage the files a submission receives.
+//It spawns a new Processor which runs in a seperate goroutine
+//and receives files to process from this ProcHelper.
 //fileQueue is the queue of files the submission has received
 //prior to the start of processing.
 func (this *ProcHelper) Handle(fileQueue *list.List) {
@@ -253,13 +277,13 @@ func (this *ProcHelper) Handle(fileQueue *list.List) {
 	for {
 		if !busy {
 			if fileQueue.Len() > 0 {
-				//Not busy so send a new File to be processed.
+				//Not busy and there are files so send one to be processed.
 				fId := fileQueue.Remove(
 					fileQueue.Front()).(bson.ObjectId)
 				procChan <- fId
 				busy = true
 			} else if this.done {
-				//Not busy and done so we can finish up here.
+				//Not busy and we are done so we should finish up here.
 				stopChan <- None()
 				submissionProcessed()
 				return

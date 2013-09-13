@@ -38,6 +38,7 @@ func (ctx *Context) Close() {
 	ctx.save()
 }
 
+//save
 func (ctx *Context) save() {
 	ctx.Session.Values["browse"] = ctx.Browse
 }
@@ -124,7 +125,8 @@ func (ctx *Context) SetResult(req *http.Request) {
 	}
 }
 
-func NewContext(sess *sessions.Session) *Context {
+//LoadContext loads a context from the session.
+func LoadContext(sess *sessions.Session) *Context {
 	ctx := &Context{Session: sess}
 	if val, ok := ctx.Session.Values["browse"]; ok {
 		ctx.Browse = val.(*BrowseData)

@@ -19,6 +19,7 @@ import (
 	"strings"
 )
 
+//Here we keep our tool configs' html template names.
 var templates = map[string]string{
 	jpf.NAME:        "jpfConfig",
 	pmd.NAME:        "pmdConfig",
@@ -56,23 +57,24 @@ func tools() []string {
 	return []string{jpf.NAME, junit.NAME, pmd.NAME, findbugs.NAME, checkstyle.NAME}
 }
 
+//CreateCheckstyle
 func CreateCheckstyle(req *http.Request, ctx *Context) (msg string, err error) {
 	return
 }
 
+//CreateFindbugs
 func CreateFindbugs(req *http.Request, ctx *Context) (msg string, err error) {
 	return
 }
 
+//CreateJUnit adds a new JUnit test for a given project.
 func CreateJUnit(req *http.Request, ctx *Context) (msg string, err error) {
-	username, err := ctx.Username()
+	username, msg, err := getUser(ctx)
 	if err != nil {
-		msg = "Could not read user."
 		return
 	}
-	projectId, err := util.ReadId(req.FormValue("project"))
+	projectId, msg, err := getProjectId(req)
 	if err != nil {
-		msg = "Could not read project."
 		return
 	}
 	testName, testBytes, err := ReadFormFile(req, "test")
@@ -80,12 +82,12 @@ func CreateJUnit(req *http.Request, ctx *Context) (msg string, err error) {
 		msg = "Could not read JUnit file."
 		return
 	}
+	//A test does not always need data files.
 	hasData := req.FormValue("data-check")
 	var dataBytes []byte
 	if hasData == "" {
 		dataBytes = make([]byte, 0)
 	} else if hasData == "true" {
-		//Read data files if provided.
 		_, dataBytes, err = ReadFormFile(req, "data")
 		if err != nil {
 			msg = "Could not read data file."
@@ -100,17 +102,18 @@ func CreateJUnit(req *http.Request, ctx *Context) (msg string, err error) {
 	return
 }
 
-//AddJPF replaces a project's JPF configuration file.
+//AddJPF replaces a project's JPF configuration with a provided configuration file.
 func AddJPF(req *http.Request, ctx *Context) (msg string, err error) {
-	projectId, err := util.ReadId(req.FormValue("project"))
+	projectId, msg, err := getProjectId(req)
 	if err != nil {
 		return
 	}
 	_, data, err := ReadFormFile(req, "jpf")
 	if err != nil {
+		msg = "Could not read JPF configuration file."
 		return
 	}
-	username, err := ctx.Username()
+	username, msg, err := getUser(ctx)
 	if err != nil {
 		return
 	}
@@ -119,13 +122,13 @@ func AddJPF(req *http.Request, ctx *Context) (msg string, err error) {
 	return
 }
 
-//CreateJPF replaces a project's JPF configuration file.
+//CreateJPF replaces a project's JPF configuration with a new, provided configuration.
 func CreateJPF(req *http.Request, ctx *Context) (msg string, err error) {
-	projectId, err := util.ReadId(req.FormValue("project"))
+	projectId, msg, err := getProjectId(req)
 	if err != nil {
 		return
 	}
-	username, err := ctx.Username()
+	username, msg, err := getUser(ctx)
 	if err != nil {
 		return
 	}
@@ -147,13 +150,20 @@ func CreateJPF(req *http.Request, ctx *Context) (msg string, err error) {
 	}
 	data, err := jpf.JPFBytes(vals)
 	if err != nil {
+		msg = "Could not create JPF configuration."
 		return
 	}
 	jpfConfig := jpf.NewConfig(projectId, username, data)
 	err = db.AddJPF(jpfConfig)
+	if err != nil {
+		msg = "Could not create JPF configuration."
+	} else {
+		msg = "Successfully created JPF configuration."
+	}
 	return
 }
 
+//readProperties reads JPF properties from a raw string and stores them in a map.
 func readProperties(raw string) (props map[string][]string) {
 	props = make(map[string][]string)
 	lines := strings.Split(raw, "\n")
@@ -180,31 +190,41 @@ func readProperties(raw string) (props map[string][]string) {
 	return
 }
 
+//CreatePMD creates PMD rules for a project from a provided list.
 func CreatePMD(req *http.Request, ctx *Context) (msg string, err error) {
-	projectId, err := util.ReadId(req.FormValue("project"))
+	projectId, msg, err := getProjectId(req)
 	if err != nil {
 		return
 	}
 	rules, err := GetStrings(req, "ruleid")
 	if err != nil {
+		msg = "Could not read rules."
 		return
 	}
 	pmdRules := pmd.NewRules(projectId, rules)
 	err = db.AddPMD(pmdRules)
+	if err != nil {
+		msg = "Could not add rules."
+	} else {
+		msg = "Successfully added rules."
+	}
 	return
 }
 
+//RunTool runs a tool on submissions in a given project.
 func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
-	projectId, err := util.ReadId(req.FormValue("project"))
+	projectId, msg, err := getProjectId(req)
 	if err != nil {
 		return
 	}
 	tool, err := GetString(req, "tool")
 	if err != nil {
+		msg = "Could not read tool."
 		return
 	}
 	submissions, err := db.GetSubmissions(bson.M{project.PROJECT_ID: projectId}, bson.M{project.ID: 1})
 	if err != nil {
+		msg = "Could not retrieve submissions."
 		return
 	}
 	var runAll bool
@@ -226,6 +246,7 @@ func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
 		}
 		for _, file := range files {
 			if resultId, ok := file.Results[tool]; ok && runAll {
+				//Delete results if we want to rerun the tool on all files.
 				err = db.RemoveResultById(resultId)
 				if err != nil {
 					util.Log(resultId, err)
@@ -249,6 +270,7 @@ func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
 			util.Log(err)
 		}
 	}
+	msg = fmt.Sprintf("Successfully started running %s on project.", tool)
 	return
 }
 

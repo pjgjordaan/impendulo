@@ -10,6 +10,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 
 public class JPFRunner {
 
@@ -35,10 +38,14 @@ public class JPFRunner {
 		PrintStream out = System.out;
 		PrintStream err = System.err;
 		System.setOut(new PrintStream(new OutputStream() {
-		    @Override public void write(int b) throws IOException {}
+			@Override
+			public void write(int b) throws IOException {
+			}
 		}));
 		System.setErr(new PrintStream(new OutputStream() {
-		    @Override public void write(int b) throws IOException {}
+			@Override
+			public void write(int b) throws IOException {
+			}
 		}));
 		try {
 
@@ -49,9 +56,9 @@ public class JPFRunner {
 			return cx;
 		} catch (JPFException jx) {
 			return jx;
-		} finally{
-		    System.setOut(out);
-		    System.setErr(err);
+		} finally {
+			System.setOut(out);
+			System.setErr(err);
 		}
 	}
 
@@ -59,29 +66,32 @@ public class JPFRunner {
 			String targetLocation, String outFile) {
 		Config config = JPF.createConfig(new String[] { configName });
 		config.setProperty("target", target);
-		config.setProperty("report.publisher", "xml");
-		config.setProperty("report.xml.class",
-				"runner.ImpenduloPublisher");
 		config.setProperty("report.xml.file", outFile);
 		config.setProperty("classpath",
 				targetLocation + ";" + config.getProperty("classpath"));
-		config.setProperty("report.xml.start", "jpf,sut");
-		config.setProperty("report.xml.transition", "");
-		config.setProperty("report.xml.constraint", "constraint,snapshot");
-		config.setProperty("report.xml.property_violation",
-				"error,snapshot,trace");
-		config.setProperty("report.xml.show_steps", "true");
-		config.setProperty("report.xml.show_method", "true");
-		config.setProperty("report.xml.show_code", "true");
-		config.setProperty("report.xml.finished", "result,statistics");
-		//config.setProperty("search.multiple_errors", "true");
+		Map<String, String> defualt = DefaultConfig();
+		for (Entry<String, String> cfg : defualt.entrySet()) {
+			if (!config.containsKey(cfg.getKey())) {
+				config.put(cfg.getKey(), cfg.getValue());
+			}
+		}
 		return config;
 	}
+
+	public static Map<String, String> DefaultConfig() {
+		Map<String, String> ret = new HashMap<String, String>();
+		ret.put("report.publisher", "xml");
+		ret.put("report.xml.class", "runner.ImpenduloPublisher");
+		ret.put("report.xml.start", "jpf,sut");
+		ret.put("report.xml.transition", "");
+		ret.put("report.xml.constraint", "constraint,snapshot");
+		ret.put("report.xml.property_violation", "error,snapshot");
+		ret.put("report.xml.show_steps", "true");
+		ret.put("report.xml.show_method", "true");
+		ret.put("report.xml.show_code", "true");
+		ret.put("report.xml.finished", "result,statistics");
+		ret.put("search.class", "gov.nasa.jpf.search.DFSearch");
+		ret.put("search.depth_limit", "1000");
+		return ret;
+	}
 }
-
-
-
-
-
-
-

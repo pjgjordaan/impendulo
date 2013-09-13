@@ -6,8 +6,6 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
-	"os"
-	"path/filepath"
 )
 
 const (
@@ -21,7 +19,7 @@ type Analyser struct {
 	target *tool.TargetInfo
 }
 
-//Eval evaluates a source file by attempting to run tools on it.
+//Eval builds and runs tools on a source file.
 func (this *Analyser) Eval() (err error) {
 	err = this.buildTarget()
 	if err != nil {
@@ -32,7 +30,6 @@ func (this *Analyser) Eval() (err error) {
 }
 
 //buildTarget saves a file to filesystem.
-//It returns file info used by tools.
 func (this *Analyser) buildTarget() error {
 	this.target = tool.NewTarget(this.file.Name,
 		this.proc.project.Lang, this.file.Package, this.proc.srcDir)
@@ -41,8 +38,11 @@ func (this *Analyser) buildTarget() error {
 
 //RunTools runs all available tools on a file, skipping previously run tools.
 func (this *Analyser) RunTools() {
+	//First we compile our file.
 	res, err := this.proc.compiler.Run(this.file.Id, this.target)
+	//If an error occurred we don't run any tools.
 	if err != nil {
+		//If the error was only compilation we still want to store the result.
 		if tool.IsCompileError(err) {
 			db.AddResult(res)
 		}
@@ -50,17 +50,16 @@ func (this *Analyser) RunTools() {
 	}
 	db.AddResult(res)
 	for _, t := range this.proc.tools {
+		//Skip the tool if it has already been run.
 		if _, ok := this.file.Results[t.Name()]; ok {
 			continue
 		}
 		res, err := t.Run(this.file.Id, this.target)
 		if err != nil {
+			//Report any errors and store timeouts.
 			util.Log(
 				fmt.Errorf("Encountered error %q when running tool %s on file %s.",
 					err, t.Name(), this.file.Id.Hex()), LOG_ANALYSER)
-			dest := filepath.Join(os.TempDir(), "errors", this.file.Id.Hex())
-			os.MkdirAll(dest, util.DPERM)
-			util.Copy(dest, this.target.Dir)
 			if tool.IsTimeout(err) {
 				err = db.AddTimeoutResult(
 					this.file.Id, t.Name())

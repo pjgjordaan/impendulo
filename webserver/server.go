@@ -10,17 +10,18 @@ import (
 var (
 	router    *pat.Router
 	staticDir string
+	running   bool
 )
 
-const LOG_SERVER = "webserver/server.go"
+const (
+	LOG_SERVER = "webserver/server.go"
+)
 
 func init() {
 	router = pat.New()
 	router.Add("POST", "/login", Handler(login))
 	router.Add("POST", "/register", Handler(register))
 	router.Add("POST", "/logout", Handler(logout))
-	router.Add("POST", "/deleteproject", Handler(deleteProject))
-	router.Add("POST", "/deleteuser", Handler(deleteUser))
 
 	GeneratePosts(router)
 
@@ -37,6 +38,7 @@ func init() {
 	router.Add("GET", "/", Handler(LoadView("homeView", "home"))).Name("index")
 }
 
+//StaticDir
 func StaticDir() string {
 	if staticDir != "" {
 		return staticDir
@@ -45,6 +47,7 @@ func StaticDir() string {
 	return staticDir
 }
 
+//getRoute
 func getRoute(name string) string {
 	u, err := router.GetRoute(name).URL()
 	if err != nil {
@@ -53,7 +56,13 @@ func getRoute(name string) string {
 	return u.Path
 }
 
+//RunTLS
 func RunTLS() {
+	if Active() {
+		return
+	}
+	setActive(true)
+	defer setActive(false)
 	cert := filepath.Join(util.BaseDir(), "cert.pem")
 	key := filepath.Join(util.BaseDir(), "key.pem")
 	if !util.Exists(cert) || !util.Exists(key) {
@@ -67,8 +76,22 @@ func RunTLS() {
 	}
 }
 
+//Run
 func Run() {
+	if Active() {
+		return
+	}
+	setActive(true)
+	defer setActive(false)
 	if err := http.ListenAndServe(":8080", router); err != nil {
 		util.Log(err)
 	}
+}
+
+func Active() bool {
+	return running
+}
+
+func setActive(active bool) {
+	running = active
 }
