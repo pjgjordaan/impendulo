@@ -1,3 +1,19 @@
+//Copyright (C) 2013  The Impendulo Authors
+//
+//This library is free software; you can redistribute it and/or
+//modify it under the terms of the GNU Lesser General Public
+//License as published by the Free Software Foundation; either
+//version 2.1 of the License, or (at your option) any later version.
+//
+//This library is distributed in the hope that it will be useful,
+//but WITHOUT ANY WARRANTY; without even the implied warranty of
+//MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//Lesser General Public License for more details.
+//
+//You should have received a copy of the GNU Lesser General Public
+//License along with this library; if not, write to the Free Software
+//Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
 package pmd
 
 import (
@@ -10,6 +26,7 @@ import (
 )
 
 type (
+	//Report is the result of running PMD on a Java source file.
 	Report struct {
 		Id      bson.ObjectId
 		Version string  `xml:"version,attr"`
@@ -17,16 +34,19 @@ type (
 		Errors  int
 	}
 
+	//File
 	File struct {
 		Name       string       `xml:"name,attr"`
 		Violations []*Violation `xml:"violation"`
 	}
 
+	//Problem
 	Problem struct {
 		*Violation
 		Starts, Ends []int
 	}
 
+	//Violation
 	Violation struct {
 		Begin       int          `xml:"beginline,attr"`
 		End         int          `xml:"endline,attr"`
@@ -42,6 +62,7 @@ func init() {
 	gob.Register(new(Report))
 }
 
+//NewReport
 func NewReport(id bson.ObjectId, data []byte) (res *Report, err error) {
 	if err = xml.Unmarshal(data, &res); err != nil {
 		err = tool.NewXMLError(err, "pmd/pmdResult.go")
@@ -55,10 +76,12 @@ func NewReport(id bson.ObjectId, data []byte) (res *Report, err error) {
 	return
 }
 
+//Success
 func (this *Report) Success() bool {
 	return this.Errors == 0
 }
 
+//String
 func (this *Report) String() (ret string) {
 	ret = fmt.Sprintf("Report{ Errors: %d\n.", this.Errors)
 	if this.Files != nil {
@@ -71,6 +94,7 @@ func (this *Report) String() (ret string) {
 	return
 }
 
+//Problems
 func (this *File) Problems() map[string]*Problem {
 	problems := make(map[string]*Problem)
 	for _, v := range this.Violations {
@@ -86,6 +110,7 @@ func (this *File) Problems() map[string]*Problem {
 	return problems
 }
 
+//String
 func (this *File) String() (ret string) {
 	ret = fmt.Sprintf("File{ Name: %s\n.", this.Name)
 	if this.Violations != nil {
@@ -98,6 +123,7 @@ func (this *File) String() (ret string) {
 	return
 }
 
+//String
 func (this *Violation) String() (ret string) {
 	ret = fmt.Sprintf("Violation{ Begin: %d; End: %d; Rule: %s; RuleSet: %s; "+
 		"Priority: %d; Description: %s}\n",

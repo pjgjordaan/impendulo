@@ -1,3 +1,19 @@
+//Copyright (C) 2013  The Impendulo Authors
+//
+//This library is free software; you can redistribute it and/or
+//modify it under the terms of the GNU Lesser General Public
+//License as published by the Free Software Foundation; either
+//version 2.1 of the License, or (at your option) any later version.
+//
+//This library is distributed in the hope that it will be useful,
+//but WITHOUT ANY WARRANTY; without even the implied warranty of
+//MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//Lesser General Public License for more details.
+//
+//You should have received a copy of the GNU Lesser General Public
+//License along with this library; if not, write to the Free Software
+//Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
 package util
 
 import (
@@ -5,8 +21,8 @@ import (
 	"bytes"
 	"errors"
 	"os"
-	"testing"
 	"path/filepath"
+	"testing"
 )
 
 func TestZipMap(t *testing.T) {
@@ -38,10 +54,10 @@ func TestExtractBytes(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if !bytes.Equal(files[zf.Name], extracted){
+		if !bytes.Equal(files[zf.Name], extracted) {
 			t.Error("Expected %s for %s but got %s.",
 				string(files[zf.Name]), zf.Name, string(extracted))
-		} 
+		}
 	}
 	zf := new(zip.File)
 	_, err = ExtractBytes(zf)
@@ -133,17 +149,17 @@ func TestExtractFile(t *testing.T) {
 		err := ExtractFile(zf, dir)
 		if err != nil {
 			t.Error(err)
-		} 
+		}
 	}
-	badFiles := []*zip.File{new(zip.File), nil} 
-	for _, zf := range badFiles{
+	badFiles := []*zip.File{new(zip.File), nil}
+	for _, zf := range badFiles {
 		err = ExtractFile(zf, dir)
 		if err == nil {
 			t.Error("Expected error for invalid zip file.")
 		}
 	}
-	badLocations := []string{ "/dev", "/gibberish"}
-	for _, loc := range badLocations{
+	badLocations := []string{"/dev", "/gibberish"}
+	for _, loc := range badLocations {
 		err = ExtractFile(zr.File[0], loc)
 		if err == nil {
 			t.Errorf("Expected error for invalid directory %s.", loc)

@@ -1,3 +1,19 @@
+//Copyright (C) 2013  The Impendulo Authors
+//
+//This library is free software; you can redistribute it and/or
+//modify it under the terms of the GNU Lesser General Public
+//License as published by the Free Software Foundation; either
+//version 2.1 of the License, or (at your option) any later version.
+//
+//This library is distributed in the hope that it will be useful,
+//but WITHOUT ANY WARRANTY; without even the implied warranty of
+//MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//Lesser General Public License for more details.
+//
+//You should have received a copy of the GNU Lesser General Public
+//License along with this library; if not, write to the Free Software
+//Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
 package util
 
 import (
@@ -9,8 +25,8 @@ import (
 )
 
 var testmap = map[string]interface{}{
-	"string": "2a 3", "int": 2, "id": bson.NewObjectId(), 
-	"map": bson.M{"a": "b"}, "bytes": []byte("AB"), 
+	"string": "2a 3", "int": 2, "id": bson.NewObjectId(),
+	"map": bson.M{"a": "b"}, "bytes": []byte("AB"),
 	"strings": []string{"A", "B"}, "int64": int64(2231231223123123123),
 }
 
@@ -48,12 +64,11 @@ func TestGetInt64(t *testing.T) {
 			if err != nil || res != v.(int64) {
 				t.Error(err, res, "!=", v)
 			}
-		} else if err == nil && k != "int"{
+		} else if err == nil && k != "int" {
 			t.Error(errors.New("Error function should not cast"))
 		}
 	}
 }
-
 
 func TestGetId(t *testing.T) {
 	this := "id"

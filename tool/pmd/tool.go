@@ -1,3 +1,19 @@
+//Copyright (C) 2013  The Impendulo Authors
+//
+//This library is free software; you can redistribute it and/or
+//modify it under the terms of the GNU Lesser General Public
+//License as published by the Free Software Foundation; either
+//version 2.1 of the License, or (at your option) any later version.
+//
+//This library is distributed in the hope that it will be useful,
+//but WITHOUT ANY WARRANTY; without even the implied warranty of
+//MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//Lesser General Public License for more details.
+//
+//You should have received a copy of the GNU Lesser General Public
+//License along with this library; if not, write to the Free Software
+//Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
 package pmd
 
 import (
@@ -12,7 +28,8 @@ import (
 )
 
 type (
-	//Tool
+	//Tool is an implementation of tool.Tool which allows us to run
+	//PMD on Java classes.
 	Tool struct {
 		cmd   string
 		rules string
@@ -40,7 +57,8 @@ func (this *Tool) Name() string {
 	return NAME
 }
 
-//Run
+//Run runs PMD on a provided Java source file. PMD writes its output to an XML file which we then read
+//and use to create a PMD Result.
 func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	outFile := filepath.Join(ti.Dir, "pmd.xml")
 	args := []string{this.cmd, config.PMD, "-f", "xml", "-stress",
