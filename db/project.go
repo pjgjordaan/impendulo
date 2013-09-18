@@ -5,9 +5,17 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
-//GetFile retrieves a file matching the given interface from the active database.
-func GetFile(matcher, selector interface{}) (ret *project.File, err error) {
-	session, err := getSession()
+type (
+	//FileInfo
+	FileInfo struct {
+		Name  string
+		Count int
+	}
+)
+
+//File retrieves a file matching the given interface from the active database.
+func File(matcher, selector interface{}) (ret *project.File, err error) {
+	session, err := Session()
 	if err != nil {
 		return
 	}
@@ -20,9 +28,9 @@ func GetFile(matcher, selector interface{}) (ret *project.File, err error) {
 	return
 }
 
-//GetFiles retrieves files matching the given interface from the active database.
-func GetFiles(matcher, selector interface{}, sort ...string) (ret []*project.File, err error) {
-	session, err := getSession()
+//Files retrieves files matching the given interface from the active database.
+func Files(matcher, selector interface{}, sort ...string) (ret []*project.File, err error) {
+	session, err := Session()
 	if err != nil {
 		return
 	}
@@ -39,14 +47,9 @@ func GetFiles(matcher, selector interface{}, sort ...string) (ret []*project.Fil
 	return
 }
 
-type FileInfo struct {
-	Name  string
-	Count int
-}
-
-//GetFileInfo retrieves names of file information.
-func GetFileInfo(matcher bson.M) (ret []*FileInfo, err error) {
-	names, err := GetFileNames(matcher)
+//FileInfos retrieves names of file information.
+func FileInfos(matcher bson.M) (ret []*FileInfo, err error) {
+	names, err := FileNames(matcher)
 	if err != nil {
 		return
 	}
@@ -63,10 +66,10 @@ func GetFileInfo(matcher bson.M) (ret []*FileInfo, err error) {
 	return
 }
 
-//GetFileNames retrieves names of files
+//FileNames retrieves names of files
 //matching the given interface from the active database.
-func GetFileNames(matcher interface{}) (ret []string, err error) {
-	session, err := getSession()
+func FileNames(matcher interface{}) (ret []string, err error) {
+	session, err := Session()
 	if err != nil {
 		return
 	}
@@ -79,10 +82,10 @@ func GetFileNames(matcher interface{}) (ret []string, err error) {
 	return
 }
 
-//GetSubmission retrieves a submission matching
+//Submission retrieves a submission matching
 //the given interface from the active database.
-func GetSubmission(matcher, selector interface{}) (ret *project.Submission, err error) {
-	session, err := getSession()
+func Submission(matcher, selector interface{}) (ret *project.Submission, err error) {
+	session, err := Session()
 	if err != nil {
 		return
 	}
@@ -95,10 +98,10 @@ func GetSubmission(matcher, selector interface{}) (ret *project.Submission, err 
 	return
 }
 
-//GetSubmissions retrieves submissions matching
+//Submissions retrieves submissions matching
 //the given interface from the active database.
-func GetSubmissions(matcher, selector interface{}, sort ...string) (ret []*project.Submission, err error) {
-	session, err := getSession()
+func Submissions(matcher, selector interface{}, sort ...string) (ret []*project.Submission, err error) {
+	session, err := Session()
 	if err != nil {
 		return
 	}
@@ -115,10 +118,10 @@ func GetSubmissions(matcher, selector interface{}, sort ...string) (ret []*proje
 	return
 }
 
-//GetProject retrieves a project matching
+//Project retrieves a project matching
 //the given interface from the active database.
-func GetProject(matcher, selector interface{}) (ret *project.Project, err error) {
-	session, err := getSession()
+func Project(matcher, selector interface{}) (ret *project.Project, err error) {
+	session, err := Session()
 	if err != nil {
 		return
 	}
@@ -131,10 +134,10 @@ func GetProject(matcher, selector interface{}) (ret *project.Project, err error)
 	return
 }
 
-//GetProjects retrieves projects matching
+//Projects retrieves projects matching
 //the given interface from the active database.
-func GetProjects(matcher, selector interface{}, sort ...string) (ret []*project.Project, err error) {
-	session, err := getSession()
+func Projects(matcher, selector interface{}, sort ...string) (ret []*project.Project, err error) {
+	session, err := Session()
 	if err != nil {
 		return
 	}
@@ -151,54 +154,9 @@ func GetProjects(matcher, selector interface{}, sort ...string) (ret []*project.
 	return
 }
 
-//AddFile adds a new file to the active database.
-func AddFile(f *project.File) (err error) {
-	session, err := getSession()
-	if err != nil {
-		return
-	}
-	defer session.Close()
-	col := session.DB("").C(FILES)
-	err = col.Insert(f)
-	if err != nil {
-		err = &DBAddError{f.String(), err}
-	}
-	return
-}
-
-//AddSubmission adds a new submission to the active database.
-func AddSubmission(s *project.Submission) (err error) {
-	session, err := getSession()
-	if err != nil {
-		return
-	}
-	defer session.Close()
-	col := session.DB("").C(SUBMISSIONS)
-	err = col.Insert(s)
-	if err != nil {
-		err = &DBAddError{s.String(), err}
-	}
-	return
-}
-
-//AddProject adds a new project to the active database.
-func AddProject(p *project.Project) (err error) {
-	session, err := getSession()
-	if err != nil {
-		return
-	}
-	defer session.Close()
-	col := session.DB("").C(PROJECTS)
-	err = col.Insert(p)
-	if err != nil {
-		err = &DBAddError{p.String(), err}
-	}
-	return
-}
-
 //RemoveFileById removes a file matching the given id from the active database.
 func RemoveFileById(id interface{}) (err error) {
-	file, err := GetFile(bson.M{project.ID: id}, bson.M{project.RESULTS: 1})
+	file, err := File(bson.M{project.ID: id}, bson.M{project.RESULTS: 1})
 	if err != nil {
 		return
 	}
@@ -206,28 +164,19 @@ func RemoveFileById(id interface{}) (err error) {
 		if _, ok := resId.(bson.ObjectId); !ok {
 			continue
 		}
-		err = RemoveResultById(resId)
+		err = RemoveById(RESULTS, resId)
 		if err != nil {
 			return
 		}
 	}
-	session, err := getSession()
-	if err != nil {
-		return
-	}
-	defer session.Close()
-	c := session.DB("").C(FILES)
-	err = c.RemoveId(id)
-	if err != nil {
-		err = &DBRemoveError{"file", err, id}
-	}
+	err = RemoveById(FILES, id)
 	return
 }
 
 //RemoveSubmissionById removes a submission matching
 //the given id from the active database.
 func RemoveSubmissionById(id interface{}) (err error) {
-	files, err := GetFiles(bson.M{project.SUBID: id},
+	files, err := Files(bson.M{project.SUBID: id},
 		bson.M{project.ID: 1})
 	if err != nil {
 		return
@@ -238,31 +187,7 @@ func RemoveSubmissionById(id interface{}) (err error) {
 			return
 		}
 	}
-	session, err := getSession()
-	if err != nil {
-		return
-	}
-	defer session.Close()
-	c := session.DB("").C(SUBMISSIONS)
-	err = c.RemoveId(id)
-	if err != nil {
-		err = &DBRemoveError{"submission", err, id}
-	}
-	return
-}
-
-//RemoveTestById removes a test matching the given id from the active database.
-func RemoveTestById(id interface{}) (err error) {
-	session, err := getSession()
-	if err != nil {
-		return
-	}
-	defer session.Close()
-	c := session.DB("").C(TESTS)
-	err = c.RemoveId(id)
-	if err != nil {
-		err = &DBRemoveError{"test", err, id}
-	}
+	err = RemoveById(SUBMISSIONS, id)
 	return
 }
 
@@ -271,7 +196,7 @@ func RemoveTestById(id interface{}) (err error) {
 func RemoveProjectById(id interface{}) (err error) {
 	projectMatch := bson.M{project.PROJECT_ID: id}
 	idSelect := bson.M{project.ID: 1}
-	subs, err := GetSubmissions(projectMatch, idSelect)
+	subs, err := Submissions(projectMatch, idSelect)
 	if err != nil {
 		return
 	}
@@ -281,33 +206,21 @@ func RemoveProjectById(id interface{}) (err error) {
 			return
 		}
 	}
-	tests, err := GetTests(projectMatch, idSelect)
+	tests, err := JUnitTests(projectMatch, idSelect)
 	if err != nil {
 		return
 	}
 	for _, test := range tests {
-		err = RemoveTestById(test.Id)
-		if err != nil {
-			return
-		}
+		RemoveById(TESTS, test.Id)
 	}
-	jpfConfig, err := GetJPF(projectMatch, idSelect)
+	jpfConfig, err := JPFConfig(projectMatch, idSelect)
 	if err == nil {
-		RemoveJPFById(jpfConfig.Id)
+		RemoveById(JPF, jpfConfig.Id)
 	}
-	pmdRules, err := GetPMD(projectMatch, idSelect)
+	pmdRules, err := PMDRules(projectMatch, idSelect)
 	if err == nil {
-		RemovePMDById(pmdRules.Id)
+		RemoveById(PMD, pmdRules.Id)
 	}
-	session, err := getSession()
-	if err != nil {
-		return
-	}
-	defer session.Close()
-	c := session.DB("").C(PROJECTS)
-	err = c.RemoveId(id)
-	if err != nil {
-		err = &DBRemoveError{"project", err, id}
-	}
+	err = RemoveById(PROJECTS, id)
 	return
 }

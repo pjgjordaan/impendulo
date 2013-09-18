@@ -5,7 +5,6 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"net/http"
@@ -24,30 +23,27 @@ func SubmitArchive(req *http.Request, ctx *Context) (msg string, err error) {
 	if err != nil {
 		return
 	}
-	if !db.Contains(db.USERS, bson.M{user.ID: username}) {
-		err = fmt.Errorf("User %s not found.", username)
-		msg = err.Error()
-		return
-	}
 	_, archiveBytes, err := ReadFormFile(req, "archive")
 	if err != nil {
 		msg = "Could not read archive."
 		return
 	}
+	//We need to create a submission for this archive so that
+	//it can be added to the db and so that it can be processed
 	sub := project.NewSubmission(projectId, username, project.ARCHIVE_MODE,
 		util.CurMilis())
-	err = db.AddSubmission(sub)
+	err = db.Add(db.SUBMISSIONS, sub)
 	if err != nil {
 		msg = "Could not create submission."
 		return
 	}
 	file := project.NewArchive(sub.Id, archiveBytes)
-	err = db.AddFile(file)
+	err = db.Add(db.FILES, file)
 	if err != nil {
 		msg = "Could not store archive."
 		return
 	}
-	//Send file to be analysed.
+	//Start a submission and send the file to be processed.
 	err = processing.StartSubmission(sub.Id)
 	if err != nil {
 		msg = "Could not start archive submission."
@@ -110,7 +106,7 @@ func AddProject(req *http.Request, ctx *Context) (msg string, err error) {
 		return
 	}
 	p := project.NewProject(name, username, lang, skeletonBytes)
-	err = db.AddProject(p)
+	err = db.Add(db.PROJECTS, p)
 	if err != nil {
 		msg = "Could not add project."
 	} else {
@@ -141,11 +137,11 @@ func RetrieveFileInfo(req *http.Request, ctx *Context) (ret []*db.FileInfo, err 
 		ctx.Browse.Sid = subId
 	}
 	matcher := bson.M{project.SUBID: ctx.Browse.Sid, project.TYPE: project.SRC}
-	ret, err = db.GetFileInfo(matcher)
+	ret, err = db.FileInfos(matcher)
 	if err != nil {
 		return
 	}
-	sub, err := db.GetSubmission(bson.M{project.ID: ctx.Browse.Sid},
+	sub, err := db.Submission(bson.M{project.ID: ctx.Browse.Sid},
 		bson.M{project.PROJECT_ID: 1, project.USER: 1})
 	if err != nil {
 		return
@@ -164,7 +160,7 @@ func RetrieveFiles(req *http.Request, ctx *Context) (ret []*project.File, err er
 	matcher := bson.M{project.SUBID: ctx.Browse.Sid,
 		project.TYPE: project.SRC, project.NAME: ctx.Browse.FileName}
 	selector := bson.M{project.TIME: 1}
-	ret, err = db.GetFiles(matcher, selector, project.TIME)
+	ret, err = db.Files(matcher, selector, project.TIME)
 	if err == nil && len(ret) == 0 {
 		err = fmt.Errorf("No files found with name %q.", ctx.Browse.FileName)
 	}
@@ -181,6 +177,7 @@ func RetrieveSubmissions(req *http.Request, ctx *Context) (subs []*project.Submi
 	if err != nil {
 		return
 	}
+	//Determine for what we want to retrieve submissions and act accordingly.
 	switch tipe {
 	case "project":
 		var pid bson.ObjectId
@@ -190,12 +187,12 @@ func RetrieveSubmissions(req *http.Request, ctx *Context) (subs []*project.Submi
 		}
 		ctx.Browse.Pid = pid
 		ctx.Browse.IsUser = false
-		subs, err = db.GetSubmissions(
+		subs, err = db.Submissions(
 			bson.M{project.PROJECT_ID: pid}, nil, "-"+project.TIME)
 	case "user":
 		ctx.Browse.Uid = idStr
 		ctx.Browse.IsUser = true
-		subs, err = db.GetSubmissions(
+		subs, err = db.Submissions(
 			bson.M{project.USER: ctx.Browse.Uid}, nil, "-"+project.TIME)
 	default:
 		err = fmt.Errorf("Unknown request type %q", tipe)
@@ -212,10 +209,11 @@ func LoadSkeleton(req *http.Request) (path string, err error) {
 	}
 	name := strconv.FormatInt(time.Now().Unix(), 10)
 	path = filepath.Join(util.BaseDir(), "skeletons", idStr, name+".zip")
+	//If the skeleton is saved for downloading we don't need to store it again.
 	if util.Exists(path) {
 		return
 	}
-	p, err := db.GetProject(bson.M{project.ID: projectId}, nil)
+	p, err := db.Project(bson.M{project.ID: projectId}, nil)
 	if err != nil {
 		return
 	}
@@ -227,13 +225,13 @@ func LoadSkeleton(req *http.Request) (path string, err error) {
 //getFile
 func getFile(id bson.ObjectId) (file *project.File, err error) {
 	selector := bson.M{project.NAME: 1, project.TIME: 1}
-	file, err = db.GetFile(bson.M{project.ID: id}, selector)
+	file, err = db.File(bson.M{project.ID: id}, selector)
 	return
 }
 
-//projectName
+//projectName retrieves the project name associated with the project identified by id.
 func projectName(id bson.ObjectId) (name string, err error) {
-	proj, err := db.GetProject(bson.M{project.ID: id},
+	proj, err := db.Project(bson.M{project.ID: id},
 		bson.M{project.NAME: 1})
 	if err != nil {
 		return

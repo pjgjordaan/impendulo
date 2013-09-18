@@ -11,22 +11,21 @@ import (
 	"time"
 )
 
-//File stores a single file's data from a submission.
-type File struct {
-	Id      bson.ObjectId "_id"
-	SubId   bson.ObjectId "subid"
-	Name    string        "name"
-	Package string        "package"
-	Type    string        "type"
-	Time    int64         "time"
-	Data    []byte        "data"
-	Results bson.M        "results"
-}
+type (
+	//File stores a single file's data from a submission.
+	File struct {
+		Id      bson.ObjectId "_id"
+		SubId   bson.ObjectId "subid"
+		Name    string        "name"
+		Package string        "package"
+		Type    string        "type"
+		Time    int64         "time"
+		Data    []byte        "data"
+		Results bson.M        "results"
+	}
+)
 
-func (this *File) TypeName() string {
-	return "file"
-}
-
+//String
 func (this *File) String() string {
 	return "Type: project.File; Id: " + this.Id.Hex() +
 		"; SubId: " + this.SubId.Hex() + "; Name: " + this.Name +
@@ -34,6 +33,7 @@ func (this *File) String() string {
 		"; Time: " + util.Date(this.Time)
 }
 
+//Equals
 func (this *File) Equals(that *File) bool {
 	if reflect.DeepEqual(this, that) {
 		return true
@@ -43,6 +43,7 @@ func (this *File) Equals(that *File) bool {
 		bytes.Equal(this.Data, that.Data)
 }
 
+//Same
 func (this *File) Same(that *File) bool {
 	return this.Id == that.Id
 }
@@ -56,12 +57,10 @@ func (this *File) CanProcess() bool {
 func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) (file *File, err error) {
 	id := bson.NewObjectId()
 	file = &File{Id: id, SubId: subId, Data: data}
-	//Non essential fields
 	file.Type, err = util.GetString(info, TYPE)
 	if err != nil && util.IsCastError(err) {
 		return
 	}
-	//Essential fields
 	file.Name, err = util.GetString(info, NAME)
 	if err != nil {
 		return

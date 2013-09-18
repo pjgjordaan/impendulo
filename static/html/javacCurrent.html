@@ -1,10 +1,10 @@
 {{define "currentResult"}}
 {{$result := .curResult}}
-{{$header := $result.ResultHeader}}
+{{$header := $result.Header}}
 {{if $result.Success}}
 <h4 class="text-success">{{$header}}</h4>
 {{else}}
-{{$res := setBreaks $result.Result}}
+{{$res := setBreaks (string $result.Data)}}
 {{if $result.Warnings}}
 <h4 class="text-warning">{{$header}}</h4>
 <p class="text-warning">{{$res}}</p>

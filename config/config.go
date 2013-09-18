@@ -1,3 +1,4 @@
+//Package config provides mechanisms for configuring how impendulo should be run.
 package config
 
 import (
@@ -14,6 +15,30 @@ var (
 	defaultConfig string
 )
 
+const (
+	JUNIT_EXEC        = "junit_exec"
+	LINT4J            = "lint4j"
+	FINDBUGS          = "findbugs"
+	JUNIT_JAR         = "junit_jar"
+	ANT               = "ant"
+	ANT_JUNIT         = "ant_junit"
+	JAVAC             = "javac"
+	JAVA              = "java"
+	JPF_JAR           = "jpf_jar"
+	RUNJPF_JAR        = "runjpf_jar"
+	GSON_JAR          = "gson_jar"
+	JPF_RUNNER_DIR    = "jpf_runner_dir"
+	TESTING_DIR       = "testing_dir"
+	JPF_HOME          = "jpf_home"
+	JPF_FINDER_DIR    = "jpf_finder_dir"
+	PMD               = "pmd"
+	PMD_RULES         = "pmd_rules"
+	CHECKSTYLE        = "checkstyle"
+	CHECKSTYLE_CONFIG = "checkstyle_config"
+	DIFF2HTML         = "diff2html"
+	DIFF              = "diff"
+)
+
 func init() {
 	settings = make(map[string]string)
 	err := LoadConfigs(DefaultConfig())
@@ -22,13 +47,13 @@ func init() {
 	}
 }
 
+//DefaultConfig
 func DefaultConfig() string {
 	if defaultConfig != "" {
 		return defaultConfig
 	}
 	defaultConfig = filepath.Join(util.InstallPath(), "config.txt")
 	return defaultConfig
-
 }
 
 //LoadConfigs loads configurations from a file.
@@ -65,27 +90,3 @@ func Config(name string) string {
 func SetConfig(name, value string) {
 	settings[name] = value
 }
-
-const (
-	JUNIT_EXEC        = "junit_exec"
-	LINT4J            = "lint4j"
-	FINDBUGS          = "findbugs"
-	JUNIT_JAR         = "junit_jar"
-	ANT               = "ant"
-	ANT_JUNIT         = "ant_junit"
-	JAVAC             = "javac"
-	JAVA              = "java"
-	JPF_JAR           = "jpf_jar"
-	RUNJPF_JAR        = "runjpf_jar"
-	GSON_JAR          = "gson_jar"
-	JPF_RUNNER_DIR    = "jpf_runner_dir"
-	TESTING_DIR       = "testing_dir"
-	JPF_HOME          = "jpf_home"
-	JPF_FINDER_DIR    = "jpf_finder_dir"
-	PMD               = "pmd"
-	PMD_RULES         = "pmd_rules"
-	CHECKSTYLE        = "checkstyle"
-	CHECKSTYLE_CONFIG = "checkstyle_config"
-	DIFF2HTML         = "diff2html"
-	DIFF              = "diff"
-)

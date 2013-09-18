@@ -10,25 +10,30 @@ import (
 	"path/filepath"
 )
 
-//Findbugs is a tool.Tool used to run the Findbugs static analysis tool on
-//Java classes.
-type FindBugs struct {
-	cmd string
-}
+type (
+	//Findbugs is a tool.Tool used to run the Findbugs static analysis tool on
+	//Java classes.
+	FindBugs struct {
+		cmd string
+	}
+)
 
-//Creates a new instance of the Findbugs tool.
+//New Creates a new instance of the Findbugs tool.
 func New() *FindBugs {
 	return &FindBugs{config.Config(config.FINDBUGS)}
 }
 
+//Lang
 func (this *FindBugs) Lang() string {
 	return tool.JAVA
 }
 
+//Name
 func (this *FindBugs) Name() string {
 	return NAME
 }
 
+//Run
 func (this *FindBugs) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	outFile := filepath.Join(ti.Dir, "findbugs.xml")
 	args := []string{config.Config(config.JAVA), "-jar", this.cmd, "-textui", "-effort:max",

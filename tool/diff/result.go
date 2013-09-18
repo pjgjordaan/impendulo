@@ -11,6 +11,13 @@ const (
 	NAME = "Diff"
 )
 
+type (
+	//DiffResult is a DisplayResult used to display a diff between two files.
+	DiffResult struct {
+		header, data string
+	}
+)
+
 func NewDiffResult(file *project.File) *DiffResult {
 	header := file.Name + " " + util.Date(file.Time)
 	data := strings.TrimSpace(string(file.Data))
@@ -18,11 +25,6 @@ func NewDiffResult(file *project.File) *DiffResult {
 		header: header,
 		data:   data,
 	}
-}
-
-//DiffResult is a DisplayResult used to display a diff between two files.
-type DiffResult struct {
-	header, data string
 }
 
 func (this *DiffResult) Create(next *DiffResult) (ret template.HTML, err error) {
@@ -42,12 +44,4 @@ func (this *DiffResult) GetName() string {
 
 func (this *DiffResult) GetData() interface{} {
 	return this
-}
-
-func (this *DiffResult) Template(current bool) string {
-	if current {
-		return "diffCurrent"
-	} else {
-		return "diffNext"
-	}
 }

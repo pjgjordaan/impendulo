@@ -12,8 +12,10 @@ var (
 	permissions map[string]int
 )
 
-//A function used to add data to the database.
-type Poster func(*http.Request, *Context) (string, error)
+type (
+	//A function used to add data to the database.
+	Poster func(*http.Request, *Context) (string, error)
+)
 
 //CreatePost loads a post request handler.
 func (this Poster) CreatePost() Handler {

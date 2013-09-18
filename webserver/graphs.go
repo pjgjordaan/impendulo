@@ -13,12 +13,14 @@ import (
 	"math"
 )
 
-//GraphArgs represents arguments which are passed to rickshaw
-//in order to draw a graph.
-type GraphArgs map[string]interface{}
+type (
+	//GraphArgs represents arguments which are passed to rickshaw
+	//in order to draw a graph.
+	GraphArgs map[string]interface{}
 
-//GraphData represents the x and y values used to draw the graphs.
-type GraphData []map[string]interface{}
+	//GraphData represents the x and y values used to draw the graphs.
+	GraphData []map[string]interface{}
+)
 
 //LoadResultGraphData calculates GraphArgs for a given result.
 func LoadResultGraphData(result, tipe string, files []*project.File) (graphArgs GraphArgs) {
@@ -61,11 +63,12 @@ func LoadResultGraphData(result, tipe string, files []*project.File) (graphArgs 
 	return
 }
 
+//loadJavacGraphData
 func loadJavacGraphData(time bool, files []*project.File) (GraphData, float64) {
 	graphData := make(GraphData, 2)
 	max := -1.0
 	for _, f := range files {
-		result, err := db.GetJavacResult(
+		result, err := db.JavacResult(
 			bson.M{project.FILEID: f.Id}, nil)
 		if err != nil {
 			continue
@@ -79,11 +82,12 @@ func loadJavacGraphData(time bool, files []*project.File) (GraphData, float64) {
 	return graphData, max
 }
 
+//loadJUnitGraphData
 func loadJUnitGraphData(testName string, time bool, files []*project.File) (GraphData, float64) {
 	graphData := make(GraphData, 3)
 	max := -1.0
 	for _, f := range files {
-		result, err := db.GetJUnitResult(
+		result, err := db.JUnitResult(
 			bson.M{project.FILEID: f.Id, project.NAME: testName}, nil)
 		if err != nil {
 			continue
@@ -97,11 +101,12 @@ func loadJUnitGraphData(testName string, time bool, files []*project.File) (Grap
 	return graphData, max
 }
 
+//loadJPFGraphData
 func loadJPFGraphData(time bool, files []*project.File) (GraphData, float64) {
 	graphData := make(GraphData, 1)
 	max := -1.0
 	for _, f := range files {
-		result, err := db.GetJPFResult(
+		result, err := db.JPFResult(
 			bson.M{project.FILEID: f.Id}, nil)
 		if err != nil {
 			continue
@@ -115,11 +120,12 @@ func loadJPFGraphData(time bool, files []*project.File) (GraphData, float64) {
 	return graphData, max
 }
 
+//loadFindbugsGraphData
 func loadFindbugsGraphData(time bool, files []*project.File) (GraphData, float64) {
 	graphData := make(GraphData, 4)
 	max := -1.0
 	for _, f := range files {
-		result, err := db.GetFindbugsResult(
+		result, err := db.FindbugsResult(
 			bson.M{project.FILEID: f.Id}, nil)
 		if err != nil || result.Data == nil {
 			continue
@@ -133,11 +139,12 @@ func loadFindbugsGraphData(time bool, files []*project.File) (GraphData, float64
 	return graphData, max
 }
 
+//loadCheckstyleGraphData
 func loadCheckstyleGraphData(time bool, files []*project.File) (GraphData, float64) {
 	graphData := make(GraphData, 1)
 	max := -1.0
 	for _, f := range files {
-		result, err := db.GetCheckstyleResult(
+		result, err := db.CheckstyleResult(
 			bson.M{project.FILEID: f.Id}, nil)
 		if err != nil || result.Data == nil {
 			continue
@@ -151,11 +158,12 @@ func loadCheckstyleGraphData(time bool, files []*project.File) (GraphData, float
 	return graphData, max
 }
 
+//loadPMDGraphData
 func loadPMDGraphData(time bool, files []*project.File) (GraphData, float64) {
 	graphData := make(GraphData, 1)
 	max := -1.0
 	for _, f := range files {
-		result, err := db.GetPMDResult(
+		result, err := db.PMDResult(
 			bson.M{project.FILEID: f.Id}, nil)
 		if err != nil || result.Data == nil {
 			continue
@@ -169,11 +177,12 @@ func loadPMDGraphData(time bool, files []*project.File) (GraphData, float64) {
 	return graphData, max
 }
 
+//loadAllGraphData
 func loadAllGraphData(time bool, files []*project.File) (GraphData, float64) {
 	graphData := make(map[string]GraphData)
 	allMax := make(map[string]float64)
 	for _, f := range files {
-		results, err := db.GetGraphResults(f.Id)
+		results, err := db.GraphResults(f.Id)
 		if err != nil || results == nil {
 			continue
 		}

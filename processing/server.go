@@ -1,3 +1,5 @@
+//Package processing provides functionality for running a submission and its snapshots
+//through the Impendulo tool suite.
 package processing
 
 import (
@@ -18,12 +20,34 @@ var (
 	statusChan                                       chan Status
 )
 
-//Request is used to carry requests to process submissions and files.
-type Request struct {
-	Id, ParentId bson.ObjectId
-	//Used to return errors
-	Response chan error
-}
+type (
+	//Request is used to carry requests to process submissions and files.
+	Request struct {
+		Id, ParentId bson.ObjectId
+		//Used to return errors
+		Response chan error
+	}
+
+	//Status is used to indicate a change in the files or
+	//submissions being processed. It is also used to retrieve the current
+	//number of files and submissions being processed.
+	Status struct {
+		Files       int
+		Submissions int
+	}
+
+	//empty
+	empty struct{}
+
+	//ProcHelper is used to help handle a submission's files.
+	ProcHelper struct {
+		subId     bson.ObjectId
+		serveChan chan bson.ObjectId
+		doneChan  chan interface{}
+		started   bool
+		done      bool
+	}
+)
 
 func init() {
 	fileChan = make(chan *Request)
@@ -31,14 +55,6 @@ func init() {
 	endSubmissionChan = make(chan *Request)
 	processedChan = make(chan interface{})
 	statusChan = make(chan Status)
-}
-
-//Status is used to indicate a change in the files or
-//submissions being processed. It is also used to retrieve the current
-//number of files and submissions being processed.
-type Status struct {
-	Files       int
-	Submissions int
 }
 
 //add adds the value of toAdd to this Status.
@@ -132,8 +148,7 @@ func Shutdown() {
 
 //None provides an empty struct
 func None() interface{} {
-	type e struct{}
-	return e{}
+	return empty{}
 }
 
 //Serve spawns new processing routines for each submission started.
@@ -210,15 +225,6 @@ func Serve(maxProcs int) {
 			busy--
 		}
 	}
-}
-
-//ProcHelper is used to help handle a submission's files.
-type ProcHelper struct {
-	subId     bson.ObjectId
-	serveChan chan bson.ObjectId
-	doneChan  chan interface{}
-	started   bool
-	done      bool
 }
 
 //NewProcHelper

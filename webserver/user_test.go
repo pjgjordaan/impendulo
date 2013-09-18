@@ -54,7 +54,7 @@ func testUserFunc(t *testing.T, f Poster, requests []postHolder) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
 	u := user.New("user", "password")
-	err := db.AddUser(u)
+	err := db.Add(db.USERS, u)
 	if err != nil {
 		t.Error(err)
 	}
@@ -70,7 +70,7 @@ func testUserFunc(t *testing.T, f Poster, requests []postHolder) {
 		}
 		_, err = f(req, ctx)
 		if ph.valid && err != nil {
-			t.Error(err)
+			t.Error(err, ph.url)
 		} else if !ph.valid && err == nil {
 			t.Error(fmt.Errorf("Expected error for %s.", ph.url))
 		}

@@ -75,7 +75,7 @@ func Compiler(proc *Processor) (compiler tool.Tool, err error) {
 //JPF creates a new instance of the JPF tool.
 func JPF(proc *Processor) (runnable tool.Tool, err error) {
 	//First we need the project's JPF configuration.
-	jpfFile, err := db.GetJPF(
+	jpfFile, err := db.JPFConfig(
 		bson.M{project.PROJECT_ID: proc.project.Id}, nil)
 	if err != nil {
 		return
@@ -87,19 +87,22 @@ func JPF(proc *Processor) (runnable tool.Tool, err error) {
 //PMD creates a new instance of the PMD tool.
 func PMD(proc *Processor) (runnable tool.Tool, err error) {
 	//First we need the project's PMD rules.
-	rules, err := db.GetPMD(bson.M{project.PROJECT_ID: proc.project.Id}, nil)
+	rules, err := db.PMDRules(bson.M{project.PROJECT_ID: proc.project.Id}, nil)
 	if err != nil {
-		rules = pmd.DefaultRules(proc.project.Id)
-		err = db.AddPMD(rules)
+		rules, err = pmd.DefaultRules(proc.project.Id)
+		if err != nil {
+			return
+		}
+		err = db.AddPMDRules(rules)
 	}
-	runnable = pmd.New(rules.Rules)
+	runnable = pmd.New(rules)
 	return
 }
 
 //JUnit creates a new JUnit tool instances for each available JUnit test for a given project.
 func JUnit(proc *Processor) (ret []tool.Tool, err error) {
 	//First we need the project's JUnit tests.
-	tests, err := db.GetTests(bson.M{project.PROJECT_ID: proc.project.Id}, nil)
+	tests, err := db.JUnitTests(bson.M{project.PROJECT_ID: proc.project.Id}, nil)
 	if err != nil {
 		return
 	}

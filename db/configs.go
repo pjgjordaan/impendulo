@@ -8,10 +8,9 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
-//GetJPF retrieves a JPF configuration file
-//matching the given interface from the active database.
-func GetJPF(matcher, selector interface{}) (ret *jpf.Config, err error) {
-	session, err := getSession()
+//JPFConfig retrieves a JPF configuration matching matcher from the active database.
+func JPFConfig(matcher, selector interface{}) (ret *jpf.Config, err error) {
+	session, err := Session()
 	if err != nil {
 		return
 	}
@@ -24,44 +23,26 @@ func GetJPF(matcher, selector interface{}) (ret *jpf.Config, err error) {
 	return
 }
 
-//AddJPF adds a new JPF configuration file to the active database.
-func AddJPF(cfg *jpf.Config) error {
-	session, err := getSession()
-	if err != nil {
-		return err
-	}
-	defer session.Close()
-	col := session.DB("").C(JPF)
-	matcher := bson.M{project.PROJECT_ID: cfg.ProjectId}
-	_, err = col.RemoveAll(matcher)
-	if err != nil {
-		err = &DBRemoveError{"jpf config files", err, matcher}
-	}
-	err = col.Insert(cfg)
-	if err != nil {
-		err = &DBAddError{cfg.String(), err}
-	}
-	return nil
-}
-
-//RemoveJPFById removes a JPF configuration file matching
-//the given id from the active database.
-func RemoveJPFById(id interface{}) (err error) {
-	session, err := getSession()
+//AddJPF overwrites a project's JPF configuration with the provided configuration.
+func AddJPFConfig(cfg *jpf.Config) (err error) {
+	session, err := Session()
 	if err != nil {
 		return
 	}
 	defer session.Close()
-	c := session.DB("").C(JPF)
-	err = c.RemoveId(id)
+	col := session.DB("").C(JPF)
+	matcher := bson.M{project.PROJECT_ID: cfg.ProjectId}
+	col.RemoveAll(matcher)
+	err = col.Insert(cfg)
 	if err != nil {
-		err = &DBRemoveError{"jpf", err, id}
+		err = &DBAddError{cfg.String(), err}
 	}
 	return
 }
 
-func GetPMD(matcher, selector interface{}) (ret *pmd.Rules, err error) {
-	session, err := getSession()
+//PMDRules retrieves PMD rules matching matcher from the db.
+func PMDRules(matcher, selector interface{}) (ret *pmd.Rules, err error) {
+	session, err := Session()
 	if err != nil {
 		return
 	}
@@ -74,42 +55,26 @@ func GetPMD(matcher, selector interface{}) (ret *pmd.Rules, err error) {
 	return
 }
 
-func AddPMD(rules *pmd.Rules) error {
-	session, err := getSession()
-	if err != nil {
-		return err
-	}
-	defer session.Close()
-	col := session.DB("").C(PMD)
-	matcher := bson.M{project.PROJECT_ID: rules.ProjectId}
-	_, err = col.RemoveAll(matcher)
-	if err != nil {
-		err = &DBRemoveError{"pmd rules", err, matcher}
-	}
-	err = col.Insert(rules)
-	if err != nil {
-		err = &DBAddError{"pmd rules", err}
-	}
-	return nil
-}
-
-func RemovePMDById(id interface{}) (err error) {
-	session, err := getSession()
+//AddPMDRules overwrites a project's current PMD rules with the provided rules.
+func AddPMDRules(rules *pmd.Rules) (err error) {
+	session, err := Session()
 	if err != nil {
 		return
 	}
 	defer session.Close()
-	c := session.DB("").C(PMD)
-	err = c.RemoveId(id)
+	col := session.DB("").C(PMD)
+	matcher := bson.M{project.PROJECT_ID: rules.ProjectId}
+	col.RemoveAll(matcher)
+	err = col.Insert(rules)
 	if err != nil {
-		err = &DBRemoveError{"pmd", err, id}
+		err = &DBAddError{"pmd rules", err}
 	}
 	return
 }
 
-//GetTest retrieves a test matching the given interface from the active database.
-func GetTest(matcher, selector interface{}) (ret *junit.Test, err error) {
-	session, err := getSession()
+//JUnitTest retrieves a test matching the matcher from the active database.
+func JUnitTest(matcher, selector interface{}) (ret *junit.Test, err error) {
+	session, err := Session()
 	if err != nil {
 		return
 	}
@@ -122,10 +87,9 @@ func GetTest(matcher, selector interface{}) (ret *junit.Test, err error) {
 	return
 }
 
-//GetTest retrieves tests matching
-//the given interface from the active database.
-func GetTests(matcher, selector interface{}) (ret []*junit.Test, err error) {
-	session, err := getSession()
+//JUnitTests retrieves all tests matching matcher from the active database.
+func JUnitTests(matcher, selector interface{}) (ret []*junit.Test, err error) {
+	session, err := Session()
 	if err != nil {
 		return
 	}
@@ -138,17 +102,20 @@ func GetTests(matcher, selector interface{}) (ret []*junit.Test, err error) {
 	return
 }
 
-//AddTest adds a new test to the active database.
-func AddTest(t *junit.Test) error {
-	session, err := getSession()
+//AddJUnitTest overwrites one of a project's JUnit tests with the new JUnit test
+//if it has the same name as the new test. Otherwise the new test is just added to the project's tests.
+func AddJUnitTest(t *junit.Test) (err error) {
+	session, err := Session()
 	if err != nil {
-		return err
+		return
 	}
 	defer session.Close()
 	col := session.DB("").C(TESTS)
+	matcher := bson.M{project.PROJECT_ID: t.ProjectId, project.NAME: t.Name}
+	col.RemoveAll(matcher)
 	err = col.Insert(t)
 	if err != nil {
 		err = &DBAddError{t.String(), err}
 	}
-	return nil
+	return
 }

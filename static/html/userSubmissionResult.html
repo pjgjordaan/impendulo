@@ -1,4 +1,6 @@
 {{define "view"}}
+<!-- This is the breadcrumb which allows us to browse through the --
+  -- hierarchy quickly -->
 <ul class="breadcrumb">
   <li><a href="homeview">Home</a></li>  
   <li><a href="userresult">Users</a></li>
@@ -14,6 +16,9 @@
   </li>
 </ul>
 <h2 class="text-center"><small>user</small> {{.ctx.Browse.Uid}}</h2>
+<!-- Here we display a table of the different submissions this user --
+  -- has made. Included are date and project name to differentiate between --
+  -- submissions. -->
 <table class="table table-hover">
   <thead><tr class="info">
       <th>Project</th>
@@ -26,7 +31,7 @@
     {{$subId := .Id.Hex}}
     <tr class="success">
       <td><a class="rowlink" href="getfiles?subid={{$subId}}">
-	  {{projectName .ProjectId.Hex}}
+	  {{projectName .ProjectId}}
       </a></td>
       <td><a class="rowlink" href="getfiles?subid={{$subId}}" >
 	  {{date .Time}}

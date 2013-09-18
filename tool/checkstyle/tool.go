@@ -10,26 +10,33 @@ import (
 	"path/filepath"
 )
 
-type Tool struct {
-	java       string
-	cmd        string
-	configFile string
-}
+type (
+	//Tool
+	Tool struct {
+		java       string
+		cmd        string
+		configFile string
+	}
+)
 
+//New
 func New() *Tool {
 	return &Tool{config.Config(config.JAVA),
 		config.Config(config.CHECKSTYLE),
 		config.Config(config.CHECKSTYLE_CONFIG)}
 }
 
+//Lang
 func (this *Tool) Lang() string {
 	return tool.JAVA
 }
 
+//Name
 func (this *Tool) Name() string {
 	return NAME
 }
 
+//Run
 func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	outFile := filepath.Join(ti.Dir, "checkstyle.xml")
 	args := []string{this.java, "-jar", this.cmd,

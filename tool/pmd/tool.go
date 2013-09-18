@@ -1,7 +1,6 @@
 package pmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
@@ -12,26 +11,36 @@ import (
 	"strings"
 )
 
-type Tool struct {
-	cmd   string
-	rules string
-}
+type (
+	//Tool
+	Tool struct {
+		cmd   string
+		rules string
+	}
+)
 
-func New(rules []string) *Tool {
+//New
+func New(rules *Rules) *Tool {
+	if rules == nil {
+		rules, _ = DefaultRules(bson.NewObjectId())
+	}
 	return &Tool{
 		cmd:   config.Config(config.PMD),
-		rules: strings.Join(rules, ","),
+		rules: strings.Join(rules.RuleArray(), ","),
 	}
 }
 
+//Lang
 func (this *Tool) Lang() string {
 	return tool.JAVA
 }
 
+//Name
 func (this *Tool) Name() string {
 	return NAME
 }
 
+//Run
 func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	outFile := filepath.Join(ti.Dir, "pmd.xml")
 	args := []string{this.cmd, config.PMD, "-f", "xml", "-stress",
@@ -49,53 +58,4 @@ func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolR
 		err = execRes.Err
 	}
 	return
-}
-
-type Rule struct {
-	Id          string
-	Name        string
-	Description string
-	Default     bool
-}
-
-var ruleSet []Rule
-
-type Rules struct {
-	Id        bson.ObjectId "_id"
-	ProjectId bson.ObjectId "projectid"
-	Rules     []string      "rules"
-}
-
-func NewRules(projectId bson.ObjectId, rules []string) *Rules {
-	return &Rules{
-		Id:        bson.NewObjectId(),
-		ProjectId: projectId,
-		Rules:     rules,
-	}
-}
-
-func RuleSet() ([]Rule, error) {
-	if ruleSet != nil {
-		return ruleSet, nil
-	}
-	cfg, err := os.Open(config.Config(config.PMD_RULES))
-	if err == nil {
-		data := util.ReadBytes(cfg)
-		err = json.Unmarshal(data, &ruleSet)
-	}
-	return ruleSet, err
-}
-
-func DefaultRules(projectId bson.ObjectId) *Rules {
-	set, err := RuleSet()
-	rules := NewRules(projectId, make([]string, 0, len(set)))
-	if err != nil {
-		return rules
-	}
-	for _, r := range set {
-		if r.Default {
-			rules.Rules = append(rules.Rules, r.Id)
-		}
-	}
-	return rules
 }

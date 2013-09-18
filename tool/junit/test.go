@@ -5,22 +5,19 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
-//Test stores tests for a project.
-type Test struct {
-	Id        bson.ObjectId "_id"
-	ProjectId bson.ObjectId "projectid"
-	Name      string        "name"
-	User      string        "user"
-	Package   string        "pkg"
-	Time      int64         "time"
-	Test      []byte        "test"
-	Data      []byte        "data"
-}
-
-//TypeName
-func (this *Test) TypeName() string {
-	return "test file"
-}
+type (
+	//Test stores tests for a project.
+	Test struct {
+		Id        bson.ObjectId "_id"
+		ProjectId bson.ObjectId "projectid"
+		Name      string        "name"
+		User      string        "user"
+		Package   string        "pkg"
+		Time      int64         "time"
+		Test      []byte        "test"
+		Data      []byte        "data"
+	}
+)
 
 //String
 func (this *Test) String() string {

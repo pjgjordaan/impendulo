@@ -17,12 +17,12 @@ func ReadJson(r io.Reader) (jmap map[string]interface{}, err error) {
 	var holder interface{}
 	err = json.Unmarshal(read, &holder)
 	if err != nil {
-		err = &IOError{read, "unmarshalling data from", err}
+		err = &UtilError{read, "unmarshalling data from", err}
 		return
 	}
 	jmap, ok := holder.(map[string]interface{})
 	if !ok {
-		err = &IOError{holder, "casting to json", nil}
+		err = &UtilError{holder, "casting to json", nil}
 	}
 	return
 }
@@ -31,13 +31,13 @@ func ReadJson(r io.Reader) (jmap map[string]interface{}, err error) {
 func LoadMap(fname string) (ret map[bson.ObjectId]bool, err error) {
 	f, err := os.Open(fname)
 	if err != nil {
-		err = &IOError{fname, "opening", err}
+		err = &UtilError{fname, "opening", err}
 		return
 	}
 	dec := gob.NewDecoder(f)
 	err = dec.Decode(&ret)
 	if err != nil {
-		err = &IOError{fname, "decoding map stored in", err}
+		err = &UtilError{fname, "decoding map stored in", err}
 	}
 	return
 }
@@ -46,13 +46,13 @@ func LoadMap(fname string) (ret map[bson.ObjectId]bool, err error) {
 func SaveMap(mp map[bson.ObjectId]bool, fname string) (err error) {
 	f, err := os.Create(fname)
 	if err != nil {
-		err = &IOError{fname, "creating", err}
+		err = &UtilError{fname, "creating", err}
 		return
 	}
 	enc := gob.NewEncoder(f)
 	err = enc.Encode(&mp)
 	if err != nil {
-		err = &IOError{mp, "encoding map", err}
+		err = &UtilError{mp, "encoding map", err}
 	}
 	return
 }
@@ -61,8 +61,12 @@ func SaveMap(mp map[bson.ObjectId]bool, fname string) (err error) {
 func WriteJson(w io.Writer, data interface{}) (err error) {
 	marshalled, err := json.Marshal(data)
 	if err != nil {
+		err = &UtilError{data, "marshalling json", err}
 		return
 	}
 	_, err = w.Write(marshalled)
+	if err != nil {
+		err = &UtilError{marshalled, "writing json", err}
+	}
 	return
 }

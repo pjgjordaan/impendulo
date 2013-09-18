@@ -11,12 +11,14 @@ import (
 	"path/filepath"
 )
 
-//Tool is a tool.Tool used to run Tool tests on a Java source file.
-type Tool struct {
-	cp                   string
-	dataLocation         string
-	testInfo, runnerInfo *tool.TargetInfo
-}
+type (
+	//Tool is a tool.Tool used to run Tool tests on a Java source file.
+	Tool struct {
+		cp                   string
+		dataLocation         string
+		testInfo, runnerInfo *tool.TargetInfo
+	}
+)
 
 //New creates a new Tool instance. testDir is the location of the Tool testing files.
 //cp is the classpath used and datalocation is the location of data files used when running
@@ -46,14 +48,17 @@ func New(test *Test, dir string) (junit *Tool, err error) {
 	return
 }
 
+//Lang
 func (this *Tool) Lang() string {
 	return tool.JAVA
 }
 
+//Name
 func (this *Tool) Name() string {
 	return NAME
 }
 
+//Run
 func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	if this.cp != "" {
 		this.cp += ":"

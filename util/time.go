@@ -6,6 +6,10 @@ import (
 	"time"
 )
 
+const (
+	layout = "2006-01-02 15:04:05"
+)
+
 //CurMilis returns the time in miliseconds.
 func GetMilis(t time.Time) int64 {
 	return t.UnixNano() / 1000000
@@ -20,8 +24,6 @@ func CurMilis() int64 {
 func GetTime(miliseconds int64) time.Time {
 	return time.Unix(0, miliseconds*1000000)
 }
-
-const layout = "2006-01-02 15:04:05"
 
 //Date returns a string representation of the date
 //represented by the miliseconds provided.

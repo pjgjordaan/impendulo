@@ -11,20 +11,22 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
-//SubmissionSpawner is an implementation of
-//HandlerSpawner for SubmissionHandlers.
-type SubmissionSpawner struct{}
+type (
+	//SubmissionSpawner is an implementation of
+	//HandlerSpawner for SubmissionHandlers.
+	SubmissionSpawner struct{}
+
+	//SubmissionHandler is an implementation of ConnHandler
+	//used to receive submissions from users of the impendulo system.
+	SubmissionHandler struct {
+		rwc        io.ReadWriteCloser
+		submission *project.Submission
+	}
+)
 
 //Spawn creates a new ConnHandler of type SubmissionHandler.
 func (this *SubmissionSpawner) Spawn() RWCHandler {
 	return &SubmissionHandler{}
-}
-
-//SubmissionHandler is an implementation of ConnHandler
-//used to receive submissions from users of the impendulo system.
-type SubmissionHandler struct {
-	rwc        io.ReadWriteCloser
-	submission *project.Submission
 }
 
 //Start sets the connection, launches the Handle method
@@ -102,7 +104,7 @@ func (this *SubmissionHandler) Login() (err error) {
 	if err != nil {
 		return
 	}
-	u, err := db.GetUserById(this.submission.User)
+	u, err := db.User(this.submission.User)
 	if err != nil {
 		return
 	}
@@ -116,7 +118,7 @@ func (this *SubmissionHandler) Login() (err error) {
 			this.submission.User)
 		return
 	}
-	projects, err := db.GetProjects(nil, bson.M{project.SKELETON: 0}, project.NAME)
+	projects, err := db.Projects(nil, bson.M{project.SKELETON: 0}, project.NAME)
 	if err == nil {
 		err = this.writeJson(projects)
 	}
@@ -144,6 +146,9 @@ func (this *SubmissionHandler) LoadInfo() (err error) {
 	return
 }
 
+//createSubmission is used when a client wishes to create a new submission.
+//Submission info is read from the subInfo map and used to create a new
+//submission in the db.
 func (this *SubmissionHandler) createSubmission(subInfo map[string]interface{}) (err error) {
 	idStr, err := util.GetString(subInfo, project.PROJECT_ID)
 	if err != nil {
@@ -157,13 +162,15 @@ func (this *SubmissionHandler) createSubmission(subInfo map[string]interface{}) 
 	if err != nil {
 		return
 	}
-	err = db.AddSubmission(this.submission)
+	err = db.Add(db.SUBMISSIONS, this.submission)
 	if err == nil {
 		err = this.writeJson(this.submission)
 	}
 	return
 }
 
+//continueSubmission is used when a client wishes to continue with a previous submission.
+//The submission id is read from the subInfo map and then the submission os loaded from the db.
 func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{}) (err error) {
 	idStr, err := util.GetString(subInfo, project.SUBID)
 	if err != nil {
@@ -173,7 +180,7 @@ func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{}
 	if err != nil {
 		return
 	}
-	this.submission, err = db.GetSubmission(bson.M{project.ID: id}, nil)
+	this.submission, err = db.Submission(bson.M{project.ID: id}, nil)
 	if err != nil {
 		return
 	}
@@ -183,10 +190,12 @@ func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{}
 
 //Read reads Files from the connection and sends them for processing.
 func (this *SubmissionHandler) Read() (done bool, err error) {
+	//Receive file metadata and request info
 	requestInfo, err := util.ReadJson(this.rwc)
 	if err != nil {
 		return
 	}
+	//Get the type of request
 	req, err := util.GetString(requestInfo, REQ)
 	if err != nil {
 		return
@@ -196,6 +205,7 @@ func (this *SubmissionHandler) Read() (done bool, err error) {
 		if err != nil {
 			return
 		}
+		//Receive file data
 		var buffer []byte
 		buffer, err = util.ReadData(this.rwc)
 		if err != nil {
@@ -207,6 +217,7 @@ func (this *SubmissionHandler) Read() (done bool, err error) {
 		}
 		delete(requestInfo, REQ)
 		var file *project.File
+		//Create a new file
 		switch this.submission.Mode {
 		case project.ARCHIVE_MODE:
 			file = project.NewArchive(
@@ -214,17 +225,18 @@ func (this *SubmissionHandler) Read() (done bool, err error) {
 		case project.FILE_MODE:
 			file, err = project.NewFile(
 				this.submission.Id, requestInfo, buffer)
+			if err != nil {
+				return
+			}
 		}
-		if err != nil {
-			return
-		}
-		err = db.AddFile(file)
+		err = db.Add(db.FILES, file)
 		if err != nil {
 			return
 		}
 		//Send file to be processed.
 		err = processing.AddFile(file)
 	} else if req == LOGOUT {
+		//Logout request so we are done with this client.
 		done = true
 	} else {
 		err = fmt.Errorf("Unknown request %q", req)
@@ -232,6 +244,7 @@ func (this *SubmissionHandler) Read() (done bool, err error) {
 	return
 }
 
+//writeJson writes an json data to this SubmissionHandler's connection.
 func (this *SubmissionHandler) writeJson(data interface{}) (err error) {
 	err = util.WriteJson(this.rwc, data)
 	if err == nil {
@@ -240,6 +253,7 @@ func (this *SubmissionHandler) writeJson(data interface{}) (err error) {
 	return
 }
 
+//write writes a string to this SubmissionHandler's connection.
 func (this *SubmissionHandler) write(data string) (err error) {
 	_, err = this.rwc.Write([]byte(data))
 	if err == nil {

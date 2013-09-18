@@ -6,13 +6,15 @@ import (
 	"sync"
 )
 
-//Buffer is a http.ResponseWriter which buffers all the data and headers.
-type HttpBuffer struct {
-	bytes.Buffer
-	resp    int
-	headers http.Header
-	once    sync.Once
-}
+type (
+	//Buffer is a http.ResponseWriter which buffers all the data and headers.
+	HttpBuffer struct {
+		bytes.Buffer
+		resp    int
+		headers http.Header
+		once    sync.Once
+	}
+)
 
 //Header implements the header method of http.ResponseWriter
 func (this *HttpBuffer) Header() http.Header {

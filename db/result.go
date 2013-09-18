@@ -1,7 +1,6 @@
 package db
 
 import (
-	"encoding/gob"
 	"fmt"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
@@ -12,16 +11,15 @@ import (
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/tool/pmd"
-	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 	"sort"
 	"strings"
 )
 
-//GetCheckstyleResult retrieves a Result matching
+//CheckstyleResult retrieves a Result matching
 //the given interface from the active database.
-func GetCheckstyleResult(matcher, selector bson.M) (ret *checkstyle.Result, err error) {
-	session, err := getSession()
+func CheckstyleResult(matcher, selector bson.M) (ret *checkstyle.Result, err error) {
+	session, err := Session()
 	if err != nil {
 		return
 	}
@@ -31,24 +29,16 @@ func GetCheckstyleResult(matcher, selector bson.M) (ret *checkstyle.Result, err 
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
-	} else if hasGridFile(ret, selector) {
-		fs := session.DB("").GridFS("fs")
-		var file *mgo.GridFile
-		file, err = fs.OpenId(ret.GetId())
-		if err != nil {
-			return
-		}
-		defer file.Close()
-		dec := gob.NewDecoder(file)
-		err = dec.Decode(&ret.Data)
+	} else if HasGridFile(ret, selector) {
+		err = GridFile(ret.GetId(), &ret.Data)
 	}
 	return
 }
 
-//GetPMDResult retrieves a Result matching
+//PMDResult retrieves a Result matching
 //the given interface from the active database.
-func GetPMDResult(matcher, selector bson.M) (ret *pmd.Result, err error) {
-	session, err := getSession()
+func PMDResult(matcher, selector bson.M) (ret *pmd.Result, err error) {
+	session, err := Session()
 	if err != nil {
 		return
 	}
@@ -58,24 +48,16 @@ func GetPMDResult(matcher, selector bson.M) (ret *pmd.Result, err error) {
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
-	} else if hasGridFile(ret, selector) {
-		fs := session.DB("").GridFS("fs")
-		var file *mgo.GridFile
-		file, err = fs.OpenId(ret.GetId())
-		if err != nil {
-			return
-		}
-		defer file.Close()
-		dec := gob.NewDecoder(file)
-		err = dec.Decode(&ret.Data)
+	} else if HasGridFile(ret, selector) {
+		err = GridFile(ret.GetId(), &ret.Data)
 	}
 	return
 }
 
-//GetFindbugsResult retrieves a Result matching
+//FindbugsResult retrieves a Result matching
 //the given interface from the active database.
-func GetFindbugsResult(matcher, selector bson.M) (ret *findbugs.Result, err error) {
-	session, err := getSession()
+func FindbugsResult(matcher, selector bson.M) (ret *findbugs.Result, err error) {
+	session, err := Session()
 	if err != nil {
 		return
 	}
@@ -85,24 +67,16 @@ func GetFindbugsResult(matcher, selector bson.M) (ret *findbugs.Result, err erro
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
-	} else if hasGridFile(ret, selector) {
-		fs := session.DB("").GridFS("fs")
-		var file *mgo.GridFile
-		file, err = fs.OpenId(ret.GetId())
-		if err != nil {
-			return
-		}
-		defer file.Close()
-		dec := gob.NewDecoder(file)
-		err = dec.Decode(&ret.Data)
+	} else if HasGridFile(ret, selector) {
+		err = GridFile(ret.GetId(), &ret.Data)
 	}
 	return
 }
 
-//GetJPFResult retrieves a Result matching
+//JPFResult retrieves a Result matching
 //the given interface from the active database.
-func GetJPFResult(matcher, selector bson.M) (ret *jpf.Result, err error) {
-	session, err := getSession()
+func JPFResult(matcher, selector bson.M) (ret *jpf.Result, err error) {
+	session, err := Session()
 	if err != nil {
 		return
 	}
@@ -112,24 +86,16 @@ func GetJPFResult(matcher, selector bson.M) (ret *jpf.Result, err error) {
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
-	} else if hasGridFile(ret, selector) {
-		fs := session.DB("").GridFS("fs")
-		var file *mgo.GridFile
-		file, err = fs.OpenId(ret.GetId())
-		if err != nil {
-			return
-		}
-		defer file.Close()
-		dec := gob.NewDecoder(file)
-		err = dec.Decode(&ret.Data)
+	} else if HasGridFile(ret, selector) {
+		err = GridFile(ret.GetId(), &ret.Data)
 	}
 	return
 }
 
-//GetJUnitResult retrieves aResult matching
+//JUnitResult retrieves aResult matching
 //the given interface from the active database.
-func GetJUnitResult(matcher, selector bson.M) (ret *junit.Result, err error) {
-	session, err := getSession()
+func JUnitResult(matcher, selector bson.M) (ret *junit.Result, err error) {
+	session, err := Session()
 	if err != nil {
 		return
 	}
@@ -138,24 +104,16 @@ func GetJUnitResult(matcher, selector bson.M) (ret *junit.Result, err error) {
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
-	} else if hasGridFile(ret, selector) {
-		fs := session.DB("").GridFS("fs")
-		var file *mgo.GridFile
-		file, err = fs.OpenId(ret.GetId())
-		if err != nil {
-			return
-		}
-		defer file.Close()
-		dec := gob.NewDecoder(file)
-		err = dec.Decode(&ret.Data)
+	} else if HasGridFile(ret, selector) {
+		err = GridFile(ret.GetId(), &ret.Data)
 	}
 	return
 }
 
-//GetJavacResult retrieves a JavacResult matching
+//JavacResult retrieves a JavacResult matching
 //the given interface from the active database.
-func GetJavacResult(matcher, selector bson.M) (ret *javac.Result, err error) {
-	session, err := getSession()
+func JavacResult(matcher, selector bson.M) (ret *javac.Result, err error) {
+	session, err := Session()
 	if err != nil {
 		return
 	}
@@ -165,55 +123,31 @@ func GetJavacResult(matcher, selector bson.M) (ret *javac.Result, err error) {
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
-	} else if hasGridFile(ret, selector) {
-		fs := session.DB("").GridFS("fs")
-		var file *mgo.GridFile
-		file, err = fs.OpenId(ret.GetId())
+	} else if HasGridFile(ret, selector) {
+		err = GridFile(ret.GetId(), &ret.Data)
 		if err != nil {
 			return
 		}
-		defer file.Close()
-		var temp *javac.Result
-		dec := gob.NewDecoder(file)
-		err = dec.Decode(&temp)
-		ret.Data = temp.Data
 	}
 	return
 }
 
-func hasGridFile(result tool.ToolResult, selector bson.M) bool {
-	return (selector == nil || selector[project.DATA] == 1) && result.OnGridFS()
-}
-
-func getGridFile(session *mgo.Session, id interface{}) (holder interface{}, err error) {
-	fs := session.DB("").GridFS("fs")
-	var file *mgo.GridFile
-	file, err = fs.OpenId(id)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-	dec := gob.NewDecoder(file)
-	err = dec.Decode(holder)
-	return
-}
-
-//GetToolResult retrieves a tool.ToolResult matching
+//ToolResult retrieves a tool.ToolResult matching
 //the given interface and name from the active database.
-func GetToolResult(name string, matcher, selector bson.M) (ret tool.ToolResult, err error) {
+func ToolResult(name string, matcher, selector bson.M) (ret tool.ToolResult, err error) {
 	switch name {
 	case javac.NAME:
-		ret, err = GetJavacResult(matcher, selector)
+		ret, err = JavacResult(matcher, selector)
 	case jpf.NAME:
-		ret, err = GetJPFResult(matcher, selector)
+		ret, err = JPFResult(matcher, selector)
 	case findbugs.NAME:
-		ret, err = GetFindbugsResult(matcher, selector)
+		ret, err = FindbugsResult(matcher, selector)
 	case pmd.NAME:
-		ret, err = GetPMDResult(matcher, selector)
+		ret, err = PMDResult(matcher, selector)
 	case checkstyle.NAME:
-		ret, err = GetCheckstyleResult(matcher, selector)
+		ret, err = CheckstyleResult(matcher, selector)
 	default:
-		ret, err = GetJUnitResult(matcher, selector)
+		ret, err = JUnitResult(matcher, selector)
 		if err != nil {
 			err = fmt.Errorf("Unknown result %q.", name)
 		}
@@ -221,22 +155,22 @@ func GetToolResult(name string, matcher, selector bson.M) (ret tool.ToolResult, 
 	return
 }
 
-//GetDisplayResult retrieves a tool.DisplayResult matching
+//DisplayResult retrieves a tool.DisplayResult matching
 //the given interface and name from the active database.
-func GetDisplayResult(name string, matcher, selector bson.M) (ret tool.DisplayResult, err error) {
+func DisplayResult(name string, matcher, selector bson.M) (ret tool.DisplayResult, err error) {
 	switch name {
 	case javac.NAME:
-		ret, err = GetJavacResult(matcher, selector)
+		ret, err = JavacResult(matcher, selector)
 	case jpf.NAME:
-		ret, err = GetJPFResult(matcher, selector)
+		ret, err = JPFResult(matcher, selector)
 	case findbugs.NAME:
-		ret, err = GetFindbugsResult(matcher, selector)
+		ret, err = FindbugsResult(matcher, selector)
 	case pmd.NAME:
-		ret, err = GetPMDResult(matcher, selector)
+		ret, err = PMDResult(matcher, selector)
 	case checkstyle.NAME:
-		ret, err = GetCheckstyleResult(matcher, selector)
+		ret, err = CheckstyleResult(matcher, selector)
 	default:
-		ret, err = GetJUnitResult(matcher, selector)
+		ret, err = JUnitResult(matcher, selector)
 		if err != nil {
 			err = fmt.Errorf("Unknown result %q.", name)
 		}
@@ -244,22 +178,22 @@ func GetDisplayResult(name string, matcher, selector bson.M) (ret tool.DisplayRe
 	return
 }
 
-//GetDisplayResult retrieves a tool.DisplayResult matching
+//DisplayResult retrieves a tool.DisplayResult matching
 //the given interface and name from the active database.
-func GetGraphResult(name string, matcher, selector bson.M) (ret tool.GraphResult, err error) {
+func GraphResult(name string, matcher, selector bson.M) (ret tool.GraphResult, err error) {
 	switch name {
 	case javac.NAME:
-		ret, err = GetJavacResult(matcher, selector)
+		ret, err = JavacResult(matcher, selector)
 	case jpf.NAME:
-		ret, err = GetJPFResult(matcher, selector)
+		ret, err = JPFResult(matcher, selector)
 	case findbugs.NAME:
-		ret, err = GetFindbugsResult(matcher, selector)
+		ret, err = FindbugsResult(matcher, selector)
 	case pmd.NAME:
-		ret, err = GetPMDResult(matcher, selector)
+		ret, err = PMDResult(matcher, selector)
 	case checkstyle.NAME:
-		ret, err = GetCheckstyleResult(matcher, selector)
+		ret, err = CheckstyleResult(matcher, selector)
 	default:
-		ret, err = GetJUnitResult(matcher, selector)
+		ret, err = JUnitResult(matcher, selector)
 		if err != nil {
 			err = fmt.Errorf("Unknown result %q.", name)
 		}
@@ -273,33 +207,22 @@ func AddResult(res tool.ToolResult) (err error) {
 		err = fmt.Errorf("Result is nil. In db/result.go.")
 		return
 	}
-	matcher := bson.M{project.ID: res.GetFileId()}
-	change := bson.M{SET: bson.M{project.RESULTS + "." + res.GetName(): res.GetId()}}
-	err = Update(FILES, matcher, change)
+	err = AddFileResult(res.GetFileId(), res.GetName(), res.GetId())
 	if err != nil {
 		return
 	}
-	session, err := getSession()
-	if err != nil {
-		return
-	}
-	defer session.Close()
 	if res.OnGridFS() {
-		fs := session.DB("").GridFS("fs")
-		var file *mgo.GridFile
-		file, err = fs.Create("")
-		if err != nil {
-			return
-		}
-		defer file.Close()
-		file.SetId(res.GetId())
-		enc := gob.NewEncoder(file)
-		err = enc.Encode(res.GetData())
+		err = AddGridFile(res.GetId(), res.GetData())
 		if err != nil {
 			return
 		}
 		res.SetData(nil)
 	}
+	session, err := Session()
+	if err != nil {
+		return
+	}
+	defer session.Close()
 	col := session.DB("").C(RESULTS)
 	err = col.Insert(res)
 	if err != nil {
@@ -308,26 +231,16 @@ func AddResult(res tool.ToolResult) (err error) {
 	return
 }
 
-//AddTimeoutResult adds a new TimeoutResult to the active database.
-func AddTimeoutResult(fileId bson.ObjectId, name string) (err error) {
+func AddFileResult(fileId bson.ObjectId, name string, value interface{}) error {
 	matcher := bson.M{project.ID: fileId}
-	change := bson.M{SET: bson.M{project.RESULTS + "." + name: tool.TIMEOUT}}
-	err = Update(FILES, matcher, change)
-	return
+	change := bson.M{SET: bson.M{project.RESULTS + "." + name: value}}
+	return Update(FILES, matcher, change)
 }
 
-//AddNoResult adds a new NoResult to the active database.
-func AddNoResult(fileId bson.ObjectId, name string) (err error) {
-	matcher := bson.M{project.ID: fileId}
-	change := bson.M{SET: bson.M{project.RESULTS + "." + name: tool.NORESULT}}
-	err = Update(FILES, matcher, change)
-	return
-}
-
-//GetAllResults retrieves all tool.DisplayResults matching
+//GraphResults retrieves all tool.DisplayResults matching
 //the given file Id from the active database.
-func GetGraphResults(fileId bson.ObjectId) (ret []tool.GraphResult, err error) {
-	file, err := GetFile(bson.M{project.ID: fileId}, bson.M{project.RESULTS: 1})
+func GraphResults(fileId bson.ObjectId) (ret []tool.GraphResult, err error) {
+	file, err := File(bson.M{project.ID: fileId}, bson.M{project.RESULTS: 1})
 	if err != nil {
 		return
 	}
@@ -336,7 +249,7 @@ func GetGraphResults(fileId bson.ObjectId) (ret []tool.GraphResult, err error) {
 		if _, ok := id.(bson.ObjectId); !ok {
 			continue
 		}
-		res, err := GetGraphResult(name, bson.M{project.ID: id}, nil)
+		res, err := GraphResult(name, bson.M{project.ID: id}, nil)
 		if err != nil {
 			err = nil
 			continue
@@ -346,9 +259,9 @@ func GetGraphResults(fileId bson.ObjectId) (ret []tool.GraphResult, err error) {
 	return
 }
 
-//GetResultNames retrieves all result names for a given project.
-func GetResultNames(projectId bson.ObjectId, nonTool bool) (ret []string, err error) {
-	tests, err := GetTests(bson.M{project.PROJECT_ID: projectId},
+//ResultNames retrieves all result names for a given project.
+func ResultNames(projectId bson.ObjectId, nonTool bool) (ret []string, err error) {
+	tests, err := JUnitTests(bson.M{project.PROJECT_ID: projectId},
 		bson.M{project.NAME: 1})
 	if err != nil {
 		return
@@ -363,21 +276,5 @@ func GetResultNames(projectId bson.ObjectId, nonTool bool) (ret []string, err er
 		ret = append(ret, tool.CODE, diff.NAME, tool.SUMMARY)
 	}
 	sort.Strings(ret)
-	return
-}
-
-//RemoveResultById removes a result matching
-//the given id from the active database.
-func RemoveResultById(id interface{}) (err error) {
-	session, err := getSession()
-	if err != nil {
-		return
-	}
-	defer session.Close()
-	c := session.DB("").C(RESULTS)
-	err = c.RemoveId(id)
-	if err != nil {
-		err = &DBRemoveError{"result", err, id}
-	}
 	return
 }

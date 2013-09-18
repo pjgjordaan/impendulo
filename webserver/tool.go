@@ -10,6 +10,7 @@ import (
 	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/diff"
 	"github.com/godfried/impendulo/tool/findbugs"
+	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/tool/pmd"
@@ -19,20 +20,24 @@ import (
 	"strings"
 )
 
-//Here we keep our tool configs' html template names.
-var templates = map[string]string{
-	jpf.NAME:        "jpfConfig",
-	pmd.NAME:        "pmdConfig",
-	junit.NAME:      "junitConfig",
-	findbugs.NAME:   "findbugsConfig",
-	checkstyle.NAME: "checkstyleConfig",
-	"none":          "noConfig",
-}
+var (
+	//Here we keep our tool configs' html template names.
+	templates = map[string]string{
+		jpf.NAME:        "jpfConfig",
+		pmd.NAME:        "pmdConfig",
+		junit.NAME:      "junitConfig",
+		findbugs.NAME:   "findbugsConfig",
+		checkstyle.NAME: "checkstyleConfig",
+		"none":          "noConfig",
+	}
+)
 
+//toolTemplate
 func toolTemplate(tool string) string {
 	return templates[tool]
 }
 
+//toolPermissions
 func toolPermissions() map[string]int {
 	return map[string]int{
 		"createjpf":        1,
@@ -43,6 +48,7 @@ func toolPermissions() map[string]int {
 	}
 }
 
+//toolPosters
 func toolPosters() map[string]Poster {
 	return map[string]Poster{
 		"createpmd":        CreatePMD,
@@ -53,8 +59,9 @@ func toolPosters() map[string]Poster {
 	}
 }
 
+//tools
 func tools() []string {
-	return []string{jpf.NAME, junit.NAME, pmd.NAME, findbugs.NAME, checkstyle.NAME}
+	return []string{jpf.NAME, junit.NAME, pmd.NAME, findbugs.NAME, checkstyle.NAME, javac.NAME}
 }
 
 //CreateCheckstyle
@@ -98,7 +105,7 @@ func CreateJUnit(req *http.Request, ctx *Context) (msg string, err error) {
 	pkg := util.GetPackage(bytes.NewReader(testBytes))
 	test := junit.NewTest(projectId, testName, username,
 		pkg, testBytes, dataBytes)
-	err = db.AddTest(test)
+	err = db.AddJUnitTest(test)
 	return
 }
 
@@ -118,7 +125,7 @@ func AddJPF(req *http.Request, ctx *Context) (msg string, err error) {
 		return
 	}
 	jpfConfig := jpf.NewConfig(projectId, username, data)
-	err = db.AddJPF(jpfConfig)
+	err = db.AddJPFConfig(jpfConfig)
 	return
 }
 
@@ -133,6 +140,7 @@ func CreateJPF(req *http.Request, ctx *Context) (msg string, err error) {
 		return
 	}
 	vals := make(map[string][]string)
+	//Read configured listeners and search.
 	listeners, err := GetStrings(req, "addedL")
 	if err == nil {
 		vals["listener"] = listeners
@@ -141,6 +149,7 @@ func CreateJPF(req *http.Request, ctx *Context) (msg string, err error) {
 	if err == nil {
 		vals["search.class"] = []string{search}
 	}
+	//Read other set properties.
 	other, err := GetString(req, "other")
 	if err == nil {
 		props := readProperties(other)
@@ -148,13 +157,15 @@ func CreateJPF(req *http.Request, ctx *Context) (msg string, err error) {
 			vals[k] = v
 		}
 	}
+	//Convert to JPF property file style.
 	data, err := jpf.JPFBytes(vals)
 	if err != nil {
 		msg = "Could not create JPF configuration."
 		return
 	}
+	//Save to db.
 	jpfConfig := jpf.NewConfig(projectId, username, data)
-	err = db.AddJPF(jpfConfig)
+	err = db.AddJPFConfig(jpfConfig)
 	if err != nil {
 		msg = "Could not create JPF configuration."
 	} else {
@@ -201,8 +212,12 @@ func CreatePMD(req *http.Request, ctx *Context) (msg string, err error) {
 		msg = "Could not read rules."
 		return
 	}
-	pmdRules := pmd.NewRules(projectId, rules)
-	err = db.AddPMD(pmdRules)
+	pmdRules, err := pmd.NewRules(projectId, toSet(rules))
+	if err != nil {
+		msg = "Could not create rules."
+		return
+	}
+	err = db.AddPMDRules(pmdRules)
 	if err != nil {
 		msg = "Could not add rules."
 	} else {
@@ -211,7 +226,18 @@ func CreatePMD(req *http.Request, ctx *Context) (msg string, err error) {
 	return
 }
 
+//toSet converts an array to a set.
+func toSet(vals []string) map[string]bool {
+	ret := make(map[string]bool)
+	for _, v := range vals {
+		ret[v] = true
+	}
+	return ret
+}
+
 //RunTool runs a tool on submissions in a given project.
+//Previous results are deleted if the user has specified that the tool
+//should be rerun on all fi
 func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
 	projectId, msg, err := getProjectId(req)
 	if err != nil {
@@ -222,7 +248,7 @@ func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
 		msg = "Could not read tool."
 		return
 	}
-	submissions, err := db.GetSubmissions(bson.M{project.PROJECT_ID: projectId}, bson.M{project.ID: 1})
+	submissions, err := db.Submissions(bson.M{project.PROJECT_ID: projectId}, bson.M{project.ID: 1})
 	if err != nil {
 		msg = "Could not retrieve submissions."
 		return
@@ -234,7 +260,7 @@ func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
 		runAll = true
 	}
 	for _, submission := range submissions {
-		files, err := db.GetFiles(bson.M{project.SUBID: submission.Id}, bson.M{project.DATA: 0})
+		files, err := db.Files(bson.M{project.SUBID: submission.Id}, bson.M{project.DATA: 0})
 		if err != nil {
 			util.Log(err)
 			continue
@@ -247,7 +273,7 @@ func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
 		for _, file := range files {
 			if resultId, ok := file.Results[tool]; ok && runAll {
 				//Delete results if we want to rerun the tool on all files.
-				err = db.RemoveResultById(resultId)
+				err = db.RemoveById(db.RESULTS, resultId)
 				if err != nil {
 					util.Log(resultId, err)
 					continue
@@ -278,7 +304,7 @@ func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
 func GetResultData(resultName string, fileId bson.ObjectId) (res tool.DisplayResult, err error) {
 	var file *project.File
 	matcher := bson.M{project.ID: fileId}
-	file, err = db.GetFile(matcher, nil)
+	file, err = db.File(matcher, nil)
 	if err != nil {
 		return
 	}
@@ -292,7 +318,7 @@ func GetResultData(resultName string, fileId bson.ObjectId) (res tool.DisplayRes
 		//Load summary for each available result.
 		for name, resid := range file.Results {
 			var currentRes tool.ToolResult
-			currentRes, err = db.GetToolResult(name,
+			currentRes, err = db.ToolResult(name,
 				bson.M{project.ID: resid}, nil)
 			if err != nil {
 				return
@@ -310,7 +336,7 @@ func GetResultData(resultName string, fileId bson.ObjectId) (res tool.DisplayRes
 		case bson.ObjectId:
 			//Retrieve result from the db.
 			matcher = bson.M{project.ID: val}
-			res, err = db.GetDisplayResult(resultName,
+			res, err = db.DisplayResult(resultName,
 				matcher, nil)
 		case string:
 			//Error, so create new error result.

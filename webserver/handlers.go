@@ -4,6 +4,7 @@ import (
 	"code.google.com/p/gorilla/sessions"
 	"fmt"
 	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"net/http"
 	"net/url"
@@ -18,21 +19,15 @@ const (
 	LOG_HANDLERS = "webserver/handlers.go"
 )
 
+type (
+	//Handler is used to handle incoming requests.
+	//It allows for better session management.
+	Handler func(http.ResponseWriter, *http.Request, *Context) error
+)
+
 func init() {
 	store = sessions.NewCookieStore(util.CookieKeys())
 }
-
-//getNav
-func getNav(ctx *Context) string {
-	if _, err := ctx.Username(); err != nil {
-		return "outNavbar"
-	}
-	return "inNavbar"
-}
-
-//Handler is used to handle incoming requests.
-//It allows for better session management.
-type Handler func(http.ResponseWriter, *http.Request, *Context) error
 
 //ServeHTTP loads a the current session, handles  the request and
 //then stores the session.
@@ -60,6 +55,14 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	buf.Apply(w)
+}
+
+//getNav
+func getNav(ctx *Context) string {
+	if _, err := ctx.Username(); err != nil {
+		return "outNavbar"
+	}
+	return "inNavbar"
 }
 
 //checkAccess verifies that a user is allowed access to a url.
@@ -171,7 +174,7 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 	if err != nil {
 		return
 	}
-	results, err := db.GetResultNames(ctx.Browse.Pid, true)
+	results, err := db.ResultNames(ctx.Browse.Pid, true)
 	if err != nil {
 		return
 	}
@@ -200,7 +203,7 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 		"nextlines": nextLines,
 	}
 	temps = []string{getNav(ctx), "analysis", "pager",
-		curRes.Template(true), nextRes.Template(false)}
+		tool.Template(curRes.GetName(), true), tool.Template(nextRes.GetName(), false)}
 	return
 }
 
@@ -228,7 +231,7 @@ func graphArgs(req *http.Request, ctx *Context) (args map[string]interface{}, er
 	if err != nil {
 		return
 	}
-	results, err := db.GetResultNames(ctx.Browse.Pid, false)
+	results, err := db.ResultNames(ctx.Browse.Pid, false)
 	results = append(results, "All")
 	if err != nil {
 		return

@@ -78,6 +78,7 @@ func main() {
 	}
 }
 
+//backupDB
 func backupDB() (err error) {
 	err = db.Setup(db.DEFAULT_CONN)
 	if err != nil {
@@ -88,6 +89,7 @@ func backupDB() (err error) {
 	return
 }
 
+//setupConn
 func setupConn(debug bool) (err error) {
 	if debug {
 		conn = db.DEBUG_CONN
@@ -100,7 +102,7 @@ func setupConn(debug bool) (err error) {
 
 //AddUsers adds users from a text file to the database.
 func AddUsers() {
-	users, err := user.ReadUsers(UsersFile)
+	users, err := user.Read(UsersFile)
 	if err != nil {
 		util.Log(err, LOG_IMPENDULO)
 		return

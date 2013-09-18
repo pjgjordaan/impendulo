@@ -5,14 +5,16 @@ import (
 	"strings"
 )
 
-//TargetInfo stores information about the target file.
-type TargetInfo struct {
-	Name    string
-	Lang    string
-	Package string
-	Ext     string
-	Dir     string
-}
+type (
+	//TargetInfo stores information about the target file.
+	TargetInfo struct {
+		Name    string
+		Lang    string
+		Package string
+		Ext     string
+		Dir     string
+	}
+)
 
 //FilePath
 func (ti *TargetInfo) FilePath() string {
@@ -47,17 +49,17 @@ func (ti *TargetInfo) Executable() string {
 func NewTarget(name, lang, pkg, dir string) *TargetInfo {
 	split := strings.Split(name, ".")
 	var ext string
-	if len(split) < 2{
+	if len(split) < 2 {
 		ext = ""
-	} else{
+	} else {
 		name = split[0]
 		ext = split[1]
 	}
 	return &TargetInfo{
-		Name:name, 
-		Lang: lang, 
-		Package: pkg, 
-		Ext: ext, 
-		Dir: dir,
+		Name:    name,
+		Lang:    lang,
+		Package: pkg,
+		Ext:     ext,
+		Dir:     dir,
 	}
 }

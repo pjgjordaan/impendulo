@@ -1,6 +1,7 @@
 package processing
 
 import (
+	"fmt"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
@@ -14,27 +15,29 @@ const (
 	LOG_PROCESSOR = "processing/processor.go"
 )
 
-//Processor is used to process individual submissions.
-type Processor struct {
-	sub      *project.Submission
-	project  *project.Project
-	rootDir  string
-	srcDir   string
-	toolDir  string
-	jpfPath  string
-	compiler tool.Tool
-	tools    []tool.Tool
-}
+type (
+	//Processor is used to process individual submissions.
+	Processor struct {
+		sub      *project.Submission
+		project  *project.Project
+		rootDir  string
+		srcDir   string
+		toolDir  string
+		jpfPath  string
+		compiler tool.Tool
+		tools    []tool.Tool
+	}
+)
 
 //NewProcessor creates a Processor and sets up the environment and
 //tools for it.
 func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
-	sub, err := db.GetSubmission(bson.M{project.ID: subId}, nil)
+	sub, err := db.Submission(bson.M{project.ID: subId}, nil)
 	if err != nil {
 		return
 	}
 	matcher := bson.M{project.ID: sub.ProjectId}
-	proj, err := db.GetProject(matcher, nil)
+	proj, err := db.Project(matcher, nil)
 	if err != nil {
 		return
 	}
@@ -65,7 +68,7 @@ processing:
 		select {
 		case fId := <-fileChan:
 			//Retrieve file and process it.
-			file, err := db.GetFile(bson.M{project.ID: fId}, nil)
+			file, err := db.File(bson.M{project.ID: fId}, nil)
 			if err != nil {
 				util.Log(err, LOG_PROCESSOR)
 			} else {
@@ -84,20 +87,22 @@ processing:
 	util.Log("Processed submission", this.sub)
 }
 
-//ProcessFile extracts archives and evaluates source files.
+//ProcessFile extracts archives and runs tools on source files.
 func (this *Processor) ProcessFile(file *project.File) (err error) {
 	util.Log("Processing file:", file)
+	defer util.Log("Processed file:", file, err)
 	switch file.Type {
 	case project.ARCHIVE:
 		err = this.Extract(file)
 	case project.SRC:
-		analyser := &Analyser{
-			proc: this,
-			file: file,
+		//Create a target for the tools to run on and save the file.
+		target := tool.NewTarget(file.Name,
+			this.project.Lang, file.Package, this.srcDir)
+		err = util.SaveFile(target.FilePath(), file.Data)
+		if err == nil {
+			this.RunTools(file, target)
 		}
-		err = analyser.Eval()
 	}
-	util.Log("Processed file:", file, err)
 	return
 }
 
@@ -109,7 +114,7 @@ func (this *Processor) Extract(archive *project.File) error {
 		return err
 	}
 	for name, data := range files {
-		err = this.storeFile(name, data)
+		err = this.StoreFile(name, data)
 		if err != nil {
 			util.Log(err, LOG_PROCESSOR)
 		}
@@ -119,7 +124,7 @@ func (this *Processor) Extract(archive *project.File) error {
 	if err != nil {
 		util.Log(err, LOG_PROCESSOR)
 	}
-	fIds, err := db.GetFiles(bson.M{project.SUBID: this.sub.Id},
+	fIds, err := db.Files(bson.M{project.SUBID: this.sub.Id},
 		bson.M{project.TIME: 1, project.ID: 1}, project.TIME)
 	if err != nil {
 		return err
@@ -127,7 +132,7 @@ func (this *Processor) Extract(archive *project.File) error {
 	ChangeStatus(Status{len(fIds), 0})
 	//Process archive files.
 	for _, fId := range fIds {
-		file, err := db.GetFile(bson.M{project.ID: fId.Id}, nil)
+		file, err := db.File(bson.M{project.ID: fId.Id}, nil)
 		if err != nil {
 			util.Log(err, LOG_PROCESSOR)
 		} else {
@@ -141,9 +146,9 @@ func (this *Processor) Extract(archive *project.File) error {
 	return nil
 }
 
-//storeFile creates a new project.File given an encoded file name and file data.
+//StoreFile creates a new project.File given an encoded file name and file data.
 //The new project.File is then saved in the database.
-func (this *Processor) storeFile(name string, data []byte) (err error) {
+func (this *Processor) StoreFile(name string, data []byte) (err error) {
 	file, err := project.ParseName(name)
 	if err != nil {
 		return
@@ -152,7 +157,58 @@ func (this *Processor) storeFile(name string, data []byte) (err error) {
 	if !db.Contains(db.FILES, matcher) {
 		file.SubId = this.sub.Id
 		file.Data = data
-		err = db.AddFile(file)
+		err = db.Add(db.FILES, file)
 	}
+	return
+}
+
+//RunTools runs all available tools on a file. It skips a tool if
+//there is already a result for it present. This makes it possible to
+//rerun old tools or add new tools and run them on old files without having
+//to rerun all the tools.
+func (this *Processor) RunTools(file *project.File, target *tool.TargetInfo) {
+	//First we compile our file.
+	err := this.Compile(file.Id, target)
+	if err != nil {
+		util.Log(err, LOG_PROCESSOR)
+		return
+	}
+	for _, t := range this.tools {
+		//Skip the tool if it has already been run.
+		if _, ok := file.Results[t.Name()]; ok {
+			continue
+		}
+		res, err := t.Run(file.Id, target)
+		if err != nil {
+			//Report any errors and store timeouts.
+			util.Log(
+				fmt.Errorf("Encountered error %q when running tool %s on file %s.",
+					err, t.Name(), file.Id.Hex()), LOG_PROCESSOR)
+			if tool.IsTimeout(err) {
+				err = db.AddFileResult(
+					file.Id, t.Name(), tool.TIMEOUT)
+			} else {
+				err = db.AddFileResult(
+					file.Id, t.Name(), tool.ERROR)
+			}
+		} else if res != nil {
+			err = db.AddResult(res)
+		} else {
+			err = db.AddFileResult(file.Id, t.Name(), tool.NORESULT)
+		}
+		if err != nil {
+			util.Log(err, LOG_PROCESSOR)
+		}
+	}
+}
+
+//Compile compiles a file, stores the result and returns any errors which may have occured.
+func (this *Processor) Compile(fileId bson.ObjectId, target *tool.TargetInfo) (err error) {
+	res, err := this.compiler.Run(fileId, target)
+	//We want to store the result if it is a compilation error
+	if err != nil && !tool.IsCompileError(err) {
+		return
+	}
+	db.AddResult(res)
 	return
 }

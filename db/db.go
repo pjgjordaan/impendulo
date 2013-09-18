@@ -1,3 +1,5 @@
+//Package db provides an interface to mgo which allows us to store and retrieve Impendulo
+//data from mongodb.
 package db
 
 import (
@@ -7,15 +9,18 @@ import (
 )
 
 const (
-	USERS        = "users"
-	SUBMISSIONS  = "submissions"
-	FILES        = "files"
-	RESULTS      = "results"
-	TESTS        = "tests"
-	PROJECTS     = "projects"
-	JPF          = "jpf"
-	PMD          = "pmd"
-	SET          = "$set"
+	//Mongodb collection name.
+	USERS       = "users"
+	SUBMISSIONS = "submissions"
+	FILES       = "files"
+	RESULTS     = "results"
+	TESTS       = "tests"
+	PROJECTS    = "projects"
+	JPF         = "jpf"
+	PMD         = "pmd"
+	//Mongodb command
+	SET = "$set"
+	//Mongodb connection and db names
 	DEFAULT_CONN = "mongodb://localhost/impendulo"
 	DEBUG_CONN   = "mongodb://localhost/impendulo_debug"
 	TEST_CONN    = "mongodb://localhost/impendulo_test"
@@ -63,8 +68,8 @@ func serveSession(activeSession *mgo.Session) {
 	close(sessionChan)
 }
 
-//getSession retrieves the current active session.
-func getSession() (s *mgo.Session, err error) {
+//Session retrieves the current active session.
+func Session() (s *mgo.Session, err error) {
 	requestChan <- true
 	s, ok := <-sessionChan
 	if s == nil || !ok {
@@ -80,33 +85,68 @@ func Close() {
 
 //DeleteDB removes a db.
 func DeleteDB(db string) error {
-	session, err := getSession()
+	session, err := Session()
 	if err != nil {
 		return err
 	}
+	defer session.Close()
 	return session.DB(db).DropDatabase()
 }
 
 //CopyDB is used to copy the contents of one database to a new
 //location.
-func CopyDB(from, to string) error {
-	session, err := getSession()
-	if err != nil {
-		return err
-	}
+func CopyDB(from, to string) (err error) {
 	err = DeleteDB(to)
 	if err != nil {
-		return err
+		return
 	}
-	return session.Run(bson.D{
-		{"copydb", "1"}, {"fromdb", from},
-		{"todb", to}}, nil)
+	session, err := Session()
+	if err != nil {
+		return
+	}
+	defer session.Close()
+	err = session.Run(
+		bson.D{
+			{"copydb", "1"},
+			{"fromdb", from},
+			{"todb", to},
+		}, nil)
+	return
+}
+
+//Add adds a document to the specified collection.
+func Add(colName string, data interface{}) (err error) {
+	session, err := Session()
+	if err != nil {
+		return
+	}
+	defer session.Close()
+	col := session.DB("").C(colName)
+	err = col.Insert(data)
+	if err != nil {
+		err = &DBAddError{colName, err}
+	}
+	return
+}
+
+//RemoveById removes a document matching the given id in collection colName from the active database.
+func RemoveById(colName string, id interface{}) (err error) {
+	session, err := Session()
+	if err != nil {
+		return
+	}
+	defer session.Close()
+	err = session.DB("").C(colName).RemoveId(id)
+	if err != nil {
+		err = &DBRemoveError{colName, err, id}
+	}
+	return
 }
 
 //Update updates documents from the collection col
-//matching the matcher interface to the change interface.
+//matching matcher with the changes specified by change.
 func Update(col string, matcher, change interface{}) (err error) {
-	session, err := getSession()
+	session, err := Session()
 	if err != nil {
 		return
 	}
@@ -122,17 +162,15 @@ func Update(col string, matcher, change interface{}) (err error) {
 	return
 }
 
-//Contains checks whether the collection col
-//contains any items matching the interfacce{} matcher.
+//Contains checks whether the collection col contains any items matching matcher.
 func Contains(col string, matcher interface{}) bool {
 	n, err := Count(col, matcher)
 	return err == nil && n > 0
 }
 
-//Count calculates the amount of items in the collection col
-//which match the interface{} matcher.
+//Count calculates the amount of items in the collection col which match matcher.
 func Count(col string, matcher interface{}) (n int, err error) {
-	session, err := getSession()
+	session, err := Session()
 	if err != nil {
 		return
 	}
@@ -143,48 +181,4 @@ func Count(col string, matcher interface{}) (n int, err error) {
 		err = &DBGetError{col + " count", err, matcher}
 	}
 	return
-}
-
-//DBGetError represents errors encountered
-//when retrieving data from the db.
-type DBGetError struct {
-	tipe    string
-	err     error
-	matcher interface{}
-}
-
-func (this *DBGetError) Error() string {
-	return fmt.Sprintf(
-		"Encountered error %q when retrieving %q matching %q from db",
-		this.err, this.tipe, this.matcher,
-	)
-}
-
-//DBAddError represents errors encountered
-//when adding data to the db.
-type DBAddError struct {
-	msg string
-	err error
-}
-
-func (this *DBAddError) Error() string {
-	return fmt.Sprintf(
-		"Encountered error %q when adding %q to db",
-		this.err, this.msg,
-	)
-}
-
-//DBRemoveError represents errors encountered
-//when removing data from the db.
-type DBRemoveError struct {
-	tipe    string
-	err     error
-	matcher interface{}
-}
-
-func (this *DBRemoveError) Error() string {
-	return fmt.Sprintf(
-		"Encountered error %q when removing %q matching %q from db",
-		this.err, this.tipe, this.matcher,
-	)
 }

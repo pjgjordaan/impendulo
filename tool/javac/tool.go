@@ -6,11 +6,13 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
-//Javac is a tool.Tool used to compile Java source files.
-type Tool struct {
-	cmd string
-	cp  string
-}
+type (
+	//Javac is a tool.Tool used to compile Java source files.
+	Tool struct {
+		cmd string
+		cp  string
+	}
+)
 
 //New creates a new Javac instance. cp is the classpath used when compiling.
 func New(cp string) *Tool {
@@ -20,14 +22,17 @@ func New(cp string) *Tool {
 	}
 }
 
+//Lang
 func (this *Tool) Lang() string {
 	return tool.JAVA
 }
 
+//Name
 func (this *Tool) Name() string {
 	return NAME
 }
 
+//Run
 func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	if this.cp != "" {
 		this.cp += ":"

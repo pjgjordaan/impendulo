@@ -11,7 +11,6 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strconv"
 	"testing"
 	"time"
@@ -24,7 +23,7 @@ func init() {
 	}
 }
 
-func TestExtractFile(t *testing.T) {
+func TestProcessFile(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
 	file, err := setupFile()
@@ -36,14 +35,9 @@ func TestExtractFile(t *testing.T) {
 		t.Error(err)
 	}
 	defer os.RemoveAll(proc.rootDir)
-	analyser := &Analyser{proc: proc, file: file}
-	err = analyser.buildTarget()
+	err = proc.ProcessFile(file)
 	if err != nil {
 		t.Error(err)
-	}
-	expected := tool.NewTarget("Triangle.java", tool.JAVA, "triangle", proc.srcDir)
-	if !reflect.DeepEqual(expected, analyser.target) {
-		t.Error("Targets not equivalent")
 	}
 	stored, err := os.Open(filepath.Join(proc.srcDir,
 		filepath.Join("triangle", "Triangle.java")))
@@ -57,25 +51,6 @@ func TestExtractFile(t *testing.T) {
 	}
 	if !bytes.Equal(fileData, buff.Bytes()) {
 		t.Error("Data not equivalent")
-	}
-}
-
-func TestEval(t *testing.T) {
-	db.Setup(db.TEST_CONN)
-	defer db.DeleteDB(db.TEST_DB)
-	file, err := setupFile()
-	if err != nil {
-		t.Error(err)
-	}
-	proc, err := NewProcessor(file.SubId)
-	if err != nil {
-		t.Error(err)
-	}
-	defer os.RemoveAll(proc.rootDir)
-	analyser := &Analyser{proc: proc, file: file}
-	err = analyser.Eval()
-	if err != nil {
-		t.Error(err)
 	}
 }
 
@@ -96,7 +71,7 @@ func TestArchive(t *testing.T) {
 		t.Error(err)
 	}
 	p := project.NewProject("Test", "user", tool.JAVA, []byte{})
-	err = db.AddProject(p)
+	err = db.Add(db.PROJECTS, p)
 	if err != nil {
 		t.Error(err)
 	}
@@ -106,11 +81,11 @@ func TestArchive(t *testing.T) {
 	for i, _ := range subs {
 		sub := project.NewSubmission(p.Id, "user", project.ARCHIVE_MODE, util.CurMilis())
 		archive := project.NewArchive(sub.Id, zipped)
-		err = db.AddSubmission(sub)
+		err = db.Add(db.SUBMISSIONS, sub)
 		if err != nil {
 			t.Error(err)
 		}
-		err = db.AddFile(archive)
+		err = db.Add(db.FILES, archive)
 		if err != nil {
 			t.Error(err)
 		}
@@ -131,12 +106,12 @@ func TestArchive(t *testing.T) {
 
 func setupFile() (file *project.File, err error) {
 	p := project.NewProject("Triangle", "user", tool.JAVA, []byte{})
-	err = db.AddProject(p)
+	err = db.Add(db.PROJECTS, p)
 	if err != nil {
 		return
 	}
 	s := project.NewSubmission(p.Id, p.User, project.FILE_MODE, 1000)
-	err = db.AddSubmission(s)
+	err = db.Add(db.SUBMISSIONS, s)
 	if err != nil {
 		return
 	}
@@ -144,7 +119,7 @@ func setupFile() (file *project.File, err error) {
 	if err != nil {
 		return
 	}
-	err = db.AddFile(file)
+	err = db.Add(db.FILES, file)
 	return
 }
 

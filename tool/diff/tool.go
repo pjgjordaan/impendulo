@@ -11,6 +11,7 @@ import (
 	"strings"
 )
 
+//Diff
 func Diff(orig, change string) (ret string, err error) {
 	origName := filepath.Join(util.BaseDir(),
 		fmt.Sprint(&orig)+fmt.Sprint(&change))
@@ -25,6 +26,7 @@ func Diff(orig, change string) (ret string, err error) {
 	return
 }
 
+//Diff2HTML
 func Diff2HTML(diff string) (ret template.HTML, err error) {
 	if diff == "" {
 		ret = template.HTML("<h4 class=\"text-success\">Files equivalent.<h4>")
@@ -42,6 +44,7 @@ func Diff2HTML(diff string) (ret template.HTML, err error) {
 	return
 }
 
+//SetHeader
 func SetHeader(diff, orig, change string) string {
 	i := strings.Index(diff, "@@")
 	if i == -1 || i >= len(diff) {

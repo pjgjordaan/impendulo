@@ -7,9 +7,9 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
-//GetUserById retrieves a user matching the given id from the active database.
-func GetUserById(id interface{}) (ret *user.User, err error) {
-	session, err := getSession()
+//User retrieves a user matching the given id from the active database.
+func User(id interface{}) (ret *user.User, err error) {
+	session, err := Session()
 	if err != nil {
 		return
 	}
@@ -22,9 +22,9 @@ func GetUserById(id interface{}) (ret *user.User, err error) {
 	return
 }
 
-//GetUsers retrieves users matching the given interface from the active database.
-func GetUsers(matcher interface{}, sort ...string) (ret []*user.User, err error) {
-	session, err := getSession()
+//Users retrieves users matching the given interface from the active database.
+func Users(matcher interface{}, sort ...string) (ret []*user.User, err error) {
+	session, err := Session()
 	if err != nil {
 		return
 	}
@@ -41,24 +41,9 @@ func GetUsers(matcher interface{}, sort ...string) (ret []*user.User, err error)
 	return
 }
 
-//AddUser adds a new user to the active database.
-func AddUser(u *user.User) (err error) {
-	session, err := getSession()
-	if err != nil {
-		return
-	}
-	defer session.Close()
-	c := session.DB("").C(USERS)
-	err = c.Insert(u)
-	if err != nil {
-		err = &DBAddError{u.String(), err}
-	}
-	return
-}
-
 //AddUsers adds new users to the active database.
 func AddUsers(users ...*user.User) (err error) {
-	session, err := getSession()
+	session, err := Session()
 	if err != nil {
 		return
 	}
@@ -76,7 +61,7 @@ func AddUsers(users ...*user.User) (err error) {
 //RemoveUserById removes a user matching
 //the given id from the active database.
 func RemoveUserById(id interface{}) (err error) {
-	subs, err := GetSubmissions(bson.M{project.USER: id},
+	subs, err := Submissions(bson.M{project.USER: id},
 		bson.M{project.ID: 1})
 	if err != nil {
 		return
@@ -87,15 +72,6 @@ func RemoveUserById(id interface{}) (err error) {
 			return
 		}
 	}
-	session, err := getSession()
-	if err != nil {
-		return
-	}
-	defer session.Close()
-	c := session.DB("").C(USERS)
-	err = c.RemoveId(id)
-	if err != nil {
-		err = &DBRemoveError{"user", err, id}
-	}
+	err = RemoveById(USERS, id)
 	return
 }

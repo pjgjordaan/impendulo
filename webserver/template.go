@@ -16,49 +16,45 @@ import (
 	"strings"
 )
 
-var funcs = template.FuncMap{
-	"projectName":     projectName,
-	"date":            util.Date,
-	"setBreaks":       setBreaks,
-	"address":         address,
-	"base":            filepath.Base,
-	"shortname":       shortname,
-	"sum":             sum,
-	"equal":           equal,
-	"langs":           tool.Langs,
-	"submissionCount": submissionCount,
-	"getBusy":         processing.GetStatus,
-	"slice":           slice,
-	"adjustment":      adjustment,
-	"listeners":       jpf.Listeners,
-	"searches":        jpf.Searches,
-	"rules":           pmd.RuleSet,
-	"tools":           tools,
-	"unescape":        html.UnescapeString,
-	"snapshots":       snapshots,
-	"launches":        launches,
-	"html":            toHTML,
-}
-
-const PAGER_SIZE = 10
-
 var (
+	funcs = template.FuncMap{
+		"projectName":     projectName,
+		"date":            util.Date,
+		"setBreaks":       func(s string) template.HTML { return template.HTML(setBreaks(s)) },
+		"address":         func(i interface{}) string { return fmt.Sprint(&i) },
+		"base":            filepath.Base,
+		"shortname":       shortname,
+		"sum":             sum,
+		"equal":           func(a, b interface{}) bool { return a == b },
+		"langs":           tool.Langs,
+		"submissionCount": submissionCount,
+		"getBusy":         processing.GetStatus,
+		"slice":           slice,
+		"adjustment":      adjustment,
+		"listeners":       jpf.Listeners,
+		"searches":        jpf.Searches,
+		"rules":           pmd.RuleSet,
+		"tools":           tools,
+		"unescape":        html.UnescapeString,
+		"snapshots":       func(id bson.ObjectId) (int, error) { return fileCount(id, project.SRC) },
+		"launches":        func(id bson.ObjectId) (int, error) { return fileCount(id, project.LAUNCH) },
+		"html":            func(s string) template.HTML { return template.HTML(s) },
+		"string":          func(b []byte) string { return string(b) },
+	}
 	templateDir   string
 	baseTemplates []string
 )
 
-func toHTML(val string) template.HTML {
-	return template.HTML(val)
+const (
+	PAGER_SIZE = 10
+)
+
+//fileCount
+func fileCount(subId bson.ObjectId, tipe string) (int, error) {
+	return db.Count(db.FILES, bson.M{project.SUBID: subId, project.TYPE: tipe})
 }
 
-func snapshots(subId bson.ObjectId) (int, error) {
-	return db.Count(db.FILES, bson.M{project.SUBID: subId, project.TYPE: project.SRC})
-}
-
-func launches(subId bson.ObjectId) (int, error) {
-	return db.Count(db.FILES, bson.M{project.SUBID: subId, project.TYPE: project.LAUNCH})
-}
-
+//slice
 func slice(files []*project.File, selected int) (ret []*project.File) {
 	if len(files) < PAGER_SIZE {
 		ret = files
@@ -72,6 +68,7 @@ func slice(files []*project.File, selected int) (ret []*project.File) {
 	return
 }
 
+//adjustment
 func adjustment(files []*project.File, selected int) (ret int) {
 	if len(files) < PAGER_SIZE || selected < PAGER_SIZE/2 {
 		ret = 0
@@ -83,6 +80,7 @@ func adjustment(files []*project.File, selected int) (ret int) {
 	return
 }
 
+//submissionCount
 func submissionCount(id interface{}) (int, error) {
 	switch tipe := id.(type) {
 	case bson.ObjectId:
@@ -94,10 +92,7 @@ func submissionCount(id interface{}) (int, error) {
 	}
 }
 
-func equal(a, b interface{}) bool {
-	return a == b
-}
-
+//sum
 func sum(vals ...int) (ret int) {
 	for _, val := range vals {
 		ret += val
@@ -105,10 +100,7 @@ func sum(vals ...int) (ret int) {
 	return
 }
 
-func isCode(name string) bool {
-	return strings.ToLower(name) == "code"
-}
-
+//shortname
 func shortname(exec string) string {
 	elements := strings.Split(exec, `.`)
 	num := len(elements)
@@ -118,18 +110,12 @@ func shortname(exec string) string {
 	return strings.Join(elements[num-2:], `.`)
 }
 
-func address(val interface{}) string {
-	return fmt.Sprint(&val)
-}
-
-func setBreaks(val string) template.HTML {
-	return template.HTML(_setBreaks(val))
-}
-
-func _setBreaks(val string) string {
+//setBreaks
+func setBreaks(val string) string {
 	return strings.Replace(val, "\n", "<br>", -1)
 }
 
+//TemplateDir
 func TemplateDir() string {
 	if templateDir != "" {
 		return templateDir
@@ -138,6 +124,7 @@ func TemplateDir() string {
 	return templateDir
 }
 
+//BaseTemplates
 func BaseTemplates() []string {
 	if baseTemplates != nil {
 		return baseTemplates

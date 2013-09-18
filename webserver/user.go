@@ -14,7 +14,7 @@ func Login(req *http.Request, ctx *Context) (msg string, err error) {
 	if err != nil {
 		return
 	}
-	u, err := db.GetUserById(uname)
+	u, err := db.User(uname)
 	if err != nil {
 		msg = fmt.Sprintf("User %s not found.", uname)
 		return
@@ -36,7 +36,7 @@ func Register(req *http.Request, ctx *Context) (msg string, err error) {
 		return
 	}
 	u := user.New(uname, pword)
-	err = db.AddUser(u)
+	err = db.Add(db.USERS, u)
 	if err != nil {
 		msg = fmt.Sprintf("User %s already exists.", uname)
 	} else {

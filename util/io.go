@@ -1,3 +1,5 @@
+//Package util provides utility methods for performing operations which are used
+//throughout impendulo such as io, type conversion and logging.
 package util
 
 import (
@@ -11,22 +13,18 @@ import (
 	"strings"
 )
 
-const(
+const (
 	DPERM = 0777
 	FPERM = os.O_WRONLY | os.O_CREATE | os.O_TRUNC
-	EOT = "\u0004"
+	EOT   = "\u0004"
 )
 
-type IOError struct {
-	origin interface{}
-	tipe   string
-	err    error
-}
-
-func (this *IOError) Error() string {
-	return fmt.Sprintf(`Encountered error %q while %s %q.`,
-		this.err, this.tipe, this.origin)
-}
+type (
+	//copier
+	copier struct {
+		dest, src string
+	}
+)
 
 //BaseDir retrieves the Impendulo directory.
 func BaseDir() string {
@@ -52,7 +50,7 @@ func ReadData(r io.Reader) ([]byte, error) {
 		if err == io.EOF {
 			busy = false
 		} else if err != nil {
-			return nil, &IOError{r, "reading from", err}
+			return nil, &UtilError{r, "reading from", err}
 		} else if bytes.HasSuffix(read, eot) {
 			read = read[:len(read)-len(eot)]
 			busy = false
@@ -66,15 +64,15 @@ func ReadData(r io.Reader) ([]byte, error) {
 func SaveFile(fname string, data []byte) error {
 	err := os.MkdirAll(filepath.Dir(fname), DPERM)
 	if err != nil {
-		return &IOError{fname, "creating", err}
+		return &UtilError{fname, "creating", err}
 	}
 	f, err := os.Create(fname)
 	if err != nil {
-		return &IOError{fname, "creating", err}
+		return &UtilError{fname, "creating", err}
 	}
 	_, err = f.Write(data)
 	if err != nil {
-		return &IOError{fname, "writing to", err}
+		return &UtilError{fname, "writing to", err}
 	}
 	return nil
 }
@@ -107,10 +105,7 @@ func GetPackage(r io.Reader) string {
 	return ""
 }
 
-type copier struct {
-	dest, src string
-}
-
+//copyFile
 func (this *copier) copyFile(path string, f os.FileInfo, err error) error {
 	if err != nil {
 		return err
@@ -118,6 +113,7 @@ func (this *copier) copyFile(path string, f os.FileInfo, err error) error {
 	return this.copy(path, f)
 }
 
+//copy
 func (this *copier) copy(path string, f os.FileInfo) (err error) {
 	destPath, err := filepath.Rel(this.src, path)
 	if err != nil {

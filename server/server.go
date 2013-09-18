@@ -1,3 +1,5 @@
+//Package server provides a TCP server which receives user submissions and
+//snapshots and sends them to be processed.
 package server
 
 import (
@@ -16,8 +18,22 @@ const (
 	PROJECTS            = "projects"
 	SUBMISSION_NEW      = "submission_new"
 	SUBMISSION_CONTINUE = "submission_continue"
+	LOG_SERVER          = "server/server.go"
 )
-const LOG_SERVER = "server/server.go"
+
+type (
+
+	//HandlerSpawner is an interface used to spawn RWCHandlers.
+	HandlerSpawner interface {
+		Spawn() RWCHandler
+	}
+
+	//RWCHandler is an interface with basic methods for handling connections.
+	RWCHandler interface {
+		Start(rwc io.ReadWriteCloser)
+		End(err error)
+	}
+)
 
 //Run is used to listen for new tcp connections and
 //spawn a new goroutine for each connection.
@@ -45,15 +61,4 @@ func Run(port string, spawner HandlerSpawner) {
 			}(conn)
 		}
 	}
-}
-
-//HandlerSpawner is an interface used to spawn RWCHandlers.
-type HandlerSpawner interface {
-	Spawn() RWCHandler
-}
-
-//ConnHandler is an interface with basic methods for handling connections.
-type RWCHandler interface {
-	Start(rwc io.ReadWriteCloser)
-	End(err error)
 }

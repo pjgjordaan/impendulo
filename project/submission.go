@@ -6,15 +6,18 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
-//Submission is used for individual project submissions
-type Submission struct {
-	Id        bson.ObjectId "_id"
-	ProjectId bson.ObjectId "projectid"
-	User      string        "user"
-	Mode      string        "mode"
-	Time      int64         "time"
-}
+type (
+	//Submission is used for individual project submissions
+	Submission struct {
+		Id        bson.ObjectId "_id"
+		ProjectId bson.ObjectId "projectid"
+		User      string        "user"
+		Mode      string        "mode"
+		Time      int64         "time"
+	}
+)
 
+//SetMode
 func (this *Submission) SetMode(mode string) error {
 	if mode != FILE_MODE && mode != ARCHIVE_MODE {
 		return fmt.Errorf("Unknown mode %s.", mode)
@@ -23,10 +26,7 @@ func (this *Submission) SetMode(mode string) error {
 	return nil
 }
 
-func (this *Submission) TypeName() string {
-	return "submission"
-}
-
+//String
 func (this *Submission) String() string {
 	return "Type: project.Submission; Id: " + this.Id.Hex() +
 		"; ProjectId: " + this.ProjectId.Hex() +

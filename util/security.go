@@ -19,8 +19,10 @@ import (
 	"math/big"
 )
 
-var authName string = "authentication.key"
-var encName string = "encryption.key"
+var (
+	authName = "authentication.key"
+	encName  = "encryption.key"
+)
 
 //CookieKeys generates cookie keys.
 func CookieKeys() (auth, enc []byte) {

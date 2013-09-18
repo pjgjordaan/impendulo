@@ -1,4 +1,6 @@
 {{define "view"}}
+<!-- This is the breadcrumb which allows us to browse through the --
+  -- hierarchy quickly -->
 <ul class="breadcrumb">
   <li><a href="homeview">Home</a></li>  
   <li><a href="projectresult">Projects</a></li>
@@ -14,6 +16,9 @@
   </li>
 </ul>
 <h2 class="text-center"><small>project</small> {{projectName .ctx.Browse.Pid}}</h2>
+<!-- Here we display a table of the different submissions within this project --
+  -- . Included are users' names and date to allow us to differentiate between --
+  -- submissions. -->
 <table class="table table-hover">
   <thead>
     <tr class="info">

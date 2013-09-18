@@ -1,3 +1,4 @@
+//Package jpf is Java Pathfinder's implementation of an Impendulo tool.
 package jpf
 
 import (
@@ -11,26 +12,34 @@ import (
 	"path/filepath"
 )
 
-//JPF is a tool.Tool which runs a JPF on a Java source file.
-type Tool struct {
-	cp, jpfPath, exec string
-}
+type (
+	//Tool is an implementation of tool.Tool which runs a JPF on a Java source file.
+	//It makes use of runner.JPFRunner to configure and run JPF on a file and
+	//runner.ImpenduloPublisher to output the results as XML.
+	Tool struct {
+		cp, jpfPath, exec string
+	}
+)
 
-//New creates a new JPF instance. jpfDir is the location of the
-//Java JPF runner files. configPath is the location of the JPF
-//configuration file.
+//New creates a new JPF instance for a given submission. jpfDir is where the
+//Java JPF runner files should be stored for this JPF instance.
+//jpfConfig is the JPF configuration associated with the submission's project.
 func New(jpfConfig *Config, jpfDir string) (jpf *Tool, err error) {
+	//Copy JPF runner files to the specified location
 	err = util.Copy(jpfDir, config.Config(config.JPF_RUNNER_DIR))
 	if err != nil {
 		return
 	}
+	//Save the config file in the same location.
 	jpfPath := filepath.Join(jpfDir, "config.jpf")
 	err = util.SaveFile(jpfPath, jpfConfig.Data)
 	if err != nil {
 		return
 	}
+	//Setup classpath with the required JPF and Json jars.
 	cp := jpfDir + ":" + config.Config(config.JPF_JAR) + ":" +
 		config.Config(config.RUNJPF_JAR) + ":" + config.Config(config.GSON_JAR)
+	//Compile JPF runner files
 	jpfInfo := tool.NewTarget("JPFRunner.java", "java", "runner", jpfDir)
 	pubInfo := tool.NewTarget("ImpenduloPublisher.java", "java", "runner", jpfDir)
 	comp := javac.New(cp)
@@ -51,14 +60,18 @@ func New(jpfConfig *Config, jpfDir string) (jpf *Tool, err error) {
 	return
 }
 
+//Lang is Java
 func (this *Tool) Lang() string {
 	return tool.JAVA
 }
 
+//Name is JPF
 func (this *Tool) Name() string {
 	return NAME
 }
 
+//Run runs JPF on a specified Java source file. It uses runner.JPFRunner to actually run JPF
+//on the source file. If the command was successful, the results are read in from a xml file.
 func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	outFile := filepath.Join(ti.Dir, "jpf")
 	args := []string{config.Config(config.JAVA), "-cp", ti.Dir + ":" +
@@ -78,29 +91,4 @@ func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolR
 		err = execRes.Err
 	}
 	return
-}
-
-func Allowed(key string) bool {
-	_, ok := reserved[key]
-	return !ok
-}
-
-type empty struct{}
-
-var reserved = map[string]empty{
-	"search.class":                  empty{},
-	"listener":                      empty{},
-	"target":                        empty{},
-	"report.publisher":              empty{},
-	"report.xml.class":              empty{},
-	"report.xml.file":               empty{},
-	"classpath":                     empty{},
-	"report.xml.start":              empty{},
-	"report.xml.transition":         empty{},
-	"report.xml.constraint":         empty{},
-	"report.xml.property_violation": empty{},
-	"report.xml.show_steps":         empty{},
-	"report.xml.show_method":        empty{},
-	"report.xml.show_code":          empty{},
-	"report.xml.finished":           empty{},
 }

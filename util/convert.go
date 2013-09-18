@@ -156,28 +156,3 @@ func toStrings(ivals interface{}) ([]string, error) {
 	}
 	return vals, nil
 }
-
-//MissingError indicates that a key was not present in a map.
-type MissingError struct {
-	key string
-}
-
-func (this *MissingError) Error() string {
-	return fmt.Sprintf("Error reading value for %q.", this.key)
-}
-
-//CastError indicates that an interface{} could not be cast to
-//a certain type.
-type CastError struct {
-	tipe  string
-	value interface{}
-}
-
-func (this *CastError) Error() string {
-	return fmt.Sprintf("Error casting value %q to %q.", this.value, this.tipe)
-}
-
-func IsCastError(err error) (ok bool) {
-	_, ok = err.(*CastError)
-	return
-}

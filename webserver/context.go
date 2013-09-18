@@ -12,25 +12,27 @@ import (
 	"net/http"
 )
 
+type (
+	//Context is used to keep track of the current user's session.
+	Context struct {
+		Session  *sessions.Session
+		projects []*project.Project
+		users    []*user.User
+		Browse   *BrowseData
+	}
+
+	//BrowseData is used to keep track of the user's browsing.
+	BrowseData struct {
+		IsUser                          bool
+		Pid, Sid                        bson.ObjectId
+		Uid, FileName, ResultName, View string
+		Selected, Next                  int
+	}
+)
+
 func init() {
 	gob.Register(new(BrowseData))
 	gob.Register(new(bson.ObjectId))
-}
-
-//Context is used to keep track of the current user's session.
-type Context struct {
-	Session  *sessions.Session
-	projects []*project.Project
-	users    []*user.User
-	Browse   *BrowseData
-}
-
-//BrowseData is used to keep track of the user's browsing.
-type BrowseData struct {
-	IsUser                          bool
-	Pid, Sid                        bson.ObjectId
-	Uid, FileName, ResultName, View string
-	Selected, Next                  int
 }
 
 //Close closes a session.
@@ -99,7 +101,7 @@ func (ctx *Context) AddUser(user string) {
 func (ctx *Context) Projects() ([]*project.Project, error) {
 	var err error
 	if ctx.projects == nil {
-		ctx.projects, err = db.GetProjects(
+		ctx.projects, err = db.Projects(
 			nil, bson.M{project.SKELETON: 0}, project.NAME)
 	}
 	return ctx.projects, err
@@ -109,7 +111,7 @@ func (ctx *Context) Projects() ([]*project.Project, error) {
 func (ctx *Context) Users() ([]*user.User, error) {
 	var err error
 	if ctx.users == nil {
-		ctx.users, err = db.GetUsers(nil, user.ID)
+		ctx.users, err = db.Users(nil, user.ID)
 	}
 	return ctx.users, err
 }

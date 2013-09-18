@@ -3,10 +3,10 @@ package util
 import (
 	"archive/zip"
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"fmt"
 )
 
 //Unzip extracts a file (given as a []byte) to dir.
@@ -14,7 +14,7 @@ func Unzip(dir string, data []byte) (err error) {
 	br := bytes.NewReader(data)
 	zr, err := zip.NewReader(br, int64(br.Len()))
 	if err != nil {
-		err = &IOError{data, "creating zip reader from", err}
+		err = &UtilError{data, "creating zip reader from", err}
 		return
 	}
 	for _, zf := range zr.File {
@@ -28,36 +28,36 @@ func Unzip(dir string, data []byte) (err error) {
 
 //ExtractFile extracts the contents of a zip.File and saves it in dir.
 func ExtractFile(zf *zip.File, dir string) error {
-	if zf == nil{
+	if zf == nil {
 		return fmt.Errorf("Could not extract nil *zip.File")
 	}
 	frc, err := zf.Open()
 	if err != nil {
-		return &IOError{zf, "opening zipfile", err}
+		return &UtilError{zf, "opening zipfile", err}
 	}
 	defer frc.Close()
 	path := filepath.Join(dir, zf.Name)
 	if zf.FileInfo().IsDir() {
 		err = os.MkdirAll(path, DPERM)
 		if err != nil {
-			return &IOError{path, "creating directory", err}
+			err = &UtilError{path, "creating directory", err}
 		}
-	} else {
-		err = os.MkdirAll(filepath.Dir(path), DPERM)
-		if err != nil {
-			return &IOError{path, "creating directory", err}
-		}
-		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, zf.Mode())
-		if err != nil {
-			return &IOError{path, "opening", err}
-		}
-		defer f.Close()
-		_, err = io.Copy(f, frc)
-		if err != nil {
-			return &IOError{f, "copying to", err}
-		}
+		return err
 	}
-	return nil
+	err = os.MkdirAll(filepath.Dir(path), DPERM)
+	if err != nil {
+		return &UtilError{path, "creating directory", err}
+	}
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, zf.Mode())
+	if err != nil {
+		return &UtilError{path, "opening", err}
+	}
+	defer f.Close()
+	_, err = io.Copy(f, frc)
+	if err != nil {
+		err = &UtilError{f, "copying to", err}
+	}
+	return err
 }
 
 //UnzipToMap reads the contents of a zip file into a map.
@@ -66,7 +66,7 @@ func UnzipToMap(data []byte) (ret map[string][]byte, err error) {
 	br := bytes.NewReader(data)
 	zr, err := zip.NewReader(br, int64(br.Len()))
 	if err != nil {
-		err = &IOError{data, "creating zip reader from", err}
+		err = &UtilError{data, "creating zip reader from", err}
 		return
 	}
 	ret = make(map[string][]byte)
@@ -86,7 +86,7 @@ func UnzipToMap(data []byte) (ret map[string][]byte, err error) {
 func ExtractBytes(zf *zip.File) (ret []byte, err error) {
 	frc, err := zf.Open()
 	if err != nil {
-		err = &IOError{zf, "opening zipfile", err}
+		err = &UtilError{zf, "opening zipfile", err}
 	} else {
 		defer frc.Close()
 		ret = ReadBytes(frc)
@@ -107,7 +107,7 @@ func ZipMap(files map[string][]byte) (ret []byte, err error) {
 	}
 	err = zw.Close()
 	if err != nil {
-		err = &IOError{zw, "closing zip", err}
+		err = &UtilError{zw, "closing zip", err}
 	} else {
 		ret = buf.Bytes()
 	}
@@ -118,12 +118,12 @@ func ZipMap(files map[string][]byte) (ret []byte, err error) {
 func AddToZip(zw *zip.Writer, name string, data []byte) (err error) {
 	f, err := zw.Create(name)
 	if err != nil {
-		err = &IOError{name, "creating zipfile", err}
+		err = &UtilError{name, "creating zipfile", err}
 		return
 	}
 	_, err = f.Write(data)
 	if err != nil {
-		err = &IOError{f, "writing to zipfile", err}
+		err = &UtilError{f, "writing to zipfile", err}
 	}
 	return
 }

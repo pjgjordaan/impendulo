@@ -9,7 +9,17 @@ import (
 	"time"
 )
 
-var errLogger, infoLogger *Logger
+var (
+	errLogger, infoLogger *Logger
+)
+
+type (
+	//Logger allows for concurrent logging.
+	Logger struct {
+		logger        *log.Logger
+		console, file bool
+	}
+)
 
 //init sets up the loggers.
 func init() {
@@ -38,12 +48,6 @@ func SetErrorLogging(setting string) {
 //SetInfoConsoleLogging sets whether info should be logged to the console.
 func SetInfoLogging(setting string) {
 	infoLogger.setLogging(setting)
-}
-
-//SyncLogger allows for concurrent logging.
-type Logger struct {
-	logger        *log.Logger
-	console, file bool
 }
 
 func (this *Logger) setLogging(setting string) {

@@ -1,7 +1,6 @@
 package jpf
 
 import (
-	//"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"github.com/godfried/impendulo/config"
@@ -13,26 +12,31 @@ import (
 	"path/filepath"
 )
 
-var listenersFile = "listeners.json"
-var searchesFile = "searches.json"
+var (
+	listenersFile = "listeners.json"
+	searchesFile  = "searches.json"
+)
 
-//Listener is a JPF Listener.
-type Class struct {
-	Name    string
-	Package string
-}
+type (
+	//Class represents properties of a Java class, specifically its name and package.
+	Class struct {
+		Name    string
+		Package string
+	}
+)
 
-//Listeners retrieves all JPF Listeners.
+//Listeners retrieves all JPF Listener classes.
 func Listeners() ([]*Class, error) {
 	return GetClasses("listeners", listenersFile)
 }
 
-
-//Listeners retrieves all JPF Listeners.
+//Searches retrieves all JPF Search classes.
 func Searches() ([]*Class, error) {
 	return GetClasses("searches", searchesFile)
 }
 
+//GetClasses retrieves an array of classes matching a specific type and writes them to a
+//provided output file for future use.
 func GetClasses(tipe, fname string) (classes []*Class, err error) {
 	var data []byte
 	path := filepath.Join(util.BaseDir(), fname)
@@ -48,8 +52,10 @@ func GetClasses(tipe, fname string) (classes []*Class, err error) {
 	return
 }
 
-
-//FindListeners searches for JPF Listeners in the jpf-core directory tree.
+//findClasses searches for classes in the jpf-core directory tree which match
+//a specific type using JPFFinder, a Java class which searches for all concrete subclasses
+//of a class or interface (gov.nasa.jpf.search.Search or gov.nasa.jpf.JPFListener for example).
+//These classes are then written to a Json output file.
 func findClasses(tipe, fname string) (found []byte, err error) {
 	target := tool.NewTarget("JPFFinder.java", "java", "finder",
 		config.Config(config.JPF_FINDER_DIR))
@@ -64,7 +70,7 @@ func findClasses(tipe, fname string) (found []byte, err error) {
 		target.Executable(), tipe, fname}
 	execRes := tool.RunCommand(args, nil)
 	resFile, err := os.Open(fname)
-	if err == nil{
+	if err == nil {
 		found = util.ReadBytes(resFile)
 	} else if execRes.Err != nil {
 		err = execRes.Err
@@ -75,11 +81,13 @@ func findClasses(tipe, fname string) (found []byte, err error) {
 	return
 }
 
+//readClasses unmarshalls an array of type *Class from a Json byte array.
 func readClasses(data []byte) (classes []*Class, err error) {
 	err = json.Unmarshal(data, &classes)
 	return
 }
 
+//loadClasses loads an array of type *Class from a Json file.
 func loadClasses(fname string) (vals []*Class, err error) {
 	f, err := os.Open(fname)
 	if err != nil {

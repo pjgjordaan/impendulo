@@ -1,3 +1,5 @@
+//Package webserver provides a webserver which allows for: viewing
+//of results; administration of submissions, projects and tools; user management;
 package webserver
 
 import (
@@ -76,7 +78,7 @@ func RunTLS() {
 	}
 }
 
-//Run
+//Run starts up the webserver if it is not currently running.
 func Run() {
 	if Active() {
 		return
@@ -88,10 +90,12 @@ func Run() {
 	}
 }
 
+//Active
 func Active() bool {
 	return running
 }
 
+//setActive
 func setActive(active bool) {
 	running = active
 }
