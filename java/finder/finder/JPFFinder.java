@@ -1,3 +1,19 @@
+//Copyright (C) 2013  The Impendulo Authors
+//
+//This library is free software; you can redistribute it and/or
+//modify it under the terms of the GNU Lesser General Public
+//License as published by the Free Software Foundation; either
+//version 2.1 of the License, or (at your option) any later version.
+//
+//This library is distributed in the hope that it will be useful,
+//but WITHOUT ANY WARRANTY; without even the implied warranty of
+//MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//Lesser General Public License for more details.
+//
+//You should have received a copy of the GNU Lesser General Public
+//License along with this library; if not, write to the Free Software
+//Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
 package finder;
 
 import java.io.File;
@@ -12,8 +28,25 @@ import util.ClassFinder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
+/**
+ * JPFFinder is used to retrieve a list of concrete classes in the same package
+ * with a common parent class. These classes are typically then converted to a
+ * Json array and written to an output file. See
+ * http://godoc.org/github.com/godfried/impendulo/tool/jpf#GetClasses for more
+ * information.
+ * 
+ * @author godfried
+ * 
+ */
 public class JPFFinder {
 
+	/**
+	 * Searches for all class in a package with a certain parent class.
+	 * 
+	 * @param pkg
+	 * @param parentName
+	 * @return a List of classes in package pkg with parent class parentName.
+	 */
 	@SuppressWarnings("rawtypes")
 	public static List<Class> findClasses(String pkg, String parentName) {
 		Class<?> parent;
@@ -33,6 +66,13 @@ public class JPFFinder {
 		return classes;
 	}
 
+	/**
+	 * Checks whether a class is a concrete subclass of another.
+	 * 
+	 * @param c
+	 * @param parent
+	 * @return
+	 */
 	public static boolean isSubclass(Class<?> c, Class<?> parent) {
 		try {
 			if (!Modifier.isAbstract(c.getModifiers())
@@ -44,16 +84,32 @@ public class JPFFinder {
 		return false;
 	}
 
+	/**
+	 * Retrieves all JPF Listeners.
+	 * 
+	 * @return
+	 */
 	@SuppressWarnings("rawtypes")
 	public static List<Class> findListeners() {
 		return findClasses("gov.nasa.jpf.listener", "gov.nasa.jpf.JPFListener");
 	}
 
+	/**
+	 * Retreieves all JPF Search classes.
+	 * 
+	 * @return
+	 */
 	@SuppressWarnings("rawtypes")
 	public static List<Class> findSearches() {
 		return findClasses("gov.nasa.jpf.search", "gov.nasa.jpf.search.Search");
 	}
 
+	/**
+	 * Retrieves the specified list of classes and writes them as Json to an
+	 * output file.
+	 * 
+	 * @param args
+	 */
 	@SuppressWarnings("rawtypes")
 	public static void main(String[] args) {
 		if (args.length < 2) {

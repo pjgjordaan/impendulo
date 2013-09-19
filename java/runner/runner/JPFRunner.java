@@ -1,9 +1,23 @@
+//Copyright (C) 2013  The Impendulo Authors
+//
+//This library is free software; you can redistribute it and/or
+//modify it under the terms of the GNU Lesser General Public
+//License as published by the Free Software Foundation; either
+//version 2.1 of the License, or (at your option) any later version.
+//
+//This library is distributed in the hope that it will be useful,
+//but WITHOUT ANY WARRANTY; without even the implied warranty of
+//MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//Lesser General Public License for more details.
+//
+//You should have received a copy of the GNU Lesser General Public
+//License along with this library; if not, write to the Free Software
+//Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
 package runner;
 
 import gov.nasa.jpf.Config;
 import gov.nasa.jpf.JPF;
-import gov.nasa.jpf.JPFConfigException;
-import gov.nasa.jpf.JPFException;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -14,6 +28,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+/**
+ * This class is used to run JPF on a provided Java file. See
+ * http://godoc.org/github.com/godfried/impendulo/tool/jpf#Tool for more
+ * information.
+ * 
+ * @author godfried
+ * 
+ */
 public class JPFRunner {
 
 	/**
@@ -28,13 +50,20 @@ public class JPFRunner {
 			throw new FileNotFoundException("Could not find config file "
 					+ args[0]);
 		}
-		Exception e = run(createConfig(args[0], args[1], args[2], args[3]));
-		if (e != null) {
+		try {
+			run(createConfig(args[0], args[1], args[2], args[3]));
+		} catch (Exception e) {
 			System.err.println(e.getMessage());
 		}
 	}
 
-	public static Exception run(Config config) {
+	/**
+	 * Here we run JPF with a provided Config.
+	 * 
+	 * @param config
+	 *            the JPF configuration to be used for this execution.
+	 */
+	public static void run(Config config) throws Exception {
 		PrintStream out = System.out;
 		PrintStream err = System.err;
 		System.setOut(new PrintStream(new OutputStream() {
@@ -48,20 +77,27 @@ public class JPFRunner {
 			}
 		}));
 		try {
-
 			JPF jpf = new JPF(config);
 			jpf.run();
-			return null;
-		} catch (JPFConfigException cx) {
-			return cx;
-		} catch (JPFException jx) {
-			return jx;
 		} finally {
 			System.setOut(out);
 			System.setErr(err);
 		}
 	}
 
+	/**
+	 * This method creates a Config from a provided config file.
+	 * 
+	 * @param configName
+	 *            the config file to load.
+	 * @param target
+	 *            the target of this config.
+	 * @param targetLocation
+	 *            the location of the target.
+	 * @param outFile
+	 *            the output file to be published to.
+	 * @return A new Config.
+	 */
 	public static Config createConfig(String configName, String target,
 			String targetLocation, String outFile) {
 		Config config = JPF.createConfig(new String[] { configName });
@@ -78,6 +114,11 @@ public class JPFRunner {
 		return config;
 	}
 
+	/**
+	 * Loads a default configuration
+	 * 
+	 * @return
+	 */
 	public static Map<String, String> DefaultConfig() {
 		Map<String, String> ret = new HashMap<String, String>();
 		ret.put("report.publisher", "xml");

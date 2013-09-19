@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="src" path="finder"/>
+	<classpathentry kind="src" path="runner"/>
+	<classpathentry kind="src" path="testing"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="lib/gson-2.2.4.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/jpf-core"/>
+	<classpathentry kind="lib" path="/usr/share/ant/lib/ant-junit.jar"/>
+	<classpathentry kind="lib" path="/usr/share/ant/lib/ant.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

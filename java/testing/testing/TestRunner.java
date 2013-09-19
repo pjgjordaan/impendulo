@@ -1,3 +1,19 @@
+//Copyright (C) 2013  The Impendulo Authors
+//
+//This library is free software; you can redistribute it and/or
+//modify it under the terms of the GNU Lesser General Public
+//License as published by the Free Software Foundation; either
+//version 2.1 of the License, or (at your option) any later version.
+//
+//This library is distributed in the hope that it will be useful,
+//but WITHOUT ANY WARRANTY; without even the implied warranty of
+//MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//Lesser General Public License for more details.
+//
+//You should have received a copy of the GNU Lesser General Public
+//License along with this library; if not, write to the Free Software
+//Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
 package testing;
 
 import java.io.File;
@@ -11,12 +27,22 @@ import org.apache.tools.ant.taskdefs.optional.junit.FormatterElement;
 import org.apache.tools.ant.taskdefs.optional.junit.JUnitTask;
 import org.apache.tools.ant.taskdefs.optional.junit.JUnitTest;
 
+/**
+ * This class is used to run a JUnit Test on a Java class. The results of the
+ * Test is stored in a XML file. We use ant libraries to run the Test and
+ * generate the XML file. See
+ * http://godoc.org/github.com/godfried/impendulo/tool/junit#Tool for more
+ * information.
+ * 
+ * @author godfried
+ * 
+ */
 public class TestRunner {
-
 	public static void main(String[] args) {
 		if (args.length != 2) {
 			throw new InvalidParameterException("Expected 2 arguments.");
 		}
+		// Disable output pipes.
 		PrintStream out = System.out;
 		PrintStream err = System.err;
 		System.setOut(new PrintStream(new OutputStream() {
@@ -29,6 +55,7 @@ public class TestRunner {
 			public void write(int b) throws IOException {
 			}
 		}));
+		// Setup arguments
 		String testExec = args[0];
 		String[] split = testExec.split("\\.");
 		String testName = split[split.length - 1];
