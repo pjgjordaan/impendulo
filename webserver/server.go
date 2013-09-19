@@ -36,10 +36,11 @@ const (
 )
 
 func init() {
+	//Setup the router.
 	router = pat.New()
 	router.Add("POST", "/login", Handler(login))
 	router.Add("POST", "/register", Handler(register))
-	router.Add("POST", "/logout", Handler(logout))
+	router.Add("POST", "/logout", Handler(Logout))
 
 	GeneratePosts(router)
 
@@ -56,7 +57,7 @@ func init() {
 	router.Add("GET", "/", Handler(LoadView("homeView", "home"))).Name("index")
 }
 
-//StaticDir
+//StaticDir retrieves the directory containing all the static files for the web server.
 func StaticDir() string {
 	if staticDir != "" {
 		return staticDir
@@ -65,7 +66,7 @@ func StaticDir() string {
 	return staticDir
 }
 
-//getRoute
+//getRoute retrieves a route for a given name.
 func getRoute(name string) string {
 	u, err := router.GetRoute(name).URL()
 	if err != nil {
@@ -106,7 +107,7 @@ func Run() {
 	}
 }
 
-//Active
+//Active is whether the server is currently running.
 func Active() bool {
 	return running
 }

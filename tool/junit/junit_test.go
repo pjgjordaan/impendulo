@@ -34,7 +34,11 @@ func TestRun(t *testing.T) {
 	defer os.RemoveAll(location)
 	os.Mkdir(srcLocation, util.DPERM)
 	os.Mkdir(testLocation, util.DPERM)
-	err := util.Copy(location, config.Config(config.TESTING_DIR))
+	testDir, err := config.Directory(config.JUNIT_TESTING)
+	if err != nil {
+		t.Error(err)
+	}
+	err = util.Copy(location, testDir)
 	if err != nil {
 		t.Errorf("Could not copy directory %q", err)
 	}

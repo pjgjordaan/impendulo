@@ -21,33 +21,20 @@ package server
 import (
 	"fmt"
 	"github.com/godfried/impendulo/util"
-	"io"
 	"net"
-)
-
-const (
-	OK                  = "ok"
-	SEND                = "send"
-	LOGIN               = "begin"
-	LOGOUT              = "end"
-	REQ                 = "req"
-	PROJECTS            = "projects"
-	SUBMISSION_NEW      = "submission_new"
-	SUBMISSION_CONTINUE = "submission_continue"
-	LOG_SERVER          = "server/server.go"
 )
 
 type (
 
-	//HandlerSpawner is an interface used to spawn RWCHandlers.
+	//HandlerSpawner is an interface used to spawn ConnHandlers.
 	HandlerSpawner interface {
-		Spawn() RWCHandler
+		Spawn() ConnHandler
 	}
 
-	//RWCHandler is an interface with basic methods for handling connections.
-	RWCHandler interface {
-		Start(rwc io.ReadWriteCloser)
-		End(err error)
+	//ConnHandler is an interface with basic methods for handling connections.
+	ConnHandler interface {
+		Start(net.Conn)
+		End(error)
 	}
 )
 
@@ -56,6 +43,7 @@ type (
 //Each goroutine launched will handle its connection and
 //its type is determined by HandlerSpawner.
 func Run(port string, spawner HandlerSpawner) {
+	//Start listening for connections
 	netListen, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		util.Log(fmt.Errorf(
@@ -71,6 +59,7 @@ func Run(port string, spawner HandlerSpawner) {
 				"Encountered error %q when accepting connection",
 				err), LOG_SERVER)
 		} else {
+			//Spawn a handler for each new connection.
 			go func(c net.Conn) {
 				handler := spawner.Spawn()
 				handler.Start(c)

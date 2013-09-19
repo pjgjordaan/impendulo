@@ -32,7 +32,7 @@ type (
 	}
 )
 
-//Header implements the header method of http.ResponseWriter
+//Header implements the Header method of http.ResponseWriter
 func (this *HttpBuffer) Header() http.Header {
 	this.once.Do(func() {
 		this.headers = make(http.Header)

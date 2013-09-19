@@ -14,95 +14,212 @@
 //License along with this library; if not, write to the Free Software
 //Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-//Package config provides mechanisms for configuring how impendulo should be run.
+//Package config provides mechanisms for configuring how Impendulo should be run.
 package config
 
 import (
-	"bufio"
+	"encoding/json"
 	"fmt"
 	"github.com/godfried/impendulo/util"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
-var (
-	settings      map[string]string
-	defaultConfig string
+type (
+	//Configuration is used to store Impendulo's Json configuration.
+	Configuration struct {
+		Bin map[Bin]string
+		Cfg map[Cfg]string
+		Dir map[Dir]string
+		Jar map[Jar]string
+		Sh  map[Sh]string
+	}
+	//Bin is a string type for paths to binary files.
+	Bin string
+	//Cfg is a string type for paths to configuration files.
+	Cfg string
+	//Dir is a string type for paths to directories.
+	Dir string
+	//Jar is a string type for paths to jar files.
+	Jar string
+	//Sh is a string type for paths to scripts.
+	Sh string
+
+	//ConfigError is used to create configuration errors.
+	ConfigError struct {
+		msg string
+	}
 )
 
 const (
-	JUNIT_EXEC        = "junit_exec"
-	LINT4J            = "lint4j"
-	FINDBUGS          = "findbugs"
-	JUNIT_JAR         = "junit_jar"
-	ANT               = "ant"
-	ANT_JUNIT         = "ant_junit"
-	JAVAC             = "javac"
-	JAVA              = "java"
-	JPF_JAR           = "jpf_jar"
-	RUNJPF_JAR        = "runjpf_jar"
-	GSON_JAR          = "gson_jar"
-	JPF_RUNNER_DIR    = "jpf_runner_dir"
-	TESTING_DIR       = "testing_dir"
-	JPF_HOME          = "jpf_home"
-	JPF_FINDER_DIR    = "jpf_finder_dir"
-	PMD               = "pmd"
-	PMD_RULES         = "pmd_rules"
-	CHECKSTYLE        = "checkstyle"
-	CHECKSTYLE_CONFIG = "checkstyle_config"
-	DIFF2HTML         = "diff2html"
-	DIFF              = "diff"
+	//Executables
+	DIFF  Bin = "diff"
+	JAVA  Bin = "java"
+	JAVAC Bin = "javac"
+
+	//Configurations
+	CHECKSTYLE_CFG Cfg = "checkstyle_cfg"
+	PMD_CFG        Cfg = "pmd_cfg"
+
+	//Directories
+	JPF_FINDER    Dir = "jpf_finder"
+	JPF_HOME      Dir = "jpf_home"
+	JPF_RUNNER    Dir = "jpf_runner"
+	JUNIT_TESTING Dir = "junit_testing"
+
+	//Jars
+	ANT        Jar = "ant"
+	ANT_JUNIT  Jar = "ant_junit"
+	CHECKSTYLE Jar = "checkstyle"
+	FINDBUGS   Jar = "findbugs"
+	GSON       Jar = "gson"
+	JPF        Jar = "jpf"
+	JPF_RUN    Jar = "jpf_run"
+	JUNIT      Jar = "junit"
+
+	//Scripts
+	DIFF2HTML Sh = "diff2html"
+	PMD       Sh = "pmd"
+)
+
+var (
+	config      *Configuration
+	defaultFile string
 )
 
 func init() {
-	settings = make(map[string]string)
 	err := LoadConfigs(DefaultConfig())
 	if err != nil {
 		util.Log(err)
 	}
 }
 
-//DefaultConfig
+//DefaultConfig retrieves the default configuration file path.
+//This is $IMPENDULO_PATH/config/config.json
 func DefaultConfig() string {
-	if defaultConfig != "" {
-		return defaultConfig
+	if defaultFile != "" {
+		return defaultFile
 	}
-	defaultConfig = filepath.Join(util.InstallPath(), "config.txt")
-	return defaultConfig
+	defaultFile = filepath.Join(util.InstallPath(), "config", "config.json")
+	return defaultFile
 }
 
 //LoadConfigs loads configurations from a file.
-//Configurations are key-value pairs on different lines.
-//Keys are seperated from the value by a '='.
-func LoadConfigs(fname string) error {
-	f, err := os.Open(fname)
+//The configuration file is in Json format and looks as follows:
+//
+//{
+//    configuration_type_1      :{
+//                                 "name": "value",
+//                                 ...
+//                                 "another_name": "another_value"
+//                              },
+//   ...
+//   another_configuration_type :{
+//                                "some_name": "some_value",
+//                                ...
+//                                "a_name": "a_value"
+//                              }
+//}
+//
+//Supported configuration types are currently:
+//binaries (bin), configs (cfg), directories (dir), jars (jar) and scripts (sh).
+func LoadConfigs(fname string) (err error) {
+	//Load configuration from Json file.
+	cfgFile, err := os.Open(fname)
 	if err != nil {
-		return err
+		return
 	}
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		vals := strings.Split(scanner.Text(), "=")
-		if len(vals) != 2 {
-			return fmt.Errorf("Config file not formatted correctly.")
+	data := util.ReadBytes(cfgFile)
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		return
+	}
+	//Check if configurations are valid.
+	for _, bin := range config.Bin {
+		if !util.IsExec(bin) {
+			return Invalid("executable file", bin)
 		}
-		name := strings.TrimSpace(vals[0])
-		value := strings.TrimSpace(vals[1])
-		settings[name] = value
 	}
-	return scanner.Err()
+	for _, cfg := range config.Cfg {
+		if !util.IsFile(cfg) {
+			return Invalid("file", cfg)
+		}
+	}
+	for _, dir := range config.Dir {
+		if !util.IsDir(dir) {
+			return Invalid("directory", dir)
+		}
+	}
+	for _, jar := range config.Jar {
+		if !util.IsFile(jar) {
+			return Invalid("file", jar)
+		}
+	}
+	for _, sh := range config.Sh {
+		if !util.IsExec(sh) {
+			return Invalid("executable file", sh)
+		}
+	}
+	return
 }
 
-//Config attempts to retrieve the named config.
-func Config(name string) string {
-	ret, ok := settings[name]
+//Binary attempts to retrieve the named binary's path.
+func Binary(name Bin) (ret string, err error) {
+	ret, ok := config.Bin[name]
 	if !ok {
-		panic("Config not found: " + name)
+		err = NA(name)
 	}
-	return ret
+	return
 }
 
-//SetConfig sets the config 'name' to 'value'.
-func SetConfig(name, value string) {
-	settings[name] = value
+//Config attempts to retrieve the named config's path.
+func Config(name Cfg) (ret string, err error) {
+	ret, ok := config.Cfg[name]
+	if !ok {
+		err = NA(name)
+	}
+	return
+}
+
+//Directory attempts to retrieve the named directory's path.
+func Directory(name Dir) (ret string, err error) {
+	ret, ok := config.Dir[name]
+	if !ok {
+		err = NA(name)
+	}
+	return
+}
+
+//JarFile attempts to retrieve the named jar's path..
+func JarFile(name Jar) (ret string, err error) {
+	ret, ok := config.Jar[name]
+	if !ok {
+		err = NA(name)
+	}
+	return
+}
+
+//Script attempts to retrieve the named script's path..
+func Script(name Sh) (ret string, err error) {
+	ret, ok := config.Sh[name]
+	if !ok {
+		err = NA(name)
+	}
+	return
+}
+
+func NA(name interface{}) error {
+	return &ConfigError{
+		msg: fmt.Sprintf("Config %s not found.", name.(string)),
+	}
+}
+
+func Invalid(tipe, name string) error {
+	return &ConfigError{
+		msg: fmt.Sprintf("Bad configuration: %s is not a %s.", tipe, name),
+	}
+}
+
+func (err *ConfigError) Error() string {
+	return err.msg
 }

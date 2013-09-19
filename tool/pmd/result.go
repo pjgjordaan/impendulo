@@ -28,7 +28,8 @@ const (
 )
 
 type (
-	//Result
+	//Result is a PMD implementation of tool.ToolResult,
+	//tool.DisplayResult and tool.GraphResult.
 	Result struct {
 		Id     bson.ObjectId "_id"
 		FileId bson.ObjectId "fileid"
@@ -67,7 +68,7 @@ func (this *Result) GetFileId() bson.ObjectId {
 	return this.FileId
 }
 
-//Summary
+//Summary consists of the number of errors found by PMD.
 func (this *Result) Summary() *tool.Summary {
 	body := fmt.Sprintf("Errors: %d", this.Data.Errors)
 	return &tool.Summary{
@@ -86,7 +87,7 @@ func (this *Result) Success() bool {
 	return true
 }
 
-//AddGraphData
+//AddGraphData adds the number of errors found by PMD.
 func (this *Result) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
 	if graphData[0] == nil {
 		graphData[0] = tool.CreateChart("PMD Errors")
@@ -105,7 +106,9 @@ func (this *Result) String() (ret string) {
 	return
 }
 
-//NewResult
+//NewResult creates a new PMD Result.
+//Any error returned will be as a result of creating a PMD Report
+//from the XML in data.
 func NewResult(fileId bson.ObjectId, data []byte) (res *Result, err error) {
 	gridFS := len(data) > tool.MAX_SIZE
 	res = &Result{

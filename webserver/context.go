@@ -47,6 +47,7 @@ type (
 )
 
 func init() {
+	//Register these so that they can be saved with the session.
 	gob.Register(new(BrowseData))
 	gob.Register(new(bson.ObjectId))
 }

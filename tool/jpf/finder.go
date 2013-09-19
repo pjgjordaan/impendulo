@@ -73,17 +73,33 @@ func GetClasses(tipe, fname string) (classes []*Class, err error) {
 //of a class or interface (gov.nasa.jpf.search.Search or gov.nasa.jpf.JPFListener for example).
 //These classes are then written to a Json output file.
 func findClasses(tipe, fname string) (found []byte, err error) {
-	target := tool.NewTarget("JPFFinder.java", "java", "finder",
-		config.Config(config.JPF_FINDER_DIR))
-	cp := filepath.Join(config.Config(config.JPF_HOME), "build", "main") +
-		":" + target.Dir + ":" + config.Config(config.GSON_JAR)
-	comp := javac.New(cp)
+	finderDir, err := config.Directory(config.JPF_FINDER)
+	if err != nil {
+		return
+	}
+	home, err := config.Directory(config.JPF_HOME)
+	if err != nil {
+		return
+	}
+	gson, err := config.JarFile(config.GSON)
+	if err != nil {
+		return
+	}
+	java, err := config.Binary(config.JAVA)
+	if err != nil {
+		return
+	}
+	target := tool.NewTarget("JPFFinder.java", "java", "finder", finderDir)
+	cp := filepath.Join(home, "build", "main") + ":" + target.Dir + ":" + gson
+	comp, err := javac.New(cp)
+	if err != nil {
+		return
+	}
 	_, err = comp.Run(bson.NewObjectId(), target)
 	if err != nil {
 		return
 	}
-	args := []string{config.Config(config.JAVA), "-cp", cp,
-		target.Executable(), tipe, fname}
+	args := []string{java, "-cp", cp, target.Executable(), tipe, fname}
 	execRes := tool.RunCommand(args, nil)
 	resFile, err := os.Open(fname)
 	if err == nil {

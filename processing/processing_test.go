@@ -18,7 +18,6 @@ package processing
 
 import (
 	"bytes"
-	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
@@ -31,13 +30,6 @@ import (
 	"testing"
 	"time"
 )
-
-func init() {
-	err := config.LoadConfigs("../config.txt")
-	if err != nil {
-		panic(err)
-	}
-}
 
 func TestProcessFile(t *testing.T) {
 	db.Setup(db.TEST_CONN)

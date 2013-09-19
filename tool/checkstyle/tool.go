@@ -14,6 +14,8 @@
 //License along with this library; if not, write to the Free Software
 //Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+//Package checkstyle is the Checkstyle static analysis tool's implementation of an Impendulo tool.
+//See http://checkstyle.sourceforge.net/ for more information.
 package checkstyle
 
 import (
@@ -30,25 +32,34 @@ type (
 	//Tool is an implementation of tool.Tool which allows
 	//us to run Checkstyle on a Java class.
 	Tool struct {
-		java       string
-		cmd        string
-		configFile string
+		java string
+		cmd  string
+		cfg  string
 	}
 )
 
-//New
-func New() *Tool {
-	return &Tool{config.Config(config.JAVA),
-		config.Config(config.CHECKSTYLE),
-		config.Config(config.CHECKSTYLE_CONFIG)}
+//New creates a new instance of the checkstyle Tool.
+//Any errors returned will of type config.ConfigError.
+func New() (tool *Tool, err error) {
+	tool = new(Tool)
+	tool.java, err = config.Binary(config.JAVA)
+	if err != nil {
+		return
+	}
+	tool.cmd, err = config.JarFile(config.CHECKSTYLE)
+	if err != nil {
+		return
+	}
+	tool.cfg, err = config.Config(config.CHECKSTYLE_CFG)
+	return
 }
 
-//Lang
+//Lang is Java
 func (this *Tool) Lang() string {
 	return tool.JAVA
 }
 
-//Name
+//Name is Checkstyle
 func (this *Tool) Name() string {
 	return NAME
 }
@@ -58,7 +69,7 @@ func (this *Tool) Name() string {
 func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	outFile := filepath.Join(ti.Dir, "checkstyle.xml")
 	args := []string{this.java, "-jar", this.cmd,
-		"-f", "xml", "-c", this.configFile,
+		"-f", "xml", "-c", this.cfg,
 		"-o", outFile, "-r", ti.Dir}
 	defer os.Remove(outFile)
 	execRes := tool.RunCommand(args, nil)

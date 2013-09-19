@@ -17,7 +17,6 @@
 package pmd
 
 import (
-	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
@@ -60,23 +59,21 @@ func TestRun(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	pmd := New(rules)
+	pmd, err := New(rules)
+	if err != nil {
+		t.Error(err)
+	}
 	_, err = pmd.Run(bson.NewObjectId(), target)
 	if err != nil {
 		t.Errorf("Expected success, got %q", err)
 	}
 	os.Remove(filepath.Join(location, "pmd.xml"))
-	pmd = New(nil)
-	res, err := pmd.Run(bson.NewObjectId(), target)
+	pmd, err = New(nil)
 	if err != nil {
 		t.Error(err)
 	}
-	pmdCfg := config.Config(config.PMD)
-	defer config.SetConfig(config.PMD, pmdCfg)
-	config.SetConfig(config.PMD, "")
-	pmd = New(rules)
-	res, err = pmd.Run(bson.NewObjectId(), target)
-	if err == nil {
-		t.Errorf("Expected error, got %s.", res)
+	_, err = pmd.Run(bson.NewObjectId(), target)
+	if err != nil {
+		t.Error(err)
 	}
 }

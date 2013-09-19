@@ -23,8 +23,8 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
-	"io"
 	"labix.org/v2/mgo/bson"
+	"net"
 )
 
 type (
@@ -35,20 +35,32 @@ type (
 	//SubmissionHandler is an implementation of ConnHandler
 	//used to receive submissions from users of the impendulo system.
 	SubmissionHandler struct {
-		rwc        io.ReadWriteCloser
+		conn       net.Conn
 		submission *project.Submission
 	}
 )
 
+const (
+	OK                  = "ok"
+	SEND                = "send"
+	LOGIN               = "begin"
+	LOGOUT              = "end"
+	REQ                 = "req"
+	PROJECTS            = "projects"
+	SUBMISSION_NEW      = "submission_new"
+	SUBMISSION_CONTINUE = "submission_continue"
+	LOG_SERVER          = "server/server.go"
+)
+
 //Spawn creates a new ConnHandler of type SubmissionHandler.
-func (this *SubmissionSpawner) Spawn() RWCHandler {
+func (this *SubmissionSpawner) Spawn() ConnHandler {
 	return &SubmissionHandler{}
 }
 
 //Start sets the connection, launches the Handle method
 //and ends the session when it returns.
-func (this *SubmissionHandler) Start(rwc io.ReadWriteCloser) {
-	this.rwc = rwc
+func (this *SubmissionHandler) Start(conn net.Conn) {
+	this.conn = conn
 	this.submission = new(project.Submission)
 	this.submission.Id = bson.NewObjectId()
 	this.End(this.Handle())
@@ -56,7 +68,7 @@ func (this *SubmissionHandler) Start(rwc io.ReadWriteCloser) {
 
 //End ends a session and reports any errors to the user.
 func (this *SubmissionHandler) End(err error) {
-	defer this.rwc.Close()
+	defer this.conn.Close()
 	var msg string
 	if err != nil {
 		msg = "ERROR: " + err.Error()
@@ -93,7 +105,7 @@ func (this *SubmissionHandler) Handle() (err error) {
 //Login authenticates a Submission.
 //It validates the user's credentials and permissions.
 func (this *SubmissionHandler) Login() (err error) {
-	loginInfo, err := util.ReadJson(this.rwc)
+	loginInfo, err := util.ReadJson(this.conn)
 	if err != nil {
 		return
 	}
@@ -104,6 +116,7 @@ func (this *SubmissionHandler) Login() (err error) {
 		err = fmt.Errorf("Invalid request %q, expected %q", req, LOGIN)
 		return
 	}
+	//Read user details
 	this.submission.User, err = util.GetString(loginInfo, project.USER)
 	if err != nil {
 		return
@@ -124,6 +137,7 @@ func (this *SubmissionHandler) Login() (err error) {
 	if err != nil {
 		return
 	}
+	//Validate user permissions and password
 	if !u.CheckSubmit(this.submission.Mode) {
 		err = fmt.Errorf("User %q has insufficient permissions for %q",
 			this.submission.User, this.submission.Mode)
@@ -134,6 +148,7 @@ func (this *SubmissionHandler) Login() (err error) {
 			this.submission.User)
 		return
 	}
+	//Send a list of available projects to the user.
 	projects, err := db.Projects(nil, bson.M{project.SKELETON: 0}, project.NAME)
 	if err == nil {
 		err = this.writeJson(projects)
@@ -145,7 +160,7 @@ func (this *SubmissionHandler) Login() (err error) {
 //A new submission is then created or an existing one resumed
 //depending on the request.
 func (this *SubmissionHandler) LoadInfo() (err error) {
-	reqInfo, err := util.ReadJson(this.rwc)
+	reqInfo, err := util.ReadJson(this.conn)
 	if err != nil {
 		return
 	}
@@ -207,7 +222,7 @@ func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{}
 //Read reads Files from the connection and sends them for processing.
 func (this *SubmissionHandler) Read() (done bool, err error) {
 	//Receive file metadata and request info
-	requestInfo, err := util.ReadJson(this.rwc)
+	requestInfo, err := util.ReadJson(this.conn)
 	if err != nil {
 		return
 	}
@@ -223,7 +238,7 @@ func (this *SubmissionHandler) Read() (done bool, err error) {
 		}
 		//Receive file data
 		var buffer []byte
-		buffer, err = util.ReadData(this.rwc)
+		buffer, err = util.ReadData(this.conn)
 		if err != nil {
 			return
 		}
@@ -262,18 +277,18 @@ func (this *SubmissionHandler) Read() (done bool, err error) {
 
 //writeJson writes an json data to this SubmissionHandler's connection.
 func (this *SubmissionHandler) writeJson(data interface{}) (err error) {
-	err = util.WriteJson(this.rwc, data)
+	err = util.WriteJson(this.conn, data)
 	if err == nil {
-		_, err = this.rwc.Write([]byte(util.EOT))
+		_, err = this.conn.Write([]byte(util.EOT))
 	}
 	return
 }
 
 //write writes a string to this SubmissionHandler's connection.
 func (this *SubmissionHandler) write(data string) (err error) {
-	_, err = this.rwc.Write([]byte(data))
+	_, err = this.conn.Write([]byte(data))
 	if err == nil {
-		_, err = this.rwc.Write([]byte(util.EOT))
+		_, err = this.conn.Write([]byte(util.EOT))
 	}
 	return
 }

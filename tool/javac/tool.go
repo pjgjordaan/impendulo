@@ -14,6 +14,8 @@
 //License along with this library; if not, write to the Free Software
 //Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+//Package javac is the OpenJDK Java compiler's implementation of an Impendulo tool.
+//For more information see http://openjdk.java.net/groups/compiler/.
 package javac
 
 import (
@@ -30,25 +32,28 @@ type (
 	}
 )
 
-//New creates a new Javac instance. cp is the classpath used when compiling.
-func New(cp string) *Tool {
-	return &Tool{
-		cmd: config.Config(config.JAVAC),
-		cp:  cp,
+//New creates a new javac instance. cp is the classpath used when compiling.
+func New(cp string) (tool *Tool, err error) {
+	tool = &Tool{
+		cp: cp,
 	}
+	tool.cmd, err = config.Binary(config.JAVAC)
+	return
 }
 
-//Lang
+//Lang is Java.
 func (this *Tool) Lang() string {
 	return tool.JAVA
 }
 
-//Name
+//Name is Javac
 func (this *Tool) Name() string {
 	return NAME
 }
 
-//Run
+//Run compiles the Java source file specified by ti. We compile with maximum warnings and compile
+//classes implicitly loaded by the source code. All compilation results will be stored (success,
+//errors and warnings).
 func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	if this.cp != "" {
 		this.cp += ":"

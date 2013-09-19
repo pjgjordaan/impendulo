@@ -48,19 +48,26 @@ func Tools(proc *Processor) (tools []tool.Tool, err error) {
 
 //javaTools retrieves Impendulo's Java tool suite.
 func javaTools(proc *Processor) []tool.Tool {
-	//These are the tools whose constructors don't return errors
-	tools := []tool.Tool{
-		findbugs.New(),
-		checkstyle.New(),
+	tools := make([]tool.Tool, 0, 10)
+	//Only add tools if they were created successfully
+	fbTool, err := findbugs.New()
+	if err == nil {
+		tools = append(tools, fbTool)
+	} else {
+		util.Log(err)
 	}
-	//Only add JPF if it was created successfully
+	csTool, err := checkstyle.New()
+	if err == nil {
+		tools = append(tools, csTool)
+	} else {
+		util.Log(err)
+	}
 	jpfTool, err := JPF(proc)
 	if err == nil {
 		tools = append(tools, jpfTool)
 	} else {
 		util.Log(err)
 	}
-	//ditto PMD and JUnit
 	pmdTool, err := PMD(proc)
 	if err == nil {
 		tools = append(tools, pmdTool)
@@ -80,7 +87,7 @@ func javaTools(proc *Processor) []tool.Tool {
 func Compiler(proc *Processor) (compiler tool.Tool, err error) {
 	switch proc.project.Lang {
 	case tool.JAVA:
-		compiler = javac.New("")
+		compiler, err = javac.New("")
 	default:
 		err = fmt.Errorf("No compiler found for %s language.",
 			proc.project.Lang)
@@ -101,7 +108,7 @@ func JPF(proc *Processor) (runnable tool.Tool, err error) {
 }
 
 //PMD creates a new instance of the PMD tool.
-func PMD(proc *Processor) (runnable tool.Tool, err error) {
+func PMD(proc *Processor) (pmdTool tool.Tool, err error) {
 	//First we need the project's PMD rules.
 	rules, err := db.PMDRules(bson.M{project.PROJECT_ID: proc.project.Id}, nil)
 	if err != nil {
@@ -111,7 +118,7 @@ func PMD(proc *Processor) (runnable tool.Tool, err error) {
 		}
 		err = db.AddPMDRules(rules)
 	}
-	runnable = pmd.New(rules)
+	pmdTool, err = pmd.New(rules)
 	return
 }
 
@@ -122,8 +129,12 @@ func JUnit(proc *Processor) (ret []tool.Tool, err error) {
 	if err != nil {
 		return
 	}
+	testDir, err := config.Directory(config.JUNIT_TESTING)
+	if err != nil {
+		return
+	}
 	//Now we copy our test runner to the proccessor's tool directory.
-	err = util.Copy(proc.toolDir, config.Config(config.TESTING_DIR))
+	err = util.Copy(proc.toolDir, testDir)
 	if err != nil {
 		return
 	}

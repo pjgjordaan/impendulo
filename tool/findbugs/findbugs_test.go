@@ -17,7 +17,6 @@
 package findbugs
 
 import (
-	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/util"
@@ -39,25 +38,23 @@ func TestRun(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not save file %q", err)
 	}
-	comp := javac.New(location)
+	comp, err := javac.New(location)
+	if err != nil {
+		t.Error(err)
+	}
 	_, err = comp.Run(bson.NewObjectId(), target)
 	if err != nil {
 		t.Errorf("Expected success, got %q", err)
 	}
-	findbugs := New()
+	findbugs, err := New()
+	if err != nil {
+		t.Error(err)
+	}
 	_, err = findbugs.Run(bson.NewObjectId(), target)
 	if err != nil {
 		t.Errorf("Expected success, got %q", err)
 	}
 	os.Remove(filepath.Join(location, "findbugs.xml"))
-	findbugsCfg := config.Config(config.FINDBUGS)
-	defer config.SetConfig(config.FINDBUGS, findbugsCfg)
-	config.SetConfig(config.FINDBUGS, "")
-	findbugs2 := New()
-	res, err := findbugs2.Run(bson.NewObjectId(), target)
-	if err == nil {
-		t.Errorf("Expected error, got %s.", res)
-	}
 }
 
 var file = []byte(`

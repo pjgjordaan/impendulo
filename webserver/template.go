@@ -70,7 +70,8 @@ func fileCount(subId bson.ObjectId, tipe string) (int, error) {
 	return db.Count(db.FILES, bson.M{project.SUBID: subId, project.TYPE: tipe})
 }
 
-//slice
+//slice gets a subslice from files which is at most PAGER_SIZE
+//in length with selected within in the subslice.
 func slice(files []*project.File, selected int) (ret []*project.File) {
 	if len(files) < PAGER_SIZE {
 		ret = files
@@ -84,7 +85,7 @@ func slice(files []*project.File, selected int) (ret []*project.File) {
 	return
 }
 
-//adjustment
+//adjustment determines the adjustment slice will make to files.
 func adjustment(files []*project.File, selected int) (ret int) {
 	if len(files) < PAGER_SIZE || selected < PAGER_SIZE/2 {
 		ret = 0
@@ -108,7 +109,7 @@ func submissionCount(id interface{}) (int, error) {
 	}
 }
 
-//sum
+//sum calculates the sum of vals.
 func sum(vals ...int) (ret int) {
 	for _, val := range vals {
 		ret += val
@@ -116,7 +117,7 @@ func sum(vals ...int) (ret int) {
 	return
 }
 
-//shortname
+//shortname gets the shortened class name of a Java class.
 func shortname(exec string) string {
 	elements := strings.Split(exec, `.`)
 	num := len(elements)
@@ -126,12 +127,13 @@ func shortname(exec string) string {
 	return strings.Join(elements[num-2:], `.`)
 }
 
-//setBreaks
+//setBreaks replaces newlines with HTML break tags.
 func setBreaks(val string) string {
 	return strings.Replace(val, "\n", "<br>", -1)
 }
 
-//TemplateDir
+//TemplateDir retrieves the directory
+//in which HTML templates are stored.
 func TemplateDir() string {
 	if templateDir != "" {
 		return templateDir
@@ -140,7 +142,8 @@ func TemplateDir() string {
 	return templateDir
 }
 
-//BaseTemplates
+//BaseTemplates loads the base HTML templates used by all
+//views in the web app.
 func BaseTemplates() []string {
 	if baseTemplates != nil {
 		return baseTemplates

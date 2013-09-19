@@ -79,11 +79,15 @@ func NewRules(projectId bson.ObjectId, rules map[string]bool) (ret *Rules, err e
 
 //RuleSet loads the available rules from a json file which can be set
 //via the config file.
-func RuleSet() (map[string]*Rule, error) {
+func RuleSet() (ret map[string]*Rule, err error) {
 	if ruleSet != nil {
 		return ruleSet, nil
 	}
-	cfg, err := os.Open(config.Config(config.PMD_RULES))
+	cfgPath, err := config.Config(config.PMD_CFG)
+	if err != nil {
+		return ruleSet, err
+	}
+	cfg, err := os.Open(cfgPath)
 	if err == nil {
 		data := util.ReadBytes(cfg)
 		err = json.Unmarshal(data, &ruleSet)

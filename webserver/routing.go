@@ -18,19 +18,28 @@ package webserver
 
 import (
 	"code.google.com/p/gorilla/pat"
+	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
-)
-
-var (
-	posters     map[string]Poster
-	viewRoutes  map[string]string
-	permissions map[string]int
 )
 
 type (
 	//A function used to add data to the database.
 	Poster func(*http.Request, *Context) (string, error)
+	Perm   int
+)
+
+const (
+	OUT Perm = iota
+	ALL
+	IN
+)
+
+var (
+	posters     map[string]Poster
+	viewRoutes  map[string]string
+	permissions map[string]Perm
 )
 
 //CreatePost loads a post request handler.
@@ -43,7 +52,7 @@ func (this Poster) CreatePost() Handler {
 	}
 }
 
-//Posters
+//Posters retrieves all posters
 func Posters() map[string]Poster {
 	if posters != nil {
 		return posters
@@ -56,7 +65,7 @@ func Posters() map[string]Poster {
 	return posters
 }
 
-//defaultPosters
+//defaultPosters loads the default posters.
 func defaultPosters() map[string]Poster {
 	return map[string]Poster{
 		"addproject": AddProject, "changeskeleton": ChangeSkeleton,
@@ -65,7 +74,7 @@ func defaultPosters() map[string]Poster {
 	}
 }
 
-//GeneratePosts loads post request handlers.
+//GeneratePosts loads post request handlers and adds them to the router.
 func GeneratePosts(router *pat.Router) {
 	posts := Posters()
 	for name, fn := range posts {
@@ -75,7 +84,7 @@ func GeneratePosts(router *pat.Router) {
 	}
 }
 
-//Views
+//Views loads all views.
 func Views() map[string]string {
 	if viewRoutes != nil {
 		return viewRoutes
@@ -84,7 +93,7 @@ func Views() map[string]string {
 	return viewRoutes
 }
 
-//defaultViews
+//defaultViews loads default views.
 func defaultViews() map[string]string {
 	return map[string]string{
 		"homeView": "home", "skeletonView": "submit",
@@ -96,8 +105,8 @@ func defaultViews() map[string]string {
 	}
 }
 
-//Permissions
-func Permissions() map[string]int {
+//Permissions loads all permissions.
+func Permissions() map[string]Perm {
 	if permissions != nil {
 		return permissions
 	}
@@ -109,18 +118,18 @@ func Permissions() map[string]int {
 	return permissions
 }
 
-//defaultPermissions
-func defaultPermissions() map[string]int {
-	return map[string]int{
-		"homeview": 0, "skeletonview": 1, "configview": 1,
-		"registerview": 0, "projectdownloadview": 1,
-		"projectdeleteview": 1, "userdeleteview": 1, "userresult": 0,
-		"projectresult": 0, "archiveview": 1, "projectview": 1,
-		"addproject": 1, "changeskeleton": 1, "submitarchive": 1,
-		"login": 0, "register": 0, "logout": 1, "deleteproject": 1,
-		"deleteuser": 1, "displaygraph": 0, "displayresult": 0, "getfiles": 0,
-		"getsubmissions": 0, "skeleton.zip": 0, "index": 0, "favicon.ico": 0,
-		"": 0, "statusview": 1, "runtoolview": 1, "runtool": 1,
+//defaultPermissions loads default permissions.
+func defaultPermissions() map[string]Perm {
+	return map[string]Perm{
+		"homeview": ALL, "skeletonview": IN, "configview": IN,
+		"registerview": OUT, "projectdownloadview": IN,
+		"projectdeleteview": IN, "userdeleteview": IN, "userresult": ALL,
+		"projectresult": ALL, "archiveview": IN, "projectview": IN,
+		"addproject": IN, "changeskeleton": IN, "submitarchive": IN,
+		"login": OUT, "register": OUT, "logout": IN, "deleteproject": IN,
+		"deleteuser": IN, "displaygraph": ALL, "displayresult": ALL, "getfiles": ALL,
+		"getsubmissions": ALL, "skeleton.zip": ALL, "index": ALL, "favicon.ico": ALL,
+		"": ALL, "statusview": IN, "runtoolview": IN, "runtool": IN,
 	}
 }
 
@@ -143,4 +152,35 @@ func LoadView(name, view string) Handler {
 		args := map[string]interface{}{"ctx": ctx}
 		return T(getNav(ctx), name).Execute(w, args)
 	}
+}
+
+//CheckAccess verifies that a user is allowed access to a url.
+func CheckAccess(url *url.URL, ctx *Context) error {
+	//Rertieve the location they are requesting
+	start := strings.LastIndex(url.Path, "/") + 1
+	end := strings.Index(url.Path, "?")
+	if end < 0 {
+		end = len(url.Path)
+	}
+	if start > end {
+		return fmt.Errorf("Invalid request %s", url.Path)
+	}
+	name := url.Path[start:end]
+	perms := Permissions()
+	//Get the permission and check it.
+	val, ok := perms[name]
+	if !ok {
+		return fmt.Errorf("Could not find request %s", url.Path)
+	}
+	switch val {
+	case OUT:
+		if ctx.LoggedIn() {
+			return fmt.Errorf("Cannot access %s when logged in.", url.Path)
+		}
+	case IN:
+		if !ctx.LoggedIn() {
+			return fmt.Errorf("Insufficient permissions to access %s", url.Path)
+		}
+	}
+	return nil
 }

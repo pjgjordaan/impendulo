@@ -54,13 +54,13 @@ func toolTemplate(tool string) string {
 }
 
 //toolPermissions
-func toolPermissions() map[string]int {
-	return map[string]int{
-		"createjpf":        1,
-		"createpmd":        1,
-		"createjunit":      1,
-		"createfindbugs":   1,
-		"createcheckstyle": 1,
+func toolPermissions() map[string]Perm {
+	return map[string]Perm{
+		"createjpf":        IN,
+		"createpmd":        IN,
+		"createjunit":      IN,
+		"createfindbugs":   IN,
+		"createcheckstyle": IN,
 	}
 }
 

@@ -17,7 +17,6 @@
 package jpf
 
 import (
-	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
@@ -44,13 +43,6 @@ func TestRun(t *testing.T) {
 	_, err = jpf.Run(bson.NewObjectId(), target)
 	if err != nil {
 		t.Errorf("Expected success, got %q", err)
-	}
-	jpfCfg := config.Config(config.JPF_JAR)
-	defer config.SetConfig(config.JPF_JAR, jpfCfg)
-	config.SetConfig(config.JPF_JAR, "")
-	jpf, err = New(jpfConfig, location)
-	if err == nil {
-		t.Error("Expected error.")
 	}
 }
 

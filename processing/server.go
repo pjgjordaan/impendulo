@@ -243,7 +243,8 @@ func Serve(maxProcs int) {
 	}
 }
 
-//NewProcHelper
+//NewProcHelper creates a new ProcHelper for the specified
+//Submission.
 func NewProcHelper(subId bson.ObjectId) *ProcHelper {
 	return &ProcHelper{
 		subId:     subId,

@@ -14,6 +14,8 @@
 //License along with this library; if not, write to the Free Software
 //Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+//Package JUnit is the JUnit Java testing framework's implementation of an Impendulo tool.
+//See http://junit.org/ for more information.
 package junit
 
 import (
@@ -36,10 +38,23 @@ type (
 	}
 )
 
-//New creates a new Tool instance. testDir is the location of the Tool testing files.
-//cp is the classpath used and datalocation is the location of data files used when running
-//the tests.
+//New creates a new  instance of the JUnit Tool.
+//test is the JUnit Test to be run. dir is the location of the submission's tool directory.
 func New(test *Test, dir string) (junit *Tool, err error) {
+	//Load jar locations
+	junitJar, err := config.JarFile(config.JUNIT)
+	if err != nil {
+		return
+	}
+	antJunit, err := config.JarFile(config.ANT_JUNIT)
+	if err != nil {
+		return
+	}
+	ant, err := config.JarFile(config.ANT)
+	if err != nil {
+		return
+	}
+	//Save the test files to the submission's tool directory.
 	testInfo := tool.NewTarget(test.Name, tool.JAVA, test.Package, dir)
 	err = util.SaveFile(testInfo.FilePath(), test.Test)
 	if err != nil {
@@ -52,9 +67,9 @@ func New(test *Test, dir string) (junit *Tool, err error) {
 		}
 	}
 	dataLocation := filepath.Join(testInfo.PackagePath(), "data")
+	//This is used to run the JUnit test using ant.
 	runnerInfo := tool.NewTarget("TestRunner.java", "java", "testing", testInfo.Dir)
-	cp := testInfo.Dir + ":" + config.Config(config.JUNIT_JAR) + ":" +
-		config.Config(config.ANT_JUNIT) + ":" + config.Config(config.ANT)
+	cp := testInfo.Dir + ":" + junitJar + ":" + antJunit + ":" + ant
 	junit = &Tool{
 		cp:           cp,
 		dataLocation: dataLocation,
@@ -64,38 +79,46 @@ func New(test *Test, dir string) (junit *Tool, err error) {
 	return
 }
 
-//Lang
+//Lang is Java
 func (this *Tool) Lang() string {
 	return tool.JAVA
 }
 
-//Name
+//Name is JUnit
 func (this *Tool) Name() string {
 	return NAME
 }
 
-//Run
+//Run runs a JUnit test on the provided Java source file. The source and test files are first
+//compiled and we run the tests via a Java runner class which uses ant to generate XML output.
 func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
+	java, err := config.Binary(config.JAVA)
+	if err != nil {
+		return
+	}
 	if this.cp != "" {
 		this.cp += ":"
 	}
 	this.cp += ti.Dir
-	//First compile the files to be tested
-	comp := javac.New(this.cp)
+	comp, err := javac.New(this.cp)
+	if err != nil {
+		return
+	}
+	//First compile the files
 	_, err = comp.Run(fileId, this.testInfo)
 	if err != nil {
 		return
 	}
-	//Compile the tests.
 	_, err = comp.Run(fileId, this.runnerInfo)
 	if err != nil {
 		return
 	}
+	//Set the arguments
 	outFile := filepath.Join(this.dataLocation, this.testInfo.Name+"_junit.xml")
-	//Run the tests.
-	args := []string{config.Config(config.JAVA), "-cp", this.cp,
-		this.runnerInfo.Executable(), this.testInfo.Executable(), this.dataLocation}
+	args := []string{java, "-cp", this.cp, this.runnerInfo.Executable(),
+		this.testInfo.Executable(), this.dataLocation}
 	defer os.Remove(outFile)
+	//Run the tests and load the result
 	execRes := tool.RunCommand(args, nil)
 	resFile, err := os.Open(outFile)
 	if err == nil {
@@ -103,6 +126,7 @@ func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolR
 		data := util.ReadBytes(resFile)
 		res, err = NewResult(fileId, this.testInfo.Name, data)
 	} else if execRes.HasStdErr() {
+		//The Java runner generated an error.
 		err = fmt.Errorf("Could not run junit: %q.", string(execRes.StdErr))
 	} else {
 		err = execRes.Err

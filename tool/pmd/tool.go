@@ -14,6 +14,8 @@
 //License along with this library; if not, write to the Free Software
 //Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+//Package pmd is the PMD static analysis tool's implementation of an Impendulo tool.
+//For more information see http://pmd.sourceforge.net/.
 package pmd
 
 import (
@@ -36,23 +38,29 @@ type (
 	}
 )
 
-//New
-func New(rules *Rules) *Tool {
+//New creates a new instance of a PMD Tool.
+//Errors returned will be due to loading either the default
+//PMD rules or the PMD execution script.
+func New(rules *Rules) (tool *Tool, err error) {
 	if rules == nil {
-		rules, _ = DefaultRules(bson.NewObjectId())
+		rules, err = DefaultRules(bson.NewObjectId())
+		if err != nil {
+			return
+		}
 	}
-	return &Tool{
-		cmd:   config.Config(config.PMD),
+	tool = &Tool{
 		rules: strings.Join(rules.RuleArray(), ","),
 	}
+	tool.cmd, err = config.Script(config.PMD)
+	return
 }
 
-//Lang
+//Lang is Java
 func (this *Tool) Lang() string {
 	return tool.JAVA
 }
 
-//Name
+//Name is PMD
 func (this *Tool) Name() string {
 	return NAME
 }
@@ -61,7 +69,7 @@ func (this *Tool) Name() string {
 //and use to create a PMD Result.
 func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	outFile := filepath.Join(ti.Dir, "pmd.xml")
-	args := []string{this.cmd, config.PMD, "-f", "xml", "-stress",
+	args := []string{this.cmd, "pmd", "-f", "xml", "-stress",
 		"-shortnames", "-R", this.rules, "-r", outFile, "-d", ti.Dir}
 	defer os.Remove(outFile)
 	execRes := tool.RunCommand(args, nil)

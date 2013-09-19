@@ -18,13 +18,10 @@ package webserver
 
 import (
 	"code.google.com/p/gorilla/sessions"
-	"fmt"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"net/http"
-	"net/url"
-	"strings"
 )
 
 var (
@@ -55,7 +52,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//Load our context from session
 	ctx := LoadContext(sess)
 	buf := new(HttpBuffer)
-	err = checkAccess(req.URL, ctx)
+	err = CheckAccess(req.URL, ctx)
 	if err != nil {
 		ctx.AddMessage(err.Error(), true)
 		err = nil
@@ -73,7 +70,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	buf.Apply(w)
 }
 
-//getNav
+//getNav retrieves the navbar to display.
 func getNav(ctx *Context) string {
 	if _, err := ctx.Username(); err != nil {
 		return "outNavbar"
@@ -81,34 +78,7 @@ func getNav(ctx *Context) string {
 	return "inNavbar"
 }
 
-//checkAccess verifies that a user is allowed access to a url.
-func checkAccess(url *url.URL, ctx *Context) error {
-	//Rertieve the location they are requesting
-	start := strings.LastIndex(url.Path, "/") + 1
-	end := strings.Index(url.Path, "?")
-	if end < 0 {
-		end = len(url.Path)
-	}
-	if start > end {
-		return fmt.Errorf("Invalid request %s", url.Path)
-	}
-	name := url.Path[start:end]
-	perms := Permissions()
-	//Get the permission and check it.
-	val, ok := perms[name]
-	if !ok {
-		return fmt.Errorf("Could not find request %s", url.Path)
-	}
-	if val == 0 {
-		return nil
-	}
-	if !ctx.LoggedIn() {
-		return fmt.Errorf("Insufficient permissions to access %s", url.Path)
-	}
-	return nil
-}
-
-//downloadProject
+//downloadProject makes a project skeleton available for download.
 func downloadProject(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	path, err := LoadSkeleton(req)
 	if err == nil {
@@ -120,7 +90,7 @@ func downloadProject(w http.ResponseWriter, req *http.Request, ctx *Context) err
 	return err
 }
 
-//getSubmissions
+//getSubmissions displays a list of submissions.
 func getSubmissions(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	subs, err := RetrieveSubmissions(req, ctx)
 	if err != nil {
@@ -139,7 +109,7 @@ func getSubmissions(w http.ResponseWriter, req *http.Request, ctx *Context) erro
 		"subRes": subs})
 }
 
-//configView
+//configView loads a tool's configuration page.
 func configView(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	tool, err := GetString(req, "tool")
 	if err != nil {
@@ -150,7 +120,7 @@ func configView(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 		map[string]interface{}{"ctx": ctx, "tool": tool})
 }
 
-//getFiles
+//getFiles diplays information about files.
 func getFiles(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	fileinfo, err := RetrieveFileInfo(req, ctx)
 	if err != nil {
@@ -163,7 +133,7 @@ func getFiles(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 		map[string]interface{}{"ctx": ctx, "fileinfo": fileinfo})
 }
 
-//displayResult
+//displayResult displays a tool's result.
 func displayResult(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	ctx.SetResult(req)
 	ctx.Browse.View = "home"
@@ -176,7 +146,7 @@ func displayResult(w http.ResponseWriter, req *http.Request, ctx *Context) error
 	return T(temps...).Execute(w, args)
 }
 
-//analysisArgs
+//analysisArgs loads arguments for displayResult
 func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{}, temps []string, err error) {
 	files, err := RetrieveFiles(req, ctx)
 	if err != nil {
@@ -223,7 +193,7 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 	return
 }
 
-//displayGraph
+//displayGraph displays a graph for a tool's result.
 func displayGraph(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	ctx.Browse.View = "home"
 	ctx.SetResult(req)
@@ -237,7 +207,7 @@ func displayGraph(w http.ResponseWriter, req *http.Request, ctx *Context) error 
 	return T(temps...).Execute(w, args)
 }
 
-//graphArgs
+//graphArgs loads arguments for displayGraph.
 func graphArgs(req *http.Request, ctx *Context) (args map[string]interface{}, err error) {
 	fileName, ferr := GetString(req, "filename")
 	if ferr == nil {
@@ -264,7 +234,7 @@ func graphArgs(req *http.Request, ctx *Context) (args map[string]interface{}, er
 	return
 }
 
-//login
+//login logs a user into the system.
 func login(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	msg, err := Login(req, ctx)
 	ctx.AddMessage(msg, err != nil)
@@ -272,7 +242,7 @@ func login(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	return err
 }
 
-//register
+//register registers a user with the system.
 func register(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	msg, err := Register(req, ctx)
 	if err != nil {
@@ -285,8 +255,8 @@ func register(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	return err
 }
 
-//logout
-func logout(w http.ResponseWriter, req *http.Request, ctx *Context) error {
+//Logout logs a user out of the system.
+func Logout(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	delete(ctx.Session.Values, "user")
 	http.Redirect(w, req, getRoute("index"), http.StatusSeeOther)
 	return nil

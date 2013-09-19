@@ -64,7 +64,7 @@ func (this *Result) GetName() string {
 	return this.Name
 }
 
-//Summary
+//Summary is the number of errors Checkstyle found.
 func (this *Result) Summary() *tool.Summary {
 	body := fmt.Sprintf("Errors: %d",
 		this.Data.Errors)
@@ -94,7 +94,7 @@ func (this *Result) Success() bool {
 	return true
 }
 
-//AddGraphData
+//AddGraphData is the amount of errors Checkstyle found
 func (this *Result) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
 	if graphData[0] == nil {
 		graphData[0] = tool.CreateChart("Checkstyle Errors")
@@ -104,7 +104,9 @@ func (this *Result) AddGraphData(max, x float64, graphData []map[string]interfac
 	return math.Max(max, y)
 }
 
-//NewResult
+//NewResult creates a new Checkstyle Result.
+//Any errors returned will be XML errors due to extracting a Report from
+//data.
 func NewResult(fileId bson.ObjectId, data []byte) (res *Result, err error) {
 	gridFS := len(data) > tool.MAX_SIZE
 	res = &Result{

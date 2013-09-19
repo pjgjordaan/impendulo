@@ -17,7 +17,6 @@
 package javac
 
 import (
-	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
@@ -36,18 +35,13 @@ func TestRun(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not save file %q", err)
 	}
-	comp := New("")
+	comp, err := New("")
+	if err != nil {
+		t.Error(err)
+	}
 	_, err = comp.Run(bson.NewObjectId(), target)
 	if err != nil {
 		t.Errorf("Expected success, got %q", err)
-	}
-	javac := config.Config(config.JAVAC)
-	defer config.SetConfig(config.JAVAC, javac)
-	config.SetConfig(config.JAVAC, "")
-	comp2 := New("")
-	_, err = comp2.Run(bson.NewObjectId(), target)
-	if err == nil {
-		t.Errorf("Expected error.")
 	}
 	err = util.SaveFile(target.FilePath(), file2)
 	if err != nil {
