@@ -88,14 +88,18 @@ func (this *Result) GetData() interface{} {
 	return this.Data
 }
 
+//CreateGraphData
+func (this *Result) CreateGraphData() (graphData tool.GraphData) {
+	graphData = make(tool.GraphData, 4)
+	graphData[0] = tool.CreateChart("Findbugs All")
+	graphData[1] = tool.CreateChart("Findbugs Priority 1")
+	graphData[2] = tool.CreateChart("Findbugs Priority 2")
+	graphData[3] = tool.CreateChart("Findbugs Priority 3")
+	return
+}
+
 //AddGraphData
-func (this *Result) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
-	if graphData[0] == nil {
-		graphData[0] = tool.CreateChart("Findbugs All")
-		graphData[1] = tool.CreateChart("Findbugs Priority 1")
-		graphData[2] = tool.CreateChart("Findbugs Priority 2")
-		graphData[3] = tool.CreateChart("Findbugs Priority 3")
-	}
+func (this *Result) AddGraphData(max, x float64, graphData tool.GraphData) float64 {
 	yB := float64(this.Data.Summary.BugCount)
 	y1 := float64(this.Data.Summary.Priority1)
 	y2 := float64(this.Data.Summary.Priority2)

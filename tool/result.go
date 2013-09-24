@@ -31,10 +31,14 @@ const (
 )
 
 type (
+	//GraphData represents the x and y values used to draw the graphs.
+	GraphData []map[string]interface{}
+
 	//GraphResult is used to display result data in a graph.
 	GraphResult interface {
-		AddGraphData(curMax, x float64, graphData []map[string]interface{}) (newMax float64)
+		AddGraphData(curMax, x float64, graphData GraphData) (newMax float64)
 		GetName() string
+		CreateGraphData() GraphData
 	}
 	//ToolResult is used to store tool result data.
 	ToolResult interface {

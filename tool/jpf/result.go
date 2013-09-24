@@ -95,11 +95,15 @@ func (this *Result) GetData() interface{} {
 	return this.Data
 }
 
+//CreateGraphData
+func (this *Result) CreateGraphData() (graphData tool.GraphData) {
+	graphData = make(tool.GraphData, 1)
+	graphData[0] = tool.CreateChart("JPF Error Detection Time")
+	return
+}
+
 //AddGraphData
-func (this *Result) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
-	if graphData[0] == nil {
-		graphData[0] = tool.CreateChart("JPF Error Detection Time")
-	}
+func (this *Result) AddGraphData(max, x float64, graphData tool.GraphData) float64 {
 	var yT float64
 	if this.Data.Errors() == 0 {
 		yT = 0
