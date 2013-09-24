@@ -78,7 +78,7 @@ func GetInt(jobj map[string]interface{}, key string) (val int, err error) {
 	return
 }
 
-//GetInt64 converts a value in a map to an int.
+//GetInt64 converts a value in a map to an int64.
 func GetInt64(jobj map[string]interface{}, key string) (val int64, err error) {
 	ival, ok := jobj[key]
 	if !ok {

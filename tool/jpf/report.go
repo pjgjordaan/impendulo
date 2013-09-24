@@ -125,7 +125,7 @@ func init() {
 	gob.Register(new(Report))
 }
 
-//NewReport
+//NewReport generates a new Report from the provided XML data.
 func NewReport(id bson.ObjectId, data []byte) (res *Report, err error) {
 	if err = xml.Unmarshal(data, &res); err != nil {
 		err = tool.NewXMLError(err, "jpf/jpfResult.go")
@@ -135,7 +135,7 @@ func NewReport(id bson.ObjectId, data []byte) (res *Report, err error) {
 	return
 }
 
-//Errors
+//Errors provided the number of errors found by JPF.
 func (this *Report) Errors() int {
 	if this.Success() {
 		return 0
@@ -143,7 +143,7 @@ func (this *Report) Errors() int {
 	return len(this.Findings.Errors)
 }
 
-//Success
+//Success is true if JPF found no errors.
 func (this *Report) Success() bool {
 	return this.Findings.Description == "none"
 }

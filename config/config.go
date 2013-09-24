@@ -22,7 +22,8 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//Package config provides mechanisms for configuring how Impendulo should be run.
+//Package config provides mechanisms for configuring the location of various resources
+//required by Impendulo such as tools and tool configurations.
 package config
 
 import (
@@ -115,7 +116,7 @@ func DefaultConfig() string {
 //LoadConfigs loads configurations from a file.
 //The configuration file is in Json format and looks as follows:
 //
-//{
+//Config: {
 //    configuration_type_1      :{
 //                                 "name": "value",
 //                                 ...
@@ -216,18 +217,21 @@ func Script(name Sh) (ret string, err error) {
 	return
 }
 
+//NA creates a new ConfigError if a request is made for an unavailable configuration.
 func NA(name interface{}) error {
 	return &ConfigError{
-		msg: fmt.Sprintf("Config %s not found.", name.(string)),
+		msg: fmt.Sprintf("Config %s not found.", name),
 	}
 }
 
+//Invalid creates a new ConfigError for a bad configuration specification.
 func Invalid(tipe, name string) error {
 	return &ConfigError{
 		msg: fmt.Sprintf("Bad configuration: %s is not a %s.", tipe, name),
 	}
 }
 
+//Error
 func (err *ConfigError) Error() string {
 	return err.msg
 }

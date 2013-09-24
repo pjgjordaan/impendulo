@@ -81,6 +81,7 @@ func GetClasses(tipe, fname string) (classes []*Class, err error) {
 //of a class or interface (gov.nasa.jpf.search.Search or gov.nasa.jpf.JPFListener for example).
 //These classes are then written to a Json output file.
 func findClasses(tipe, fname string) (found []byte, err error) {
+	//Load configurations
 	finderDir, err := config.Directory(config.JPF_FINDER)
 	if err != nil {
 		return
@@ -97,6 +98,7 @@ func findClasses(tipe, fname string) (found []byte, err error) {
 	if err != nil {
 		return
 	}
+	//Setup and compile JPFFinder
 	target := tool.NewTarget("JPFFinder.java", "java", "finder", finderDir)
 	cp := filepath.Join(home, "build", "main") + ":" + target.Dir + ":" + gson
 	comp, err := javac.New(cp)
@@ -107,6 +109,7 @@ func findClasses(tipe, fname string) (found []byte, err error) {
 	if err != nil {
 		return
 	}
+	//Run JPFFinder and retrieve the output.
 	args := []string{java, "-cp", cp, target.Executable(), tipe, fname}
 	execRes := tool.RunCommand(args, nil)
 	resFile, err := os.Open(fname)

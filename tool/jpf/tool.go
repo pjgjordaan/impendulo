@@ -114,9 +114,11 @@ func (this *Tool) Name() string {
 	return NAME
 }
 
-//Run runs JPF on a specified Java source file. It uses runner.JPFRunner to actually run JPF
-//on the source file. If the command was successful, the results are read in from a xml file.
+//Run runs JPF on a specified Java source file. It uses the Java class runner.JPFRunner to
+//actually run JPF on the source file. If the command was successful, the
+//results are read in from a xml file.
 func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
+	//Load arguments
 	java, err := config.Binary(config.JAVA)
 	if err != nil {
 		return
@@ -126,6 +128,7 @@ func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolR
 		this.jpfPath, ti.Executable(), ti.Dir, outFile}
 	outFile = outFile + ".xml"
 	defer os.Remove(outFile)
+	//Run JPF and load result
 	execRes := tool.RunCommand(args, nil)
 	resFile, err := os.Open(outFile)
 	if err == nil {

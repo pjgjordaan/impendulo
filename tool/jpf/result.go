@@ -62,7 +62,7 @@ func (this *Result) OnGridFS() bool {
 	return this.GridFS
 }
 
-//String
+//String allows us to print this struct nicely.
 func (this *Result) String() string {
 	return fmt.Sprintf("Id: %q; FileId: %q; Name: %s; \nData: %s\n",
 		this.Id, this.FileId, this.Name, this.Data)
@@ -83,7 +83,7 @@ func (this *Result) GetFileId() bson.ObjectId {
 	return this.FileId
 }
 
-//Summary
+//Summary is the errors found by JPF.
 func (this *Result) Summary() *tool.Summary {
 	body := fmt.Sprintf("Result: %s \n Errors: %d",
 		this.Data.Findings.Description, len(this.Data.Findings.Errors))
@@ -93,9 +93,9 @@ func (this *Result) Summary() *tool.Summary {
 	}
 }
 
-//Success
+//Success is true if no errors were found.
 func (this *Result) Success() bool {
-	return true
+	return len(this.Data.Findings.Errors) == 0
 }
 
 //GetData
@@ -103,7 +103,8 @@ func (this *Result) GetData() interface{} {
 	return this.Data
 }
 
-//AddGraphData
+//AddGraphData adds the time taken to find a JPF error to the current graph data.
+//If no errors were found, the time is 0.
 func (this *Result) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
 	if graphData[0] == nil {
 		graphData[0] = tool.CreateChart("JPF Error Detection Time")
@@ -118,14 +119,14 @@ func (this *Result) AddGraphData(max, x float64, graphData []map[string]interfac
 	return math.Max(max, yT)
 }
 
-//NewResult
+//NewResult creates a new JPF result. The data []byte is in XML format and
+//therefore allows us to generate a JPF report from it.
 func NewResult(fileId bson.ObjectId, data []byte) (res *Result, err error) {
-	gridFS := len(data) > tool.MAX_SIZE
 	res = &Result{
 		Id:     bson.NewObjectId(),
 		FileId: fileId,
 		Name:   NAME,
-		GridFS: gridFS,
+		GridFS: len(data) > tool.MAX_SIZE,
 	}
 	res.Data, err = NewReport(res.Id, data)
 	return

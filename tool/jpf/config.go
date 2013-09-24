@@ -82,9 +82,8 @@ func (this *Config) String() string {
 
 //NewConfig creates a new JPF configuration for a certain project.
 func NewConfig(projectId bson.ObjectId, user string, data []byte) *Config {
-	id := bson.NewObjectId()
 	return &Config{
-		Id:        id,
+		Id:        bson.NewObjectId(),
 		ProjectId: projectId,
 		User:      user,
 		Time:      util.CurMilis(),
