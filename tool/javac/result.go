@@ -96,7 +96,7 @@ func (this *Result) GetData() interface{} {
 }
 
 //AddGraphData
-func (this *Result) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
+func (this *Result) AddGraphData(max, x float64, graphData tool.GraphData) float64 {
 	if graphData[0] == nil {
 		graphData[0] = tool.CreateChart(this.GetName() + " Errors")
 		graphData[1] = tool.CreateChart(this.GetName() + " Warnings")
@@ -110,6 +110,14 @@ func (this *Result) AddGraphData(max, x float64, graphData []map[string]interfac
 	tool.AddCoords(graphData[0], x, yE)
 	tool.AddCoords(graphData[1], x, yW)
 	return math.Max(max, math.Max(yE, yW))
+}
+
+//CreateGraphData
+func (this *Result) CreateGraphData() (graphData tool.GraphData) {
+	graphData = make(tool.GraphData, 2)
+	graphData[0] = tool.CreateChart(this.GetName() + " Errors")
+	graphData[1] = tool.CreateChart(this.GetName() + " Warnings")
+	return
 }
 
 //NewResult

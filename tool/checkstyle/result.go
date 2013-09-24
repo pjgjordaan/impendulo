@@ -102,11 +102,15 @@ func (this *Result) Success() bool {
 	return true
 }
 
+//CreateGraphData
+func (this *Result) CreateGraphData() (graphData tool.GraphData) {
+	graphData = make(tool.GraphData, 1)
+	graphData[0] = tool.CreateChart("Checkstyle Errors")
+	return
+}
+
 //AddGraphData is the amount of errors Checkstyle found
-func (this *Result) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
-	if graphData[0] == nil {
-		graphData[0] = tool.CreateChart("Checkstyle Errors")
-	}
+func (this *Result) AddGraphData(max, x float64, graphData tool.GraphData) float64 {
 	y := float64(this.Data.Errors)
 	tool.AddCoords(graphData[0], x, y)
 	return math.Max(max, y)

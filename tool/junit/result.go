@@ -102,13 +102,17 @@ func (this *Result) Success() bool {
 	return this.Data.Success()
 }
 
+//CreateGraphData
+func (this *Result) CreateGraphData() (graphData tool.GraphData) {
+	graphData = make(tool.GraphData, 3)
+	graphData[0] = tool.CreateChart(this.GetName() + " Errors")
+	graphData[1] = tool.CreateChart(this.GetName() + " Failures")
+	graphData[2] = tool.CreateChart(this.GetName() + " Successes")
+	return
+}
+
 //AddGraphData
-func (this *Result) AddGraphData(max, x float64, graphData []map[string]interface{}) float64 {
-	if graphData[0] == nil {
-		graphData[0] = tool.CreateChart(this.GetName() + " Errors")
-		graphData[1] = tool.CreateChart(this.GetName() + " Failures")
-		graphData[2] = tool.CreateChart(this.GetName() + " Successes")
-	}
+func (this *Result) AddGraphData(max, x float64, graphData tool.GraphData) float64 {
 	yE := float64(this.Data.Errors)
 	yF := float64(this.Data.Failures)
 	yS := float64(this.Data.Tests - this.Data.Failures - this.Data.Errors)

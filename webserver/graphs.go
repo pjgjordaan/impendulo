@@ -28,11 +28,6 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/tool/checkstyle"
-	"github.com/godfried/impendulo/tool/findbugs"
-	"github.com/godfried/impendulo/tool/javac"
-	"github.com/godfried/impendulo/tool/jpf"
-	"github.com/godfried/impendulo/tool/pmd"
 	"labix.org/v2/mgo/bson"
 	"math"
 )
@@ -41,33 +36,20 @@ type (
 	//GraphArgs represents arguments which are passed to rickshaw
 	//in order to draw a graph.
 	GraphArgs map[string]interface{}
-
-	//GraphData represents the x and y values used to draw the graphs.
-	GraphData []map[string]interface{}
 )
 
 //LoadResultGraphData calculates GraphArgs for a given result.
 func LoadResultGraphData(result, tipe string, files []*project.File) (graphArgs GraphArgs) {
-	var graphData GraphData
+	var graphData tool.GraphData
 	max := -1.0
 	time := tipe == "time"
 	switch result {
-	case javac.NAME:
-		graphData, max = loadJavacGraphData(time, files)
-	case jpf.NAME:
-		graphData, max = loadJPFGraphData(time, files)
-	case findbugs.NAME:
-		graphData, max = loadFindbugsGraphData(time, files)
-	case pmd.NAME:
-		graphData, max = loadPMDGraphData(time, files)
-	case checkstyle.NAME:
-		graphData, max = loadCheckstyleGraphData(time, files)
 	case "All":
 		graphData, max = loadAllGraphData(time, files)
 	case tool.CODE:
 	case tool.SUMMARY:
 	default:
-		graphData, max = loadJUnitGraphData(result, time, files)
+		graphData, max = loadGraphData(result, files, time)
 	}
 	if max == -1.0 {
 		return
@@ -75,10 +57,6 @@ func LoadResultGraphData(result, tipe string, files []*project.File) (graphArgs 
 	graphArgs = make(GraphArgs)
 	graphArgs["max"] = max + max*0.05
 	graphArgs["series"] = graphData
-	/*	if result == javac.NAME {
-		graphArgs["yformat"] = map[string]interface{}{"0": "Failure", "1": "Success"}
-		graphArgs["min"] = -0.05
-	}*/
 	graphArgs["height"] = 400
 	graphArgs["width"] = 700
 	graphArgs["interpolation"] = "linear"
@@ -87,123 +65,33 @@ func LoadResultGraphData(result, tipe string, files []*project.File) (graphArgs 
 	return
 }
 
-//loadJavacGraphData
-func loadJavacGraphData(time bool, files []*project.File) (GraphData, float64) {
-	graphData := make(GraphData, 2)
-	max := -1.0
+func loadGraphData(name string, files []*project.File, time bool) (data tool.GraphData, max float64) {
+	max = -1.0
 	for _, f := range files {
-		result, err := db.JavacResult(
-			bson.M{project.FILEID: f.Id}, nil)
+		file, err := db.File(bson.M{project.ID: f.Id}, bson.M{project.TIME: 1, project.RESULTS: 1})
 		if err != nil {
 			continue
 		}
-		var x float64 = -1
-		if time {
-			x = float64(f.Time)
-		}
-		max = result.AddGraphData(max, x, graphData)
-	}
-	return graphData, max
-}
-
-//loadJUnitGraphData
-func loadJUnitGraphData(testName string, time bool, files []*project.File) (GraphData, float64) {
-	graphData := make(GraphData, 3)
-	max := -1.0
-	for _, f := range files {
-		result, err := db.JUnitResult(
-			bson.M{project.FILEID: f.Id, project.NAME: testName}, nil)
+		result, err := db.GraphResult(name,
+			bson.M{project.ID: file.Results[name]}, nil)
 		if err != nil {
 			continue
 		}
-		var x float64 = -1
-		if time {
-			x = float64(f.Time)
-		}
-		max = result.AddGraphData(max, x, graphData)
-	}
-	return graphData, max
-}
-
-//loadJPFGraphData
-func loadJPFGraphData(time bool, files []*project.File) (GraphData, float64) {
-	graphData := make(GraphData, 1)
-	max := -1.0
-	for _, f := range files {
-		result, err := db.JPFResult(
-			bson.M{project.FILEID: f.Id}, nil)
-		if err != nil {
-			continue
+		if data == nil {
+			data = result.CreateGraphData()
 		}
 		var x float64 = -1
 		if time {
-			x = float64(f.Time)
+			x = float64(file.Time)
 		}
-		max = result.AddGraphData(max, x, graphData)
+		max = result.AddGraphData(max, x, data)
 	}
-	return graphData, max
-}
-
-//loadFindbugsGraphData
-func loadFindbugsGraphData(time bool, files []*project.File) (GraphData, float64) {
-	graphData := make(GraphData, 4)
-	max := -1.0
-	for _, f := range files {
-		result, err := db.FindbugsResult(
-			bson.M{project.FILEID: f.Id}, nil)
-		if err != nil || result.Data == nil {
-			continue
-		}
-		var x float64 = -1
-		if time {
-			x = float64(f.Time)
-		}
-		max = result.AddGraphData(max, x, graphData)
-	}
-	return graphData, max
-}
-
-//loadCheckstyleGraphData
-func loadCheckstyleGraphData(time bool, files []*project.File) (GraphData, float64) {
-	graphData := make(GraphData, 1)
-	max := -1.0
-	for _, f := range files {
-		result, err := db.CheckstyleResult(
-			bson.M{project.FILEID: f.Id}, nil)
-		if err != nil || result.Data == nil {
-			continue
-		}
-		var x float64 = -1
-		if time {
-			x = float64(f.Time)
-		}
-		max = result.AddGraphData(max, x, graphData)
-	}
-	return graphData, max
-}
-
-//loadPMDGraphData
-func loadPMDGraphData(time bool, files []*project.File) (GraphData, float64) {
-	graphData := make(GraphData, 1)
-	max := -1.0
-	for _, f := range files {
-		result, err := db.PMDResult(
-			bson.M{project.FILEID: f.Id}, nil)
-		if err != nil || result.Data == nil {
-			continue
-		}
-		var x float64 = -1
-		if time {
-			x = float64(f.Time)
-		}
-		max = result.AddGraphData(max, x, graphData)
-	}
-	return graphData, max
+	return
 }
 
 //loadAllGraphData
-func loadAllGraphData(time bool, files []*project.File) (GraphData, float64) {
-	graphData := make(map[string]GraphData)
+func loadAllGraphData(time bool, files []*project.File) (tool.GraphData, float64) {
+	graphData := make(map[string]tool.GraphData)
 	allMax := make(map[string]float64)
 	for _, f := range files {
 		results, err := db.GraphResults(f.Id)
@@ -216,7 +104,7 @@ func loadAllGraphData(time bool, files []*project.File) (GraphData, float64) {
 		}
 		for _, result := range results {
 			if _, ok := graphData[result.GetName()]; !ok {
-				graphData[result.GetName()] = make(GraphData, 4)
+				graphData[result.GetName()] = make(tool.GraphData, 4)
 			}
 			allMax[result.GetName()] = result.AddGraphData(
 				allMax[result.GetName()], x, graphData[result.GetName()])
@@ -226,7 +114,7 @@ func loadAllGraphData(time bool, files []*project.File) (GraphData, float64) {
 	for _, v := range allMax {
 		max = math.Max(max, v)
 	}
-	allData := make(GraphData, 0)
+	allData := make(tool.GraphData, 0)
 	for key, val := range graphData {
 		scale := max / allMax[key]
 		for _, data := range val {
