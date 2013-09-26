@@ -1,0 +1,31 @@
+{{define "submissionResult"}}
+<table class="table table-hover">
+  <thead>
+    <tr class="info">
+      <th>User</th>
+      <th>Created</th>
+      <th>Snapshots</th>
+      <th>Launches</th>
+    </tr>
+  </thead>
+  <tbody data-provides="rowlink" >
+    {{ range .subRes}}
+    {{$subId := .Id.Hex}}
+    <tr class="success">
+      <td><a class="rowlink" href="getfiles?subid={{$subId}}">
+	  {{.User}}
+      </a></td>
+      <td><a class="rowlink" href="getfiles?subid={{$subId}}" >
+	  {{date .Time}}
+      </a></td>
+      <td><a class="rowlink" href="getfiles?subid={{$subId}}">
+	  {{snapshots .Id}}
+      </a></td>
+      <td><a class="rowlink" href="getfiles?subid={{$subId}}">
+	  {{launches .Id}}
+      </a></td>
+    </tr>
+    {{end}}
+  </tbody>
+</table>
+{{end}}

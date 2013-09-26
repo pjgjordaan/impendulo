@@ -39,14 +39,14 @@ const (
 )
 
 type (
-	//GraphData represents the x and y values used to draw the graphs.
-	GraphData []map[string]interface{}
+	//Chart represents the x and y values used to draw the charts.
+	Chart map[string][]float64
 
-	//GraphResult is used to display result data in a graph.
-	GraphResult interface {
-		AddGraphData(curMax, x float64, graphData GraphData) (newMax float64)
+	//ChartResult is used to display result data in a chart.
+	ChartResult interface {
+		ChartVals() map[string]float64
 		GetName() string
-		CreateGraphData() GraphData
+		ChartNames() []string
 	}
 	//ToolResult is used to store tool result data.
 	ToolResult interface {
@@ -104,25 +104,24 @@ type (
 	}
 )
 
-//AddCoords inserts new coordinates into data used to display a chart.
-func AddCoords(chart map[string]interface{}, x, y float64) {
-	if _, ok := chart["data"].([]map[string]float64); !ok {
-		return
-	}
+//Add inserts new coordinates into data used to display a chart.
+func (chart Chart) Add(x float64, ys map[string]float64) {
 	if x < 0 {
-		x = float64(len(chart["data"].([]map[string]float64)))
-	} else {
-		x = x / 1000
+		x = float64(len(chart["x"]))
 	}
-	chart["data"] = append(chart["data"].([]map[string]float64),
-		map[string]float64{"x": x, "y": y})
+	chart["x"] = append(chart["x"], x)
+	for name, val := range ys {
+		chart[name] = append(chart[name], val)
+	}
 }
 
-//CreateChart initialises new chart data.
-func CreateChart(name string) (chart map[string]interface{}) {
-	chart = make(map[string]interface{})
-	chart["name"] = name
-	chart["data"] = make([]map[string]float64, 0, 100)
+//NewChart initialises new chart data.
+func NewChart(names []string) (chart Chart) {
+	chart = make(Chart)
+	for _, name := range names {
+		chart[name] = make([]float64, 0, 100)
+	}
+	chart["x"] = make([]float64, 0, 100)
 	return
 }
 

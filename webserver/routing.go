@@ -135,7 +135,7 @@ func defaultPermissions() map[string]Perm {
 		"projectresult": ALL, "archiveview": IN, "projectview": IN,
 		"addproject": IN, "changeskeleton": IN, "submitarchive": IN,
 		"login": OUT, "register": OUT, "logout": IN, "deleteproject": IN,
-		"deleteuser": IN, "displaygraph": ALL, "displayresult": ALL, "getfiles": ALL,
+		"deleteuser": IN, "displaychart": ALL, "displayresult": ALL, "getfiles": ALL,
 		"getsubmissions": ALL, "skeleton.zip": ALL, "index": ALL, "favicon.ico": ALL,
 		"": ALL, "statusview": IN, "runtoolview": IN, "runtool": IN,
 	}

@@ -52,6 +52,13 @@ func GetInt(req *http.Request, name string) (found int, err error) {
 	return
 }
 
+//GetInt64 retrieves an integer value from a request form.
+func GetInt64(req *http.Request, name string) (found int64, err error) {
+	iStr := req.FormValue(name)
+	found, err = strconv.ParseInt(iStr, 10, 64)
+	return
+}
+
 //GetLines retrieves an array of size m-n+1 with values
 //starting at n and ending at m where n and m are start and end
 //values retrieved from req.

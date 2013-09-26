@@ -1,6 +1,6 @@
 /*
-Copyright (c) 2013, The Impendulo Authors
-All rights reserved.
+  Copyright (c) 2013, The Impendulo Authors
+  All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
@@ -30,8 +30,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .minus3   { color: blue;                       }
 .plus3    { color: maroon;                     }
 .at2      { color: lime;                       }
-.plus     { color: green; background: #E7E7E7; }
-.minus    { color: red;   background: #D7D7D7; }
+.plus     { 
+    color: green; 
+    background: #E7E7E7; 
+}
+.minus    { 
+    color: red;   
+    background: #D7D7D7; 
+}
 .only     { color: purple;                     }
 .form-padded{padding:20px 10px 25px;}
 .alert-list{
@@ -43,38 +49,67 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     padding-left:50px;
 }
 
-.chart_container {
-    display: inline-block;
-    font-family: Arial, Helvetica, sans-serif;
-}
-.chart {
-    margin-left: 80px;
-    float: left;
-}
-.legend {
-    display: inline-block;
-    float:left;
-}
-.offset_form {
-    float: left;
-    margin: 2em 0 0 15px;
-    font-size: 13px;
-}
-.y_axis {
-    position: absolute;
-    width: 80px;
+path {
+    stroke-width: 1;
+    fill: none;
 }
 
-.x_axis {
-    margin-left: 80px;
-    float: left;
+.axis {
+    shape-rendering: crispEdges;
 }
 
+.x.axis line {
+    stroke: lightgrey;
+}
 
+.x.axis .minor {
+    stroke-opacity: .5;
+}
+
+.x.axis path {
+    display: none;
+}
+
+.y.axis line, .y.axis path {
+    fill: none;
+    stroke: #000;
+}
 .center{
     margin-left:auto;
     margin-right:auto;
     width:30%;
+}
+
+#tooltip {
+    position: absolute;
+    width: auto;
+    height: auto;
+    padding: 5px;
+    background-color: white;
+    -webkit-border-radius: 10px;
+    -moz-border-radius: 10px;
+    border-radius: 10px;
+    -webkit-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+    -moz-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+    pointer-events: none;
+}
+
+#tooltip.hidden {
+    display: none;
+}
+
+#chart{
+    position: relative;
+    width:100%;
+    height:400px;
+}
+
+.legend {
+    padding: 5px;
+    font: 10px sans-serif;
+    background: yellow;
+    box-shadow: 2px 2px 1px #888;
 }
 
 .pagination-right {
@@ -84,3 +119,4 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .accordion-inner{
     overflow:auto;
 }
+

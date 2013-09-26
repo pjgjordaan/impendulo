@@ -28,7 +28,6 @@ import (
 	"fmt"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
-	"math"
 )
 
 const (
@@ -36,7 +35,7 @@ const (
 )
 
 type (
-	//Result is a JPF implementation of tool.ToolResult, tool.DisplayResult and tool.GraphResult.
+	//Result is a JPF implementation of tool.ToolResult, tool.DisplayResult and tool.ChartResult.
 	Result struct {
 		Id     bson.ObjectId "_id"
 		FileId bson.ObjectId "fileid"
@@ -103,24 +102,24 @@ func (this *Result) GetData() interface{} {
 	return this.Data
 }
 
-//CreateGraphData
-func (this *Result) CreateGraphData() (graphData tool.GraphData) {
-	graphData = make(tool.GraphData, 1)
-	graphData[0] = tool.CreateChart("JPF Error Detection Time")
-	return
+//ChartNames
+func (this *Result) ChartNames() []string {
+	return []string{
+		"Error Detection Time",
+	}
 }
 
-//AddGraphData adds the time taken to find a JPF error to the current graph data.
-//If no errors were found, the time is 0.
-func (this *Result) AddGraphData(max, x float64, graphData tool.GraphData) float64 {
+//ChartVals
+func (this *Result) ChartVals() map[string]float64 {
 	var yT float64
 	if this.Data.Errors() == 0 {
 		yT = 0
 	} else {
 		yT = float64(this.Data.Stats.Time)
 	}
-	tool.AddCoords(graphData[0], x, yT)
-	return math.Max(max, yT)
+	return map[string]float64{
+		"Error Detection Time": yT,
+	}
 }
 
 //NewResult creates a new JPF result. The data []byte is in XML format and

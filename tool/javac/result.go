@@ -27,7 +27,6 @@ package javac
 import (
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
-	"math"
 )
 
 const (
@@ -36,7 +35,7 @@ const (
 
 type (
 	//Result is a Javac implementation of tool.ToolResult, tool.DisplayResult
-	//and tool.GraphResult. It contains the result of compiling a Java source
+	//and tool.ChartResult. It contains the result of compiling a Java source
 	//file using the specified Java compiler.
 	Result struct {
 		Id     bson.ObjectId "_id"
@@ -95,29 +94,26 @@ func (this *Result) GetData() interface{} {
 	return this.Data
 }
 
-//AddGraphData
-func (this *Result) AddGraphData(max, x float64, graphData tool.GraphData) float64 {
-	if graphData[0] == nil {
-		graphData[0] = tool.CreateChart(this.GetName() + " Errors")
-		graphData[1] = tool.CreateChart(this.GetName() + " Warnings")
+//ChartNames
+func (this *Result) ChartNames() []string {
+	return []string{
+		"Errors",
+		"Warnings",
 	}
+}
+
+//ChartVals
+func (this *Result) ChartVals() map[string]float64 {
 	yE, yW := 0.0, 0.0
 	if this.Data.Errors() {
 		yE = float64(this.Data.Count)
 	} else if this.Data.Warnings() {
 		yW = float64(this.Data.Count)
 	}
-	tool.AddCoords(graphData[0], x, yE)
-	tool.AddCoords(graphData[1], x, yW)
-	return math.Max(max, math.Max(yE, yW))
-}
-
-//CreateGraphData
-func (this *Result) CreateGraphData() (graphData tool.GraphData) {
-	graphData = make(tool.GraphData, 2)
-	graphData[0] = tool.CreateChart(this.GetName() + " Errors")
-	graphData[1] = tool.CreateChart(this.GetName() + " Warnings")
-	return
+	return map[string]float64{
+		"Errors":   yE,
+		"Warnings": yW,
+	}
 }
 
 //NewResult

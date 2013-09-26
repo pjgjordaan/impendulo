@@ -28,7 +28,6 @@ import (
 	"fmt"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
-	"math"
 )
 
 const (
@@ -37,7 +36,7 @@ const (
 
 type (
 	//Result is a PMD implementation of tool.ToolResult,
-	//tool.DisplayResult and tool.GraphResult.
+	//tool.DisplayResult and tool.ChartResult.
 	Result struct {
 		Id     bson.ObjectId "_id"
 		FileId bson.ObjectId "fileid"
@@ -95,18 +94,16 @@ func (this *Result) Success() bool {
 	return true
 }
 
-//CreateGraphData
-func (this *Result) CreateGraphData() (graphData tool.GraphData) {
-	graphData = make(tool.GraphData, 1)
-	graphData[0] = tool.CreateChart("PMD Errors")
-	return
+//ChartNames
+func (this *Result) ChartNames() []string {
+	return []string{"Errors"}
 }
 
-//AddGraphData adds the number of errors found by PMD.
-func (this *Result) AddGraphData(max, x float64, graphData tool.GraphData) float64 {
-	y := float64(this.Data.Errors)
-	tool.AddCoords(graphData[0], x, y)
-	return math.Max(max, y)
+//ChartVals gets the number of errors found by PMD.
+func (this *Result) ChartVals() map[string]float64 {
+	return map[string]float64{
+		"Errors": float64(this.Data.Errors),
+	}
 }
 
 //String

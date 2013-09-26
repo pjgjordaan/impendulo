@@ -28,7 +28,6 @@ import (
 	"fmt"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
-	"math"
 )
 
 const (
@@ -96,27 +95,24 @@ func (this *Result) GetData() interface{} {
 	return this.Data
 }
 
-//CreateGraphData
-func (this *Result) CreateGraphData() (graphData tool.GraphData) {
-	graphData = make(tool.GraphData, 4)
-	graphData[0] = tool.CreateChart("Findbugs All")
-	graphData[1] = tool.CreateChart("Findbugs Priority 1")
-	graphData[2] = tool.CreateChart("Findbugs Priority 2")
-	graphData[3] = tool.CreateChart("Findbugs Priority 3")
-	return
+//ChartNames
+func (this *Result) ChartNames() []string {
+	return []string{
+		"All",
+		"Priority 1",
+		"Priority 2",
+		"Priority 3",
+	}
 }
 
-//AddGraphData
-func (this *Result) AddGraphData(max, x float64, graphData tool.GraphData) float64 {
-	yB := float64(this.Data.Summary.BugCount)
-	y1 := float64(this.Data.Summary.Priority1)
-	y2 := float64(this.Data.Summary.Priority2)
-	y3 := float64(this.Data.Summary.Priority3)
-	tool.AddCoords(graphData[0], x, yB)
-	tool.AddCoords(graphData[1], x, y1)
-	tool.AddCoords(graphData[2], x, y2)
-	tool.AddCoords(graphData[3], x, y3)
-	return math.Max(max, math.Max(y1, math.Max(y2, math.Max(y3, yB))))
+//ChartVals
+func (this *Result) ChartVals() map[string]float64 {
+	return map[string]float64{
+		"All":        float64(this.Data.Summary.BugCount),
+		"Priority 1": float64(this.Data.Summary.Priority1),
+		"Priority 2": float64(this.Data.Summary.Priority2),
+		"Priority 3": float64(this.Data.Summary.Priority3),
+	}
 }
 
 //NewResult

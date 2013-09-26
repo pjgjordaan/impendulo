@@ -28,7 +28,6 @@ import (
 	"fmt"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
-	"math"
 )
 
 const (
@@ -37,7 +36,7 @@ const (
 
 type (
 	//Result is an implementation of ToolResult, DisplayResult
-	//and GraphResult for JUnit test results.
+	//and ChartResult for JUnit test results.
 	Result struct {
 		Id       bson.ObjectId "_id"
 		FileId   bson.ObjectId "fileid"
@@ -102,24 +101,22 @@ func (this *Result) Success() bool {
 	return this.Data.Success()
 }
 
-//CreateGraphData
-func (this *Result) CreateGraphData() (graphData tool.GraphData) {
-	graphData = make(tool.GraphData, 3)
-	graphData[0] = tool.CreateChart(this.GetName() + " Errors")
-	graphData[1] = tool.CreateChart(this.GetName() + " Failures")
-	graphData[2] = tool.CreateChart(this.GetName() + " Successes")
-	return
+//ChartNames
+func (this *Result) ChartNames() []string {
+	return []string{
+		"Errors",
+		"Failures",
+		"Successes",
+	}
 }
 
-//AddGraphData
-func (this *Result) AddGraphData(max, x float64, graphData tool.GraphData) float64 {
-	yE := float64(this.Data.Errors)
-	yF := float64(this.Data.Failures)
-	yS := float64(this.Data.Tests - this.Data.Failures - this.Data.Errors)
-	tool.AddCoords(graphData[0], x, yE)
-	tool.AddCoords(graphData[1], x, yF)
-	tool.AddCoords(graphData[2], x, yS)
-	return math.Max(max, math.Max(yE, math.Max(yF, yS)))
+//ChartVals
+func (this *Result) ChartVals() map[string]float64 {
+	return map[string]float64{
+		"Errors":    float64(this.Data.Errors),
+		"Failures":  float64(this.Data.Failures),
+		"Successes": float64(this.Data.Tests - this.Data.Failures - this.Data.Errors),
+	}
 }
 
 //NewResult creates a new junit.Result from provided XML data.

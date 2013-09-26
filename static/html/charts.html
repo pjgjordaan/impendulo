@@ -34,12 +34,12 @@
   {{end}}
   <li class="dropdown">
     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-      {{$resultName}} Graph <span class="caret"></span>
+      {{$resultName}} Chart <span class="caret"></span>
     </a>
     <ul class="dropdown-menu" role="menu">
       {{range $results}}  
       <li>
-	<a href="displaygraph?resultname={{.}}&type={{$type}}">
+	<a href="displaychart?resultname={{.}}&type={{$type}}">
 	  {{.}}
 	</a>
       </li>
@@ -53,37 +53,16 @@
   <small>file</small> {{ $fileName}} 
   <small>tool</small> {{$resultName}}
 </h2>
-<div>
-<form role="form" class="center" action="displaygraph" method="get">
-  <label for="timeRadio" class="radio-inline">
-      <input type="radio" name="type" id="timeRadio" value="time" 
-	     {{if equal "time" $type}} checked{{end}}>
-      Time
-    </label>
-  <label for="numRadio" class="radio-inline">
-    <input type="radio" name="type" id="numRadio" value="num"
-	   {{if equal "num" $type}} checked{{end}}>
-      Normal
-  </label>
-  <button type="submit" class="btn btn-default">
-    <span class="glyphicon glyphicon-arrow-right"></span>
-  </button>
-</form>
-</div>
-<div>
-<br>
+<div id="chart" class="chart" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <div id="tooltip" class="hidden">
+    <h5 id="title"><small id="y"></small></h5>
+    <h6 id="x"></h6>
+  </div>
 </div>
 <script language="javascript" src="/static/js/jquery-2.0.2.min.js"></script>
 <script language="javascript" src="/static/js/d3.v3.min.js"></script>
-<script language="javascript" src="/static/js/rickshaw.js"></script>
-<script language="javascript" src="/static/js/graphs.js"></script> 
-<div class="chart_holder" id="resultGraphHolder">
-  <div class="y_axis" id="resultGraphY"></div>
-  <div class="chart" id="resultGraph"></div>
-  <div class="legend" id="resultGraphLegend"></div>
-  <div class="x_axis" id="resultGraphX"></div> 
-</div>
+<script language="javascript" src="/static/js/charts.js"></script> 
 <script>
-  drawGraph({{.graphArgs}});
+  timeChart({{.chart}});
 </script>
 {{end}}

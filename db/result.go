@@ -204,7 +204,7 @@ func DisplayResult(name string, matcher, selector bson.M) (ret tool.DisplayResul
 
 //DisplayResult retrieves a tool.DisplayResult matching
 //the given interface and name from the active database.
-func GraphResult(name string, matcher, selector bson.M) (ret tool.GraphResult, err error) {
+func ChartResult(name string, matcher, selector bson.M) (ret tool.ChartResult, err error) {
 	switch name {
 	case javac.NAME:
 		ret, err = JavacResult(matcher, selector)
@@ -261,19 +261,19 @@ func AddFileResult(fileId bson.ObjectId, name string, value interface{}) error {
 	return Update(FILES, matcher, change)
 }
 
-//GraphResults retrieves all tool.DisplayResults matching
+//ChartResults retrieves all tool.DisplayResults matching
 //the given file Id from the active database.
-func GraphResults(fileId bson.ObjectId) (ret []tool.GraphResult, err error) {
+func ChartResults(fileId bson.ObjectId) (ret []tool.ChartResult, err error) {
 	file, err := File(bson.M{project.ID: fileId}, bson.M{project.RESULTS: 1})
 	if err != nil {
 		return
 	}
-	ret = make([]tool.GraphResult, 0, len(file.Results))
+	ret = make([]tool.ChartResult, 0, len(file.Results))
 	for name, id := range file.Results {
 		if _, ok := id.(bson.ObjectId); !ok {
 			continue
 		}
-		res, err := GraphResult(name, bson.M{project.ID: id}, nil)
+		res, err := ChartResult(name, bson.M{project.ID: id}, nil)
 		if err != nil {
 			err = nil
 			continue

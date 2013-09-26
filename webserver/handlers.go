@@ -160,6 +160,10 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 	if err != nil {
 		return
 	}
+	neighbour, nerr := getNeighbour(req, len(files)-1)
+	if nerr == nil {
+		ctx.Browse.Next = neighbour
+	}
 	selected, serr := getSelected(req, len(files)-1)
 	if serr == nil {
 		ctx.Browse.Selected = selected
@@ -175,10 +179,6 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 	curRes, err := GetResultData(ctx.Browse.ResultName, curFile.Id)
 	if err != nil {
 		return
-	}
-	neighbour, nerr := getNeighbour(req, len(files)-1)
-	if nerr == nil {
-		ctx.Browse.Next = neighbour
 	}
 	nextFile, err := getFile(files[ctx.Browse.Next].Id)
 	if err != nil {
@@ -201,22 +201,22 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 	return
 }
 
-//displayGraph displays a graph for a tool's result.
-func displayGraph(w http.ResponseWriter, req *http.Request, ctx *Context) error {
+//displayChart displays a chart for a tool's result.
+func displayChart(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	ctx.Browse.View = "home"
 	ctx.SetResult(req)
-	args, err := graphArgs(req, ctx)
+	args, err := chartArgs(req, ctx)
 	if err != nil {
-		ctx.AddMessage("Could not retrieve graph data.", true)
+		ctx.AddMessage("Could not retrieve chart data.", true)
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 		return err
 	}
-	temps := []string{getNav(ctx), "graphResult"}
+	temps := []string{getNav(ctx), "charts"}
 	return T(temps...).Execute(w, args)
 }
 
-//graphArgs loads arguments for displayGraph.
-func graphArgs(req *http.Request, ctx *Context) (args map[string]interface{}, err error) {
+//chartArgs loads arguments for displaychart.
+func chartArgs(req *http.Request, ctx *Context) (args map[string]interface{}, err error) {
 	fileName, ferr := GetString(req, "filename")
 	if ferr == nil {
 		ctx.Browse.FileName = fileName
@@ -234,10 +234,10 @@ func graphArgs(req *http.Request, ctx *Context) (args map[string]interface{}, er
 	if err != nil {
 		return
 	}
-	graphArgs := LoadResultGraphData(ctx.Browse.ResultName, tipe, files)
+	chart := LoadChart(ctx.Browse.ResultName, tipe, files)
 	args = map[string]interface{}{
 		"ctx": ctx, "files": files, "results": results,
-		"graphArgs": graphArgs, "type": tipe,
+		"chart": chart, "type": tipe,
 	}
 	return
 }

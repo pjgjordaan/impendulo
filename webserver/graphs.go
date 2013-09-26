@@ -29,66 +29,46 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
-	"math"
 )
 
-type (
-	//GraphArgs represents arguments which are passed to rickshaw
-	//in order to draw a graph.
-	GraphArgs map[string]interface{}
-)
-
-//LoadResultGraphData calculates GraphArgs for a given result.
-func LoadResultGraphData(result, tipe string, files []*project.File) (graphArgs GraphArgs) {
-	var graphData tool.GraphData
-	max := -1.0
+//LoadChart calculates GraphArgs for a given result.
+func LoadChart(result, tipe string, files []*project.File) (chart tool.Chart) {
 	time := tipe == "time"
 	switch result {
-	case "All":
-		graphData, max = loadAllGraphData(time, files)
+	/*case "All":
+	graphData, max = loadAllGraphData(time, files)*/
 	case tool.CODE:
 	case tool.SUMMARY:
 	default:
-		graphData, max = loadGraphData(result, files, time)
+		chart = loadChart(result, files, time)
 	}
-	if max == -1.0 {
-		return
-	}
-	graphArgs = make(GraphArgs)
-	graphArgs["max"] = max + max*0.05
-	graphArgs["series"] = graphData
-	graphArgs["height"] = 400
-	graphArgs["width"] = 700
-	graphArgs["interpolation"] = "linear"
-	graphArgs["renderer"] = "line"
-	graphArgs["type"] = tipe
 	return
 }
 
-func loadGraphData(name string, files []*project.File, time bool) (data tool.GraphData, max float64) {
-	max = -1.0
+func loadChart(name string, files []*project.File, time bool) (chart tool.Chart) {
 	for _, f := range files {
 		file, err := db.File(bson.M{project.ID: f.Id}, bson.M{project.TIME: 1, project.RESULTS: 1})
 		if err != nil {
 			continue
 		}
-		result, err := db.GraphResult(name,
+		result, err := db.ChartResult(name,
 			bson.M{project.ID: file.Results[name]}, nil)
 		if err != nil {
 			continue
 		}
-		if data == nil {
-			data = result.CreateGraphData()
+		if chart == nil {
+			chart = tool.NewChart(result.ChartNames())
 		}
 		var x float64 = -1
 		if time {
 			x = float64(file.Time)
 		}
-		max = result.AddGraphData(max, x, data)
+		chart.Add(x, result.ChartVals())
 	}
 	return
 }
 
+/*
 //loadAllGraphData
 func loadAllGraphData(time bool, files []*project.File) (tool.GraphData, float64) {
 	graphData := make(map[string]tool.GraphData)
@@ -131,3 +111,4 @@ func loadAllGraphData(time bool, files []*project.File) (tool.GraphData, float64
 	}
 	return allData, max
 }
+*/
