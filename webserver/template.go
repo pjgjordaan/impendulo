@@ -160,6 +160,7 @@ func BaseTemplates() []string {
 		filepath.Join(TemplateDir(), "base.html"),
 		filepath.Join(TemplateDir(), "index.html"),
 		filepath.Join(TemplateDir(), "messages.html"),
+		filepath.Join(TemplateDir(), "footer.html"),
 	}
 	return baseTemplates
 }

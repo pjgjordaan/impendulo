@@ -28,24 +28,22 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 )
 
 //LoadChart calculates GraphArgs for a given result.
-func LoadChart(result, tipe string, files []*project.File) (chart tool.Chart) {
-	time := tipe == "time"
+func LoadChart(result string, files []*project.File) (chart tool.Chart) {
 	switch result {
-	/*case "All":
-	graphData, max = loadAllGraphData(time, files)*/
 	case tool.CODE:
 	case tool.SUMMARY:
 	default:
-		chart = loadChart(result, files, time)
+		chart = loadChart(result, files)
 	}
 	return
 }
 
-func loadChart(name string, files []*project.File, time bool) (chart tool.Chart) {
+func loadChart(name string, files []*project.File) (chart tool.Chart) {
 	for _, f := range files {
 		file, err := db.File(bson.M{project.ID: f.Id}, bson.M{project.TIME: 1, project.RESULTS: 1})
 		if err != nil {
@@ -54,61 +52,13 @@ func loadChart(name string, files []*project.File, time bool) (chart tool.Chart)
 		result, err := db.ChartResult(name,
 			bson.M{project.ID: file.Results[name]}, nil)
 		if err != nil {
+			util.Log(err, file.Results[name])
 			continue
 		}
 		if chart == nil {
 			chart = tool.NewChart(result.ChartNames())
 		}
-		var x float64 = -1
-		if time {
-			x = float64(file.Time)
-		}
-		chart.Add(x, result.ChartVals())
+		chart.Add(float64(file.Time), result.ChartVals())
 	}
 	return
 }
-
-/*
-//loadAllGraphData
-func loadAllGraphData(time bool, files []*project.File) (tool.GraphData, float64) {
-	graphData := make(map[string]tool.GraphData)
-	allMax := make(map[string]float64)
-	for _, f := range files {
-		results, err := db.GraphResults(f.Id)
-		if err != nil || results == nil {
-			continue
-		}
-		var x float64 = -1
-		if time {
-			x = float64(f.Time)
-		}
-		for _, result := range results {
-			if _, ok := graphData[result.GetName()]; !ok {
-				graphData[result.GetName()] = make(tool.GraphData, 4)
-			}
-			allMax[result.GetName()] = result.AddGraphData(
-				allMax[result.GetName()], x, graphData[result.GetName()])
-		}
-	}
-	max := 0.0
-	for _, v := range allMax {
-		max = math.Max(max, v)
-	}
-	allData := make(tool.GraphData, 0)
-	for key, val := range graphData {
-		scale := max / allMax[key]
-		for _, data := range val {
-			if data == nil {
-				break
-			}
-			point := data["data"].([]map[string]float64)
-			for _, vals := range point {
-				vals["y"] *= scale
-			}
-			data["data"] = point
-			allData = append(allData, data)
-		}
-	}
-	return allData, max
-}
-*/

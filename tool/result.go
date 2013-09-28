@@ -106,9 +106,6 @@ type (
 
 //Add inserts new coordinates into data used to display a chart.
 func (chart Chart) Add(x float64, ys map[string]float64) {
-	if x < 0 {
-		x = float64(len(chart["x"]))
-	}
 	chart["x"] = append(chart["x"], x)
 	for name, val := range ys {
 		chart[name] = append(chart[name], val)

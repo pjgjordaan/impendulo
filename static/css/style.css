@@ -39,7 +39,16 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     background: #D7D7D7; 
 }
 .only     { color: purple;                     }
-.form-padded{padding:20px 10px 25px;}
+
+.form-padded{
+    padding:20px 10px 25px;
+}
+
+.btn-chart{
+    margin-top:20px;
+    position: relative;
+}
+
 .alert-list{
     padding-top:5px;
     padding-bottom: 5px;

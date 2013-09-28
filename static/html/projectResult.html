@@ -3,16 +3,18 @@
   <li><a href="homeview">Home</a> </li>
   <li class="active">Projects</li>
 </ul>
-<table class="table table-hover">
-  <thead><tr class="info">
+<table class="table table-hover table-striped">
+  <thead>
+    <tr class="info">
       <th>Name</th>
       <th>Created</th>
       <th>Language</th>
       <th>Submissions</th>
-  </tr></thead>
+    </tr>
+  </thead>
   <tbody data-provides="rowlink" >
     {{ range .ctx.Projects}}
-    <tr class="success">
+    <tr>
       <td><a class="rowlink" href="getsubmissions?id={{.Id.Hex}}&type=project" >{{.Name}}</a></td>
       <td><a class="rowlink" href="getsubmissions?id={{.Id.Hex}}&type=project" >{{date .Time}}</a></td>
       <td><a class="rowlink" href="getsubmissions?id={{.Id.Hex}}&type=project" >{{.Lang}}</a></td>

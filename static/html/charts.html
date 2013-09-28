@@ -2,7 +2,6 @@
 {{$resultName := .ctx.Browse.ResultName}}
 {{$fileName := .ctx.Browse.FileName}}
 {{$results := .results}}
-{{$type := .type}}
 <ul class="breadcrumb">
   <li><a href="homeview">Home</a></li>
   {{if .ctx.Browse.IsUser}}
@@ -39,7 +38,7 @@
     <ul class="dropdown-menu" role="menu">
       {{range $results}}  
       <li>
-	<a href="displaychart?resultname={{.}}&type={{$type}}">
+	<a href="displaychart?resultname={{.}}">
 	  {{.}}
 	</a>
       </li>
@@ -47,12 +46,14 @@
     </ul>
   </li>
 </ul>
-<h2 class="text-center">
+<h4 class="text-center">
   <small>user</small> {{.ctx.Browse.Uid}} 
   <small>project</small> {{projectName .ctx.Browse.Pid}}
   <small>file</small> {{ $fileName}} 
+</h4>
+<h3 class="text-center">
   <small>tool</small> {{$resultName}}
-</h2>
+</h3>
 <div id="chart" class="chart" xmlns:xlink="http://www.w3.org/1999/xlink">
   <div id="tooltip" class="hidden">
     <h5 id="title"><small id="y"></small></h5>

@@ -1,25 +1,18 @@
 {{define "title"}}Impendulo{{end}}
 {{define "content"}}
 <div class="row">
-  <div class="col-md-12">
+  <div class="col-md-offset-1 col-md-10">
     <div id="navbar" class="row">
-      <div class="col-md-1"></div>
-      <div class="col-md-10">
 	{{template "navbar" .}}
-      </div>
-      <div class="col-md-1"></div>
     </div>
-    <div id="main" class="row">
-      <div class="col-md-1"></div>
-      <div class="col-md-10">
-	<div id="messages" class="row">
-	  {{template "messages" .}}
-	</div>
-	<div id="view" class="row">
-	{{template "view" .}}
-	</div>
-      </div>
-      <div class="col-md-1"></div>
+    <div id="messages" class="row">
+      {{template "messages" .}}
+    </div>
+    <div id="view" class="row">
+      {{template "view" .}}
+    </div>
+    <div id="footer" class="row">
+      {{template "footer"}}
     </div>
   </div>
 </div>

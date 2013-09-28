@@ -226,18 +226,13 @@ func chartArgs(req *http.Request, ctx *Context) (args map[string]interface{}, er
 		return
 	}
 	results, err := db.ResultNames(ctx.Browse.Pid, false)
-	results = append(results, "All")
 	if err != nil {
 		return
 	}
-	tipe, err := GetString(req, "type")
-	if err != nil {
-		return
-	}
-	chart := LoadChart(ctx.Browse.ResultName, tipe, files)
+	chart := LoadChart(ctx.Browse.ResultName, files)
 	args = map[string]interface{}{
 		"ctx": ctx, "files": files, "results": results,
-		"chart": chart, "type": tipe,
+		"chart": chart,
 	}
 	return
 }

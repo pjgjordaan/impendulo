@@ -32,8 +32,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Map.Entry;
 
 /**
@@ -108,18 +106,21 @@ public class JPFRunner {
 	 */
 	public static Config createConfig(String configName, String target,
 			String targetLocation, String outFile) {
-		Config config = JPF.createConfig(new String[] { configName });
+		Config config = new Config(new String[] {});
 		config.setProperty("target", target);
 		config.setProperty("report.xml.file", outFile);
 		config.setProperty("classpath",
 				targetLocation + ";" + config.getProperty("classpath"));
-		Map<String, String> defualt = DefaultConfig();
-		for (Entry<String, String> cfg : defualt.entrySet()) {
-			if (!config.containsKey(cfg.getKey())) {
-				config.put(cfg.getKey(), cfg.getValue());
-			}
-		}
+		addDefaults(config);
+		addFileConfig(config, configName);
 		return config;
+	}
+
+	private static void addFileConfig(Config config, String configName) {
+		Config fileConfig = new Config(configName);
+		for(Entry<Object, Object> fileProperty : fileConfig.entrySet()){
+			config.put(fileProperty.getKey(), fileProperty.getValue());
+		}
 	}
 
 	/**
@@ -127,20 +128,19 @@ public class JPFRunner {
 	 * 
 	 * @return
 	 */
-	public static Map<String, String> DefaultConfig() {
-		Map<String, String> ret = new HashMap<String, String>();
-		ret.put("report.publisher", "xml");
-		ret.put("report.xml.class", "runner.ImpenduloPublisher");
-		ret.put("report.xml.start", "jpf,sut");
-		ret.put("report.xml.transition", "");
-		ret.put("report.xml.constraint", "constraint,snapshot");
-		ret.put("report.xml.property_violation", "error,snapshot");
-		ret.put("report.xml.show_steps", "true");
-		ret.put("report.xml.show_method", "true");
-		ret.put("report.xml.show_code", "true");
-		ret.put("report.xml.finished", "result,statistics");
-		ret.put("search.class", "gov.nasa.jpf.search.DFSearch");
-		ret.put("search.depth_limit", "1000");
-		return ret;
+	public static void addDefaults(Config config) {
+		config.put("report.publisher", "xml");
+		config.put("report.xml.class", "runner.ImpenduloPublisher");
+		config.put("report.xml.start", "jpf,sut");
+		config.put("report.xml.transition", "");
+		config.put("report.xml.constraint", "constraint,snapshot");
+		config.put("report.xml.property_violation", "error,snapshot");
+		config.put("report.xml.show_steps", "true");
+		config.put("report.xml.show_method", "true");
+		config.put("report.xml.show_code", "true");
+		config.put("report.xml.finished", "result,statistics");
+		config.put("search.class", "gov.nasa.jpf.search.DFSearch");
+		config.put("search.depth_limit", "1000");
+		config.put("search.multiple_errors", "true");
 	}
 }

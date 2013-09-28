@@ -105,20 +105,14 @@ func (this *Result) GetData() interface{} {
 //ChartNames
 func (this *Result) ChartNames() []string {
 	return []string{
-		"Error Detection Time",
+		"Errors",
 	}
 }
 
 //ChartVals
 func (this *Result) ChartVals() map[string]float64 {
-	var yT float64
-	if this.Data.Errors() == 0 {
-		yT = 0
-	} else {
-		yT = float64(this.Data.Stats.Time)
-	}
 	return map[string]float64{
-		"Error Detection Time": yT,
+		"Errors": float64(this.Data.Errors()),
 	}
 }
 

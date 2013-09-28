@@ -19,7 +19,7 @@
 <!-- Here we display a table of the different submissions within this project --
   -- . Included are users' names and date to allow us to differentiate between --
   -- submissions. -->
-<table class="table table-hover">
+<table class="table table-hover table-striped">
   <thead>
     <tr class="info">
       <th>User</th>
@@ -31,7 +31,7 @@
   <tbody data-provides="rowlink" >
     {{ range .subRes}}
     {{$subId := .Id.Hex}}
-    <tr class="success">
+    <tr>
       <td><a class="rowlink" href="getfiles?subid={{$subId}}">
 	  {{.User}}
       </a></td>

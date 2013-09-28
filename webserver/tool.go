@@ -297,18 +297,17 @@ func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
 		for _, file := range files {
 			if resultId, ok := file.Results[tool]; ok && runAll {
 				//Delete results if we want to rerun the tool on all files.
-				err = db.RemoveById(db.RESULTS, resultId)
-				if err != nil {
-					util.Log(resultId, err)
-					continue
-				}
 				delete(file.Results, tool)
 				change := bson.M{db.SET: bson.M{project.RESULTS: file.Results}}
 				err = db.Update(db.FILES, bson.M{project.ID: file.Id}, change)
 				if err != nil {
 					util.Log(err)
-					continue
 				}
+				err = db.RemoveById(db.RESULTS, resultId)
+				if err != nil {
+					util.Log(resultId, err)
+				}
+
 			}
 			err = processing.AddFile(file)
 			if err != nil {
