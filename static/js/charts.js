@@ -22,7 +22,7 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-function timeChart(chartData) {
+function timeChart(fileName, resultName, chartData) {
     if (chartData === null){
 	return;
     }
@@ -52,6 +52,18 @@ function timeChart(chartData) {
 	.domain([min, max])
 	.range([h, 0]);
     
+    
+    var xAxis = d3.svg.axis()
+	.scale(x)
+	.tickSize(-h)
+	.tickSubdivide(true);
+
+    var yAxisLeft = d3.svg.axis()
+	.scale(y)
+	.ticks(4)
+	.orient("left");
+        
+
     var colours = d3.scale.category10() 
         .domain(names); 
     
@@ -62,10 +74,6 @@ function timeChart(chartData) {
 	.append("svg:g")
 	.attr("transform", "translate(" + m[3] + "," + m[0] + ")");
     
-    var xAxis = d3.svg.axis()
-	.scale(x)
-	.tickSize(-h)
-	.tickSubdivide(true);
     
     chart.append("svg:g")
 	.attr("class", "x axis")
@@ -77,11 +85,6 @@ function timeChart(chartData) {
         .attr("y",  h+40)
         .style("text-anchor", "middle")
         .text("Time");
-    
-    var yAxisLeft = d3.svg.axis()
-	.scale(y)
-	.ticks(4)
-	.orient("left");
     
     chart.append("svg:g")
 	.attr("class", "y axis")
@@ -109,6 +112,7 @@ function timeChart(chartData) {
 	var chartName = names[index];
 	var col = colours(colours.domain()[colourIndex]);
 	chart.append("svg:path")
+	    .attr("class", "line")
 	    .attr("d", line(chartData[chartName]))
 	    .style("stroke", function() {
 		return col;
@@ -116,7 +120,10 @@ function timeChart(chartData) {
 	for(var k = 0; k < chartData[chartName].length; k++){
 	    chart.append("svg:a")
 		.text("here")
-		.attr("xlink:href", "displayresult?currentIndex="+k+"&nextIndex="+(k+1))
+		.attr("xlink:href", "displayresult?currentIndex="+k+
+		      "&nextIndex="+(k+1)+"&resultname="+resultName+
+		      "&filename="+fileName
+		     )
 		.append("svg:circle")
 		.attr("name", chartName)
 		.attr("x", chartData["x"][k])
@@ -194,3 +201,4 @@ function timeChart(chartData) {
 	});
 
 }
+

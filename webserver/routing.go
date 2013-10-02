@@ -27,6 +27,8 @@ package webserver
 import (
 	"code.google.com/p/gorilla/pat"
 	"fmt"
+	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/user"
 	"net/http"
 	"net/url"
 	"strings"
@@ -39,15 +41,13 @@ type (
 )
 
 const (
-	OUT Perm = iota
-	ALL
-	IN
+	OUT user.Permission = 42
 )
 
 var (
 	posters     map[string]Poster
 	viewRoutes  map[string]string
-	permissions map[string]Perm
+	permissions map[string]user.Permission
 )
 
 //CreatePost loads a post request handler.
@@ -114,7 +114,7 @@ func defaultViews() map[string]string {
 }
 
 //Permissions loads all permissions.
-func Permissions() map[string]Perm {
+func Permissions() map[string]user.Permission {
 	if permissions != nil {
 		return permissions
 	}
@@ -127,17 +127,23 @@ func Permissions() map[string]Perm {
 }
 
 //defaultPermissions loads default permissions.
-func defaultPermissions() map[string]Perm {
-	return map[string]Perm{
-		"homeview": ALL, "skeletonview": IN, "configview": IN,
-		"registerview": OUT, "projectdownloadview": IN,
-		"projectdeleteview": IN, "userdeleteview": IN, "userresult": ALL,
-		"projectresult": ALL, "archiveview": IN, "projectview": IN,
-		"addproject": IN, "changeskeleton": IN, "submitarchive": IN,
-		"login": OUT, "register": OUT, "logout": IN, "deleteproject": IN,
-		"deleteuser": IN, "displaychart": ALL, "displayresult": ALL, "getfiles": ALL,
-		"getsubmissions": ALL, "skeleton.zip": ALL, "index": ALL, "favicon.ico": ALL,
-		"": ALL, "statusview": IN, "runtoolview": IN, "runtool": IN,
+func defaultPermissions() map[string]user.Permission {
+	return map[string]user.Permission{
+		"registerview": OUT, "register": OUT, "login": OUT,
+		"homeview": user.NONE, "projectresult": user.NONE,
+		"userresult": user.NONE, "": user.NONE, "displaychart": user.NONE,
+		"displayresult": user.NONE, "getfiles": user.NONE,
+		"index": user.NONE, "favicon.ico": user.NONE, "getsubmissions": user.NONE,
+		"projectdownloadview": user.STUDENT, "skeleton.zip": user.STUDENT,
+		"archiveview": user.STUDENT, "submitarchive": user.STUDENT,
+		"logout":       user.STUDENT,
+		"skeletonview": user.TEACHER, "changeskeleton": user.TEACHER,
+		"projectview": user.TEACHER, "addproject": user.TEACHER,
+		"runtoolview": user.TEACHER, "runtool": user.TEACHER,
+		"configview":        user.TEACHER,
+		"projectdeleteview": user.ADMIN, "deleteproject": user.ADMIN,
+		"userdeleteview": user.ADMIN, "deleteuser": user.ADMIN,
+		"statusview": user.ADMIN,
 	}
 }
 
@@ -163,7 +169,7 @@ func LoadView(name, view string) Handler {
 }
 
 //CheckAccess verifies that a user is allowed access to a url.
-func CheckAccess(url *url.URL, ctx *Context) error {
+func CheckAccess(url *url.URL, ctx *Context) (err error) {
 	//Rertieve the location they are requesting
 	start := strings.LastIndex(url.Path, "/") + 1
 	end := strings.Index(url.Path, "?")
@@ -171,24 +177,49 @@ func CheckAccess(url *url.URL, ctx *Context) error {
 		end = len(url.Path)
 	}
 	if start > end {
-		return fmt.Errorf("Invalid request %s", url.Path)
+		err = fmt.Errorf("Invalid request %s", url.Path)
+		return
 	}
 	name := url.Path[start:end]
 	perms := Permissions()
 	//Get the permission and check it.
 	val, ok := perms[name]
 	if !ok {
-		return fmt.Errorf("Could not find request %s", url.Path)
+		err = fmt.Errorf("Could not find request %s", url.Path)
+		return
 	}
+	var msg string
+	//Check permission levels.
 	switch val {
 	case OUT:
 		if ctx.LoggedIn() {
-			return fmt.Errorf("Cannot access %s when logged in.", url.Path)
+			msg = "Cannot access %s when logged in."
 		}
-	case IN:
+	case user.STUDENT:
 		if !ctx.LoggedIn() {
-			return fmt.Errorf("Insufficient permissions to access %s", url.Path)
+			msg = "You need to be logged in to access %s"
+		}
+	case user.ADMIN, user.TEACHER:
+		if !ctx.LoggedIn() {
+			msg = "You need to be logged in to access %s"
+		} else {
+			uname, _ := ctx.Username()
+			if !checkUserPermission(uname, val) {
+				msg = "You have insufficient permissions to access %s"
+			}
 		}
 	}
-	return nil
+	if msg != "" {
+		err = fmt.Errorf(msg, url.Path)
+	}
+	return
+}
+
+//checkUserPermission verifies that a user has the specified permission level.
+func checkUserPermission(uname string, perm user.Permission) bool {
+	user, err := db.User(uname)
+	if err != nil {
+		return false
+	}
+	return user.Access >= perm
 }

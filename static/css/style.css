@@ -129,3 +129,24 @@ path {
     overflow:auto;
 }
 
+dl dt{
+    text-align: left; 
+    margin-left: 10px;
+}
+
+dl dd{
+    text-align: left; 
+    margin-left: 20px;
+}
+
+.thread-content{
+    text-align: left; 
+    margin-left: 25px;
+    margin-top: 0px;
+    margin-bottom: 15px;
+}
+
+.thread-title{
+    margin-left:10px;
+    margin-bottom:3px;
+}

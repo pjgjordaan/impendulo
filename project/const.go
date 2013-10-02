@@ -52,4 +52,5 @@ const (
 	HTML         = "html"
 	FILEID       = "fileid"
 	SKELETON     = "skeleton"
+	REPORT       = "report"
 )

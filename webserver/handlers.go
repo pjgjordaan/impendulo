@@ -26,9 +26,13 @@ package webserver
 
 import (
 	"code.google.com/p/gorilla/sessions"
+	"fmt"
 	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
+	"labix.org/v2/mgo/bson"
 	"net/http"
 )
 
@@ -80,10 +84,23 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 //getNav retrieves the navbar to display.
 func getNav(ctx *Context) string {
-	if _, err := ctx.Username(); err != nil {
+	uname, err := ctx.Username()
+	if err != nil {
 		return "outNavbar"
 	}
-	return "inNavbar"
+	u, err := db.User(uname)
+	if err != nil {
+		return "outNavbar"
+	}
+	switch u.Access {
+	case user.STUDENT:
+		return "studentNavbar"
+	case user.TEACHER:
+		return "teacherNavbar"
+	case user.ADMIN:
+		return "adminNavbar"
+	}
+	return "outNavbar"
 }
 
 //downloadProject makes a project skeleton available for download.
@@ -113,8 +130,8 @@ func getSubmissions(w http.ResponseWriter, req *http.Request, ctx *Context) erro
 		temp = "projectSubmissionResult"
 	}
 	ctx.Browse.View = "home"
-	return T(getNav(ctx), temp).Execute(w, map[string]interface{}{"ctx": ctx,
-		"subRes": subs})
+	args := map[string]interface{}{"ctx": ctx, "subRes": subs}
+	return T(getNav(ctx), temp).Execute(w, args)
 }
 
 //configView loads a tool's configuration page.
@@ -124,8 +141,8 @@ func configView(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 		tool = "none"
 	}
 	ctx.Browse.View = "submit"
-	return T(getNav(ctx), "configView", toolTemplate(tool)).Execute(w,
-		map[string]interface{}{"ctx": ctx, "tool": tool})
+	args := map[string]interface{}{"ctx": ctx, "tool": tool}
+	return T(getNav(ctx), "configView", toolTemplate(tool)).Execute(w, args)
 }
 
 //getFiles diplays information about files.
@@ -137,14 +154,12 @@ func getFiles(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 		return err
 	}
 	ctx.Browse.View = "home"
-	return T(getNav(ctx), "fileResult").Execute(w,
-		map[string]interface{}{"ctx": ctx, "fileinfo": fileinfo})
+	args := map[string]interface{}{"ctx": ctx, "fileInfo": fileinfo}
+	return T(getNav(ctx), "fileResult").Execute(w, args)
 }
 
 //displayResult displays a tool's result.
 func displayResult(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	ctx.SetResult(req)
-	ctx.Browse.View = "home"
 	args, temps, err := analysisArgs(req, ctx)
 	if err != nil {
 		ctx.AddMessage("Could not retrieve results.", true)
@@ -156,19 +171,25 @@ func displayResult(w http.ResponseWriter, req *http.Request, ctx *Context) error
 
 //analysisArgs loads arguments for displayResult
 func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{}, temps []string, err error) {
+	ctx.Browse.View = "home"
+	oldName := ctx.Browse.ResultName
+	ctx.Browse.ResultName, err = GetString(req, "resultname")
+	if err != nil {
+		return
+	}
 	files, err := RetrieveFiles(req, ctx)
 	if err != nil {
 		return
 	}
-	neighbour, nerr := getNeighbour(req, len(files)-1)
-	if nerr == nil {
-		ctx.Browse.Next = neighbour
+	ctx.Browse.Next, err = getNeighbour(req, len(files)-1)
+	if err != nil {
+		return
 	}
-	selected, serr := getSelected(req, len(files)-1)
-	if serr == nil {
-		ctx.Browse.Selected = selected
+	ctx.Browse.Selected, err = getSelected(req, len(files)-1)
+	if err != nil {
+		return
 	}
-	curFile, err := getFile(files[ctx.Browse.Selected].Id)
+	currentFile, err := getFile(files[ctx.Browse.Selected].Id)
 	if err != nil {
 		return
 	}
@@ -176,7 +197,7 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 	if err != nil {
 		return
 	}
-	curRes, err := GetResultData(ctx.Browse.ResultName, curFile.Id)
+	currentResult, err := GetResult(ctx.Browse.ResultName, currentFile.Id)
 	if err != nil {
 		return
 	}
@@ -184,27 +205,62 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 	if err != nil {
 		return
 	}
-	nextRes, err := GetResultData(ctx.Browse.ResultName, nextFile.Id)
+	nextResult, err := GetResult(ctx.Browse.ResultName, nextFile.Id)
 	if err != nil {
 		return
 	}
-	currentLines := GetLines(req, "current")
-	nextLines := GetLines(req, "next")
-	args = map[string]interface{}{"ctx": ctx, "files": files,
-		"curFile": curFile, "curResult": curRes.GetData(),
-		"results": results, "nextFile": nextFile,
-		"nextResult": nextRes.GetData(), "currentlines": currentLines,
-		"nextlines": nextLines,
+	if ctx.Browse.ResultName == tool.CODE {
+		lines, id := highlightArgs(req, oldName)
+		if lines != nil {
+			if id == currentFile.Id {
+				currentResult.(*tool.CodeResult).Lines = lines
+			} else if id == nextFile.Id {
+				nextResult.(*tool.CodeResult).Lines = lines
+			} else {
+				err = fmt.Errorf("Caller %v does not match any files.", id)
+				return
+			}
+		}
+
 	}
-	temps = []string{getNav(ctx), "analysis", "pager",
-		tool.Template(curRes.GetName(), true), tool.Template(nextRes.GetName(), false)}
+	args = map[string]interface{}{
+		"ctx": ctx, "files": files, "currentFile": currentFile,
+		"currentResult": currentResult, "results": results,
+		"nextFile": nextFile, "nextResult": nextResult,
+	}
+	var template string
+	if !isError(currentResult) || isError(nextResult) {
+		template = currentResult.Template()
+	} else {
+		template = nextResult.Template()
+	}
+	temps = []string{
+		getNav(ctx), "analysis", "pager", template,
+	}
+	return
+}
+
+//highlightArgs loads the file's id which we want to highlight the lines in as well as the lines.
+func highlightArgs(req *http.Request, name string) (lines []int, id bson.ObjectId) {
+	resId, err := util.ReadId(req.FormValue("caller"))
+	if err != nil {
+		return
+	}
+	result, err := db.ToolResult(name, bson.M{project.ID: resId}, bson.M{project.FILEID: 1})
+	if err != nil {
+		util.Log(err)
+		return
+	}
+	id = result.GetFileId()
+	lines, err = GetLines(req)
+	if err != nil {
+		util.Log(err)
+	}
 	return
 }
 
 //displayChart displays a chart for a tool's result.
 func displayChart(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	ctx.Browse.View = "home"
-	ctx.SetResult(req)
 	args, err := chartArgs(req, ctx)
 	if err != nil {
 		ctx.AddMessage("Could not retrieve chart data.", true)
@@ -217,9 +273,14 @@ func displayChart(w http.ResponseWriter, req *http.Request, ctx *Context) error 
 
 //chartArgs loads arguments for displaychart.
 func chartArgs(req *http.Request, ctx *Context) (args map[string]interface{}, err error) {
-	fileName, ferr := GetString(req, "filename")
-	if ferr == nil {
-		ctx.Browse.FileName = fileName
+	ctx.Browse.View = "home"
+	ctx.Browse.ResultName, err = GetString(req, "resultname")
+	if err != nil {
+		return
+	}
+	ctx.Browse.FileName, err = GetString(req, "filename")
+	if err != nil {
+		return
 	}
 	files, err := RetrieveFiles(req, ctx)
 	if err != nil {

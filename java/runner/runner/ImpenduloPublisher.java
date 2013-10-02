@@ -25,9 +25,18 @@
 package runner;
 
 import gov.nasa.jpf.Config;
+import gov.nasa.jpf.Error;
 import gov.nasa.jpf.report.Reporter;
 import gov.nasa.jpf.report.Statistics;
 import gov.nasa.jpf.report.XMLPublisher;
+import gov.nasa.jpf.vm.ElementInfo;
+import gov.nasa.jpf.vm.StackFrame;
+import gov.nasa.jpf.vm.ThreadInfo;
+import gov.nasa.jpf.vm.ThreadList;
+import gov.nasa.jpf.vm.VM;
+
+import java.lang.reflect.Field;
+import java.util.List;
 
 /**
  * This class extends XMLPublisher so that we can easily customise the XML
@@ -61,4 +70,76 @@ public class ImpenduloPublisher extends XMLPublisher {
 		out.println("  </statistics>");
 	}
 
+	@Override
+	protected void publishResult() {
+		List<Error> errors = reporter.getErrors();
+
+		out.println("  <errors>");
+		out.print("    <total>");
+		out.print(errors.size());
+		out.println("</total>");
+		for (int i = 0; i < errors.size(); i++) {
+			boolean foundMatch = false;
+			Error current = errors.get(i);
+			for (int j = i + 1; j < errors.size(); j++) {
+				Error check = errors.get(j);
+				if (current.getDescription().equals(check.getDescription())
+						&& current.getDetails().equals(check.getDetails())) {
+					foundMatch = true;
+					break;
+				}
+			}
+			if (foundMatch) {
+				continue;
+			}
+			out.println("    <error>");
+			out.print("      <property>");
+			out.print(current.getProperty().getClass().getName());
+			out.println("</property>");
+			out.print("      <description>");
+			out.print(current.getProperty().getExplanation());
+			out.println("      </description>");
+			Field threadsField;
+			try {
+				threadsField = current.getClass()
+						.getDeclaredField("threadList");
+				threadsField.setAccessible(true);
+				ThreadInfo[] threads = ((ThreadList) threadsField.get(current))
+						.getThreads();
+				out.println("      <threads>");
+				for (ThreadInfo ti : threads) {
+					out.println("        <thread id=\"" + ti.getId()
+							+ "\" name=\"" + ti.getName() + "\" status=\""
+							+ ti.getStateName() + "\">");
+					// owned locks
+					for (ElementInfo e : ti.getLockedObjects()) {
+						out.println("          <lock-owned object=\"" + e
+								+ "\"/>");
+					}
+					// requested locks
+					ElementInfo ei = ti.getLockObject();
+					if (ei != null) {
+						out.println("          <lock-request object=\"" + ei
+								+ "\"/>");
+					}
+					// stack frames
+					for (StackFrame frame : ti) {
+						if (!frame.isDirectCallFrame()) {
+							out.println("          <frame line=\""
+									+ frame.getLine() + "\">"
+									+ frame.getStackTraceInfo() + "</frame>");
+						}
+					}
+					out.println("        </thread>");
+				}
+				out.println("      </threads>");
+			} catch (NoSuchFieldException | SecurityException
+					| IllegalArgumentException | IllegalAccessException e) {
+				e.printStackTrace();
+			}
+
+			out.println("    </error>");
+		}
+		out.println("  </errors>");
+	}
 }

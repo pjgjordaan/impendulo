@@ -1,6 +1,0 @@
-{{define "currentResult"}}
-{{$size := sum (len .currentlines) -1}}
-<pre class="brush: java; highlight: [{{range $i, $v := .currentlines}}{{$v}}{{if not (equal $i $size)}}, {{end}}{{end}}];" id="currentCode">
-{{.curResult}}
-</pre>
-{{end}}

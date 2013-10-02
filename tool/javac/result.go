@@ -41,17 +41,18 @@ type (
 		Id     bson.ObjectId "_id"
 		FileId bson.ObjectId "fileid"
 		Name   string        "name"
-		Data   *Report       "data"
+		Report *Report       "report"
 		GridFS bool          "gridfs"
 	}
 )
 
-//SetData
-func (this *Result) SetData(data interface{}) {
-	if data == nil {
-		this.Data = nil
+//SetReport is used to change this result's report. This comes in handy
+//when putting data into/getting data out of GridFS
+func (this *Result) SetReport(report tool.Report) {
+	if report == nil {
+		this.Report = nil
 	} else {
-		this.Data = data.(*Report)
+		this.Report = report.(*Report)
 	}
 }
 
@@ -78,7 +79,7 @@ func (this *Result) GetFileId() bson.ObjectId {
 //Summary
 func (this *Result) Summary() *tool.Summary {
 	var body string
-	if this.Data.Success() {
+	if this.Report.Success() {
 		body = "Compiled successfully."
 	} else {
 		body = "No compile."
@@ -89,9 +90,9 @@ func (this *Result) Summary() *tool.Summary {
 	}
 }
 
-//GetData
-func (this *Result) GetData() interface{} {
-	return this.Data
+//GetReport
+func (this *Result) GetReport() tool.Report {
+	return this.Report
 }
 
 //ChartNames
@@ -105,15 +106,19 @@ func (this *Result) ChartNames() []string {
 //ChartVals
 func (this *Result) ChartVals() map[string]float64 {
 	yE, yW := 0.0, 0.0
-	if this.Data.Errors() {
-		yE = float64(this.Data.Count)
-	} else if this.Data.Warnings() {
-		yW = float64(this.Data.Count)
+	if this.Report.Errors() {
+		yE = float64(this.Report.Count)
+	} else if this.Report.Warnings() {
+		yW = float64(this.Report.Count)
 	}
 	return map[string]float64{
 		"Errors":   yE,
 		"Warnings": yW,
 	}
+}
+
+func (this *Result) Template() string {
+	return "javacResult"
 }
 
 //NewResult
@@ -125,6 +130,6 @@ func NewResult(fileId bson.ObjectId, data []byte) *Result {
 		FileId: fileId,
 		Name:   NAME,
 		GridFS: gridFS,
-		Data:   NewReport(id, data),
+		Report: NewReport(id, data),
 	}
 }

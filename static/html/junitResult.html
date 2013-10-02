@@ -1,0 +1,79 @@
+{{define "result"}}
+{{$report := .Report}}
+{{if $report.Success}}
+<h4 class="text-success">Passed all tests.</h4>
+{{else}}
+{{$resultName := .ResultName}}
+{{$fileName := .FileName}}
+{{$current := .Current}}
+{{$next := .Next}}
+<dl class="dl-horizontal">
+  <dt>Tests</dt><dd>{{$report.Tests}}</dd>
+  <dt>Errors</dt><dd>{{$report.Errors}}</dd>
+  <dt>Failures</dt><dd>{{$report.Failures}}</dd>
+  <dt>Time</dt><dd>{{$report.Time}}</dd>
+</dl>
+{{$addr := address $report}}
+<div class="panel-group" id="junitaccordion{{$addr}}">
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <a class="accordion-toggle" data-toggle="collapse"
+	 data-parent="#junitaccordion{{$addr}}" href="#failures{{$addr}}">
+	<h4>Failures<h4>
+      </a>
+    </div>
+    <div id="failures{{$addr}}" class="panel-collapse collapse in">
+      <div class="accordion-inner">
+	<div class="panel-group" id="results{{$addr}}">
+	  {{$results := $report.GetResults 10}}
+	  {{range $results}}
+	  {{$resultAddress := address .}}
+	  {{if .IsFailure}}
+	  <div class="panel panel-default">
+	    <div class="panel-heading">
+	      <a class="accordion-toggle" data-toggle="collapse"
+	  data-parent="#results{{$addr}}" href="#result{{$resultAddress}}">
+		<h5 class="text-center">{{base .Name}}</h5>
+	      </a>
+	    </div>
+	    <div id="result{{$resultAddress}}" class="panel-collapse collapse">
+	      <div class="accordion-inner">
+		<dl class="dl-horizontal">
+		  <dt>Time</dt><dd>{{.Time}}</dd>
+		  <dt>Message</dt><dd>{{.Fail.Message}}</dd>
+		  <dt>Type</dt><dd>{{.Fail.Type}}</dd>
+	  	</dl>
+		<div class="panel-group" id="traceaccordion{{$resultAddress}}">
+		  <div class="panel panel-default">
+		    <div class="panel-heading">
+		      <a class="accordion-toggle"
+			 data-toggle="collapse"
+			 data-parent="#traceaccordion{{$resultAddress}}"
+			 href="#trace{{$resultAddress}}">
+			<h6>Trace</h6>
+		      </a>
+		    </div>
+		    <div id="trace{{$resultAddress}}" class="panel-collapse collapse">
+		      <div class="accordion-inner">
+			<p class="text-error">
+			  {{setBreaks .Fail.Value}}
+			</p>
+		      </div>
+		    </div>
+		  </div>
+		</div>
+	      </div>
+	    </div>
+	  </div>
+	  {{end}}
+	  {{end}}
+	  <a href="displayresult?resultname={{$resultName}}&filename={{$fileName}}&current={{$current}}&next={{$next}}">
+	    More
+	  </a>
+	</div>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}
+{{end}}

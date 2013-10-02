@@ -72,7 +72,7 @@ func javacResult(fileId bson.ObjectId, gridFS bool) *javac.Result {
 		Id:     id,
 		FileId: fileId,
 		Name:   javac.NAME,
-		Data:   javacReport(id),
+		Report: javacReport(id),
 		GridFS: gridFS,
 	}
 }
@@ -83,7 +83,7 @@ func checkstyleResult(fileId bson.ObjectId, gridFS bool) *checkstyle.Result {
 		Id:     id,
 		FileId: fileId,
 		Name:   checkstyle.NAME,
-		Data:   checkstyleReport(id),
+		Report: checkstyleReport(id),
 		GridFS: gridFS,
 	}
 }
@@ -94,7 +94,7 @@ func findbugsResult(fileId bson.ObjectId, gridFS bool) *findbugs.Result {
 		Id:     id,
 		FileId: fileId,
 		Name:   findbugs.NAME,
-		Data:   findbugsReport(id),
+		Report: findbugsReport(id),
 		GridFS: gridFS,
 	}
 }

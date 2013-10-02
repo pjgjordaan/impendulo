@@ -231,9 +231,11 @@ func (this *Report) loadMaps() {
 	for _, cat := range this.Categories {
 		this.CategoryMap[cat.Name] = cat
 	}
+	this.Categories = nil
 	for _, pat := range this.Patterns {
 		this.PatternMap[pat.Type] = pat
 	}
+	this.Patterns = nil
 }
 
 //String

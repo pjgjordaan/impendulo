@@ -41,17 +41,18 @@ type (
 		Id     bson.ObjectId "_id"
 		FileId bson.ObjectId "fileid"
 		Name   string        "name"
-		Data   *Report       "data"
+		Report *Report       "report"
 		GridFS bool          "gridfs"
 	}
 )
 
-//SetData
-func (this *Result) SetData(data interface{}) {
-	if data == nil {
-		this.Data = nil
+//SetReport is used to change this result's report. This comes in handy
+//when putting data into/getting data out of GridFS
+func (this *Result) SetReport(report tool.Report) {
+	if report == nil {
+		this.Report = nil
 	} else {
-		this.Data = data.(*Report)
+		this.Report = report.(*Report)
 	}
 }
 
@@ -77,16 +78,16 @@ func (this *Result) GetFileId() bson.ObjectId {
 
 //Summary consists of the number of errors found by PMD.
 func (this *Result) Summary() *tool.Summary {
-	body := fmt.Sprintf("Errors: %d", this.Data.Errors)
+	body := fmt.Sprintf("Errors: %d", this.Report.Errors)
 	return &tool.Summary{
 		Name: this.GetName(),
 		Body: body,
 	}
 }
 
-//GetData
-func (this *Result) GetData() interface{} {
-	return this.Data
+//GetReport
+func (this *Result) GetReport() tool.Report {
+	return this.Report
 }
 
 //Success
@@ -102,17 +103,21 @@ func (this *Result) ChartNames() []string {
 //ChartVals gets the number of errors found by PMD.
 func (this *Result) ChartVals() map[string]float64 {
 	return map[string]float64{
-		"Errors": float64(this.Data.Errors),
+		"Errors": float64(this.Report.Errors),
 	}
 }
 
 //String
 func (this *Result) String() (ret string) {
-	if this.Data != nil {
-		ret = this.Data.String()
+	if this.Report != nil {
+		ret = this.Report.String()
 	}
 	ret += this.Id.Hex()
 	return
+}
+
+func (this *Result) Template() string {
+	return "pmdResult"
 }
 
 //NewResult creates a new PMD Result.
@@ -126,6 +131,6 @@ func NewResult(fileId bson.ObjectId, data []byte) (res *Result, err error) {
 		Name:   NAME,
 		GridFS: gridFS,
 	}
-	res.Data, err = NewReport(res.Id, data)
+	res.Report, err = NewReport(res.Id, data)
 	return
 }

@@ -64,7 +64,7 @@ func TestResultGridFS(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		res.SetData(report(res.GetName(), res.GetId()))
+		res.SetReport(report(res.GetName(), res.GetId()))
 		if !reflect.DeepEqual(res, dbRes) {
 			t.Error("Results not equivalent", dbRes)
 		}

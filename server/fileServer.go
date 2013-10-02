@@ -145,12 +145,6 @@ func (this *SubmissionHandler) Login() (err error) {
 	if err != nil {
 		return
 	}
-	//Validate user permissions and password
-	if !u.CheckSubmit(this.submission.Mode) {
-		err = fmt.Errorf("User %q has insufficient permissions for %q",
-			this.submission.User, this.submission.Mode)
-		return
-	}
 	if !util.Validate(u.Password, u.Salt, pword) {
 		err = fmt.Errorf("%q used an invalid username or password",
 			this.submission.User)

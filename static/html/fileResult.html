@@ -32,11 +32,11 @@
 <h2 class="text-center"><small>user</small> {{.ctx.Browse.Uid}} <br>
   <small>project</small> {{$project}}</h2>
 <ul class="list-unstyled">
-  {{range .fileinfo}}
+  {{range .fileInfo}}
   <li>
     <h3>{{.Name}}</h3>
     <h5>{{.Count}} Snapshots</h5>
-    <a href="displayresult?filename={{.Name}}&currentIndex=0&nextIndex=1&resultname=Javac">Analysis</a>
+    <a href="displayresult?filename={{.Name}}&current=0&next=1&resultname=Javac">Analysis</a>
     <a href="displaychart?filename={{.Name}}&resultname=Javac">Charts</a>
   </li>
   {{end}}

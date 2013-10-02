@@ -119,7 +119,7 @@ func JPF(proc *Processor) (runnable tool.Tool, err error) {
 func PMD(proc *Processor) (pmdTool tool.Tool, err error) {
 	//First we need the project's PMD rules.
 	rules, err := db.PMDRules(bson.M{project.PROJECT_ID: proc.project.Id}, nil)
-	if err != nil {
+	if err != nil || rules == nil || len(rules.Rules) == 0 {
 		rules, err = pmd.DefaultRules(proc.project.Id)
 		if err != nil {
 			return

@@ -38,7 +38,7 @@ const (
 
 //HasGridFile checks whether this query needs to get data from GridFS
 func HasGridFile(result tool.ToolResult, selector bson.M) bool {
-	return (selector == nil || selector[project.DATA] == 1) && result.OnGridFS()
+	return (selector == nil || selector[project.REPORT] == 1) && result.OnGridFS()
 }
 
 //GridFile loads a GridFile matching id into a provided data structure from GridFS.

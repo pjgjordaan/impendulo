@@ -41,17 +41,18 @@ type (
 		Id     bson.ObjectId "_id"
 		FileId bson.ObjectId "fileid"
 		Name   string        "name"
-		Data   *Report       "data"
+		Report *Report       "report"
 		GridFS bool          "gridfs"
 	}
 )
 
-//SetData
-func (this *Result) SetData(data interface{}) {
-	if data == nil {
-		this.Data = nil
+//SetReport is used to change this result's report. This comes in handy
+//when putting data into/getting data out of GridFS
+func (this *Result) SetReport(report tool.Report) {
+	if report == nil {
+		this.Report = nil
 	} else {
-		this.Data = data.(*Report)
+		this.Report = report.(*Report)
 	}
 }
 
@@ -62,8 +63,8 @@ func (this *Result) OnGridFS() bool {
 
 //String
 func (this *Result) String() string {
-	return fmt.Sprintf("Id: %q; FileId: %q; Name: %s; \nData: %s\n",
-		this.Id, this.FileId, this.Name, this.Data.String())
+	return fmt.Sprintf("Id: %q; FileId: %q; Name: %s; \nReport: %s\n",
+		this.Id, this.FileId, this.Name, this.Report.String())
 }
 
 //GetName
@@ -74,7 +75,7 @@ func (this *Result) GetName() string {
 //Summary is the number of errors Checkstyle found.
 func (this *Result) Summary() *tool.Summary {
 	body := fmt.Sprintf("Errors: %d",
-		this.Data.Errors)
+		this.Report.Errors)
 	return &tool.Summary{
 		Name: this.GetName(),
 		Body: body,
@@ -91,9 +92,9 @@ func (this *Result) GetFileId() bson.ObjectId {
 	return this.FileId
 }
 
-//GetData
-func (this *Result) GetData() interface{} {
-	return this.Data
+//GetReport
+func (this *Result) GetReport() tool.Report {
+	return this.Report
 }
 
 //Success
@@ -111,8 +112,12 @@ func (this *Result) ChartNames() []string {
 //ChartVals
 func (this *Result) ChartVals() map[string]float64 {
 	return map[string]float64{
-		"Errors": float64(this.Data.Errors),
+		"Errors": float64(this.Report.Errors),
 	}
+}
+
+func (this *Result) Template() string {
+	return "checkstyleResult"
 }
 
 //NewResult creates a new Checkstyle Result.
@@ -126,6 +131,6 @@ func NewResult(fileId bson.ObjectId, data []byte) (res *Result, err error) {
 		Name:   NAME,
 		GridFS: gridFS,
 	}
-	res.Data, err = NewReport(res.Id, data)
+	res.Report, err = NewReport(res.Id, data)
 	return
 }

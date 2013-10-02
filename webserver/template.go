@@ -25,11 +25,13 @@
 package webserver
 
 import (
+	"errors"
 	"fmt"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/diff"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/util"
@@ -40,6 +42,11 @@ import (
 	"strings"
 )
 
+type (
+	//Args represents arguments passed to html templates.
+	Args map[string]interface{}
+)
+
 var (
 	funcs = template.FuncMap{
 		"projectName":     projectName,
@@ -47,7 +54,7 @@ var (
 		"setBreaks":       func(s string) template.HTML { return template.HTML(setBreaks(s)) },
 		"address":         func(i interface{}) string { return fmt.Sprint(&i) },
 		"base":            filepath.Base,
-		"shortname":       shortname,
+		"shortName":       shortName,
 		"sum":             sum,
 		"equal":           func(a, b interface{}) bool { return a == b },
 		"langs":           tool.Langs,
@@ -64,6 +71,10 @@ var (
 		"launches":        func(id bson.ObjectId) (int, error) { return fileCount(id, project.LAUNCH) },
 		"html":            func(s string) template.HTML { return template.HTML(s) },
 		"string":          func(b []byte) string { return string(b) },
+		"args":            args,
+		"insert":          insert,
+		"isError":         isError,
+		"hasChart":        func(n string) bool { return n != tool.CODE && n != diff.NAME && n != tool.SUMMARY },
 	}
 	templateDir   string
 	baseTemplates []string
@@ -73,9 +84,48 @@ const (
 	PAGER_SIZE = 10
 )
 
+//isError checks whether a result is an ErrorResult.
+func isError(result tool.DisplayResult) bool {
+	_, ok := result.(*tool.ErrorResult)
+	return ok
+}
+
+//args creates a map from the list of items. Items at even indices in the list
+//must be strings and are keys in the map while the item which immediately follows them
+//will be the value which corresponds to that key in the map. The list must therefore
+//contain an even number of items.
+func args(values ...interface{}) (ret Args, err error) {
+	if len(values)%2 != 0 {
+		err = errors.New("Invalid args call.")
+		return
+	}
+	ret = make(Args, len(values)/2)
+	for i := 0; i < len(values); i += 2 {
+		key, ok := values[i].(string)
+		if !ok {
+			err = errors.New("args keys must be strings.")
+			return
+		}
+		ret[key] = values[i+1]
+	}
+	return
+}
+
+//insert adds a key-value pair to the specified map.
+func insert(args Args, key string, value interface{}) Args {
+	args[key] = value
+	return args
+}
+
 //fileCount
 func fileCount(subId bson.ObjectId, tipe string) (int, error) {
-	return db.Count(db.FILES, bson.M{project.SUBID: subId, project.TYPE: tipe})
+	return db.Count(
+		db.FILES,
+		bson.M{
+			project.SUBID: subId,
+			project.TYPE:  tipe,
+		},
+	)
 }
 
 //slice gets a subslice from files which is at most PAGER_SIZE
@@ -125,8 +175,8 @@ func sum(vals ...int) (ret int) {
 	return
 }
 
-//shortname gets the shortened class name of a Java class.
-func shortname(exec string) string {
+//shortName gets the shortened class name of a Java class.
+func shortName(exec string) string {
 	elements := strings.Split(exec, `.`)
 	num := len(elements)
 	if num < 2 {
@@ -168,10 +218,13 @@ func BaseTemplates() []string {
 //T creates a new HTML template from the given files.
 func T(names ...string) *template.Template {
 	t := template.New("base.html").Funcs(funcs)
-	all := make([]string, len(BaseTemplates())+len(names))
-	end := copy(all, BaseTemplates())
-	for i, name := range names {
-		all[i+end] = filepath.Join(TemplateDir(), name+".html")
+	all := make([]string, len(BaseTemplates()), len(BaseTemplates())+len(names))
+	copy(all, BaseTemplates())
+	for _, name := range names {
+		path := filepath.Join(TemplateDir(), name+".html")
+		if util.Exists(path) {
+			all = append(all, path)
+		}
 	}
 	t = template.Must(t.ParseFiles(all...))
 	return t

@@ -1,0 +1,15 @@
+{{define "result"}}
+{{$report := .Report}}
+{{if $report.Success}}
+<h4 class="text-success">{{$report.Header}}</h4>
+{{else}}
+{{$content := setBreaks (string $report.Data)}}
+{{if $report.Warnings}}
+<h4 class="text-warning">{{$report.Header}}</h4>
+<p class="text-warning">{{$content}}</p>
+{{else}}
+<h4 class="text-danger">{{$report.Header}}</h4>
+<p class="text-danger">{{$content}}</p>
+{{end}}
+{{end}}
+{{end}}

@@ -62,22 +62,35 @@ func GetInt64(req *http.Request, name string) (found int64, err error) {
 //GetLines retrieves an array of size m-n+1 with values
 //starting at n and ending at m where n and m are start and end
 //values retrieved from req.
-func GetLines(req *http.Request, name string) []int {
-	start, err := GetInt(req, name+"focusstart")
+func GetLines(req *http.Request) (lines []int, err error) {
+	lineStr, err := GetString(req, "lines")
 	if err != nil {
-		err = nil
-		start = 0
+		return
 	}
-	end, err := GetInt(req, name+"focusend")
+	locs := strings.Split(lineStr, "-")
+	start, err := strconv.Atoi(locs[0])
 	if err != nil {
-		err = nil
-		end = start
+		return
 	}
-	lines := make([]int, end-start+1)
+	if start < 0 {
+		err = fmt.Errorf("Invalid code highlight start value %d.", start)
+		return
+	}
+	end := start
+	if len(locs) == 2 {
+		end, err = strconv.Atoi(locs[1])
+		if err != nil {
+			return
+		} else if end < start {
+			err = fmt.Errorf("Code highlight end value %d less than start %d.", end, start)
+			return
+		}
+	}
+	lines = make([]int, end-start+1)
 	for i := start; i <= end; i++ {
 		lines[i-start] = i
 	}
-	return lines
+	return
 }
 
 //GetStrings retrieves a string value from a request form.
@@ -117,12 +130,12 @@ func getIndex(req *http.Request, name string, maxSize int) (ret int, err error) 
 
 //getSelected
 func getSelected(req *http.Request, maxSize int) (int, error) {
-	return getIndex(req, "currentIndex", maxSize)
+	return getIndex(req, "current", maxSize)
 }
 
 //getNeighbour
 func getNeighbour(req *http.Request, maxSize int) (int, error) {
-	return getIndex(req, "nextIndex", maxSize)
+	return getIndex(req, "next", maxSize)
 }
 
 //getProjectId

@@ -30,7 +30,6 @@ import (
 	"fmt"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/user"
 	"labix.org/v2/mgo/bson"
 	"net/http"
@@ -139,17 +138,6 @@ func (ctx *Context) Users() ([]*user.User, error) {
 		ctx.users, err = db.Users(nil, user.ID)
 	}
 	return ctx.users, err
-}
-
-//SetResult sets which result the user is currently viewing.
-func (ctx *Context) SetResult(req *http.Request) {
-	name := req.FormValue("resultname")
-	if name != "" {
-		ctx.Browse.ResultName = name
-	}
-	if ctx.Browse.ResultName == "" {
-		ctx.Browse.ResultName = tool.CODE
-	}
 }
 
 //LoadContext loads a context from the session.

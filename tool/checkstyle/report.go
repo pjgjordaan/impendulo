@@ -31,6 +31,7 @@ import (
 	"github.com/godfried/impendulo/tool"
 	"html/template"
 	"labix.org/v2/mgo/bson"
+	"sort"
 	"strings"
 )
 
@@ -45,17 +46,12 @@ type (
 
 	//File represents a file on which checkstyle was run and all errors found in it.
 	File struct {
-		Name   string   `xml:"name,attr"`
-		Errors []*Error `xml:"error"`
+		Name   string `xml:"name,attr"`
+		Errors Errors `xml:"error"`
 	}
 
-	//Problem is a compressed variation of Error.
-	//This is because it stores all errors of the same type in a single struct.
-	//This is done by storing the lines in which they occur in a seperate array.
-	Problem struct {
-		*Error
-		Lines []int
-	}
+	//Errors
+	Errors []*Error
 
 	//Error represents an occurrence of an error detected by checkstyle.
 	//It gives the location of the error, its severity and a thorough description.
@@ -65,6 +61,7 @@ type (
 		Severity string        `xml:"severity,attr"`
 		Message  template.HTML `xml:"message,attr"`
 		Source   string        `xml:"source,attr"`
+		Lines    []int
 	}
 )
 
@@ -82,6 +79,7 @@ func NewReport(id bson.ObjectId, data []byte) (res *Report, err error) {
 	res.Errors = 0
 	for _, f := range res.Files {
 		res.Errors += len(f.Errors)
+		f.CompressErrors()
 	}
 	return
 }
@@ -111,11 +109,6 @@ func (this *Report) String() string {
 		this.Id, this.Version, this.Errors, files)
 }
 
-//ShouldDisplay
-func (this *File) ShouldDisplay() bool {
-	return len(this.Errors) > 0
-}
-
 //String
 func (this *File) String() string {
 	errs := ""
@@ -126,18 +119,35 @@ func (this *File) String() string {
 		this.Name, errs)
 }
 
-//Problems
-func (this *File) Problems() map[string]*Problem {
-	problems := make(map[string]*Problem)
+//CompressErrors packs all Errors of the same
+//type into a single Error by storing their location seperately.
+func (this *File) CompressErrors() {
+	indices := make(map[string]int)
+	compressed := make(Errors, 0, len(this.Errors))
 	for _, e := range this.Errors {
-		p, ok := problems[e.Source]
+		index, ok := indices[e.Source]
 		if !ok {
-			problems[e.Source] = &Problem{e, make([]int, 0, len(this.Errors))}
-			p = problems[e.Source]
+			e.Lines = make([]int, 0, len(this.Errors))
+			compressed = append(compressed, e)
+			index = len(compressed) - 1
+			indices[e.Source] = index
 		}
-		p.Lines = append(p.Lines, e.Line)
+		compressed[index].Lines = append(compressed[index].Lines, e.Line)
 	}
-	return problems
+	sort.Sort(compressed)
+	this.Errors = compressed
+}
+
+func (this Errors) Len() int {
+	return len(this)
+}
+
+func (this Errors) Swap(i, j int) {
+	this[i], this[j] = this[j], this[i]
+}
+
+func (this Errors) Less(i, j int) bool {
+	return this[i].Source < this[j].Source
 }
 
 //String

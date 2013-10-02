@@ -1,0 +1,92 @@
+{{define "result"}}
+{{$report := .Report}}
+{{if $report.Success}}
+<h4 class="text-success">No errors detected</h4>
+{{else}}
+{{$errCount := len $report.Errors}}
+<h4 class="text-danger accordion-text">
+  {{if equal $errCount 1}} 
+  1 Unique Error ({{$report.Total}} Total)
+  {{else}}
+  {{$errCount}} Unique Errors ({{$report.Total}} Total)
+  {{end}}
+</h4>
+{{end}}
+{{$addr := address $report}}
+<div class="panel-group" id="jpfaccordion{{$addr}}">
+  {{if not $report.Success}}
+  {{$fileName := .FileName}}
+  {{$current := .Current}}
+  {{$next := .Next}}
+  {{$id := $report.Id.Hex}}
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <a class="accordion-toggle" data-toggle="collapse"
+	 data-parent="#jpfaccordion{{$addr}}" href="#errors{{$addr}}">
+	<h4>Errors</h4>
+      </a>
+    </div>
+    <div id="errors{{$addr}}" class="panel-collapse collapse in">
+      <div class="accordion-inner">
+	{{range $report.Errors}}
+	{{$details := setBreaks .Details}}
+	<dl class="dl">
+	  <dt>Type</dt><dd>{{.Property}}</dd>
+	  <dt>Details</dt><dd>{{$details}}</dd>
+	</dl>
+	<div class="panel-group" id="threadaccordion{{$addr}}">
+	  <div class="panel panel-default">
+	    <div class="panel-heading">
+	      <a class="accordion-toggle" data-toggle="collapse"
+		 data-parent="#threadaccordion{{$addr}}" href="#threads{{$addr}}">
+		<h5 class="text-center">Threads</h5>
+	      </a>
+	    </div>
+	    <div id="threads{{$addr}}" class="panel-collapse collapse">
+	      <div class="accordion-inner">
+		{{range .Threads}}
+		<h5 class="thread-title"><strong>{{.Name}}</strong> <small>Status</small> {{.Status}}</h5>
+		<p class="thread-content">
+		  {{range .Frames}}
+		  {{if equal .Line -1}}
+		  {{.Details}}
+		  {{else}}
+		  <a href="displayresult?resultname=Code&lines={{.Line}}&caller={{$id}}&filename={{$fileName}}&current={{$current}}&next={{$next}}">
+		    {{.Details}}
+		  </a>
+		  {{end}}
+		  <br>
+		  {{end}}
+		</dl>
+		{{end}}
+	      </div>
+	    </div>
+	  </div>
+	</div>
+	{{end}}
+      </div>
+    </div>
+  </div>
+  {{end}}
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <a class="accordion-toggle" data-toggle="collapse"
+	 data-parent="#jpfaccordion{{$addr}}" href="#statistics{{$addr}}">
+	<h4>Statistics</h4>
+      </a>
+    </div>
+    <div id="statistics{{$addr}}" class="panel-collapse collapse">
+      <div class="accordion-inner">
+	<dl class="dl-horizontal">
+	  <dt>Elapsed time</dt><dd>{{$report.Stats.Time}} ms</dd>
+	  <dt>New States</dt><dd>{{$report.Stats.NewStates}}</dd>
+	  <dt>Visited States</dt><dd>{{$report.Stats.VisitedStates}}</dd>
+	  <dt>BackTracked States</dt><dd>{{$report.Stats.BacktrackedStates}}</dd>
+	  <dt>End States</dt><dd>{{$report.Stats.EndStates}}</dd>
+	  <dt>Memory Usage</dt><dd>{{$report.Stats.Memory}} MB</dd>
+	</dl>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

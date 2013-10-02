@@ -29,6 +29,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processing"
@@ -37,15 +38,18 @@ import (
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/webserver"
+	"labix.org/v2/mgo/bson"
 	"runtime"
+	"strconv"
+	"strings"
 )
 
 //Flag variables for setting ports to listen on, users file to process, mode to run in, etc.
 var (
-	Port, UsersFile, ConfigFile, ErrorLogging, InfoLogging, Backup string
-	Web, Receiver, Processor, Debug                                bool
-	MaxProcs, Timeout                                              int
-	conn                                                           string
+	Port, UsersFile, ConfigFile, ErrorLogging, InfoLogging, Backup, Access string
+	Web, Receiver, Processor, Debug                                        bool
+	MaxProcs, Timeout                                                      int
+	conn                                                                   string
 )
 
 const (
@@ -66,6 +70,12 @@ func init() {
 	flag.StringVar(&Port, "p", "8010", "Specify the port to listen on for files.")
 	flag.StringVar(&UsersFile, "u", "", "Specify a file with new users.")
 	flag.StringVar(&ConfigFile, "c", config.DefaultConfig(), "Specify a configuration file.")
+	flag.StringVar(
+		&Access, "a", "",
+		"Change a user's access permissions."+
+			"Available permissions: NONE=0, STUDENT=1, TEACHER=2, ADMIN=3."+
+			"Example: -a=pieter:2.",
+	)
 }
 
 func main() {
@@ -73,30 +83,35 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	flag.Parse()
 	//Handle setup flags
-	if Backup != "" {
-		err := backupDB()
-		if err != nil {
-			util.Log(err, LOG_IMPENDULO)
-			return
-		}
-	}
-	err := setupConn(Debug)
+	err := backupDB()
 	if err != nil {
-		util.Log(err, LOG_IMPENDULO)
+		fmt.Println(err)
+		return
+	}
+	err = setupConn(Debug)
+	if err != nil {
+		fmt.Println(err)
 		return
 	}
 	defer db.Close()
+	err = modifyAccess()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	err = config.LoadConfigs(ConfigFile)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	err = AddUsers()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	util.SetErrorLogging(ErrorLogging)
 	util.SetInfoLogging(InfoLogging)
 	tool.SetTimeout(Timeout)
-	err = config.LoadConfigs(ConfigFile)
-	if err != nil {
-		util.Log(err, LOG_IMPENDULO)
-		return
-	}
-	if UsersFile != "" {
-		AddUsers()
-	}
 	//Run various processes if specified.
 	if Web {
 		RunWebServer(Receiver || Processor)
@@ -109,8 +124,38 @@ func main() {
 	}
 }
 
+//modifyAccess changes a specified user's access permissions.
+//Modification is specified as username:new_permission_level where
+//new_permission_level can be integers from 0 to 3.
+func modifyAccess() error {
+	if Access == "" {
+		return nil
+	}
+	params := strings.Split(Access, ":")
+	if len(params) != 2 {
+		return fmt.Errorf("Invalid parameters %s for user access modification.", Access)
+	}
+	val, err := strconv.Atoi(params[1])
+	if err != nil {
+		return fmt.Errorf("Invalid user access token %s.", params[1])
+	}
+	newPerm := user.Permission(val)
+	if newPerm < user.NONE || newPerm > user.ADMIN {
+		return fmt.Errorf("Invalid user access token %d.", val)
+	}
+	change := bson.M{db.SET: bson.M{user.ACCESS: newPerm}}
+	err = db.Update(db.USERS, bson.M{user.ID: params[0]}, change)
+	if err != nil {
+		return fmt.Errorf("Could not update user %s's access permissions.", params[0])
+	}
+	return nil
+}
+
 //backupDB backs up the default database to a specified backup.
 func backupDB() (err error) {
+	if Backup == "" {
+		return
+	}
 	err = db.Setup(db.DEFAULT_CONN)
 	if err != nil {
 		return
@@ -132,22 +177,20 @@ func setupConn(debug bool) (err error) {
 }
 
 //AddUsers adds users from a text file to the database.
-func AddUsers() {
+func AddUsers() (err error) {
+	if UsersFile == "" {
+		return
+	}
 	users, err := user.Read(UsersFile)
 	if err != nil {
-		util.Log(err, LOG_IMPENDULO)
 		return
 	}
 	err = db.Setup(conn)
 	if err != nil {
-		util.Log(err, LOG_IMPENDULO)
 		return
 	}
 	err = db.AddUsers(users...)
-	if err != nil {
-		util.Log(err, LOG_IMPENDULO)
-	}
-
+	return
 }
 
 //RunWebServer runs the webserver

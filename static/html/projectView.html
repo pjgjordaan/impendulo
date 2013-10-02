@@ -1,4 +1,4 @@
-{{ define "view" }}
+{{define "view"}}
 <h3>Create Project</h3>
 <form class="form-horizontal" action="addproject" method="post" enctype="multipart/form-data">
   <div class="form-group">
@@ -12,7 +12,7 @@
     <div class="col-lg-3">
       <select class="form-control" name="lang" id="lang">
 	{{$langs := langs}}
-	{{ range $langs}}
+	{{range $langs}}
 	<option value={{.}}>{{.}}</option>
 	{{end}}
       </select>
@@ -32,4 +32,4 @@
     </div>
   </div>
 </form>
-{{ end }}
+{{end}}

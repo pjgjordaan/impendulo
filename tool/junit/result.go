@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	NAME = "JUnit Test"
+	NAME = "JUnit"
 )
 
 type (
@@ -41,17 +41,17 @@ type (
 		Id       bson.ObjectId "_id"
 		FileId   bson.ObjectId "fileid"
 		TestName string        "name"
-		Data     *Report       "data"
+		Report   *Report       "report"
 		GridFS   bool          "gridfs"
 	}
 )
 
-//SetData
-func (this *Result) SetData(data interface{}) {
-	if data == nil {
-		this.Data = nil
+//SetReport
+func (this *Result) SetReport(report tool.Report) {
+	if report == nil {
+		this.Report = nil
 	} else {
-		this.Data = data.(*Report)
+		this.Report = report.(*Report)
 	}
 }
 
@@ -62,8 +62,8 @@ func (this *Result) OnGridFS() bool {
 
 //String
 func (this *Result) String() string {
-	return fmt.Sprintf("Id: %q; FileId: %q; TestName: %s; \n Data: %s",
-		this.Id, this.FileId, this.TestName, this.Data)
+	return fmt.Sprintf("Id: %q; FileId: %q; TestName: %s; \n Report: %s",
+		this.Id, this.FileId, this.TestName, this.Report)
 }
 
 //GetName
@@ -84,21 +84,21 @@ func (this *Result) GetFileId() bson.ObjectId {
 //Summary
 func (this *Result) Summary() *tool.Summary {
 	body := fmt.Sprintf("Tests: %d \n Failures: %d \n Errors: %d \n Time: %f",
-		this.Data.Tests, this.Data.Failures, this.Data.Errors, this.Data.Time)
+		this.Report.Tests, this.Report.Failures, this.Report.Errors, this.Report.Time)
 	return &tool.Summary{
 		Name: this.GetName(),
 		Body: body,
 	}
 }
 
-//GetData
-func (this *Result) GetData() interface{} {
-	return this.Data
+//GetReport
+func (this *Result) GetReport() tool.Report {
+	return this.Report
 }
 
 //Success
 func (this *Result) Success() bool {
-	return this.Data.Success()
+	return this.Report.Success()
 }
 
 //ChartNames
@@ -113,10 +113,14 @@ func (this *Result) ChartNames() []string {
 //ChartVals
 func (this *Result) ChartVals() map[string]float64 {
 	return map[string]float64{
-		"Errors":    float64(this.Data.Errors),
-		"Failures":  float64(this.Data.Failures),
-		"Successes": float64(this.Data.Tests - this.Data.Failures - this.Data.Errors),
+		"Errors":    float64(this.Report.Errors),
+		"Failures":  float64(this.Report.Failures),
+		"Successes": float64(this.Report.Tests - this.Report.Failures - this.Report.Errors),
 	}
+}
+
+func (this *Result) Template() string {
+	return "junitResult"
 }
 
 //NewResult creates a new junit.Result from provided XML data.
@@ -128,6 +132,6 @@ func NewResult(fileId bson.ObjectId, name string, data []byte) (res *Result, err
 		TestName: name,
 		GridFS:   gridFS,
 	}
-	res.Data, err = NewReport(res.Id, data)
+	res.Report, err = NewReport(res.Id, data)
 	return
 }

@@ -1,6 +1,0 @@
-{{define "nextResult" }}
-{{$size := sum (len .nextlines) -1}}
-<pre class="brush: java; highlight: [{{range $i, $v := .nextlines}}{{$v}}{{if not (equal $i $size)}}, {{end}}{{end}}];" id="nextCode">
-{{.nextResult}}
-</pre>
-{{end}}

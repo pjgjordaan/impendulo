@@ -54,7 +54,7 @@ func CheckstyleResult(matcher, selector bson.M) (ret *checkstyle.Result, err err
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
 	} else if HasGridFile(ret, selector) {
-		err = GridFile(ret.GetId(), &ret.Data)
+		err = GridFile(ret.GetId(), &ret.Report)
 	}
 	return
 }
@@ -73,7 +73,7 @@ func PMDResult(matcher, selector bson.M) (ret *pmd.Result, err error) {
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
 	} else if HasGridFile(ret, selector) {
-		err = GridFile(ret.GetId(), &ret.Data)
+		err = GridFile(ret.GetId(), &ret.Report)
 	}
 	return
 }
@@ -92,7 +92,7 @@ func FindbugsResult(matcher, selector bson.M) (ret *findbugs.Result, err error) 
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
 	} else if HasGridFile(ret, selector) {
-		err = GridFile(ret.GetId(), &ret.Data)
+		err = GridFile(ret.GetId(), &ret.Report)
 	}
 	return
 }
@@ -111,7 +111,7 @@ func JPFResult(matcher, selector bson.M) (ret *jpf.Result, err error) {
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
 	} else if HasGridFile(ret, selector) {
-		err = GridFile(ret.GetId(), &ret.Data)
+		err = GridFile(ret.GetId(), &ret.Report)
 	}
 	return
 }
@@ -129,7 +129,7 @@ func JUnitResult(matcher, selector bson.M) (ret *junit.Result, err error) {
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
 	} else if HasGridFile(ret, selector) {
-		err = GridFile(ret.GetId(), &ret.Data)
+		err = GridFile(ret.GetId(), &ret.Report)
 	}
 	return
 }
@@ -148,7 +148,7 @@ func JavacResult(matcher, selector bson.M) (ret *javac.Result, err error) {
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
 	} else if HasGridFile(ret, selector) {
-		err = GridFile(ret.GetId(), &ret.Data)
+		err = GridFile(ret.GetId(), &ret.Report)
 		if err != nil {
 			return
 		}
@@ -236,11 +236,11 @@ func AddResult(res tool.ToolResult) (err error) {
 		return
 	}
 	if res.OnGridFS() {
-		err = AddGridFile(res.GetId(), res.GetData())
+		err = AddGridFile(res.GetId(), res.GetReport())
 		if err != nil {
 			return
 		}
-		res.SetData(nil)
+		res.SetReport(nil)
 	}
 	session, err := Session()
 	if err != nil {
@@ -255,6 +255,7 @@ func AddResult(res tool.ToolResult) (err error) {
 	return
 }
 
+//AddFileResult adds or updates a result in a file's results.
 func AddFileResult(fileId bson.ObjectId, name string, value interface{}) error {
 	matcher := bson.M{project.ID: fileId}
 	change := bson.M{SET: bson.M{project.RESULTS + "." + name: value}}

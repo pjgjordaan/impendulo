@@ -31,6 +31,8 @@ import (
 	"github.com/godfried/impendulo/tool"
 	"html/template"
 	"labix.org/v2/mgo/bson"
+	"sort"
+	"strings"
 )
 
 type (
@@ -45,16 +47,12 @@ type (
 	//File defines a source file analysed by PMD and all of the errors
 	//found in it.
 	File struct {
-		Name       string       `xml:"name,attr"`
-		Violations []*Violation `xml:"violation"`
+		Name       string     `xml:"name,attr"`
+		Violations Violations `xml:"violation"`
 	}
 
-	//Problem is a compressed variation of Violation in that it will store all occurences of the same
-	//Violation as a single Violation and then store each Violation's location.
-	Problem struct {
-		*Violation
-		Starts, Ends []int
-	}
+	//Violations
+	Violations []*Violation
 
 	//Violation describes an error detected by PMD.
 	Violation struct {
@@ -65,6 +63,8 @@ type (
 		Url         template.URL `xml:"externalInfoUrl,attr"`
 		Priority    int          `xml:"priority,attr"`
 		Description string       `xml:",innerxml"`
+		//The locations where the error was detected.
+		Starts, Ends []int
 	}
 )
 
@@ -82,6 +82,7 @@ func NewReport(id bson.ObjectId, data []byte) (res *Report, err error) {
 	res.Errors = 0
 	for _, f := range res.Files {
 		res.Errors += len(f.Violations)
+		f.CompressViolations()
 	}
 	return
 }
@@ -104,42 +105,54 @@ func (this *Report) String() (ret string) {
 	return
 }
 
-//Problems converts a File's Violations to Problems.
-func (this *File) Problems() map[string]*Problem {
-	problems := make(map[string]*Problem)
+//File retrieves a File whose name ends with the provided name.
+func (this *Report) File(name string) *File {
+	for _, f := range this.Files {
+		if strings.HasSuffix(f.Name, name) {
+			return f
+		}
+	}
+	return nil
+}
+
+//CompressViolations packs all Violations of the same
+//type into a single Violation by storing their location seperately.
+func (this *File) CompressViolations() {
+	indices := make(map[string]int)
+	compressed := make(Violations, 0, len(this.Violations))
 	for _, v := range this.Violations {
-		p, ok := problems[v.Rule]
+		index, ok := indices[v.Rule]
 		if !ok {
 			//Only store if the Violation type has not been stored yet.
-			problems[v.Rule] = &Problem{v,
-				make([]int, 0, len(this.Violations)), make([]int, 0, len(this.Violations))}
-			p = problems[v.Rule]
+			v.Starts = make([]int, 0, len(this.Violations))
+			v.Ends = make([]int, 0, len(this.Violations))
+			compressed = append(compressed, v)
+			index = len(compressed) - 1
+			indices[v.Rule] = index
 		}
 		//Add Violation location.
-		p.Starts = append(p.Starts, v.Begin)
-		p.Ends = append(p.Ends, v.End)
+		compressed[index].Starts = append(compressed[index].Starts, v.Begin)
+		compressed[index].Ends = append(compressed[index].Ends, v.End)
 	}
-	return problems
+	sort.Sort(compressed)
+	this.Violations = compressed
 }
 
 //String
 func (this *File) String() (ret string) {
 	ret = fmt.Sprintf("File{ Name: %s\n.", this.Name)
-	if this.Violations != nil {
-		ret += "Violations: \n"
-		for _, v := range this.Violations {
-			ret += v.String()
-		}
-	}
 	ret += "}\n"
 	return
 }
 
-//String
-func (this *Violation) String() (ret string) {
-	ret = fmt.Sprintf("Violation{ Begin: %d; End: %d; Rule: %s; RuleSet: %s; "+
-		"Priority: %d; Description: %s}\n",
-		this.Begin, this.End, this.Rule, this.RuleSet,
-		this.Priority, this.Description)
-	return
+func (this Violations) Len() int {
+	return len(this)
+}
+
+func (this Violations) Swap(i, j int) {
+	this[i], this[j] = this[j], this[i]
+}
+
+func (this Violations) Less(i, j int) bool {
+	return this[i].Rule < this[j].Rule
 }

@@ -40,18 +40,18 @@ type (
 		Id     bson.ObjectId "_id"
 		FileId bson.ObjectId "fileid"
 		Name   string        "name"
-		Data   *Report       "data"
+		Report *Report       "report"
 		GridFS bool          "gridfs"
 	}
 )
 
-//SetData is used to change this result's data. This comes in handy
+//SetReport is used to change this result's report. This comes in handy
 //when putting data into/getting data out of GridFS
-func (this *Result) SetData(data interface{}) {
-	if data == nil {
-		this.Data = nil
+func (this *Result) SetReport(report tool.Report) {
+	if report == nil {
+		this.Report = nil
 	} else {
-		this.Data = data.(*Report)
+		this.Report = report.(*Report)
 	}
 }
 
@@ -63,8 +63,8 @@ func (this *Result) OnGridFS() bool {
 
 //String allows us to print this struct nicely.
 func (this *Result) String() string {
-	return fmt.Sprintf("Id: %q; FileId: %q; Name: %s; \nData: %s\n",
-		this.Id, this.FileId, this.Name, this.Data)
+	return fmt.Sprintf("Id: %q; FileId: %q; Name: %s; \nReport: %s\n",
+		this.Id, this.FileId, this.Name, this.Report)
 }
 
 //GetName
@@ -84,8 +84,8 @@ func (this *Result) GetFileId() bson.ObjectId {
 
 //Summary is the errors found by JPF.
 func (this *Result) Summary() *tool.Summary {
-	body := fmt.Sprintf("Result: %s \n Errors: %d",
-		this.Data.Findings.Description, len(this.Data.Findings.Errors))
+	body := fmt.Sprintf("Errors: %d",
+		this.Report.ErrorCount())
 	return &tool.Summary{
 		Name: this.GetName(),
 		Body: body,
@@ -94,26 +94,32 @@ func (this *Result) Summary() *tool.Summary {
 
 //Success is true if no errors were found.
 func (this *Result) Success() bool {
-	return len(this.Data.Findings.Errors) == 0
+	return this.Report.Success()
 }
 
-//GetData
-func (this *Result) GetData() interface{} {
-	return this.Data
+//GetReport
+func (this *Result) GetReport() tool.Report {
+	return this.Report
 }
 
 //ChartNames
 func (this *Result) ChartNames() []string {
 	return []string{
-		"Errors",
+		"Total Errors",
+		"Unique Errors",
 	}
 }
 
 //ChartVals
 func (this *Result) ChartVals() map[string]float64 {
 	return map[string]float64{
-		"Errors": float64(this.Data.Errors()),
+		"Total Errors":  float64(this.Report.Total),
+		"Unique Errors": float64(this.Report.ErrorCount()),
 	}
+}
+
+func (this *Result) Template() string {
+	return "jpfResult"
 }
 
 //NewResult creates a new JPF result. The data []byte is in XML format and
@@ -125,6 +131,6 @@ func NewResult(fileId bson.ObjectId, data []byte) (res *Result, err error) {
 		Name:   NAME,
 		GridFS: len(data) > tool.MAX_SIZE,
 	}
-	res.Data, err = NewReport(res.Id, data)
+	res.Report, err = NewReport(res.Id, data)
 	return
 }

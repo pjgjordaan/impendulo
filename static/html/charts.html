@@ -38,7 +38,7 @@
     <ul class="dropdown-menu" role="menu">
       {{range $results}}  
       <li>
-	<a href="displaychart?resultname={{.}}">
+	<a href="displaychart?resultname={{.}}&filename={{$fileName}}">
 	  {{.}}
 	</a>
       </li>
@@ -64,6 +64,6 @@
 <script language="javascript" src="/static/js/d3.v3.min.js"></script>
 <script language="javascript" src="/static/js/charts.js"></script> 
 <script>
-  timeChart({{.chart}});
+  timeChart({{$fileName}}, {{$resultName}}, {{.chart}});
 </script>
 {{end}}

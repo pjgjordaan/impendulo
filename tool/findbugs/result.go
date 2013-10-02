@@ -41,17 +41,18 @@ type (
 		Id     bson.ObjectId "_id"
 		FileId bson.ObjectId "fileid"
 		Name   string        "name"
-		Data   *Report       "data"
+		Report *Report       "report"
 		GridFS bool          "gridfs"
 	}
 )
 
-//SetData
-func (this *Result) SetData(data interface{}) {
-	if data == nil {
-		this.Data = nil
+//SetReport is used to change this result's report. This comes in handy
+//when putting data into/getting data out of GridFS
+func (this *Result) SetReport(report tool.Report) {
+	if report == nil {
+		this.Report = nil
 	} else {
-		this.Data = data.(*Report)
+		this.Report = report.(*Report)
 	}
 }
 
@@ -62,8 +63,8 @@ func (this *Result) OnGridFS() bool {
 
 //String
 func (this *Result) String() string {
-	return fmt.Sprintf("Id: %q; FileId: %q; TestName: %s; \n Data: %s",
-		this.Id, this.FileId, this.Name, this.Data)
+	return fmt.Sprintf("Id: %q; FileId: %q; TestName: %s; \n Report: %s",
+		this.Id, this.FileId, this.Name, this.Report)
 }
 
 //GetName
@@ -83,16 +84,16 @@ func (this *Result) GetFileId() bson.ObjectId {
 
 //Summary
 func (this *Result) Summary() *tool.Summary {
-	body := fmt.Sprintf("Bugs: %d", this.Data.Summary.BugCount)
+	body := fmt.Sprintf("Bugs: %d", this.Report.Summary.BugCount)
 	return &tool.Summary{
 		Name: this.GetName(),
 		Body: body,
 	}
 }
 
-//GetData
-func (this *Result) GetData() interface{} {
-	return this.Data
+//GetReport
+func (this *Result) GetReport() tool.Report {
+	return this.Report
 }
 
 //ChartNames
@@ -108,11 +109,15 @@ func (this *Result) ChartNames() []string {
 //ChartVals
 func (this *Result) ChartVals() map[string]float64 {
 	return map[string]float64{
-		"All":        float64(this.Data.Summary.BugCount),
-		"Priority 1": float64(this.Data.Summary.Priority1),
-		"Priority 2": float64(this.Data.Summary.Priority2),
-		"Priority 3": float64(this.Data.Summary.Priority3),
+		"All":        float64(this.Report.Summary.BugCount),
+		"Priority 1": float64(this.Report.Summary.Priority1),
+		"Priority 2": float64(this.Report.Summary.Priority2),
+		"Priority 3": float64(this.Report.Summary.Priority3),
 	}
+}
+
+func (this *Result) Template() string {
+	return "findbugsResult"
 }
 
 //NewResult
@@ -124,6 +129,6 @@ func NewResult(fileId bson.ObjectId, data []byte) (res *Result, err error) {
 		Name:   NAME,
 		GridFS: gridFS,
 	}
-	res.Data, err = NewReport(res.Id, data)
+	res.Report, err = NewReport(res.Id, data)
 	return
 }

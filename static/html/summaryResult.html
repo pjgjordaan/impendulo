@@ -1,8 +1,7 @@
-{{define "nextResult"}}
-{{$result := .nextResult}}
-{{$address := address $result}}
+{{define "result"}}
+{{$address := address .}}
 <div class="panel-group" id="summaryaccordion{{$address}}">
-  {{range $result}}
+  {{range .Result}}
   <div class="panel panel-default">
     <div class="panel-heading">
       <a class="accordion-toggle" data-toggle="collapse"

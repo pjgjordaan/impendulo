@@ -98,8 +98,10 @@ func ChangeSkeleton(req *http.Request, ctx *Context) (msg string, err error) {
 		msg = "Could not read skeleton file."
 		return
 	}
-	err = db.Update(db.PROJECTS, bson.M{project.ID: projectId},
-		bson.M{db.SET: bson.M{project.SKELETON: data}})
+	err = db.Update(
+		db.PROJECTS, bson.M{project.ID: projectId},
+		bson.M{db.SET: bson.M{project.SKELETON: data}},
+	)
 	if err != nil {
 		msg = "Could not update skeleton file."
 	} else {
@@ -165,8 +167,10 @@ func RetrieveFileInfo(req *http.Request, ctx *Context) (ret []*db.FileInfo, err 
 	if err != nil {
 		return
 	}
-	sub, err := db.Submission(bson.M{project.ID: ctx.Browse.Sid},
-		bson.M{project.PROJECT_ID: 1, project.USER: 1})
+	sub, err := db.Submission(
+		bson.M{project.ID: ctx.Browse.Sid},
+		bson.M{project.PROJECT_ID: 1, project.USER: 1},
+	)
 	if err != nil {
 		return
 	}
@@ -212,12 +216,16 @@ func RetrieveSubmissions(req *http.Request, ctx *Context) (subs []*project.Submi
 		ctx.Browse.Pid = pid
 		ctx.Browse.IsUser = false
 		subs, err = db.Submissions(
-			bson.M{project.PROJECT_ID: pid}, nil, "-"+project.TIME)
+			bson.M{project.PROJECT_ID: pid},
+			nil, "-"+project.TIME,
+		)
 	case "user":
 		ctx.Browse.Uid = idStr
 		ctx.Browse.IsUser = true
 		subs, err = db.Submissions(
-			bson.M{project.USER: ctx.Browse.Uid}, nil, "-"+project.TIME)
+			bson.M{project.USER: ctx.Browse.Uid},
+			nil, "-"+project.TIME,
+		)
 	default:
 		err = fmt.Errorf("Unknown request type %q", tipe)
 	}

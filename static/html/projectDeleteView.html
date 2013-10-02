@@ -1,11 +1,11 @@
-{{ define "view" }}
+{{define "view"}}
 <h3>Delete Projects</h3>
 <form class="form-horizontal" action="deleteproject" method="post">
   <div class="form-group">
     <label class="col-lg-2 control-label" for="project">Project</label>
     <div class="col-lg-3">
       <select class="form-control" name="project" id="project">
-	{{ range .ctx.Projects}}
+	{{range .ctx.Projects}}
 	<option value={{.Id.Hex}}>{{.Name}}</option>
 	{{end}}
       </select>
@@ -19,4 +19,4 @@
     </div>
   </div>
 </form>
-{{ end }}
+{{end}}

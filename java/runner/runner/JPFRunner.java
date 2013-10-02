@@ -133,8 +133,8 @@ public class JPFRunner {
 		config.put("report.xml.class", "runner.ImpenduloPublisher");
 		config.put("report.xml.start", "jpf,sut");
 		config.put("report.xml.transition", "");
-		config.put("report.xml.constraint", "constraint,snapshot");
-		config.put("report.xml.property_violation", "error,snapshot");
+		config.put("report.xml.constraint", "constraint");
+		config.put("report.xml.property_violation", "error");
 		config.put("report.xml.show_steps", "true");
 		config.put("report.xml.show_method", "true");
 		config.put("report.xml.show_code", "true");

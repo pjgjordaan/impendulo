@@ -38,6 +38,7 @@ import (
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/tool/pmd"
+	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"net/http"
@@ -62,13 +63,13 @@ func toolTemplate(tool string) string {
 }
 
 //toolPermissions
-func toolPermissions() map[string]Perm {
-	return map[string]Perm{
-		"createjpf":        IN,
-		"createpmd":        IN,
-		"createjunit":      IN,
-		"createfindbugs":   IN,
-		"createcheckstyle": IN,
+func toolPermissions() map[string]user.Permission {
+	return map[string]user.Permission{
+		"createjpf":        user.TEACHER,
+		"createpmd":        user.TEACHER,
+		"createjunit":      user.TEACHER,
+		"createfindbugs":   user.TEACHER,
+		"createcheckstyle": user.TEACHER,
 	}
 }
 
@@ -85,7 +86,10 @@ func toolPosters() map[string]Poster {
 
 //tools
 func tools() []string {
-	return []string{jpf.NAME, junit.NAME, pmd.NAME, findbugs.NAME, checkstyle.NAME, javac.NAME}
+	return []string{
+		jpf.NAME, junit.NAME, pmd.NAME,
+		findbugs.NAME, checkstyle.NAME, javac.NAME,
+	}
 }
 
 //CreateCheckstyle
@@ -127,8 +131,10 @@ func CreateJUnit(req *http.Request, ctx *Context) (msg string, err error) {
 	}
 	//Read package name from file.
 	pkg := util.GetPackage(bytes.NewReader(testBytes))
-	test := junit.NewTest(projectId, testName, username,
-		pkg, testBytes, dataBytes)
+	test := junit.NewTest(
+		projectId, testName, username,
+		pkg, testBytes, dataBytes,
+	)
 	err = db.AddJUnitTest(test)
 	return
 }
@@ -165,11 +171,11 @@ func CreateJPF(req *http.Request, ctx *Context) (msg string, err error) {
 	}
 	vals := make(map[string][]string)
 	//Read configured listeners and search.
-	listeners, err := GetStrings(req, "addedL")
+	listeners, err := GetStrings(req, "addedlisteners")
 	if err == nil {
 		vals["listener"] = listeners
 	}
-	search, err := GetString(req, "addedS")
+	search, err := GetString(req, "addedsearches")
 	if err == nil {
 		vals["search.class"] = []string{search}
 	}
@@ -272,7 +278,10 @@ func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
 		msg = "Could not read tool."
 		return
 	}
-	submissions, err := db.Submissions(bson.M{project.PROJECT_ID: projectId}, bson.M{project.ID: 1})
+	submissions, err := db.Submissions(
+		bson.M{project.PROJECT_ID: projectId},
+		bson.M{project.ID: 1},
+	)
 	if err != nil {
 		msg = "Could not retrieve submissions."
 		return
@@ -284,7 +293,10 @@ func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
 		runAll = true
 	}
 	for _, submission := range submissions {
-		files, err := db.Files(bson.M{project.SUBID: submission.Id}, bson.M{project.DATA: 0})
+		files, err := db.Files(
+			bson.M{project.SUBID: submission.Id},
+			bson.M{project.DATA: 0},
+		)
 		if err != nil {
 			util.Log(err)
 			continue
@@ -295,17 +307,11 @@ func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
 			continue
 		}
 		for _, file := range files {
-			if resultId, ok := file.Results[tool]; ok && runAll {
-				//Delete results if we want to rerun the tool on all files.
-				delete(file.Results, tool)
-				change := bson.M{db.SET: bson.M{project.RESULTS: file.Results}}
-				err = db.Update(db.FILES, bson.M{project.ID: file.Id}, change)
-				if err != nil {
-					util.Log(err)
-				}
-				err = db.RemoveById(db.RESULTS, resultId)
-				if err != nil {
-					util.Log(resultId, err)
+			if runAll {
+				if tool == "all" {
+					removeAll(file)
+				} else {
+					removeOne(file, tool)
 				}
 
 			}
@@ -323,8 +329,58 @@ func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
 	return
 }
 
-//GetResultData retrieves a DisplayResult for a given file and result name.
-func GetResultData(resultName string, fileId bson.ObjectId) (res tool.DisplayResult, err error) {
+//removeAll removes all of the specified file's results from the db.
+func removeAll(file *project.File) {
+	for _, resId := range file.Results {
+		id, ok := resId.(bson.ObjectId)
+		if !ok {
+			continue
+		}
+		err := db.RemoveById(db.RESULTS, id)
+		if err != nil {
+			util.Log(err)
+		}
+	}
+	change := bson.M{
+		db.SET: bson.M{
+			project.RESULTS: bson.M{},
+		},
+	}
+	err := db.Update(db.FILES, bson.M{project.ID: file.Id}, change)
+	if err != nil {
+		util.Log(err)
+	}
+}
+
+//removeOne removes the specified file result from the db.
+func removeOne(file *project.File, name string) {
+	resultVal, ok := file.Results[name]
+	if !ok {
+		return
+	}
+	delete(file.Results, name)
+	change := bson.M{
+		db.SET: bson.M{
+			project.RESULTS: file.Results,
+		},
+	}
+	err := db.Update(db.FILES, bson.M{project.ID: file.Id}, change)
+	if err != nil {
+		util.Log(err)
+	}
+	resultId, ok := resultVal.(bson.ObjectId)
+	if !ok {
+		return
+	}
+	err = db.RemoveById(db.RESULTS, resultId)
+	if err != nil {
+		util.Log(err)
+	}
+	return
+}
+
+//GetResult retrieves a DisplayResult for a given file and result name.
+func GetResult(resultName string, fileId bson.ObjectId) (res tool.DisplayResult, err error) {
 	var file *project.File
 	matcher := bson.M{project.ID: fileId}
 	file, err = db.File(matcher, nil)
@@ -335,14 +391,17 @@ func GetResultData(resultName string, fileId bson.ObjectId) (res tool.DisplayRes
 	case tool.CODE:
 		res = tool.NewCodeResult(file.Data)
 	case diff.NAME:
-		res = diff.NewDiffResult(file)
+		res = diff.NewResult(file)
 	case tool.SUMMARY:
 		res = tool.NewSummaryResult()
 		//Load summary for each available result.
 		for name, resid := range file.Results {
 			var currentRes tool.ToolResult
-			currentRes, err = db.ToolResult(name,
-				bson.M{project.ID: resid}, nil)
+			currentRes, err = db.ToolResult(
+				name, bson.M{
+					project.ID: resid,
+				}, nil,
+			)
 			if err != nil {
 				return
 			}
@@ -351,30 +410,21 @@ func GetResultData(resultName string, fileId bson.ObjectId) (res tool.DisplayRes
 	default:
 		ival, ok := file.Results[resultName]
 		if !ok {
-			res = tool.NewErrorResult(
-				fmt.Errorf("No result available for %v.", resultName))
+			res = tool.NewErrorResult(tool.NORESULT, resultName)
 			return
 		}
 		switch val := ival.(type) {
 		case bson.ObjectId:
 			//Retrieve result from the db.
 			matcher = bson.M{project.ID: val}
-			res, err = db.DisplayResult(resultName,
-				matcher, nil)
+			res, err = db.DisplayResult(
+				resultName, matcher, nil,
+			)
 		case string:
 			//Error, so create new error result.
-			switch val {
-			case tool.TIMEOUT:
-				res = new(tool.TimeoutResult)
-			case tool.NORESULT:
-				res = new(tool.NoResult)
-			default:
-				res = tool.NewErrorResult(
-					fmt.Errorf("No result available for %v.", resultName))
-			}
+			res = tool.NewErrorResult(val, resultName)
 		default:
-			res = tool.NewErrorResult(
-				fmt.Errorf("No result available for %v.", resultName))
+			res = tool.NewErrorResult(tool.NORESULT, resultName)
 		}
 	}
 	return

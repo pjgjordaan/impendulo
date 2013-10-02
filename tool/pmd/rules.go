@@ -26,6 +26,7 @@ package pmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
@@ -63,6 +64,15 @@ func (this *Rules) RuleArray() []string {
 		i++
 	}
 	return ret
+}
+
+//String
+func (this *Rules) String() (ret string) {
+	ret = "Rules:"
+	for k, v := range this.Rules {
+		ret += fmt.Sprintf("\n\tRule %s Used %t", k, v)
+	}
+	return
 }
 
 //NewRules creates a bew Rules struct from a set of rules for a given project.

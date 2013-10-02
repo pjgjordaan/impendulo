@@ -1,0 +1,44 @@
+{{define "result"}}
+{{$report := .Report}}
+{{if $report.Success}}
+<h4 class="text-success">No problems detected.</h4>
+{{else}}
+{{$fileName := .FileName}}
+{{$current := .Current}}
+{{$next := .Next}}
+{{$file := $report.File $fileName}}
+{{$id := $report.Id.Hex}}
+<h4 class="text-danger">{{$report.Errors}} problems detected.</h4>
+{{$addr := address $report}}
+<div class="panel-group" id="checkstyleaccordion{{$addr}}">
+  {{range $file.Errors}}
+  {{$errorAddress := address .}}
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <a class="accordion-toggle" data-toggle="collapse"
+	 data-parent="#checkstyleaccordion{{$addr}}"
+	 href="#error{{$errorAddress}}">
+	<h5 class="text-center">{{shortName .Source}}</h5>
+      </a>
+    </div>
+    <div id="error{{$errorAddress}}" class="panel-collapse collapse">
+      <div class="accordion-inner">
+	<dl class="dl-horizontal">
+	  <dt>Locations</dt>
+	  <dd>
+	    {{range .Lines}}
+	    <a href="displayresult?resultname=Code&lines={{.}}&caller={{$id}}&filename={{$fileName}}&current={{$current}}&next={{$next}}">
+	      Line {{.}};
+	    </a>
+	    {{end}}
+	  </dd>	
+	  <dt>Severity</dt><dd>{{.Severity}}</dd>
+	  <dt>Description</dt><dd>{{.Message}}</dd>
+	</dl>
+      </div>
+    </div>
+  </div>
+  {{end}}
+</div>
+{{end}}
+{{end}}

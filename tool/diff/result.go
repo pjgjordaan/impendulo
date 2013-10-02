@@ -27,6 +27,7 @@ package diff
 
 import (
 	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"html/template"
 	"strings"
@@ -37,27 +38,27 @@ const (
 )
 
 type (
-	//DiffResult is a tool.DisplayResult used to display a diff between two files.
-	DiffResult struct {
+	//Result is a tool.DisplayResult used to display a diff between two files.
+	Result struct {
 		header, data string
 	}
 )
 
-//NewDiffResult creates anew DiffResult with a single file.
-//A DiffResult is actually only made up of a single file's source code
+//NewResult creates a new Result with a single file.
+//A Result is actually only made up of a single file's source code
 //and never contains a diff. This is calculated seperately.
-func NewDiffResult(file *project.File) *DiffResult {
+func NewResult(file *project.File) *Result {
 	header := file.Name + " " + util.Date(file.Time)
 	data := strings.TrimSpace(string(file.Data))
-	return &DiffResult{
+	return &Result{
 		header: header,
 		data:   data,
 	}
 }
 
-//Create calculates the diff of two DiffResults' code, converts it to HTML
+//Create calculates the diff of two Results' code, converts it to HTML
 //and returns this.
-func (this *DiffResult) Create(next *DiffResult) (ret template.HTML, err error) {
+func (this *Result) Create(next *Result) (ret template.HTML, err error) {
 	diff, err := Diff(this.data, next.data)
 	if err != nil {
 		return
@@ -69,11 +70,15 @@ func (this *DiffResult) Create(next *DiffResult) (ret template.HTML, err error) 
 }
 
 //GetName
-func (this *DiffResult) GetName() string {
+func (this *Result) GetName() string {
 	return NAME
 }
 
-//GetData
-func (this *DiffResult) GetData() interface{} {
+//GetReport
+func (this *Result) GetReport() tool.Report {
 	return this
+}
+
+func (this *Result) Template() string {
+	return "diffResult"
 }

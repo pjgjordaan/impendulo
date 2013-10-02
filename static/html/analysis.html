@@ -1,8 +1,8 @@
 {{define "view"}}
-{{$curFile := .curFile}}
+{{$currentFile := .currentFile}}
 {{$nextFile := .nextFile}}
 {{$resultName := .ctx.Browse.ResultName}}
-{{$fileName := $curFile.Name}}
+{{$fileName := $currentFile.Name}}
 {{$results := .results}}
 {{$selected := .ctx.Browse.Selected}}
 {{$neighbour := .ctx.Browse.Next}}
@@ -43,7 +43,7 @@
     <ul class="dropdown-menu" role="menu">
       {{range $results}}  
       <li>
-	<a href="displayresult?resultname={{.}}">
+	<a href="displayresult?resultname={{.}}&filename={{$fileName}}&current={{$selected}}&next={{$neighbour}}">
 	  {{.}}
 	</a>
       </li>
@@ -54,13 +54,15 @@
 <h4 class="text-center">
   <small>user</small> {{.ctx.Browse.Uid}} 
   <small>project</small> {{$project}}
-  <small>file</small> {{ $fileName}}   
+  <small>file</small> {{$fileName}}   
 </h4>
 <h3 class="text-center">
   <small>tool</small> {{$resultName}}
-    <a  class="btn btn-primary" href="displaychart?filename={{$fileName}}&resultname={{$resultName}}">
-      Chart
-    </a>
+  {{if (hasChart $resultName)}}
+  <a  class="btn btn-primary" href="displaychart?filename={{$fileName}}&resultname={{$resultName}}">
+    Chart
+  </a>
+  {{end}}
 </h3>
 <div class="row">
   <div class="col-md-8">
@@ -69,11 +71,11 @@
   <div class="col-md-4">
     <form role="form" class="form-padded form-inline" action="displayresult" method="get">
       <div class="form-group">
-	<label class="sr-only" for="currentIndex">First File</label>
-	<select class="form-control" name="currentIndex" id="currentIndex">
+	<label class="sr-only" for="current">First File</label>
+	<select class="form-control" name="current" id="current">
 	  {{range $index, $file := .files}} 
 	  {{$dispIndex := sum $index 1}}
-	  {{if $curFile.Same $file}}
+	  {{if $currentFile.Same $file}}
 	  <option selected value="{{$index}}">{{$dispIndex}}</option>
 	  {{else}}
 	  <option value="{{$index}}">{{$dispIndex}}</option>
@@ -82,8 +84,8 @@
 	</select>
       </div>
       <div class="form-group">
-	<label class="sr-only" for="nextIndex">Second File</label>
-	<select class="form-control" name="nextIndex" id="nextIndex">
+	<label class="sr-only" for="next">Second File</label>
+	<select class="form-control" name="next" id="next">
 	  {{range $index, $file := .files}} 
 	  {{$dispIndex := sum $index 1}}
 	  {{if equal $neighbour $index}}
@@ -106,7 +108,7 @@
       <dt>File Number</dt>
       <dd>{{sum $selected 1}}</dd>
       <dt>Date</dt>
-      <dd>{{date $curFile.Time}}</dd>
+      <dd>{{date $currentFile.Time}}</dd>
     </dl>
   </div>
   <div class="col-md-6">
@@ -119,15 +121,26 @@
   </div>
 </div>
 {{if (equal $resultName "Diff")}}
-{{$data := .curResult.Create .nextResult}}
-{{template "currentResult"  $data}}
+{{$data := .currentResult.Create .nextResult}}
+{{template "result"  $data}}
 {{else}}
 <div class="row">
+  {{$args := args "FileName" .ctx.Browse.FileName "ResultName" .ctx.Browse.ResultName "Current" .ctx.Browse.Selected "Next" .ctx.Browse.Next}}
   <div class="col-md-6">
-    {{template "currentResult"  .}}
+    {{if isError .currentResult}}
+    <p class="text-danger">{{.currentResult.GetReport}}</p>
+    {{else}}
+    {{$args := insert $args "Report" .currentResult.GetReport}}
+    {{template "result"  $args}}
+    {{end}}
   </div>
   <div class="col-md-6">
-    {{template "nextResult"  .}}
+    {{if isError .nextResult}}
+    <p class="text-danger">{{.nextResult.GetReport}}</p>
+    {{else}}
+    {{$args := insert $args "Report" .nextResult.GetReport}}
+    {{template "result"  $args}}
+    {{end}}
   </div>
 </div>
 {{if (equal $resultName "Code")}}
