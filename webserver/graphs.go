@@ -44,6 +44,7 @@ func LoadChart(result string, files []*project.File) (chart tool.Chart) {
 }
 
 func loadChart(name string, files []*project.File) (chart tool.Chart) {
+	chart = tool.NewChart()
 	for _, f := range files {
 		file, err := db.File(bson.M{project.ID: f.Id}, bson.M{project.TIME: 1, project.RESULTS: 1})
 		if err != nil {
@@ -54,9 +55,6 @@ func loadChart(name string, files []*project.File) (chart tool.Chart) {
 		if err != nil {
 			util.Log(err, file.Results[name])
 			continue
-		}
-		if chart == nil {
-			chart = tool.NewChart(result.ChartNames())
 		}
 		chart.Add(float64(file.Time), result.ChartVals())
 	}

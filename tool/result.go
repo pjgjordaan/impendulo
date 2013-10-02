@@ -41,7 +41,9 @@ const (
 
 type (
 	//Chart represents the x and y values used to draw the charts.
-	Chart map[string][]float64
+	Chart struct {
+		Data []map[string]interface{}
+	}
 
 	//ChartResult is used to display result data in a chart.
 	ChartResult interface {
@@ -128,20 +130,19 @@ type (
 )
 
 //Add inserts new coordinates into data used to display a chart.
-func (chart Chart) Add(x float64, ys map[string]float64) {
-	chart["x"] = append(chart["x"], x)
+func (chart *Chart) Add(x float64, ys map[string]float64) {
 	for name, val := range ys {
-		chart[name] = append(chart[name], val)
+		point := map[string]interface{}{"x": x, "y": val, "name": name}
+		chart.Data = append(chart.Data, point)
 	}
 }
 
 //NewChart initialises new chart data.
-func NewChart(names []string) (chart Chart) {
-	chart = make(Chart)
-	for _, name := range names {
-		chart[name] = make([]float64, 0, 100)
-	}
-	chart["x"] = make([]float64, 0, 100)
+func NewChart() (chart Chart) {
+	chart = Chart{Data: make([]map[string]interface{}, 0, 1000)}
+	/*	for _, name := range names {
+		chart[name] = make([]Point, 0, 100)
+	}*/
 	return
 }
 

@@ -128,13 +128,13 @@ func getIndex(req *http.Request, name string, maxSize int) (ret int, err error) 
 	return
 }
 
-//getSelected
-func getSelected(req *http.Request, maxSize int) (int, error) {
+//getCurrent
+func getCurrent(req *http.Request, maxSize int) (int, error) {
 	return getIndex(req, "current", maxSize)
 }
 
-//getNeighbour
-func getNeighbour(req *http.Request, maxSize int) (int, error) {
+//getNext
+func getNext(req *http.Request, maxSize int) (int, error) {
 	return getIndex(req, "next", maxSize)
 }
 

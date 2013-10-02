@@ -34,6 +34,7 @@ import (
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"net/http"
+	"strconv"
 )
 
 var (
@@ -181,15 +182,31 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 	if err != nil {
 		return
 	}
-	ctx.Browse.Next, err = getNeighbour(req, len(files)-1)
+	ctx.Browse.Current, err = getCurrent(req, len(files)-1)
 	if err != nil {
-		return
+		time, terr := strconv.ParseInt(req.FormValue("time"), 10, 64)
+		if terr != nil {
+			return
+		}
+		found := false
+		for index, file := range files {
+			if file.Time == time {
+				ctx.Browse.Current = index
+				ctx.Browse.Next = index + 1
+				found = true
+				break
+			}
+		}
+		if !found {
+			return
+		}
+	} else {
+		ctx.Browse.Next, err = getNext(req, len(files)-1)
+		if err != nil {
+			return
+		}
 	}
-	ctx.Browse.Selected, err = getSelected(req, len(files)-1)
-	if err != nil {
-		return
-	}
-	currentFile, err := getFile(files[ctx.Browse.Selected].Id)
+	currentFile, err := getFile(files[ctx.Browse.Current].Id)
 	if err != nil {
 		return
 	}
@@ -290,7 +307,7 @@ func chartArgs(req *http.Request, ctx *Context) (args map[string]interface{}, er
 	if err != nil {
 		return
 	}
-	chart := LoadChart(ctx.Browse.ResultName, files)
+	chart := LoadChart(ctx.Browse.ResultName, files).Data
 	args = map[string]interface{}{
 		"ctx": ctx, "files": files, "results": results,
 		"chart": chart,

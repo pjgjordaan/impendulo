@@ -1,21 +1,21 @@
 {{define "pager"}}
-{{$selected := .ctx.Browse.Selected}}
-{{$neighbour := .ctx.Browse.Next}}
+{{$current := .ctx.Browse.Current}}
+{{$next := .ctx.Browse.Next}}
 {{$resultName := .ctx.Browse.ResultName}}
 {{$fileName := .curFile.Name}}
-{{$sliced := slice .files $selected}}
-{{$adjustment := adjustment .files $selected}}
+{{$sliced := slice .files $current}}
+{{$adjustment := adjustment .files $current}}
 <ul id="filepager" class="pagination pagination-right">
-  {{$prev := sum $selected -1}}
+  {{$prev := sum $current -1}}
   <li>
-    <a href="displayresult?filename={{$fileName}}&current={{$prev}}&next={{$selected}}&resultname={{$resultName}}">
+    <a href="displayresult?filename={{$fileName}}&current={{$prev}}&next={{$current}}&resultname={{$resultName}}">
       &laquo;
     </a>
   </li>
   {{range $index, $file := $sliced}}
   {{$actual := sum $index $adjustment}}
   {{$actualNext := sum $actual 1}}
-  {{if (equal $actual $selected)}} 
+  {{if (equal $actual $current)}} 
   <li class="active">
     <a id="file{{$actual}}"
        href="displayresult?filename={{$fileName}}&current={{$actual}}&next={{$actualNext}}&resultname={{$resultName}}">
@@ -31,9 +31,9 @@
   </li>
   {{end}}
   {{end}}
-  {{$next := sum $neighbour 1}}
+  {{$last := sum $next 1}}
   <li>
-    <a href="displayresult?filename={{$fileName}}&current={{$neighbour}}&next={{$next}}&resultname={{$resultName}}">
+    <a href="displayresult?filename={{$fileName}}&current={{$next}}&next={{$last}}&resultname={{$resultName}}">
       &raquo;
     </a>
   </li>

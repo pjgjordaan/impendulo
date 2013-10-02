@@ -49,7 +49,7 @@ type (
 		IsUser                          bool
 		Pid, Sid                        bson.ObjectId
 		Uid, FileName, ResultName, View string
-		Selected, Next                  int
+		Current, Next                   int
 	}
 )
 

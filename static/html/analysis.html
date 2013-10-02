@@ -4,8 +4,8 @@
 {{$resultName := .ctx.Browse.ResultName}}
 {{$fileName := $currentFile.Name}}
 {{$results := .results}}
-{{$selected := .ctx.Browse.Selected}}
-{{$neighbour := .ctx.Browse.Next}}
+{{$current := .ctx.Browse.Current}}
+{{$next := .ctx.Browse.Next}}
 {{$project := projectName .ctx.Browse.Pid}}
 <ul class="breadcrumb">
   <li><a href="homeview">Home</a></li>
@@ -43,7 +43,7 @@
     <ul class="dropdown-menu" role="menu">
       {{range $results}}  
       <li>
-	<a href="displayresult?resultname={{.}}&filename={{$fileName}}&current={{$selected}}&next={{$neighbour}}">
+	<a href="displayresult?resultname={{.}}&filename={{$fileName}}&current={{$current}}&next={{$next}}">
 	  {{.}}
 	</a>
       </li>
@@ -88,7 +88,7 @@
 	<select class="form-control" name="next" id="next">
 	  {{range $index, $file := .files}} 
 	  {{$dispIndex := sum $index 1}}
-	  {{if equal $neighbour $index}}
+	  {{if equal $next $index}}
 	  <option selected value="{{$index}}">{{$dispIndex}}</option>
 	  {{else}}
 	  <option value="{{$index}}">{{$dispIndex}}</option>
@@ -106,7 +106,7 @@
   <div class="col-md-6">
     <dl class="dl-horizontal text-info">
       <dt>File Number</dt>
-      <dd>{{sum $selected 1}}</dd>
+      <dd>{{sum $current 1}}</dd>
       <dt>Date</dt>
       <dd>{{date $currentFile.Time}}</dd>
     </dl>
@@ -114,7 +114,7 @@
   <div class="col-md-6">
     <dl class="dl-horizontal text-info">
       <dt>File Number</dt>
-      <dd>{{sum $neighbour 1}}</dd>
+      <dd>{{sum $next 1}}</dd>
       <dt>Date</dt>
       <dd>{{date $nextFile.Time}}</dd>
     </dl>
@@ -125,7 +125,7 @@
 {{template "result"  $data}}
 {{else}}
 <div class="row">
-  {{$args := args "FileName" .ctx.Browse.FileName "ResultName" .ctx.Browse.ResultName "Current" .ctx.Browse.Selected "Next" .ctx.Browse.Next}}
+  {{$args := args "FileName" $fileName "ResultName" $resultName "Current" $current "Next" $next}}
   <div class="col-md-6">
     {{if isError .currentResult}}
     <p class="text-danger">{{.currentResult.GetReport}}</p>
