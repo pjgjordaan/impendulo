@@ -36,24 +36,31 @@ import (
 )
 
 type (
+	Type string
 	//File stores a single file's data from a submission.
 	File struct {
 		Id      bson.ObjectId "_id"
 		SubId   bson.ObjectId "subid"
 		Name    string        "name"
 		Package string        "package"
-		Type    string        "type"
+		Type    Type          "type"
 		Time    int64         "time"
 		Data    []byte        "data"
 		Results bson.M        "results"
 	}
 )
 
+const (
+	SRC     Type = "src"
+	LAUNCH  Type = "launch"
+	ARCHIVE Type = "archive"
+)
+
 //String
 func (this *File) String() string {
 	return "Type: project.File; Id: " + this.Id.Hex() +
 		"; SubId: " + this.SubId.Hex() + "; Name: " + this.Name +
-		"; Package: " + this.Package + "; Type: " + this.Type +
+		"; Package: " + this.Package + "; Type: " + string(this.Type) +
 		"; Time: " + util.Date(this.Time)
 }
 
@@ -81,10 +88,11 @@ func (this *File) CanProcess() bool {
 func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) (file *File, err error) {
 	id := bson.NewObjectId()
 	file = &File{Id: id, SubId: subId, Data: data}
-	file.Type, err = util.GetString(info, TYPE)
+	tipe, err := util.GetString(info, TYPE)
 	if err != nil && util.IsCastError(err) {
 		return
 	}
+	file.Type = Type(tipe)
 	file.Name, err = util.GetString(info, NAME)
 	if err != nil {
 		return

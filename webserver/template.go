@@ -118,7 +118,7 @@ func insert(args Args, key string, value interface{}) Args {
 }
 
 //fileCount
-func fileCount(subId bson.ObjectId, tipe string) (int, error) {
+func fileCount(subId bson.ObjectId, tipe project.Type) (int, error) {
 	return db.Count(
 		db.FILES,
 		bson.M{

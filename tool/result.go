@@ -140,9 +140,6 @@ func (chart *Chart) Add(x float64, ys map[string]float64) {
 //NewChart initialises new chart data.
 func NewChart() (chart Chart) {
 	chart = Chart{Data: make([]map[string]interface{}, 0, 1000)}
-	/*	for _, name := range names {
-		chart[name] = make([]Point, 0, 100)
-	}*/
 	return
 }
 

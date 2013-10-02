@@ -44,9 +44,14 @@ func LoadChart(result string, files []*project.File) (chart tool.Chart) {
 }
 
 func loadChart(name string, files []*project.File) (chart tool.Chart) {
+	if len(files) == 0 {
+		return
+	}
 	chart = tool.NewChart()
+	selector := bson.M{project.TIME: 1, project.RESULTS: 1}
 	for _, f := range files {
-		file, err := db.File(bson.M{project.ID: f.Id}, bson.M{project.TIME: 1, project.RESULTS: 1})
+		matcher := bson.M{project.ID: f.Id}
+		file, err := db.File(matcher, selector)
 		if err != nil {
 			continue
 		}
@@ -57,6 +62,20 @@ func loadChart(name string, files []*project.File) (chart tool.Chart) {
 			continue
 		}
 		chart.Add(float64(file.Time), result.ChartVals())
+	}
+	file, err := db.File(bson.M{project.ID: files[0].Id}, bson.M{project.SUBID: 1})
+	if err != nil {
+		util.Log(err)
+		return
+	}
+	matcher := bson.M{project.SUBID: file.SubId, project.TYPE: project.LAUNCH}
+	launches, err := db.Files(matcher, nil, project.TIME)
+	if err != nil {
+		util.Log(err)
+		return
+	}
+	for _, launch := range launches {
+		chart.Add(float64(launch.Time), map[string]float64{"Launch": 0.0})
 	}
 	return
 }

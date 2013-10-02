@@ -26,26 +26,31 @@ function timeChart(fileName, resultName, chartData) {
     if (chartData === null){
 	return;
     }
+    var tools = chartData.filter(function(d){return d.name !== "Launch";});
+    var launches = chartData.filter(function(d){return d.name === "Launch";});
     var lineData = d3.nest()
 	.key(function(d) { return d.name; })
-	.entries(chartData);
+	.entries(tools);
     
     var m = [80, 100, 80, 100];
     var w = 900 - m[1] - m[3];
     var h = 400 - m[0] - m[2];
-
-    var colour = d3.scale.category10() 
+    var getY = function(d){return d.y;};
+    var mid = (d3.max(tools, getY)-d3.min(tools, getY))/2;
+    console.log(mid);
+    var cols = ["#1f77b4", "#ff7f0e", "#2ca02c",  "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"];
+    var colour = d3.scale.ordinal()
+	.range(cols) 
         .domain(d3.keys(chartData[0]).filter(function(key) { return key == "name"; }));  
 
     var dotCol = function(d) { 
-	return colour(d.name); 
+	return d.name === "Launch" ? "#d62728" : colour(d.name); 
     };    
-    
     var lineCol = function(d) { 
-        return colour(d.key);
+        return d.key === "Launch" ? "#d62728" : colour(d.key);
     }
     var y = d3.scale.linear()
-	.domain(d3.extent(chartData, function(d){return d.y;}))
+	.domain(d3.extent(chartData, getY))
 	.range([h, 0]);
     
     var x = d3.time.scale()
@@ -110,6 +115,14 @@ function timeChart(fileName, resultName, chartData) {
 		.attr("r", 4)
 		.on("mouseover", showTooltip)
 		.on("mouseout", hideTooltip);
+	    chartBody.selectAll(".launch")	
+		.attr("class", "launch")
+		.attr("fill", "#d62728")
+    		.attr("points", function(d){return star(loadDate(d), y(mid), 7, 2, 10);})
+    		.attr("cx", loadDate)
+		.attr("cy", y(mid))
+		.on("mouseover", showTooltip)
+		.on("mouseout", hideTooltip);
 	});
     
     var chart = d3.select("#chart")
@@ -160,7 +173,7 @@ function timeChart(fileName, resultName, chartData) {
 	.style("stroke", lineCol);
     
     chartBody.selectAll(".link")
-	.data(chartData)
+	.data(tools)
 	.enter()
 	.append("svg:a")
 	.attr("xlink:href", loadLink)
@@ -174,6 +187,23 @@ function timeChart(fileName, resultName, chartData) {
 	.on("mouseover", showTooltip)
 	.on("mouseout", hideTooltip);
 
+
+    chartBody.selectAll(".launch")
+	.data(launches)
+	.enter()
+	.append("svg:polygon")
+	.attr("class", "launch")
+	.attr("fill", "#d62728")
+    	.attr("points", function(d){return star(loadDate(d), y(mid), 7, 2, 10);})
+    	.attr("cx", loadDate)
+	.attr("cy", y(mid))
+	.on("mouseover", showTooltip)
+	.on("mouseout", hideTooltip);
+
+    var legendData = d3.nest()
+	.key(function(d) { return d.name; })
+	.entries(chartData);
+    
     var legend = chart.append("g")
 	.attr("class", "legend")
     	.attr("height", 100)
@@ -181,7 +211,7 @@ function timeChart(fileName, resultName, chartData) {
 	.attr('transform', 'translate(-20,50)');  
     
     legend.selectAll('rect')
-	.data(lineData)
+	.data(legendData)
 	.enter()
 	.append("rect")
 	.attr("x", w+35)
@@ -193,7 +223,7 @@ function timeChart(fileName, resultName, chartData) {
 	.style("fill", lineCol);
     
     legend.selectAll('text')
-	.data(lineData)
+	.data(legendData)
 	.enter()
 	.append("text")
 	.attr("x", w+50)
@@ -212,13 +242,35 @@ function showTooltip(d){
     var xVal = new Date(+d.x).toLocaleTimeString();
     var xPos = parseFloat(d3.select(this).attr("cx"));
     var yPos = parseFloat(d3.select(this).attr("cy"));
+    var text = d.name === "Launch" ? d.name : d.name+": "+d.y;
     d3.select("#tooltip")
 	.style("left", xPos + "px")
 	.style("top", yPos + "px")						
 	.select("#title")
-	.text(d.name+": "+d.y);
+	.text(text);
     d3.select("#tooltip")
 	.select("#x")
 	.text(xVal);
     d3.select("#tooltip").classed("hidden", false);
+}
+
+function star(x, y, arms, innerRadius, outerRadius)
+{
+    var results = "";  
+    var angle = Math.PI / arms;
+    for (var i = 0; i < 2 * arms; i++)
+    {
+	var r = (i & 1) == 0 ? outerRadius : innerRadius;
+	var currX = x + Math.cos(i * angle) * r;
+	var currY = y + Math.sin(i * angle) * r;
+	if (i == 0)
+	{
+            results = currX + "," + currY;
+	}
+	else
+	{
+            results += ", " + currX + "," + currY;
+	}
+    }
+    return results;
 }
