@@ -22,39 +22,43 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+var DOT_RADIUS = 4,
+FOCUS_COLOUR = "black",
+LAUNCH_COLOUR = "#d62728",
+COLOURS = ["#1f77b4", "#ff7f0e", "#2ca02c",  "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"];
+        
 function timeChart(fileName, resultName, chartData) {
     if (chartData === null){
 	return;
     }
-    var tools = chartData.filter(function(d){return d.name !== "Launch";});
-    var launches = chartData.filter(function(d){return d.name === "Launch";});
+    var tools = chartData.filter(function(d){
+	return d.name !== "Launch";
+    });
+    var launches = chartData.filter(function(d){
+	return d.name === "Launch";
+    });
     var lineData = d3.nest()
-	.key(function(d) { return d.name; })
-	.entries(tools);
-    
-    var m = [80, 100, 80, 100];
+	.key(getKey)
+	.entries(tools);  
+    var m = [10, 100, 150, 100];
     var w = 900 - m[1] - m[3];
-    var h = 400 - m[0] - m[2];
-    var getY = function(d){return d.y;};
+    var h = 500 - m[0] - m[2];
     var mid = (d3.max(tools, getY)-d3.min(tools, getY))/2;
-    console.log(mid);
-    var cols = ["#1f77b4", "#ff7f0e", "#2ca02c",  "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"];
-    var colour = d3.scale.ordinal()
-	.range(cols) 
+    var getColour = d3.scale.ordinal()
+	.range(COLOURS) 
         .domain(d3.keys(chartData[0]).filter(function(key) { return key == "name"; }));  
-
     var dotCol = function(d) { 
-	return d.name === "Launch" ? "#d62728" : colour(d.name); 
+	return d.name === "Launch" ? LAUNCH_COLOUR : getColour(d.name); 
     };    
     var lineCol = function(d) { 
-        return d.key === "Launch" ? "#d62728" : colour(d.key);
-    }
+        return d.key === "Launch" ? LAUNCH_COLOUR : getColour(d.key);
+    };
     var y = d3.scale.linear()
 	.domain(d3.extent(chartData, getY))
 	.range([h, 0]);
     
     var x = d3.time.scale()
-	.domain(d3.extent(chartData, function(d){return d.x;}))
+	.domain(d3.extent(chartData, getX))
 	.range([0, w]);  
 
     var loadLink = function(d) {
@@ -72,9 +76,28 @@ function timeChart(fileName, resultName, chartData) {
     }
     
     var hideTooltip = function(d) {
-	d3.select("#tooltip").classed("hidden", true);
-	d3.select(this)
-	    .attr("fill", dotCol);
+	var selected = d3.select(this);
+	var attr = "r";
+	var val = DOT_RADIUS;
+	if(selected.attr("key") === "Launch"){
+	    var xPos = parseFloat(d3.select(this).attr("cx"));
+	    var yPos = parseFloat(d3.select(this).attr("cy"));
+	    attr = "points";
+	    val = function(d){
+		return star(xPos, yPos);
+	    };
+	}
+	selected
+	    .transition()
+            .duration(500)
+            .ease("linear")
+	    .attr("fill", dotCol)
+	    .attr(attr, val);
+	d3.select("#tooltip")
+	    .transition()
+            .duration(500)
+            .ease("linear")
+	    .style("opacity", 0);
     };
 
     var line = d3.svg.line()
@@ -98,31 +121,57 @@ function timeChart(fileName, resultName, chartData) {
 	.x(x)
 	.y(y)
 	.on("zoom", function(){
-	    chart.select(".x.axis").call(xAxis);
-	    chart.select(".y.axis").call(yAxis);
+	    var duration = 1000;
+	    var ease = "linear";
+	    chart.select(".x.axis")
+		.transition()
+		.duration(duration)
+		.ease(ease)
+		.call(xAxis);
+	    chart.select(".y.axis")
+		.transition()
+		.duration(duration)
+		.ease(ease)
+		.call(yAxis);
 	    chart.selectAll(".line")
-		.attr("class", "line")
-		.attr("d", function(d) { return line(d.values); })
-		.style("stroke", lineCol);
+	    	.attr("class", "line")
+		.style("stroke", lineCol)
+		.attr("key", trimKey)
+		.transition()
+		.duration(duration)
+	    	.ease(ease)
+		.attr("d", function(d) { 
+		    return line(d.values); 
+		});
 	    chartBody.selectAll(".link")
 	    	.attr("xlink:href", loadLink)
 		.attr("class", "link")
+		.attr("key", trimKey)
 		.select(".dot")
 		.attr("class", "dot")
 		.attr("fill", dotCol)
-    		.attr("cx", loadDate)
+    		.on("mouseover", showTooltip)
+		.on("mouseout", hideTooltip)
+		.transition()
+		.duration(duration)
+		.ease(ease)
+		.attr("cx", loadDate)
 		.attr("cy", loadY)
-		.attr("r", 4)
-		.on("mouseover", showTooltip)
-		.on("mouseout", hideTooltip);
-	    chartBody.selectAll(".launch")	
+		.attr("r", DOT_RADIUS);
+	    chartBody.selectAll(".launch")
 		.attr("class", "launch")
-		.attr("fill", "#d62728")
-    		.attr("points", function(d){return star(loadDate(d), y(mid), 7, 2, 10);})
-    		.attr("cx", loadDate)
-		.attr("cy", y(mid))
+		.attr("fill", dotCol)
+		.attr("key", trimKey)
 		.on("mouseover", showTooltip)
-		.on("mouseout", hideTooltip);
+		.on("mouseout", hideTooltip)
+    		.transition()
+		.duration(duration)
+		.ease(ease)
+		.attr("points", function(d){
+		    return star(loadDate(d), y(mid));
+		})
+    		.attr("cx", loadDate)
+		.attr("cy", y(mid));
 	});
     
     var chart = d3.select("#chart")
@@ -166,11 +215,15 @@ function timeChart(fileName, resultName, chartData) {
 	.attr("clip-path", "url(#clip)");
 
     chartBody.selectAll(".line")
-	.data(lineData, function(d) { return d.key; })
-	.enter().append("path")
+	.data(lineData, getKey)
+	.enter()
+	.append("path")
 	.attr("class", "line")
-	.attr("d", function(d) { return line(d.values); })
-	.style("stroke", lineCol);
+	.attr("key", trimKey)
+	.style("stroke", lineCol)
+	.attr("d", function(d) { 
+	    return line(d.values); 
+	});
     
     chartBody.selectAll(".link")
 	.data(tools)
@@ -178,12 +231,13 @@ function timeChart(fileName, resultName, chartData) {
 	.append("svg:a")
 	.attr("xlink:href", loadLink)
 	.attr("class", "link")
+	.attr("key", trimKey)
 	.append("svg:circle")
 	.attr("class", "dot")
 	.attr("fill", dotCol)
     	.attr("cx", loadDate)
 	.attr("cy", loadY)
-	.attr("r", 4)
+	.attr("r", DOT_RADIUS)
 	.on("mouseover", showTooltip)
 	.on("mouseout", hideTooltip);
 
@@ -193,15 +247,18 @@ function timeChart(fileName, resultName, chartData) {
 	.enter()
 	.append("svg:polygon")
 	.attr("class", "launch")
-	.attr("fill", "#d62728")
-    	.attr("points", function(d){return star(loadDate(d), y(mid), 7, 2, 10);})
+	.attr("fill", dotCol)
+    	.attr("points", function(d){
+	    return star(loadDate(d), y(mid));
+	})
     	.attr("cx", loadDate)
 	.attr("cy", y(mid))
+	.attr("key", trimKey)
 	.on("mouseover", showTooltip)
 	.on("mouseout", hideTooltip);
 
     var legendData = d3.nest()
-	.key(function(d) { return d.name; })
+	.key(getKey)
 	.entries(chartData);
     
     var legend = chart.append("g")
@@ -210,52 +267,75 @@ function timeChart(fileName, resultName, chartData) {
 	.attr("width", 100)
 	.attr('transform', 'translate(-20,50)');  
     
-    legend.selectAll('rect')
+    legend.selectAll("rect")
 	.data(legendData)
 	.enter()
 	.append("rect")
-	.attr("x", w+35)
+	.attr("x", w+40)
 	.attr("y", function(d, i){ 
 	    return i *  20;
 	})
 	.attr("width", 10)
 	.attr("height", 10)
-	.style("fill", lineCol);
+	.attr("showing", true)
+	.style("fill", lineCol)
+	.on("click", toggleVisibility);
     
     legend.selectAll('text')
 	.data(legendData)
 	.enter()
 	.append("text")
-	.attr("x", w+50)
+	.attr("x", w+55)
 	.attr("y", function(d, i){ 
 	    return i *  20 + 9;
 	})
-	.text(function(d) {
-            return d.key;
-	});
+	.text(getKey);
 
 }
 
 function showTooltip(d){
-    d3.select(this)
-	.attr("fill", "black");
     var xVal = new Date(+d.x).toLocaleTimeString();
     var xPos = parseFloat(d3.select(this).attr("cx"));
     var yPos = parseFloat(d3.select(this).attr("cy"));
     var text = d.name === "Launch" ? d.name : d.name+": "+d.y;
-    d3.select("#tooltip")
+    var selected = d3.select(this)
+    var attr = "r";
+    var val = 8;
+    if(selected.attr("key") === "Launch"){
+	attr = "points";
+	val = function(d){
+	    return star(xPos, yPos, 2);
+	};
+    } 
+    selected
+	.transition()
+        .duration(500)
+        .ease("linear")
+	.attr("fill", FOCUS_COLOUR)
+	.attr(attr, val);
+    
+    var tooltip = d3.select("#tooltip")
 	.style("left", xPos + "px")
-	.style("top", yPos + "px")						
+	.style("top", yPos + "px");	
+    tooltip
 	.select("#title")
 	.text(text);
-    d3.select("#tooltip")
+    tooltip
 	.select("#x")
 	.text(xVal);
-    d3.select("#tooltip").classed("hidden", false);
+    tooltip
+	.transition()
+        .duration(500)	
+	.ease("linear")
+	.style("opacity", 1);
 }
 
-function star(x, y, arms, innerRadius, outerRadius)
+function star(x, y, scale)
 {
+    scale = scale || 1;
+    var innerRadius = 2 * scale;
+    var outerRadius = 10 * scale;
+    var arms = 8;
     var results = "";  
     var angle = Math.PI / arms;
     for (var i = 0; i < 2 * arms; i++)
@@ -273,4 +353,48 @@ function star(x, y, arms, innerRadius, outerRadius)
 	}
     }
     return results;
+}
+
+function toggleVisibility(d){
+    var key = trimKey(d);
+    var chartOpacity = d3.select("[key="+key+"]").style("opacity");
+    var legendOpacity = 1.0;
+    if(chartOpacity === "0"){
+	chartOpacity = 1.0;
+    }else{
+	chartOpacity = 0.0;
+	legendOpacity = 0.3;
+    }
+    d3.select(this)
+	.transition()
+        .duration(500)
+        .ease("linear")
+	.style("opacity", legendOpacity);
+    d3.selectAll("[key="+key+"]")
+	.transition()
+        .duration(500)
+        .ease("linear")
+	.style("opacity", chartOpacity);
+}
+
+function getX(d){
+    return d.x;
+}
+
+function getY(d){
+    return d.y;
+}
+
+function getKey(d) {
+    var val = "";
+    if(d.key !== undefined ){
+	val = d.key;
+    }else if(d.name !== undefined){
+	val = d.name;
+    }
+    return val; 
+}
+
+function trimKey(d) {
+    return getKey(d).replace(" ", "")
 }
