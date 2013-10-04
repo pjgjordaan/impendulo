@@ -34,6 +34,7 @@ import (
 	"github.com/godfried/impendulo/tool/diff"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/pmd"
+	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"html"
 	"html/template"
@@ -75,6 +76,9 @@ var (
 		"insert":          insert,
 		"isError":         isError,
 		"hasChart":        func(n string) bool { return n != tool.CODE && n != diff.NAME && n != tool.SUMMARY },
+		"submissions":     projectSubmissions,
+		"projects":        func() ([]*project.Project, error) { return db.Projects(nil, bson.M{project.SKELETON: 0}, project.NAME) },
+		"users":           func() ([]*user.User, error) { return db.Users(nil, user.ID) },
 	}
 	templateDir   string
 	baseTemplates []string
@@ -83,6 +87,12 @@ var (
 const (
 	PAGER_SIZE = 10
 )
+
+func projectSubmissions(id bson.ObjectId) (subs []*project.Submission, err error) {
+	matcher := bson.M{project.PROJECT_ID: id}
+	subs, err = db.Submissions(matcher, nil, "-"+project.TIME)
+	return
+}
 
 //isError checks whether a result is an ErrorResult.
 func isError(result tool.DisplayResult) bool {

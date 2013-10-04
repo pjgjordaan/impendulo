@@ -9,12 +9,13 @@
       <th>Submissions</th>
   </tr></thead>
   <tbody data-provides="rowlink" >
-    {{ range .ctx.Users}}
-    <tr>
-      <td><a class="rowlink" href="getsubmissions?id={{.Name}}&type=user">{{.Name}}</a></td>
-      <td><a class="rowlink" href="getsubmissions?id={{.Name}}&type=user">{{submissionCount .Name}}</a></td>
-    </tr>
-    {{end}}
+     {{$users := users}}
+     {{range $users}}
+     <tr>
+       <td><a class="rowlink" href="getsubmissions?id={{.Name}}&type=user">{{.Name}}</a></td>
+       <td><a class="rowlink" href="getsubmissions?id={{.Name}}&type=user">{{submissionCount .Name}}</a></td>
+     </tr>
+     {{end}}
   </tbody>
 </table>
 {{end}}

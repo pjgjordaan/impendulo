@@ -179,18 +179,22 @@ func RetrieveFileInfo(req *http.Request, ctx *Context) (ret []*db.FileInfo, err 
 	return
 }
 
-//RetrieveFiles fetches all files in a submission with a given name.
-func RetrieveFiles(req *http.Request, ctx *Context) (ret []*project.File, err error) {
+//retrieveFiles fetches all files in a submission with a given name.
+func retrieveFiles(req *http.Request, ctx *Context) ([]*project.File, error) {
 	name, ferr := GetString(req, "filename")
 	if ferr == nil {
 		ctx.Browse.FileName = name
 	}
-	matcher := bson.M{project.SUBID: ctx.Browse.Sid,
-		project.TYPE: project.SRC, project.NAME: ctx.Browse.FileName}
+	return Snapshots(ctx.Browse.Sid, ctx.Browse.FileName)
+}
+
+func Snapshots(subId bson.ObjectId, fileName string) (ret []*project.File, err error) {
+	matcher := bson.M{project.SUBID: subId,
+		project.TYPE: project.SRC, project.NAME: fileName}
 	selector := bson.M{project.TIME: 1}
 	ret, err = db.Files(matcher, selector, project.TIME)
 	if err == nil && len(ret) == 0 {
-		err = fmt.Errorf("No files found with name %q.", ctx.Browse.FileName)
+		err = fmt.Errorf("No files found with name %q.", fileName)
 	}
 	return
 }

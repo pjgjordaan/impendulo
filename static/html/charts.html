@@ -11,7 +11,8 @@
       User Submissions <span class="caret"></span>
     </a>
     <ul class="dropdown-menu" role="menu">
-      {{range .ctx.Users}}
+      {{$users := users}}
+      {{range $users}}
       <li><a href="getsubmissions?id={{.Name}}&type=user">{{.Name}}</a></li>
       {{end}}
     </ul>
@@ -24,7 +25,8 @@
       Project Submissions <span class="caret"></span>
     </a>
     <ul class="dropdown-menu" role="menu">
-      {{range .ctx.Projects}}
+      {{$projects := projects}}
+      {{range $projects}}
       <li><a href="getsubmissions?id={{.Id.Hex}}&type=project">{{.Name}}</a></li>
       {{end}}
     </ul>
@@ -36,9 +38,10 @@
       {{$resultName}} Chart <span class="caret"></span>
     </a>
     <ul class="dropdown-menu" role="menu">
+      {{$compare := .compare}}
       {{range $results}}  
       <li>
-	<a href="displaychart?resultname={{.}}&filename={{$fileName}}">
+	<a href="displaychart?resultname={{.}}&filename={{$fileName}}&compare={{$compare}}">
 	  {{.}}
 	</a>
       </li>
@@ -47,13 +50,36 @@
   </li>
 </ul>
 <h4 class="text-center">
-  <small>user</small> {{.ctx.Browse.Uid}} 
   <small>project</small> {{projectName .ctx.Browse.Pid}}
   <small>file</small> {{ $fileName}} 
 </h4>
 <h3 class="text-center">
-  <small>tool</small> {{$resultName}}
-</h3>
+  <small>tool</small> {{$resultName}} 
+  <small>user</small> {{.ctx.Browse.Uid}} 
+  <small class="dropdown">
+    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+      Compare <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu" role="menu">
+      {{$submissions := submissions .ctx.Browse.Pid}}
+      {{$subid := .ctx.Browse.Sid}}
+      {{range $submissions}}
+       {{if not (equal $subid .Id)}}
+      <li>
+	<a href="displaychart?resultname={{$resultName}}&filename={{$fileName}}&compare={{.Id.Hex}}">
+	  {{.User}} on {{date .Time}} 
+       </a>
+      </li>
+      {{end}}
+      {{end}}
+      <li>
+	<a href="displaychart?resultname={{$resultName}}&filename={{$fileName}}">
+	  No one
+	</a>
+      </li>
+    </ul>
+  </small>
+</h3> 
 <div id="chart" class="chart" xmlns:xlink="http://www.w3.org/1999/xlink">
   <div id="tooltip" class="tooltip">
     <h5 id="title"><small id="y"></small></h5>

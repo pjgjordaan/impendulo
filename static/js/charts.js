@@ -24,35 +24,30 @@
 
 var DOT_RADIUS = 4,
 FOCUS_COLOUR = "black",
-LAUNCH_COLOUR = "#d62728",
-COLOURS = ["#1f77b4", "#ff7f0e", "#2ca02c",  "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"];
-        
-function timeChart(fileName, resultName, chartData) {
+COLOURS = ["#1f77b4", "#ff7f0e", "#2ca02c",  "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"],
+LAUNCH = "Launches";
+      
+function timeChart(fileName, resultName, chartData, compare) {
     if (chartData === null){
 	return;
     }
     var tools = chartData.filter(function(d){
-	return d.name !== "Launch";
+	return !isLaunch(d);
     });
-    var launches = chartData.filter(function(d){
-	return d.name === "Launch";
-    });
+    var launches = chartData.filter(isLaunch);
     var lineData = d3.nest()
 	.key(getKey)
 	.entries(tools);  
-    var m = [10, 100, 150, 100];
-    var w = 900 - m[1] - m[3];
+    var m = [10, 150, 100, 100];
+    var w = 1100 - m[1] - m[3];
     var h = 500 - m[0] - m[2];
     var mid = (d3.max(tools, getY)-d3.min(tools, getY))/2;
     var getColour = d3.scale.ordinal()
 	.range(COLOURS) 
         .domain(d3.keys(chartData[0]).filter(function(key) { return key == "name"; }));  
-    var dotCol = function(d) { 
-	return d.name === "Launch" ? LAUNCH_COLOUR : getColour(d.name); 
+    var chartColour = function(d) { 
+	return getColour(getKey(d)); 
     };    
-    var lineCol = function(d) { 
-        return d.key === "Launch" ? LAUNCH_COLOUR : getColour(d.key);
-    };
     var y = d3.scale.linear()
 	.domain(d3.extent(chartData, getY))
 	.range([h, 0]);
@@ -62,9 +57,11 @@ function timeChart(fileName, resultName, chartData) {
 	.range([0, w]);  
 
     var loadLink = function(d) {
-	return "displayresult?time="+d.x+
+	var href = "displayresult?time="+d.x+
 	    "&resultname="+resultName+
 	    "&filename="+fileName;
+	href = compare ? href + compare : href;
+	return href;
     };
 
     var loadDate = function(d,i) { 
@@ -79,7 +76,7 @@ function timeChart(fileName, resultName, chartData) {
 	var selected = d3.select(this);
 	var attr = "r";
 	var val = DOT_RADIUS;
-	if(selected.attr("key") === "Launch"){
+	if(selected.attr("key") === LAUNCH){
 	    var xPos = parseFloat(d3.select(this).attr("cx"));
 	    var yPos = parseFloat(d3.select(this).attr("cy"));
 	    attr = "points";
@@ -91,7 +88,7 @@ function timeChart(fileName, resultName, chartData) {
 	    .transition()
             .duration(500)
             .ease("linear")
-	    .attr("fill", dotCol)
+	    .attr("fill", chartColour)
 	    .attr(attr, val);
 	d3.select("#tooltip")
 	    .transition()
@@ -135,7 +132,7 @@ function timeChart(fileName, resultName, chartData) {
 		.call(yAxis);
 	    chart.selectAll(".line")
 	    	.attr("class", "line")
-		.style("stroke", lineCol)
+		.style("stroke", chartColour)
 		.attr("key", trimKey)
 		.transition()
 		.duration(duration)
@@ -149,7 +146,7 @@ function timeChart(fileName, resultName, chartData) {
 		.attr("key", trimKey)
 		.select(".dot")
 		.attr("class", "dot")
-		.attr("fill", dotCol)
+		.attr("fill", chartColour)
     		.on("mouseover", showTooltip)
 		.on("mouseout", hideTooltip)
 		.transition()
@@ -160,7 +157,7 @@ function timeChart(fileName, resultName, chartData) {
 		.attr("r", DOT_RADIUS);
 	    chartBody.selectAll(".launch")
 		.attr("class", "launch")
-		.attr("fill", dotCol)
+		.attr("fill", chartColour)
 		.attr("key", trimKey)
 		.on("mouseover", showTooltip)
 		.on("mouseout", hideTooltip)
@@ -220,7 +217,7 @@ function timeChart(fileName, resultName, chartData) {
 	.append("path")
 	.attr("class", "line")
 	.attr("key", trimKey)
-	.style("stroke", lineCol)
+	.style("stroke", chartColour)
 	.attr("d", function(d) { 
 	    return line(d.values); 
 	});
@@ -234,7 +231,7 @@ function timeChart(fileName, resultName, chartData) {
 	.attr("key", trimKey)
 	.append("svg:circle")
 	.attr("class", "dot")
-	.attr("fill", dotCol)
+	.attr("fill", chartColour)
     	.attr("cx", loadDate)
 	.attr("cy", loadY)
 	.attr("r", DOT_RADIUS)
@@ -247,7 +244,7 @@ function timeChart(fileName, resultName, chartData) {
 	.enter()
 	.append("svg:polygon")
 	.attr("class", "launch")
-	.attr("fill", dotCol)
+	.attr("fill", chartColour)
     	.attr("points", function(d){
 	    return star(loadDate(d), y(mid));
 	})
@@ -271,24 +268,25 @@ function timeChart(fileName, resultName, chartData) {
 	.data(legendData)
 	.enter()
 	.append("rect")
-	.attr("x", w+40)
+	.attr("x", w+30)
 	.attr("y", function(d, i){ 
-	    return i *  20;
+	    return i *  25;
 	})
-	.attr("width", 10)
-	.attr("height", 10)
+	.attr("width", 15)
+	.attr("height", 15)
 	.attr("showing", true)
-	.style("fill", lineCol)
+	.style("fill", chartColour)
 	.on("click", toggleVisibility);
     
     legend.selectAll('text')
 	.data(legendData)
 	.enter()
 	.append("text")
-	.attr("x", w+55)
+	.attr("x", w+50)
 	.attr("y", function(d, i){ 
-	    return i *  20 + 9;
+	    return (i *  25) + 13;
 	})
+	.attr("font-size","10px")
 	.text(getKey);
 
 }
@@ -297,7 +295,7 @@ function showTooltip(d){
     var xVal = new Date(+d.x).toLocaleTimeString();
     var xPos = parseFloat(d3.select(this).attr("cx"));
     var yPos = parseFloat(d3.select(this).attr("cy"));
-    var text = d.name === "Launch" ? d.name : d.name+": "+d.y;
+    var text = isLaunch(d) ? d.name : d.name+": "+d.y;
     var selected = d3.select(this)
     var attr = "r";
     var val = 8;
@@ -385,16 +383,20 @@ function getY(d){
     return d.y;
 }
 
-function getKey(d) {
-    var val = "";
-    if(d.key !== undefined ){
-	val = d.key;
-    }else if(d.name !== undefined){
-	val = d.name;
-    }
-    return val; 
+function isLaunch(d){
+    return getKey(d).endsWith(LAUNCH);
 }
+
+function getKey(d) {
+    return d.key; 
+}
+
+
 
 function trimKey(d) {
     return getKey(d).replace(" ", "")
 }
+
+String.prototype.endsWith = function(suffix) {
+    return this.indexOf(suffix, this.length - suffix.length) !== -1;
+};

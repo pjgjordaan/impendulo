@@ -5,7 +5,8 @@
     <label class="col-lg-2 control-label" for="project">Project</label>
     <div class="col-lg-3">
       <select class="form-control" name="project" id="project">
-	{{ range .ctx.Projects}}
+	{{$projects := projects}}
+	{{range $projects}}
 	<option value={{.Id.Hex}}>{{.Name}}</option>
 	{{end}}
       </select>
@@ -15,7 +16,8 @@
     <label class="col-lg-2 control-label" for="user">User</label>
     <div class="col-lg-3">
       <select class="form-control" name="user" id="user">
-	{{ range .ctx.Users}}
+	{{$users := users}}
+	{{range $users}}
 	<option value={{.Name}}>{{.Name}}</option>
 	{{end}}
       </select>

@@ -130,9 +130,9 @@ type (
 )
 
 //Add inserts new coordinates into data used to display a chart.
-func (chart *Chart) Add(x float64, ys map[string]float64) {
+func (chart *Chart) Add(user string, x float64, ys map[string]float64) {
 	for name, val := range ys {
-		point := map[string]interface{}{"x": x, "y": val, "name": name}
+		point := map[string]interface{}{"x": x, "y": val, "key": user + " " + name, "name": name, "user": user}
 		chart.Data = append(chart.Data, point)
 	}
 }

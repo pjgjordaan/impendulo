@@ -32,36 +32,26 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
-//LoadChart calculates GraphArgs for a given result.
-func LoadChart(result string, files []*project.File) (chart tool.Chart) {
-	switch result {
-	case tool.CODE:
-	case tool.SUMMARY:
-	default:
-		chart = loadChart(result, files)
-	}
-	return
-}
-
-func loadChart(name string, files []*project.File) (chart tool.Chart) {
+func LoadChart(userName, resultName string, files []*project.File, startTime int64) (chart tool.Chart) {
 	if len(files) == 0 {
 		return
 	}
 	chart = tool.NewChart()
 	selector := bson.M{project.TIME: 1, project.RESULTS: 1}
+	adjust := startTime - files[0].Time
 	for _, f := range files {
 		matcher := bson.M{project.ID: f.Id}
 		file, err := db.File(matcher, selector)
 		if err != nil {
 			continue
 		}
-		result, err := db.ChartResult(name,
-			bson.M{project.ID: file.Results[name]}, nil)
+		result, err := db.ChartResult(resultName,
+			bson.M{project.ID: file.Results[resultName]}, nil)
 		if err != nil {
-			util.Log(err, file.Results[name])
+			util.Log(err, file.Results[resultName])
 			continue
 		}
-		chart.Add(float64(file.Time), result.ChartVals())
+		chart.Add(userName, float64(file.Time+adjust), result.ChartVals())
 	}
 	file, err := db.File(bson.M{project.ID: files[0].Id}, bson.M{project.SUBID: 1})
 	if err != nil {
@@ -75,7 +65,7 @@ func loadChart(name string, files []*project.File) (chart tool.Chart) {
 		return
 	}
 	for _, launch := range launches {
-		chart.Add(float64(launch.Time), map[string]float64{"Launch": 0.0})
+		chart.Add(userName, float64(launch.Time+adjust), map[string]float64{"Launches": 0.0})
 	}
 	return
 }

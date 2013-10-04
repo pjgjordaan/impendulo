@@ -9,7 +9,8 @@
       Project Submissions <span class="caret"></span>
     </a>
     <ul class="dropdown-menu" role="menu">
-      {{range .ctx.Projects}}
+      {{$projects := projects}}
+      {{range $projects}}
       <li><a href="getsubmissions?id={{.Id.Hex}}&type=project">{{.Name}}</a></li>
       {{end}}
     </ul>

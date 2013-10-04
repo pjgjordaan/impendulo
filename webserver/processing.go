@@ -26,6 +26,7 @@ package webserver
 
 import (
 	"fmt"
+	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/util"
 	"io/ioutil"
 	"labix.org/v2/mgo/bson"
@@ -33,6 +34,20 @@ import (
 	"strconv"
 	"strings"
 )
+
+//CloneData
+func CloneData(req *http.Request, ctx *Context) (msg string, err error) {
+	remote, err := GetString(req, "remote")
+	if err != nil {
+		msg = "Could not read remote data location."
+		return
+	}
+	err = db.CloneData(remote)
+	if err != nil {
+		msg = fmt.Sprintf("Could not clone data from %s.", remote)
+	}
+	return
+}
 
 //ReadFormFile reads a file's name and data from a request form.
 func ReadFormFile(req *http.Request, name string) (fname string, data []byte, err error) {

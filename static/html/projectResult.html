@@ -13,7 +13,8 @@
     </tr>
   </thead>
   <tbody data-provides="rowlink" >
-    {{range .ctx.Projects}}
+    {{$projects := projects}}
+    {{range $projects}}
     <tr>
       <td><a class="rowlink" href="getsubmissions?id={{.Id.Hex}}&type=project" >{{.Name}}</a></td>
       <td><a class="rowlink" href="getsubmissions?id={{.Id.Hex}}&type=project" >{{date .Time}}</a></td>

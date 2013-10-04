@@ -29,8 +29,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/user"
 	"labix.org/v2/mgo/bson"
 	"net/http"
 )
@@ -38,10 +36,8 @@ import (
 type (
 	//Context is used to keep track of the current user's session.
 	Context struct {
-		Session  *sessions.Session
-		projects []*project.Project
-		users    []*user.User
-		Browse   *BrowseData
+		Session *sessions.Session
+		Browse  *BrowseData
 	}
 
 	//BrowseData is used to keep track of the user's browsing.
@@ -86,6 +82,25 @@ func (ctx *Context) LoggedIn() bool {
 	return err == nil
 }
 
+//Username retrieves the current user's username.
+func (ctx *Context) Username() (string, error) {
+	username, ok := ctx.Session.Values["user"].(string)
+	if !ok {
+		return "", fmt.Errorf("Could not retrieve user.")
+	}
+	return username, nil
+}
+
+//AddUser sets the currently signed in user.
+func (ctx *Context) AddUser(user string) {
+	ctx.Session.Values["user"] = user
+}
+
+//AddUser sets the currently signed in user.
+func (ctx *Context) RemoveUser() {
+	delete(ctx.Session.Values, "user")
+}
+
 //AddMessage adds a message to be displayed to the user.
 func (ctx *Context) AddMessage(msg string, isErr bool) {
 	var tipe string
@@ -107,39 +122,6 @@ func (ctx *Context) Successes() []interface{} {
 	return ctx.Session.Flashes("success")
 }
 
-//Username retrieves the current user's username.
-func (ctx *Context) Username() (string, error) {
-	username, ok := ctx.Session.Values["user"].(string)
-	if !ok {
-		return "", fmt.Errorf("Could not retrieve user.")
-	}
-	return username, nil
-}
-
-//AddUser sets the currently signed in user.
-func (ctx *Context) AddUser(user string) {
-	ctx.Session.Values["user"] = user
-}
-
-//Projects loads all available projects.
-func (ctx *Context) Projects() ([]*project.Project, error) {
-	var err error
-	if ctx.projects == nil {
-		ctx.projects, err = db.Projects(
-			nil, bson.M{project.SKELETON: 0}, project.NAME)
-	}
-	return ctx.projects, err
-}
-
-//Users loads all available users.
-func (ctx *Context) Users() ([]*user.User, error) {
-	var err error
-	if ctx.users == nil {
-		ctx.users, err = db.Users(nil, user.ID)
-	}
-	return ctx.users, err
-}
-
 //LoadContext loads a context from the session.
 func LoadContext(sess *sessions.Session) *Context {
 	ctx := &Context{Session: sess}
@@ -147,6 +129,12 @@ func LoadContext(sess *sessions.Session) *Context {
 		ctx.Browse = val.(*BrowseData)
 	} else {
 		ctx.Browse = new(BrowseData)
+	}
+	if uname, err := ctx.Username(); err == nil {
+		_, err = db.User(uname)
+		if err != nil {
+			ctx.RemoveUser()
+		}
 	}
 	return ctx
 }

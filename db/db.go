@@ -45,13 +45,14 @@ const (
 	//Mongodb command
 	SET = "$set"
 	//Mongodb connection and db names
-	DEFAULT_CONN = "mongodb://localhost/impendulo"
-	DEBUG_CONN   = "mongodb://localhost/impendulo_debug"
-	TEST_CONN    = "mongodb://localhost/impendulo_test"
+	ADDRESS      = "mongodb://localhost/"
 	DEFAULT_DB   = "impendulo"
 	DEBUG_DB     = "impendulo_debug"
 	TEST_DB      = "impendulo_test"
 	BACKUP_DB    = "impendulo_backup"
+	DEFAULT_CONN = ADDRESS + DEFAULT_DB
+	DEBUG_CONN   = "mongodb://localhost/impendulo_debug"
+	TEST_CONN    = "mongodb://localhost/impendulo_test"
 )
 
 var (
@@ -135,6 +136,34 @@ func CopyDB(from, to string) (err error) {
 			{"fromdb", from},
 			{"todb", to},
 		}, nil)
+	return
+}
+
+//CloneCollection
+func CloneCollection(origin, collection string) (err error) {
+	session, err := Session()
+	if err != nil {
+		return
+	}
+	defer session.Close()
+	fmt.Println(session.DB("").Name, collection)
+	err = session.DB("").Run(
+		bson.D{
+			{"cloneCollection", collection},
+			{"from", origin},
+		}, nil)
+	return
+}
+
+//CloneData
+func CloneData(origin string) (err error) {
+	collections := []string{USERS, PROJECTS, SUBMISSIONS, FILES, TESTS, JPF, PMD}
+	for _, col := range collections {
+		err = CloneCollection(origin, col)
+		if err != nil {
+			return
+		}
+	}
 	return
 }
 

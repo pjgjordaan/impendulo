@@ -178,7 +178,7 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 	if err != nil {
 		return
 	}
-	files, err := RetrieveFiles(req, ctx)
+	files, err := retrieveFiles(req, ctx)
 	if err != nil {
 		return
 	}
@@ -299,7 +299,7 @@ func chartArgs(req *http.Request, ctx *Context) (args map[string]interface{}, er
 	if err != nil {
 		return
 	}
-	files, err := RetrieveFiles(req, ctx)
+	files, err := retrieveFiles(req, ctx)
 	if err != nil {
 		return
 	}
@@ -307,10 +307,28 @@ func chartArgs(req *http.Request, ctx *Context) (args map[string]interface{}, er
 	if err != nil {
 		return
 	}
-	chart := LoadChart(ctx.Browse.ResultName, files).Data
+	startTime := files[0].Time
+	chart := LoadChart(ctx.Browse.Uid, ctx.Browse.ResultName, files, startTime).Data
+	compareStr := ""
+	compareId, cerr := util.ReadId(req.FormValue("compare"))
+	if cerr == nil {
+		var submission *project.Submission
+		submission, err = db.Submission(bson.M{project.ID: compareId}, nil)
+		if err != nil {
+			return
+		}
+		var compareFiles []*project.File
+		compareFiles, err = Snapshots(compareId, ctx.Browse.FileName)
+		if err != nil {
+			return
+		}
+		compareChart := LoadChart(submission.User, ctx.Browse.ResultName, compareFiles, startTime).Data
+		chart = append(chart, compareChart...)
+		compareStr = compareId.Hex()
+	}
 	args = map[string]interface{}{
 		"ctx": ctx, "files": files, "results": results,
-		"chart": chart,
+		"chart": chart, "compare": compareStr,
 	}
 	return
 }

@@ -9,7 +9,8 @@
       User Submissions <span class="caret"></span>
     </a>
     <ul class="dropdown-menu" role="menu">
-      {{range .ctx.Users}}
+      {{$users := users}}
+      {{range $users}}
       <li><a href="getsubmissions?id={{.Name}}&type=user">{{.Name}}</a></li>
       {{end}}
     </ul>

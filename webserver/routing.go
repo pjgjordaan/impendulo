@@ -79,6 +79,7 @@ func defaultPosters() map[string]Poster {
 		"addproject": AddProject, "changeskeleton": ChangeSkeleton,
 		"submitarchive": SubmitArchive, "runtool": RunTool,
 		"deleteproject": DeleteProject, "deleteuser": DeleteUser,
+		"clonedata": CloneData,
 	}
 }
 
@@ -104,11 +105,11 @@ func Views() map[string]string {
 //defaultViews loads default views.
 func defaultViews() map[string]string {
 	return map[string]string{
-		"homeView": "home", "skeletonView": "submit",
-		"registerView": "register", "projectDownloadView": "download",
+		"homeView": "home", "userResult": "home", "projectResult": "home",
+		"skeletonView": "submit", "archiveView": "submit", "projectView": "submit",
+		"registerView":        "register",
+		"projectDownloadView": "download", "cloneDataView": "download",
 		"projectDeleteView": "delete", "userDeleteView": "delete",
-		"userResult": "home", "projectResult": "home",
-		"archiveView": "submit", "projectView": "submit",
 		"statusView": "status", "runToolView": "tool",
 	}
 }
@@ -143,7 +144,8 @@ func defaultPermissions() map[string]user.Permission {
 		"configview":        user.TEACHER,
 		"projectdeleteview": user.ADMIN, "deleteproject": user.ADMIN,
 		"userdeleteview": user.ADMIN, "deleteuser": user.ADMIN,
-		"statusview": user.ADMIN,
+		"statusview": user.ADMIN, "clonedataview": user.ADMIN,
+		"clonedata": user.ADMIN,
 	}
 }
 
