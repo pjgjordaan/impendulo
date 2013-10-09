@@ -2,7 +2,7 @@
 {{$report := .Report}}
 {{$size := sum (len $report.Lines) -1}}
 {{$addr := address $report}}
-<pre class="brush: java; highlight: [{{range $i, $v := $report.Lines}}{{$v}}{{if not (equal $i $size)}}, {{end}}{{end}}];" id="code{{$addr}}">
+<pre class="brush: java; highlight: [{{range $i, $v := $report.Lines}}{{$v}}{{if ne $i $size}}, {{end}}{{end}}];" id="code{{$addr}}">
 {{$report.Data}}
 </pre>
 {{end}}

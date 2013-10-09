@@ -3,7 +3,7 @@
 {{$tools := tools}}
 <ul class="nav nav-pills">
   {{range $tools}}
-  <li {{if (equal . $tool)}} class="active"{{end}}><a href="configview?tool={{.}}">{{.}}</a></li>
+  <li {{if eq . $tool}} class="active"{{end}}><a href="configview?tool={{.}}">{{.}}</a></li>
   {{end}}
 </ul>
 {{template "config" .}}

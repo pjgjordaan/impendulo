@@ -1,8 +1,5 @@
 {{define "view"}}
-<ul class="breadcrumb">
-  <li><a href="homeview">Home</a> </li>
-  <li class="active">Projects</li>
-</ul>
+{{template "breadcrumb" .}}
 <table class="table table-hover table-striped">
   <thead>
     <tr class="info">
@@ -16,10 +13,10 @@
     {{$projects := projects}}
     {{range $projects}}
     <tr>
-      <td><a class="rowlink" href="getsubmissions?id={{.Id.Hex}}&type=project" >{{.Name}}</a></td>
-      <td><a class="rowlink" href="getsubmissions?id={{.Id.Hex}}&type=project" >{{date .Time}}</a></td>
-      <td><a class="rowlink" href="getsubmissions?id={{.Id.Hex}}&type=project" >{{.Lang}}</a></td>
-      <td><a class="rowlink" href="getsubmissions?id={{.Id.Hex}}&type=project">{{submissionCount .Id}}</a></td>
+      <td><a class="rowlink" href="{{getProjectSubmissions .Id}}" >{{.Name}}</a></td>
+      <td><a class="rowlink" href="{{getProjectSubmissions .Id}}" >{{date .Time}}</a></td>
+      <td><a class="rowlink" href="{{getProjectSubmissions .Id}}" >{{.Lang}}</a></td>
+      <td><a class="rowlink" href="{{getProjectSubmissions .Id}}">{{submissionCount .Id}}</a></td>
     </tr>
     {{end}}
   </tbody>

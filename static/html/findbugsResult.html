@@ -3,9 +3,12 @@
 {{if $report.Success}}
 <h4 class="text-success">No bugs found</h4>
 {{else}}
-{{$fileName := .FileName}}
-{{$current := .Current}}
-{{$next := .Next}}
+{{$code := "Code"}}
+{{$uid := .state.Uid}}
+{{$sid := .state.Sid}}
+{{$fileName := .state.File}}
+{{$current := .state.Current}}
+{{$next := .state.Next}}
 {{$id := $report.Id.Hex}}
 {{$addr := address $report}}
 <h4 class="text-danger">{{$report.Summary.BugCount}} bugs found</h4>
@@ -65,7 +68,7 @@
 		    Source Line
 		  </dt>
 		  <dd>
-		    <a href="displayresult?resultname=Code&lines={{.Line.Start}}-{{.Line.End}}&caller={{$id}}&filename={{$fileName}}&current={{$current}}&next={{$next}}">
+		    <a href="{{displayResultLines $sid $uid $code $fileName $current $next $id .Line.Start .Line.End}}">
 		      {{.Line.Message}}
 		    </a>
 		  </dd>

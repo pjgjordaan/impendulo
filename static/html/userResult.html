@@ -1,8 +1,5 @@
 {{define "view"}}
-<ul class="breadcrumb">
-  <li><a href="homeview">Home</a> </li>  
-  <li class="active">Users</li>
-</ul>
+{{template "breadcrumb" .}}
 <table class="table table-hover table-striped">
   <thead><tr class="info">
       <th>User</th>
@@ -12,8 +9,8 @@
      {{$users := users}}
      {{range $users}}
      <tr>
-       <td><a class="rowlink" href="getsubmissions?id={{.Name}}&type=user">{{.Name}}</a></td>
-       <td><a class="rowlink" href="getsubmissions?id={{.Name}}&type=user">{{submissionCount .Name}}</a></td>
+       <td><a class="rowlink" href="{{getUserSubmissions .Name}}">{{.Name}}</a></td>
+       <td><a class="rowlink" href="{{getUserSubmissions .Name}}">{{submissionCount .Name}}</a></td>
      </tr>
      {{end}}
   </tbody>

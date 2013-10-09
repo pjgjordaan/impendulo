@@ -116,6 +116,17 @@ func downloadProject(w http.ResponseWriter, req *http.Request, ctx *Context) err
 	return err
 }
 
+//configView loads a tool's configuration page.
+func configView(w http.ResponseWriter, req *http.Request, ctx *Context) error {
+	tool, err := GetString(req, "tool")
+	if err != nil {
+		tool = "none"
+	}
+	ctx.Browse.View = "submit"
+	args := map[string]interface{}{"ctx": ctx, "tool": tool}
+	return T(getNav(ctx), "configView", toolTemplate(tool)).Execute(w, args)
+}
+
 //getSubmissions displays a list of submissions.
 func getSubmissions(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	subs, err := RetrieveSubmissions(req, ctx)
@@ -131,19 +142,9 @@ func getSubmissions(w http.ResponseWriter, req *http.Request, ctx *Context) erro
 		temp = "projectSubmissionResult"
 	}
 	ctx.Browse.View = "home"
+	ctx.Browse.Level = SUBMISSIONS
 	args := map[string]interface{}{"ctx": ctx, "subRes": subs}
 	return T(getNav(ctx), temp).Execute(w, args)
-}
-
-//configView loads a tool's configuration page.
-func configView(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	tool, err := GetString(req, "tool")
-	if err != nil {
-		tool = "none"
-	}
-	ctx.Browse.View = "submit"
-	args := map[string]interface{}{"ctx": ctx, "tool": tool}
-	return T(getNav(ctx), "configView", toolTemplate(tool)).Execute(w, args)
 }
 
 //getFiles diplays information about files.
@@ -155,30 +156,44 @@ func getFiles(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 		return err
 	}
 	ctx.Browse.View = "home"
+	ctx.Browse.Level = FILES
 	args := map[string]interface{}{"ctx": ctx, "fileInfo": fileinfo}
 	return T(getNav(ctx), "fileResult").Execute(w, args)
 }
 
-//displayResult displays a tool's result.
-func displayResult(w http.ResponseWriter, req *http.Request, ctx *Context) error {
+//showResult displays a tool's result.
+func showResult(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	args, temps, err := analysisArgs(req, ctx)
 	if err != nil {
 		ctx.AddMessage("Could not retrieve results.", true)
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 		return err
 	}
+	ctx.Browse.View = "home"
+	ctx.Browse.Level = ANALYSIS
 	return T(temps...).Execute(w, args)
 }
 
 //analysisArgs loads arguments for displayResult
 func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{}, temps []string, err error) {
-	ctx.Browse.View = "home"
-	oldName := ctx.Browse.ResultName
-	ctx.Browse.ResultName, err = GetString(req, "resultname")
+	oldName := ctx.Browse.Result
+	err = ctx.Browse.SetUid(req)
 	if err != nil {
 		return
 	}
-	files, err := retrieveFiles(req, ctx)
+	err = ctx.Browse.SetSid(req)
+	if err != nil {
+		return
+	}
+	err = ctx.Browse.SetResult(req)
+	if err != nil {
+		return
+	}
+	err = ctx.Browse.SetFile(req)
+	if err != nil {
+		return
+	}
+	files, err := Snapshots(ctx.Browse.Sid, ctx.Browse.File)
 	if err != nil {
 		return
 	}
@@ -214,7 +229,7 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 	if err != nil {
 		return
 	}
-	currentResult, err := GetResult(ctx.Browse.ResultName, currentFile.Id)
+	currentResult, err := GetResult(ctx.Browse.Result, currentFile.Id)
 	if err != nil {
 		return
 	}
@@ -222,11 +237,11 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 	if err != nil {
 		return
 	}
-	nextResult, err := GetResult(ctx.Browse.ResultName, nextFile.Id)
+	nextResult, err := GetResult(ctx.Browse.Result, nextFile.Id)
 	if err != nil {
 		return
 	}
-	if ctx.Browse.ResultName == tool.CODE {
+	if ctx.Browse.Result == tool.CODE {
 		lines, id := highlightArgs(req, oldName)
 		if lines != nil {
 			if id == currentFile.Id {
@@ -238,7 +253,6 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 				return
 			}
 		}
-
 	}
 	args = map[string]interface{}{
 		"ctx": ctx, "files": files, "currentFile": currentFile,
@@ -276,30 +290,39 @@ func highlightArgs(req *http.Request, name string) (lines []int, id bson.ObjectI
 	return
 }
 
-//displayChart displays a chart for a tool's result.
-func displayChart(w http.ResponseWriter, req *http.Request, ctx *Context) error {
+//showChart displays a chart for a tool's result.
+func showChart(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	args, err := chartArgs(req, ctx)
 	if err != nil {
 		ctx.AddMessage("Could not retrieve chart data.", true)
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 		return err
 	}
+	ctx.Browse.View = "home"
+	ctx.Browse.Level = CHART
 	temps := []string{getNav(ctx), "charts"}
 	return T(temps...).Execute(w, args)
 }
 
 //chartArgs loads arguments for displaychart.
 func chartArgs(req *http.Request, ctx *Context) (args map[string]interface{}, err error) {
-	ctx.Browse.View = "home"
-	ctx.Browse.ResultName, err = GetString(req, "resultname")
+	err = ctx.Browse.SetUid(req)
 	if err != nil {
 		return
 	}
-	ctx.Browse.FileName, err = GetString(req, "filename")
+	err = ctx.Browse.SetSid(req)
 	if err != nil {
 		return
 	}
-	files, err := retrieveFiles(req, ctx)
+	err = ctx.Browse.SetResult(req)
+	if err != nil {
+		return
+	}
+	err = ctx.Browse.SetFile(req)
+	if err != nil {
+		return
+	}
+	files, err := Snapshots(ctx.Browse.Sid, ctx.Browse.File)
 	if err != nil {
 		return
 	}
@@ -308,21 +331,16 @@ func chartArgs(req *http.Request, ctx *Context) (args map[string]interface{}, er
 		return
 	}
 	startTime := files[0].Time
-	chart := LoadChart(ctx.Browse.Uid, ctx.Browse.ResultName, files, startTime).Data
+	chart := LoadChart(ctx.Browse.Result, files, startTime).Data
 	compareStr := ""
 	compareId, cerr := util.ReadId(req.FormValue("compare"))
 	if cerr == nil {
-		var submission *project.Submission
-		submission, err = db.Submission(bson.M{project.ID: compareId}, nil)
-		if err != nil {
-			return
-		}
 		var compareFiles []*project.File
-		compareFiles, err = Snapshots(compareId, ctx.Browse.FileName)
+		compareFiles, err = Snapshots(compareId, ctx.Browse.File)
 		if err != nil {
 			return
 		}
-		compareChart := LoadChart(submission.User, ctx.Browse.ResultName, compareFiles, startTime).Data
+		compareChart := LoadChart(ctx.Browse.Result, compareFiles, startTime).Data
 		chart = append(chart, compareChart...)
 		compareStr = compareId.Hex()
 	}

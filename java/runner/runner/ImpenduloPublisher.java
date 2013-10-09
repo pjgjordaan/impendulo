@@ -33,7 +33,6 @@ import gov.nasa.jpf.vm.ElementInfo;
 import gov.nasa.jpf.vm.StackFrame;
 import gov.nasa.jpf.vm.ThreadInfo;
 import gov.nasa.jpf.vm.ThreadList;
-import gov.nasa.jpf.vm.VM;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -73,7 +72,6 @@ public class ImpenduloPublisher extends XMLPublisher {
 	@Override
 	protected void publishResult() {
 		List<Error> errors = reporter.getErrors();
-
 		out.println("  <errors>");
 		out.print("    <total>");
 		out.print(errors.size());

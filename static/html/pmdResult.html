@@ -3,9 +3,12 @@
 {{if $report.Success}}
 <h4 class="text-success">No problems detected.</h4>
 {{else}}
-{{$fileName := .FileName}}
-{{$current := .Current}}
-{{$next := .Next}}
+{{$code := "Code"}}
+{{$uid := .state.Uid}}
+{{$sid := .state.Sid}}
+{{$fileName := .state.File}}
+{{$current := .state.Current}}
+{{$next := .state.Next}}
 {{$file := $report.File $fileName}}
 {{$id := $report.Id.Hex}}
 {{$addr := address $report}}
@@ -29,7 +32,7 @@
 	    {{$ends := .Ends}}
 	    {{range $i, $start :=  .Starts}}
 	    {{$end := index $ends $i}}
-	    <a href="displayresult?resultname=Code&lines={{$start}}-{{$end}}&caller={{$id}}&filename={{$fileName}}&current={{$current}}&next={{$next}}">
+	    <a href="{{displayResultLines $sid $uid $code $fileName $current $next $id $start $end}}">
 	      {{$start}} to {{$end}}; 
 	    </a>
 	    {{end}}

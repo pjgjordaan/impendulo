@@ -165,6 +165,9 @@ func LoadView(name, view string) Handler {
 	return func(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 		views := Views()
 		ctx.Browse.View = views[name]
+		if ctx.Browse.View == "home" {
+			ctx.Browse.SetLevel(name)
+		}
 		args := map[string]interface{}{"ctx": ctx}
 		return T(getNav(ctx), name).Execute(w, args)
 	}

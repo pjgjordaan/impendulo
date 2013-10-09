@@ -1,8 +1,8 @@
 {{define "view"}}
-<h3>Download Project Skeleton</h3>
+<h3 class="heading">Download Project Skeleton</h3>
 <form class="form-horizontal" action="skeleton.zip" method="get">
   <div class="form-group">
-    <label class="col-lg-2 control-label" for="project">Project</label>
+    <label class="col-lg-offset-3 col-lg-2 control-label" for="project">Project</label>
     <div class="col-lg-3">
       <select class="form-control" name="project" id="project">
 	{{$projects := projects}}
@@ -13,7 +13,7 @@
     </div>
   </div>
   <div class="form-group">
-    <div class="col-lg-offset-2 col-lg-3">
+    <div class="col-lg-offset-5 col-lg-3">
       <button type="submit" class="btn btn-default">
 	<span class="glyphicon glyphicon-download"></span> Download
       </button>

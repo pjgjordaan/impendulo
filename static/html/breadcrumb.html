@@ -1,0 +1,99 @@
+{{define "breadcrumb"}}
+<ul class="breadcrumb">
+  {{if .ctx.Browse.Level.Home}} 
+  <li class="active">Home</li>
+  {{else}}
+  <li><a href="homeview">Home</a></li>
+  {{if .ctx.Browse.Level.Projects}}
+  <li class="active">Projects</li>
+  {{else if .ctx.Browse.Level.Users}}
+  <li class="active">Users</li>
+  {{else if .ctx.Browse.IsUser}}
+  <li><a href="userresult">Users</a></li>
+  {{if .ctx.Browse.Level.Submissions}}
+  <li class="active">
+    User Submissions
+  </li>
+  {{else}}
+  <li class="dropdown">
+    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+      User Submissions <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu" role="menu">
+      {{$users := users}}
+      {{range $users}}
+      <li><a href="{{getUserSubmissions .Name}}">{{.Name}}</a></li>
+      {{end}}
+    </ul>
+  </li>
+  {{end}}
+  {{else}} 
+  <li><a href="projectresult">Projects</a></li>
+  {{if .ctx.Browse.Level.Submissions}}
+   <li class="active">
+     Project Submissions
+   </li>
+  {{else}}
+  <li class="dropdown">
+    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+      Project Submissions <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu" role="menu">
+      {{$projects := projects}}
+      {{range $projects}}
+      <li><a href="{{getProjectSubmissions .Id}}">{{.Name}}</a></li>
+      {{end}}
+    </ul>
+  </li>
+  {{end}}
+  {{end}}
+  {{$project := projectName .ctx.Browse.Pid}}
+  {{$uid := .ctx.Browse.Uid}}
+  {{$sid := .ctx.Browse.Sid}}
+  {{if .ctx.Browse.Level.Files}}
+  <li class="active">{{$uid}}'s
+    {{$project}} Submission</li>
+  {{else if or .ctx.Browse.Level.Analysis .ctx.Browse.Level.Chart}}
+  <li><a href="{{getFiles .ctx.Browse.Sid}}">{{$uid}}'s
+      {{$project}} Submission</a></li>
+  {{$resultName := .ctx.Browse.Result}}
+  {{$fileName := .ctx.Browse.File}}
+  {{$results := .results}}
+  {{if .ctx.Browse.Level.Analysis}}
+  {{$current := .ctx.Browse.Current}}
+  {{$next := .ctx.Browse.Next}}
+  <li class="dropdown">
+    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+      {{$resultName}} <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu" role="menu">
+      {{range $results}}  
+      <li>
+	<a href="{{displayResult $sid $uid . $fileName $current $next}}">
+	  {{.}}
+	</a>
+      </li>
+      {{end}}
+    </ul>
+  </li>
+  {{else if .ctx.Browse.Level.Chart}}
+  <li class="dropdown">
+    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+      {{$resultName}} Chart <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu" role="menu">
+      {{$compare := .compare}}
+      {{range $results}}  
+      <li>
+	<a href="{{compareChart $sid $uid . $fileName $compare}}">
+	  {{.}}
+	</a>
+      </li>
+      {{end}}
+    </ul>
+  </li>
+  {{end}}
+  {{end}}
+  {{end}}
+</ul>
+{{end}}

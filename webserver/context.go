@@ -29,6 +29,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"net/http"
 )
@@ -37,21 +38,33 @@ type (
 	//Context is used to keep track of the current user's session.
 	Context struct {
 		Session *sessions.Session
-		Browse  *BrowseData
+		Browse  *Browse
 	}
 
-	//BrowseData is used to keep track of the user's browsing.
-	BrowseData struct {
-		IsUser                          bool
-		Pid, Sid                        bson.ObjectId
-		Uid, FileName, ResultName, View string
-		Current, Next                   int
+	//Browse is used to keep track of the user's browsing.
+	Browse struct {
+		IsUser                  bool
+		Pid, Sid                bson.ObjectId
+		Uid, File, Result, View string
+		Current, Next           int
+		Level                   Level
 	}
+	Level int
+)
+
+const (
+	HOME Level = iota
+	PROJECTS
+	USERS
+	SUBMISSIONS
+	FILES
+	ANALYSIS
+	CHART
 )
 
 func init() {
 	//Register these so that they can be saved with the session.
-	gob.Register(new(BrowseData))
+	gob.Register(new(Browse))
 	gob.Register(new(bson.ObjectId))
 }
 
@@ -126,9 +139,9 @@ func (ctx *Context) Successes() []interface{} {
 func LoadContext(sess *sessions.Session) *Context {
 	ctx := &Context{Session: sess}
 	if val, ok := ctx.Session.Values["browse"]; ok {
-		ctx.Browse = val.(*BrowseData)
+		ctx.Browse = val.(*Browse)
 	} else {
-		ctx.Browse = new(BrowseData)
+		ctx.Browse = new(Browse)
 	}
 	if uname, err := ctx.Username(); err == nil {
 		_, err = db.User(uname)
@@ -137,4 +150,83 @@ func LoadContext(sess *sessions.Session) *Context {
 		}
 	}
 	return ctx
+}
+
+func (b *Browse) SetUid(req *http.Request) (err error) {
+	uid, err := GetString(req, "uid")
+	if err == nil {
+		b.Uid = uid
+	}
+	return
+}
+
+func (b *Browse) SetSid(req *http.Request) (err error) {
+	sid, err := util.ReadId(req.FormValue("sid"))
+	if err == nil {
+		b.Sid = sid
+	}
+	return
+}
+
+func (b *Browse) SetPid(req *http.Request) (err error) {
+	pid, err := util.ReadId(req.FormValue("pid"))
+	if err == nil {
+		b.Pid = pid
+	}
+	return
+}
+
+func (b *Browse) SetResult(req *http.Request) (err error) {
+	res, err := GetString(req, "result")
+	if err == nil {
+		b.Result = res
+	}
+	return
+}
+
+func (b *Browse) SetFile(req *http.Request) (err error) {
+	f, err := GetString(req, "file")
+	if err == nil {
+		b.File = f
+	}
+	return
+}
+
+func (b *Browse) SetLevel(route string) {
+	switch route {
+	case "homeView":
+		b.Level = HOME
+	case "projectResult":
+		b.Level = PROJECTS
+	case "userResult":
+		b.Level = USERS
+	}
+}
+
+func (l Level) Home() bool {
+	return l == HOME
+}
+
+func (l Level) Projects() bool {
+	return l == PROJECTS
+}
+
+func (l Level) Users() bool {
+	return l == USERS
+}
+
+func (l Level) Submissions() bool {
+	return l == SUBMISSIONS
+}
+
+func (l Level) Files() bool {
+	return l == FILES
+}
+
+func (l Level) Analysis() bool {
+	return l == ANALYSIS
+}
+
+func (l Level) Chart() bool {
+	return l == CHART
 }

@@ -1,54 +1,10 @@
 {{define "view"}}
-{{$resultName := .ctx.Browse.ResultName}}
-{{$fileName := .ctx.Browse.FileName}}
+{{$resultName := .ctx.Browse.Result}}
+{{$fileName := .ctx.Browse.File}}
+{{$uid := .ctx.Browse.Uid}}
+{{$sid := .ctx.Browse.Sid}}
 {{$results := .results}}
-<ul class="breadcrumb">
-  <li><a href="homeview">Home</a></li>
-  {{if .ctx.Browse.IsUser}}
-  <li><a href="userresult">Users</a></li>
-  <li class="dropdown">
-    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-      User Submissions <span class="caret"></span>
-    </a>
-    <ul class="dropdown-menu" role="menu">
-      {{$users := users}}
-      {{range $users}}
-      <li><a href="getsubmissions?id={{.Name}}&type=user">{{.Name}}</a></li>
-      {{end}}
-    </ul>
-  </li>
-  <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">{{projectName .ctx.Browse.Pid}} Submission</a></li>
-  {{else}}
-  <li><a href="projectresult">Projects</a></li>
-  <li class="dropdown">
-    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-      Project Submissions <span class="caret"></span>
-    </a>
-    <ul class="dropdown-menu" role="menu">
-      {{$projects := projects}}
-      {{range $projects}}
-      <li><a href="getsubmissions?id={{.Id.Hex}}&type=project">{{.Name}}</a></li>
-      {{end}}
-    </ul>
-  </li>
-  <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">{{.ctx.Browse.Uid}}'s Submission</a></li>
-  {{end}}
-  <li class="dropdown">
-    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-      {{$resultName}} Chart <span class="caret"></span>
-    </a>
-    <ul class="dropdown-menu" role="menu">
-      {{$compare := .compare}}
-      {{range $results}}  
-      <li>
-	<a href="displaychart?resultname={{.}}&filename={{$fileName}}&compare={{$compare}}">
-	  {{.}}
-	</a>
-      </li>
-      {{end}}
-    </ul>
-  </li>
-</ul>
+{{template "breadcrumb" .}}
 <h4 class="text-center">
   <small>project</small> {{projectName .ctx.Browse.Pid}}
   <small>file</small> {{ $fileName}} 
@@ -62,18 +18,17 @@
     </a>
     <ul class="dropdown-menu" role="menu">
       {{$submissions := submissions .ctx.Browse.Pid}}
-      {{$subid := .ctx.Browse.Sid}}
       {{range $submissions}}
-       {{if not (equal $subid .Id)}}
+       {{if ne $sid .Id}}
       <li>
-	<a href="displaychart?resultname={{$resultName}}&filename={{$fileName}}&compare={{.Id.Hex}}">
+	<a href="{{compareChart $sid $uid $resultName $fileName .Id.Hex}}">
 	  {{.User}} on {{date .Time}} 
        </a>
       </li>
       {{end}}
       {{end}}
       <li>
-	<a href="displaychart?resultname={{$resultName}}&filename={{$fileName}}">
+	<a href="{{singleChart $sid $uid $resultName $fileName}}">
 	  No one
 	</a>
       </li>
@@ -81,10 +36,7 @@
   </small>
 </h3> 
 <div id="chart" class="chart" xmlns:xlink="http://www.w3.org/1999/xlink">
-  <div id="tooltip" class="tooltip">
-    <h5 id="title"><small id="y"></small></h5>
-    <h6 id="x"></h6>
-  </div>
+  <div id="tooltip" class="tooltip"></div>
 </div>
 <script language="javascript" src="/static/js/jquery-2.0.2.min.js"></script>
 <script language="javascript" src="/static/js/d3.v3.min.js"></script>

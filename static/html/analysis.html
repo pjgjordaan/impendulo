@@ -1,58 +1,15 @@
 {{define "view"}}
 {{$currentFile := .currentFile}}
 {{$nextFile := .nextFile}}
-{{$resultName := .ctx.Browse.ResultName}}
-{{$fileName := $currentFile.Name}}
+{{$resultName := .ctx.Browse.Result}}
+{{$fileName := .ctx.Browse.File}}
 {{$results := .results}}
 {{$current := .ctx.Browse.Current}}
 {{$next := .ctx.Browse.Next}}
 {{$project := projectName .ctx.Browse.Pid}}
-<ul class="breadcrumb">
-  <li><a href="homeview">Home</a></li>
-  {{if .ctx.Browse.IsUser}}
-  <li><a href="userresult">Users</a></li>
-  <li class="dropdown">
-    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-      User Submissions <span class="caret"></span>
-    </a>
-    <ul class="dropdown-menu" role="menu">
-      {{$users := users}}
-      {{range $users}}
-      <li><a href="getsubmissions?id={{.Name}}&type=user">{{.Name}}</a></li>
-      {{end}}
-    </ul>
-  </li>
-  {{else}}
-  <li><a href="projectresult">Projects</a></li>
-  <li class="dropdown">
-    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-      Project Submissions <span class="caret"></span>
-    </a>
-    <ul class="dropdown-menu" role="menu">
-      {{$projects := projects}}
-      {{range $projects}}
-      <li><a href="getsubmissions?id={{.Id.Hex}}&type=project">{{.Name}}</a></li>
-      {{end}}
-    </ul>
-  </li>
-  {{end}}
-  <li><a href="getfiles">{{.ctx.Browse.Uid}}'s
-      {{$project}} Submission</a></li>
-  <li class="dropdown">
-    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-      {{$resultName}} <span class="caret"></span>
-    </a>
-    <ul class="dropdown-menu" role="menu">
-      {{range $results}}  
-      <li>
-	<a href="displayresult?resultname={{.}}&filename={{$fileName}}&current={{$current}}&next={{$next}}">
-	  {{.}}
-	</a>
-      </li>
-      {{end}}
-    </ul>
-  </li>
-</ul>
+{{$uid := .ctx.Browse.Uid}}
+{{$sid := .ctx.Browse.Sid}}
+{{template "breadcrumb" .}}
 <h4 class="text-center">
   <small>user</small> {{.ctx.Browse.Uid}} 
   <small>project</small> {{$project}}
@@ -61,7 +18,7 @@
 <h3 class="text-center">
   <small>tool</small> {{$resultName}}
   {{if (hasChart $resultName)}}
-  <a  class="btn btn-primary" href="displaychart?filename={{$fileName}}&resultname={{$resultName}}">
+  <a class="btn btn-primary" href="{{singleChart $sid $uid $resultName $fileName}}">
     Chart
   </a>
   {{end}}
@@ -90,7 +47,7 @@
 	<select class="form-control" name="next" id="next">
 	  {{range $index, $file := .files}} 
 	  {{$dispIndex := sum $index 1}}
-	  {{if equal $next $index}}
+	  {{if eq $next $index}}
 	  <option selected value="{{$index}}">{{$dispIndex}}</option>
 	  {{else}}
 	  <option value="{{$index}}">{{$dispIndex}}</option>
@@ -122,12 +79,12 @@
     </dl>
   </div>
 </div>
-{{if (equal $resultName "Diff")}}
+{{if (eq $resultName "Diff")}}
 {{$data := .currentResult.Create .nextResult}}
 {{template "result"  $data}}
 {{else}}
 <div class="row">
-  {{$args := args "FileName" $fileName "ResultName" $resultName "Current" $current "Next" $next}}
+  {{$args := args "state" .ctx.Browse}}
   <div class="col-md-6">
     {{if isError .currentResult}}
     <p class="text-danger">{{.currentResult.GetReport}}</p>
@@ -145,7 +102,7 @@
     {{end}}
   </div>
 </div>
-{{if (equal $resultName "Code")}}
+{{if (eq $resultName "Code")}}
 <script type="text/javascript">
   SyntaxHighlighter.all();
   window.onload = function(){

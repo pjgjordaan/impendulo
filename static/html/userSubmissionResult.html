@@ -1,21 +1,7 @@
 {{define "view"}}
 <!-- This is the breadcrumb which allows us to browse through the --
   -- hierarchy quickly -->
-<ul class="breadcrumb">
-  <li><a href="homeview">Home</a></li>  
-  <li><a href="userresult">Users</a></li>
-  <li class="dropdown">
-    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-      User Submissions <span class="caret"></span>
-    </a>
-    <ul class="dropdown-menu" role="menu">
-      {{$users := users}}
-      {{range $users}}
-      <li><a href="getsubmissions?id={{.Name}}&type=user">{{.Name}}</a></li>
-      {{end}}
-    </ul>
-  </li>
-</ul>
+{{template "breadcrumb" .}}
 <h2 class="text-center"><small>user</small> {{.ctx.Browse.Uid}}</h2>
 <!-- Here we display a table of the different submissions this user --
   -- has made. Included are date and project name to differentiate between --
@@ -31,16 +17,16 @@
     {{ range .subRes}}
     {{$subId := .Id.Hex}}
     <tr>
-      <td><a class="rowlink" href="getfiles?subid={{$subId}}">
+      <td><a class="rowlink" href="{{getFiles $subId}}">
 	  {{projectName .ProjectId}}
       </a></td>
-      <td><a class="rowlink" href="getfiles?subid={{$subId}}" >
+      <td><a class="rowlink" href="{{getFiles $subId}}" >
 	  {{date .Time}}
       </a></td>
-      <td><a class="rowlink" href="getfiles?subid={{$subId}}">
+      <td><a class="rowlink" href="{{getFiles $subId}}">
 	  {{snapshots .Id}}
       </a></td>
-      <td><a class="rowlink" href="getfiles?subid={{$subId}}">
+      <td><a class="rowlink" href="{{getFiles $subId}}">
 	  {{launches .Id}}
       </a></td>
     </tr>

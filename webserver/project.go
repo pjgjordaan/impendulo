@@ -25,6 +25,7 @@
 package webserver
 
 import (
+	"errors"
 	"fmt"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processing"
@@ -158,9 +159,9 @@ func DeleteProject(req *http.Request, ctx *Context) (msg string, err error) {
 
 //RetrieveFileInfo fetches all filenames in a submission.
 func RetrieveFileInfo(req *http.Request, ctx *Context) (ret []*db.FileInfo, err error) {
-	subId, serr := util.ReadId(req.FormValue("subid"))
-	if serr == nil {
-		ctx.Browse.Sid = subId
+	err = ctx.Browse.SetSid(req)
+	if err != nil {
+		return
 	}
 	matcher := bson.M{project.SUBID: ctx.Browse.Sid, project.TYPE: project.SRC}
 	ret, err = db.FileInfos(matcher)
@@ -179,19 +180,11 @@ func RetrieveFileInfo(req *http.Request, ctx *Context) (ret []*db.FileInfo, err 
 	return
 }
 
-//retrieveFiles fetches all files in a submission with a given name.
-func retrieveFiles(req *http.Request, ctx *Context) ([]*project.File, error) {
-	name, ferr := GetString(req, "filename")
-	if ferr == nil {
-		ctx.Browse.FileName = name
-	}
-	return Snapshots(ctx.Browse.Sid, ctx.Browse.FileName)
-}
-
+//Snapshots retrieves snapshots of a given file in a submission.
 func Snapshots(subId bson.ObjectId, fileName string) (ret []*project.File, err error) {
 	matcher := bson.M{project.SUBID: subId,
 		project.TYPE: project.SRC, project.NAME: fileName}
-	selector := bson.M{project.TIME: 1}
+	selector := bson.M{project.TIME: 1, project.SUBID: 1}
 	ret, err = db.Files(matcher, selector, project.TIME)
 	if err == nil && len(ret) == 0 {
 		err = fmt.Errorf("No files found with name %q.", fileName)
@@ -200,40 +193,24 @@ func Snapshots(subId bson.ObjectId, fileName string) (ret []*project.File, err e
 }
 
 //RetrieveSubmissions fetches all submissions in a project or by a user.
-func RetrieveSubmissions(req *http.Request, ctx *Context) (subs []*project.Submission, err error) {
-	tipe, err := GetString(req, "type")
-	if err != nil {
-		return
-	}
-	idStr, err := GetString(req, "id")
-	if err != nil {
-		return
-	}
-	//Determine for what we want to retrieve submissions and act accordingly.
-	switch tipe {
-	case "project":
-		var pid bson.ObjectId
-		pid, err = util.ReadId(idStr)
-		if err != nil {
-			return
-		}
-		ctx.Browse.Pid = pid
+func RetrieveSubmissions(req *http.Request, ctx *Context) ([]*project.Submission, error) {
+	perr := ctx.Browse.SetPid(req)
+	uerr := ctx.Browse.SetUid(req)
+	if perr == nil {
 		ctx.Browse.IsUser = false
-		subs, err = db.Submissions(
-			bson.M{project.PROJECT_ID: pid},
+		return db.Submissions(
+			bson.M{project.PROJECT_ID: ctx.Browse.Pid},
 			nil, "-"+project.TIME,
 		)
-	case "user":
-		ctx.Browse.Uid = idStr
+	} else if uerr == nil {
 		ctx.Browse.IsUser = true
-		subs, err = db.Submissions(
+		return db.Submissions(
 			bson.M{project.USER: ctx.Browse.Uid},
 			nil, "-"+project.TIME,
 		)
-	default:
-		err = fmt.Errorf("Unknown request type %q", tipe)
+	} else {
+		return nil, errors.New("No id found.")
 	}
-	return
 }
 
 //LoadSkeleton makes a project skeleton available for download.

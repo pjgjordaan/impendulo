@@ -56,8 +56,8 @@ func init() {
 
 	router.Add("GET", "/configview", Handler(configView)).Name("configview")
 
-	router.Add("GET", "/displaychart", Handler(displayChart)).Name("displaychart")
-	router.Add("GET", "/displayresult", Handler(displayResult)).Name("displayresult")
+	router.Add("GET", "/displaychart", Handler(showChart)).Name("displaychart")
+	router.Add("GET", "/displayresult", Handler(showResult)).Name("displayresult")
 	router.Add("GET", "/getfiles", Handler(getFiles)).Name("getfiles")
 	router.Add("GET", "/getsubmissions", Handler(getSubmissions)).Name("getsubmissions")
 	router.Add("GET", "/skeleton.zip", Handler(downloadProject))

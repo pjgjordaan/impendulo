@@ -5,7 +5,7 @@
 {{else}}
 {{$errCount := len $report.Errors}}
 <h4 class="text-danger accordion-text">
-  {{if equal $errCount 1}} 
+  {{if eq $errCount 1}} 
   1 Unique Error ({{$report.Total}} Total)
   {{else}}
   {{$errCount}} Unique Errors ({{$report.Total}} Total)
@@ -15,9 +15,12 @@
 {{$addr := address $report}}
 <div class="panel-group" id="jpfaccordion{{$addr}}">
   {{if not $report.Success}}
-  {{$fileName := .FileName}}
-  {{$current := .Current}}
-  {{$next := .Next}}
+  {{$code := "Code"}}
+  {{$uid := .state.Uid}}
+  {{$sid := .state.Sid}}
+  {{$fileName := .state.File}}
+  {{$current := .state.Current}}
+  {{$next := .state.Next}}
   {{$id := $report.Id.Hex}}
   <div class="panel panel-default">
     <div class="panel-heading">
@@ -48,10 +51,10 @@
 		<h5 class="thread-title"><strong>{{.Name}}</strong> <small>Status</small> {{.Status}}</h5>
 		<p class="thread-content">
 		  {{range .Frames}}
-		  {{if equal .Line -1}}
+		  {{if eq .Line -1}}
 		  {{.Details}}
 		  {{else}}
-		  <a href="displayresult?resultname=Code&lines={{.Line}}&caller={{$id}}&filename={{$fileName}}&current={{$current}}&next={{$next}}">
+		  <a href="{{displayResultLines $sid $uid $code $fileName $current $next $id .Line .Line}}">
 		    {{.Details}}
 		  </a>
 		  {{end}}

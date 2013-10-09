@@ -50,35 +50,41 @@ type (
 
 var (
 	funcs = template.FuncMap{
-		"projectName":     projectName,
-		"date":            util.Date,
-		"setBreaks":       func(s string) template.HTML { return template.HTML(setBreaks(s)) },
-		"address":         func(i interface{}) string { return fmt.Sprint(&i) },
-		"base":            filepath.Base,
-		"shortName":       shortName,
-		"sum":             sum,
-		"equal":           func(a, b interface{}) bool { return a == b },
-		"langs":           tool.Langs,
-		"submissionCount": submissionCount,
-		"getBusy":         processing.GetStatus,
-		"slice":           slice,
-		"adjustment":      adjustment,
-		"listeners":       jpf.Listeners,
-		"searches":        jpf.Searches,
-		"rules":           pmd.RuleSet,
-		"tools":           tools,
-		"unescape":        html.UnescapeString,
-		"snapshots":       func(id bson.ObjectId) (int, error) { return fileCount(id, project.SRC) },
-		"launches":        func(id bson.ObjectId) (int, error) { return fileCount(id, project.LAUNCH) },
-		"html":            func(s string) template.HTML { return template.HTML(s) },
-		"string":          func(b []byte) string { return string(b) },
-		"args":            args,
-		"insert":          insert,
-		"isError":         isError,
-		"hasChart":        func(n string) bool { return n != tool.CODE && n != diff.NAME && n != tool.SUMMARY },
-		"submissions":     projectSubmissions,
-		"projects":        func() ([]*project.Project, error) { return db.Projects(nil, bson.M{project.SKELETON: 0}, project.NAME) },
-		"users":           func() ([]*user.User, error) { return db.Users(nil, user.ID) },
+		"projectName":           projectName,
+		"date":                  util.Date,
+		"setBreaks":             func(s string) template.HTML { return template.HTML(setBreaks(s)) },
+		"address":               func(i interface{}) string { return fmt.Sprint(&i) },
+		"base":                  filepath.Base,
+		"shortName":             shortName,
+		"sum":                   sum,
+		"langs":                 tool.Langs,
+		"submissionCount":       submissionCount,
+		"getBusy":               processing.GetStatus,
+		"slice":                 slice,
+		"adjustment":            adjustment,
+		"listeners":             jpf.Listeners,
+		"searches":              jpf.Searches,
+		"rules":                 pmd.RuleSet,
+		"tools":                 tools,
+		"unescape":              html.UnescapeString,
+		"snapshots":             func(id bson.ObjectId) (int, error) { return fileCount(id, project.SRC) },
+		"launches":              func(id bson.ObjectId) (int, error) { return fileCount(id, project.LAUNCH) },
+		"html":                  func(s string) template.HTML { return template.HTML(s) },
+		"string":                func(b []byte) string { return string(b) },
+		"args":                  args,
+		"insert":                insert,
+		"isError":               isError,
+		"hasChart":              func(n string) bool { return n != tool.CODE && n != diff.NAME && n != tool.SUMMARY },
+		"submissions":           projectSubmissions,
+		"projects":              func() ([]*project.Project, error) { return db.Projects(nil, bson.M{project.SKELETON: 0}, project.NAME) },
+		"users":                 func() ([]*user.User, error) { return db.Users(nil, user.ID) },
+		"displayResult":         displayResult,
+		"displayResultLines":    displayResultLines,
+		"getFiles":              func(subId bson.ObjectId) string { return fmt.Sprintf("getfiles?sid=%s", subId.Hex()) },
+		"getUserSubmissions":    func(user string) string { return fmt.Sprintf("getsubmissions?uid=%s", user) },
+		"getProjectSubmissions": func(id bson.ObjectId) string { return fmt.Sprintf("getsubmissions?pid=%s", id.Hex()) },
+		"singleChart":           singleChart,
+		"compareChart":          compareChart,
 	}
 	templateDir   string
 	baseTemplates []string
@@ -87,6 +93,24 @@ var (
 const (
 	PAGER_SIZE = 10
 )
+
+func compareChart(sid bson.ObjectId, uid, result, file, compare string) string {
+	return singleChart(sid, uid, result, file) + fmt.Sprintf("&compare=%s", compare)
+}
+
+func singleChart(sid bson.ObjectId, uid, result, file string) string {
+	return fmt.Sprintf("displaychart?sid=%s&uid=%s&result=%s&file=%s", sid.Hex(), uid, result, file)
+}
+
+func displayResult(sid bson.ObjectId, uid, result, file string, current, next int) string {
+	return fmt.Sprintf("displayresult?sid=%s&uid=%s&result=%s&file=%s&current=%d&next=%d",
+		sid.Hex(), uid, result, file, current, next)
+}
+
+func displayResultLines(sid bson.ObjectId, uid, result, file string, current, next int, caller string, start, end int) string {
+	return displayResult(sid, uid, result, file, current, next) +
+		fmt.Sprintf("&caller=%s&lines=%d-%d", caller, start, end)
+}
 
 func projectSubmissions(id bson.ObjectId) (subs []*project.Submission, err error) {
 	matcher := bson.M{project.PROJECT_ID: id}
@@ -221,6 +245,7 @@ func BaseTemplates() []string {
 		filepath.Join(TemplateDir(), "index.html"),
 		filepath.Join(TemplateDir(), "messages.html"),
 		filepath.Join(TemplateDir(), "footer.html"),
+		filepath.Join(TemplateDir(), "breadcrumb.html"),
 	}
 	return baseTemplates
 }

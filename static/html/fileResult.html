@@ -1,36 +1,8 @@
 {{define "view"}}
 {{$project := projectName .ctx.Browse.Pid}}
-<ul class="breadcrumb">
-  <li><a href="homeview">Home</a></li>  
-  {{if .ctx.Browse.IsUser}}
-  <li><a href="userresult">Users</a></li>
-  <li class="dropdown">
-    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-      User Submissions <span class="caret"></span>
-    </a>
-    <ul class="dropdown-menu" role="menu">
-      {{$users := users}}
-      {{range $users}}
-      <li><a href="getsubmissions?id={{.Name}}&type=user">{{.Name}}</a></li>
-      {{end}}
-    </ul>
-  </li>
-  {{else}}
-  <li><a href="projectresult">Projects</a></li>
-  <li class="dropdown">
-    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-      Project Submissions <span class="caret"></span>
-    </a>
-    <ul class="dropdown-menu" role="menu">
-      {{$projects := projects}}
-      {{range $projects}}
-      <li><a href="getsubmissions?id={{.Id.Hex}}&type=project">{{.Name}}</a></li>
-      {{end}}
-    </ul>
-  </li>
-  {{end}}
-  <li class="active">{{.ctx.Browse.Uid}}'s {{$project}} Submission</li>
-</ul>
+{{$uid := .ctx.Browse.Uid}}
+{{$sid := .ctx.Browse.Sid}}
+{{template "breadcrumb" .}}
 <h2 class="text-center"><small>user</small> {{.ctx.Browse.Uid}} <br>
   <small>project</small> {{$project}}</h2>
 <ul class="list-unstyled">
@@ -38,8 +10,9 @@
   <li>
     <h3>{{.Name}}</h3>
     <h5>{{.Count}} Snapshots</h5>
-    <a href="displayresult?filename={{.Name}}&current=0&next=1&resultname=Javac">Analysis</a>
-    <a href="displaychart?filename={{.Name}}&resultname=Javac">Charts</a>
+    {{$javac := "Javac"}}
+    <a href="{{displayResult $sid $uid $javac .Name 0 1}}">Analysis</a>
+    <a href="{{singleChart $sid $uid $javac .Name}}">Charts</a>
   </li>
   {{end}}
 </ul>

@@ -118,7 +118,7 @@ public class JPFRunner {
 
 	private static void addFileConfig(Config config, String configName) {
 		Config fileConfig = new Config(configName);
-		for(Entry<Object, Object> fileProperty : fileConfig.entrySet()){
+		for (Entry<Object, Object> fileProperty : fileConfig.entrySet()) {
 			config.put(fileProperty.getKey(), fileProperty.getValue());
 		}
 	}

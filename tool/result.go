@@ -26,6 +26,7 @@ package tool
 
 import (
 	"fmt"
+	"github.com/godfried/impendulo/project"
 	"labix.org/v2/mgo/bson"
 	"strings"
 )
@@ -130,9 +131,13 @@ type (
 )
 
 //Add inserts new coordinates into data used to display a chart.
-func (chart *Chart) Add(user string, x float64, ys map[string]float64) {
+func (chart *Chart) Add(sub *project.Submission, x, adjust float64, ys map[string]float64) {
 	for name, val := range ys {
-		point := map[string]interface{}{"x": x, "y": val, "key": user + " " + name, "name": name, "user": user}
+		point := map[string]interface{}{
+			"x": x, "y": val, "key": name + " " + sub.Id.Hex(),
+			"name": name, "subId": sub.Id.Hex(), "user": sub.User,
+			"created": sub.Time, "adjust": adjust,
+		}
 		chart.Data = append(chart.Data, point)
 	}
 }
