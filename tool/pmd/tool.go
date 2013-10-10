@@ -59,7 +59,7 @@ func New(rules *Rules) (tool *Tool, err error) {
 	tool = &Tool{
 		rules: strings.Join(rules.RuleArray(), ","),
 	}
-	tool.cmd, err = config.Script(config.PMD)
+	tool.cmd, err = config.PMD.Path()
 	return
 }
 

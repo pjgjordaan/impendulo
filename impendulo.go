@@ -46,11 +46,11 @@ import (
 
 //Flag variables for setting ports to listen on, users file to process, mode to run in, etc.
 var (
-	Port, UsersFile, ConfigFile, ErrorLogging string
-	InfoLogging, Backup, Access, DB, Address  string
-	Web, Receiver, Processor                  bool
-	MaxProcs, Timeout                         int
-	conn                                      string
+	HTTP, TCP, UsersFile, ConfigFile, ErrorLogging string
+	InfoLogging, Backup, Access, DB, Address       string
+	Web, Receiver, Processor                       bool
+	MaxProcs, Timeout                              int
+	conn                                           string
 )
 
 const (
@@ -67,7 +67,8 @@ func init() {
 	flag.StringVar(&Backup, "b", "", "Specify a backup db (default none).")
 	flag.StringVar(&ErrorLogging, "e", "a", "Specify where to log errors to (default console & file).")
 	flag.StringVar(&InfoLogging, "i", "f", "Specify where to log info to (default file).")
-	flag.StringVar(&Port, "p", "8010", "Specify the port to listen on for files.")
+	flag.StringVar(&TCP, "tp", "8010", "Specify the port to listen on for files using TCP.")
+	flag.StringVar(&HTTP, "hp", "8080", "Specify the port to use for the webserver.")
 	flag.StringVar(&UsersFile, "u", "", "Specify a file with new users.")
 	flag.StringVar(&ConfigFile, "c", config.DefaultConfig(), "Specify a configuration file.")
 	flag.StringVar(&DB, "db", db.DEBUG_DB, "Specify a db to use. (default "+db.DEBUG_DB+").")
@@ -194,18 +195,18 @@ func AddUsers() (err error) {
 //RunWebServer runs the webserver
 func RunWebServer(inRoutine bool) {
 	if inRoutine {
-		go webserver.Run()
+		go webserver.Run(HTTP)
 	} else {
-		webserver.Run()
+		webserver.Run(HTTP)
 	}
 }
 
 //RunFileReceiver runs the TCP file receiving server.
 func RunFileReceiver(inRoutine bool) {
 	if inRoutine {
-		go server.Run(Port, new(server.SubmissionSpawner))
+		go server.Run(TCP, new(server.SubmissionSpawner))
 	} else {
-		server.Run(Port, new(server.SubmissionSpawner))
+		server.Run(TCP, new(server.SubmissionSpawner))
 	}
 }
 

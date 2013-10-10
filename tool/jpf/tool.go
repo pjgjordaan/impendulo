@@ -51,19 +51,19 @@ type (
 //jpfConfig is the JPF configuration associated with the submission's project.
 func New(jpfConfig *Config, jpfDir string) (jpf *Tool, err error) {
 	//Load locations
-	runDir, err := config.Directory(config.JPF_RUNNER)
+	runDir, err := config.JPF_RUNNER.Path()
 	if err != nil {
 		return
 	}
-	jpfJar, err := config.JarFile(config.JPF)
+	jpfJar, err := config.JPF.Path()
 	if err != nil {
 		return
 	}
-	jpfRunJar, err := config.JarFile(config.JPF_RUN)
+	jpfRunJar, err := config.JPF_RUN.Path()
 	if err != nil {
 		return
 	}
-	gson, err := config.JarFile(config.GSON)
+	gson, err := config.GSON.Path()
 	if err != nil {
 		return
 	}
@@ -119,7 +119,7 @@ func (this *Tool) Name() string {
 //results are read in from a xml file.
 func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	//Load arguments
-	java, err := config.Binary(config.JAVA)
+	java, err := config.JAVA.Path()
 	if err != nil {
 		return
 	}

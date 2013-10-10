@@ -29,8 +29,7 @@
 	    </a>
             <ul class="dropdown-menu">
               <li><a href="projectdownloadview">Project Skeleton</a></li>
-              <li><a href="clonedataview">Remote Data</a></li>
-	    </ul>
+            </ul>
           </li>
 	  <li {{if (.ctx.IsView "delete")}} class="dropdown active" {{else}} class="dropdown" {{end}}>
             <a href="#" class="dropdown-toggle" data-toggle="dropdown">
@@ -49,6 +48,16 @@
 	    </a>
             <ul class="dropdown-menu">
               <li><a href="runtoolview">Run</a></li>
+	    </ul>
+          </li>
+	  <li {{if (.ctx.IsView "data")}} class="dropdown active" {{else}} class="dropdown" {{end}}>
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+	      <span class="glyphicon glyphicon-download"></span> Data
+	      <b class="caret"></b>
+	    </a>
+            <ul class="dropdown-menu">
+              <li><a href="importdataview">Import</a></li>
+	      <li><a href="exportdataview">Export</a></li>
 	    </ul>
           </li>
 	  <li {{if (.ctx.IsView "status")}} class="active" {{end}}>

@@ -78,7 +78,7 @@ function timeChart(fileName, resultName, chartData, compare) {
 	var selected = d3.select(this);
 	var attr = 'r';
 	var val = DOT_RADIUS;
-	if(selected.attr('name') === LAUNCH){
+	if(isLaunch(d)){
 	    var xPos = parseFloat(d3.select(this).attr('cx'));
 	    var yPos = parseFloat(d3.select(this).attr('cy'));
 	    attr = 'points';
@@ -114,7 +114,8 @@ function timeChart(fileName, resultName, chartData, compare) {
     var yAxis = d3.svg.axis()
 	.scale(y)
 	.ticks(5)
-	.orient('left');   
+	.orient('left')
+	.tickSubdivide(true);
     
     var zoom = d3.behavior.zoom()
 	.x(x)

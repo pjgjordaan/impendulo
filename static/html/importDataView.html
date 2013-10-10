@@ -1,0 +1,25 @@
+{{define "view"}}
+<h3 class="heading">Import Impendulo Data</h3>
+<form role="form" class="form-horizontal" action="importdata" method="post" enctype="multipart/form-data">
+  <div class="form-group">
+    <label class="col-lg-offset-3 col-lg-2 control-label" for="db">Database</label>
+    <div class="col-lg-3">
+      <input class="form-control" name="db" type="text" id="db"
+	     placeholder="Database to import to">
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="col-lg-offset-3 col-lg-2 control-label" for="data">Data</label>
+    <div class="col-lg-3">
+      <input class="form-control" type="file" id="data" name="data">
+    </div>
+  </div>
+  <div class="form-group">
+    <div class="col-lg-offset-5 col-lg-3">
+      <button type="submit" class="btn btn-default">
+	<span class="glyphicon glyphicon-import"></span> Import
+      </button>
+    </div>
+  </div>
+</form>
+{{end}}

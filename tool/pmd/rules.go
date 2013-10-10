@@ -101,7 +101,7 @@ func RuleSet() (ret map[string]*Rule, err error) {
 	if ruleSet != nil {
 		return ruleSet, nil
 	}
-	cfgPath, err := config.Config(config.PMD_CFG)
+	cfgPath, err := config.PMD_CFG.Path()
 	if err != nil {
 		return ruleSet, err
 	}

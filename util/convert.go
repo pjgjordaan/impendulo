@@ -180,3 +180,12 @@ func toStrings(ivals interface{}) ([]string, error) {
 	}
 	return vals, nil
 }
+
+//ToSet converts an array to a set.
+func ToSet(vals []string) map[string]bool {
+	ret := make(map[string]bool)
+	for _, v := range vals {
+		ret[v] = true
+	}
+	return ret
+}

@@ -42,7 +42,7 @@ import (
 //Diff calculates and returns the diff between orig and change.
 func Diff(orig, change string) (ret string, err error) {
 	//Load diff executable
-	exec, err := config.Binary(config.DIFF)
+	exec, err := config.DIFF.Path()
 	if err != nil {
 		return
 	}
@@ -68,7 +68,7 @@ func Diff2HTML(diff string) (ret template.HTML, err error) {
 		return
 	}
 	//Load the script
-	script, err := config.Script(config.DIFF2HTML)
+	script, err := config.DIFF2HTML.Path()
 	if err != nil {
 		return
 	}

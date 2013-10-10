@@ -1,16 +1,16 @@
 {{define "breadcrumb"}}
 <ul class="breadcrumb">
-  {{if .ctx.Browse.Level.Home}} 
+  {{if .ctx.Browse.Level.Is "home"}} 
   <li class="active">Home</li>
   {{else}}
   <li><a href="homeview">Home</a></li>
-  {{if .ctx.Browse.Level.Projects}}
+  {{if .ctx.Browse.Level.Is "projects"}}
   <li class="active">Projects</li>
-  {{else if .ctx.Browse.Level.Users}}
+  {{else if .ctx.Browse.Level.Is "users"}}
   <li class="active">Users</li>
   {{else if .ctx.Browse.IsUser}}
   <li><a href="userresult">Users</a></li>
-  {{if .ctx.Browse.Level.Submissions}}
+  {{if .ctx.Browse.Level.Is "submissions"}}
   <li class="active">
     User Submissions
   </li>
@@ -29,7 +29,7 @@
   {{end}}
   {{else}} 
   <li><a href="projectresult">Projects</a></li>
-  {{if .ctx.Browse.Level.Submissions}}
+  {{if .ctx.Browse.Level.Is "submissions"}}
    <li class="active">
      Project Submissions
    </li>
@@ -50,16 +50,16 @@
   {{$project := projectName .ctx.Browse.Pid}}
   {{$uid := .ctx.Browse.Uid}}
   {{$sid := .ctx.Browse.Sid}}
-  {{if .ctx.Browse.Level.Files}}
+  {{if .ctx.Browse.Level.Is "files"}}
   <li class="active">{{$uid}}'s
     {{$project}} Submission</li>
-  {{else if or .ctx.Browse.Level.Analysis .ctx.Browse.Level.Chart}}
+  {{else if or (.ctx.Browse.Level.Is "analysis") (.ctx.Browse.Level.Is "chart")}}
   <li><a href="{{getFiles .ctx.Browse.Sid}}">{{$uid}}'s
       {{$project}} Submission</a></li>
   {{$resultName := .ctx.Browse.Result}}
   {{$fileName := .ctx.Browse.File}}
   {{$results := .results}}
-  {{if .ctx.Browse.Level.Analysis}}
+  {{if .ctx.Browse.Level.Is "analysis"}}
   {{$current := .ctx.Browse.Current}}
   {{$next := .ctx.Browse.Next}}
   <li class="dropdown">
@@ -76,7 +76,7 @@
       {{end}}
     </ul>
   </li>
-  {{else if .ctx.Browse.Level.Chart}}
+  {{else if .ctx.Browse.Level.Is "chart"}}
   <li class="dropdown">
     <a class="dropdown-toggle" data-toggle="dropdown" href="#">
       {{$resultName}} Chart <span class="caret"></span>

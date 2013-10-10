@@ -106,16 +106,14 @@ func (this *Result) ChartNames() []string {
 	return []string{
 		"Errors",
 		"Failures",
-		"Successes",
 	}
 }
 
 //ChartVals
 func (this *Result) ChartVals() map[string]float64 {
 	return map[string]float64{
-		"Errors":    float64(this.Report.Errors),
-		"Failures":  float64(this.Report.Failures),
-		"Successes": float64(this.Report.Tests - this.Report.Failures - this.Report.Errors),
+		"Errors":   float64(this.Report.Errors),
+		"Failures": float64(this.Report.Failures),
 	}
 }
 

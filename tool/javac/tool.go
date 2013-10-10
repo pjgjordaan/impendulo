@@ -45,7 +45,7 @@ func New(cp string) (tool *Tool, err error) {
 	tool = &Tool{
 		cp: cp,
 	}
-	tool.cmd, err = config.Binary(config.JAVAC)
+	tool.cmd, err = config.JAVAC.Path()
 	return
 }
 

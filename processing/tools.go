@@ -137,7 +137,7 @@ func JUnit(proc *Processor) (ret []tool.Tool, err error) {
 	if err != nil {
 		return
 	}
-	testDir, err := config.Directory(config.JUNIT_TESTING)
+	testDir, err := config.JUNIT_TESTING.Path()
 	if err != nil {
 		return
 	}

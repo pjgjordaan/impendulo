@@ -47,7 +47,7 @@ type (
 //If an error is returned, it will be due Findbugs not being configured correctly.
 func New() (tool *FindBugs, err error) {
 	tool = new(FindBugs)
-	tool.cmd, err = config.JarFile(config.FINDBUGS)
+	tool.cmd, err = config.FINDBUGS.Path()
 	return
 }
 
@@ -67,7 +67,7 @@ func (this *FindBugs) Name() string {
 //Findbugs Result.
 func (this *FindBugs) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
 	//Setup arguments
-	java, err := config.Binary(config.JAVA)
+	java, err := config.JAVA.Path()
 	if err != nil {
 		return
 	}

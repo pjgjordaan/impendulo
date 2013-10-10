@@ -27,12 +27,15 @@ package webserver
 import (
 	"fmt"
 	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/tool/mongo"
 	"github.com/godfried/impendulo/util"
 	"io/ioutil"
 	"labix.org/v2/mgo/bson"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 //CloneData
@@ -45,6 +48,46 @@ func CloneData(req *http.Request, ctx *Context) (msg string, err error) {
 	err = db.CloneData(remote)
 	if err != nil {
 		msg = fmt.Sprintf("Could not clone data from %s.", remote)
+	}
+	return
+}
+
+//ImportData
+func ImportData(req *http.Request, ctx *Context) (msg string, err error) {
+	dbName, err := GetString(req, "db")
+	if err != nil {
+		msg = "Could not read db to import to."
+		return
+	}
+	var data []byte
+	_, data, err = ReadFormFile(req, "data")
+	if err != nil {
+		msg = "Unable to read data file."
+		return
+	}
+	err = mongo.ImportData(dbName, data)
+	if err != nil {
+		msg = "Unable to import db data."
+	} else {
+		msg = "Successfully imported db data."
+	}
+	return
+}
+
+//ExportData
+func ExportData(req *http.Request, ctx *Context) (msg string, err error) {
+	dbName, err := GetString(req, "db")
+	if err != nil {
+		msg = "Could not read db to import to."
+		return
+	}
+	name := strconv.FormatInt(time.Now().Unix(), 10)
+	path := filepath.Join(util.BaseDir(), "exports", name+".zip")
+	err = mongo.ExportData(dbName, path, db.USERS, db.SUBMISSIONS, db.FILES, db.PROJECTS, db.JPF, db.PMD)
+	if err != nil {
+		msg = "Unable to export db data."
+	} else {
+		msg = "Successfully exported db data."
 	}
 	return
 }

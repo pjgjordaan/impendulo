@@ -146,7 +146,6 @@ func CloneCollection(origin, collection string) (err error) {
 		return
 	}
 	defer session.Close()
-	fmt.Println(session.DB("").Name, collection)
 	err = session.DB("").Run(
 		bson.D{
 			{"cloneCollection", collection},

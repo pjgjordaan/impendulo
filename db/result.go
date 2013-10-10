@@ -295,8 +295,15 @@ func ResultNames(projectId bson.ObjectId, nonTool bool) (ret []string, err error
 	for i, test := range tests {
 		ret[i] = strings.Split(test.Name, ".")[0]
 	}
-	ret = append(ret, checkstyle.NAME, findbugs.NAME,
-		javac.NAME, jpf.NAME, pmd.NAME)
+	ret = append(ret, checkstyle.NAME, findbugs.NAME, javac.NAME)
+	_, jerr := JPFConfig(bson.M{project.PROJECT_ID: projectId}, bson.M{project.ID: 1})
+	if jerr == nil {
+		ret = append(ret, jpf.NAME)
+	}
+	_, perr := PMDRules(bson.M{project.PROJECT_ID: projectId}, bson.M{project.ID: 1})
+	if perr == nil {
+		ret = append(ret, pmd.NAME)
+	}
 	if nonTool {
 		ret = append(ret, tool.CODE, diff.NAME, tool.SUMMARY)
 	}

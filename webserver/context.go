@@ -32,6 +32,7 @@ import (
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"net/http"
+	"strings"
 )
 
 type (
@@ -49,7 +50,8 @@ type (
 		Current, Next           int
 		Level                   Level
 	}
-	Level int
+	Level  int
+	Setter func(*http.Request) error
 )
 
 const (
@@ -192,6 +194,15 @@ func (b *Browse) SetFile(req *http.Request) (err error) {
 	return
 }
 
+func SetContext(req *http.Request, setters ...Setter) error {
+	for _, setter := range setters {
+		if err := setter(req); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (b *Browse) SetLevel(route string) {
 	switch route {
 	case "homeView":
@@ -203,30 +214,24 @@ func (b *Browse) SetLevel(route string) {
 	}
 }
 
-func (l Level) Home() bool {
-	return l == HOME
-}
-
-func (l Level) Projects() bool {
-	return l == PROJECTS
-}
-
-func (l Level) Users() bool {
-	return l == USERS
-}
-
-func (l Level) Submissions() bool {
-	return l == SUBMISSIONS
-}
-
-func (l Level) Files() bool {
-	return l == FILES
-}
-
-func (l Level) Analysis() bool {
-	return l == ANALYSIS
-}
-
-func (l Level) Chart() bool {
-	return l == CHART
+func (this Level) Is(level string) bool {
+	level = strings.ToLower(level)
+	switch level {
+	case "home":
+		return this == HOME
+	case "projects":
+		return this == PROJECTS
+	case "users":
+		return this == USERS
+	case "submissions":
+		return this == SUBMISSIONS
+	case "files":
+		return this == FILES
+	case "analysis":
+		return this == ANALYSIS
+	case "chart":
+		return this == CHART
+	default:
+		return false
+	}
 }

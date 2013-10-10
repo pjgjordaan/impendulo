@@ -13,8 +13,6 @@
 	"ant": "/usr/share/java/ant.jar", 
 	"ant_junit": "/usr/share/java/ant-junit.jar",
 	"findbugs": "/home/godfried/applications/findbugs-2.0.2/lib/findbugs.jar",
-	"jpf": "/home/godfried/dev/java/jpf/jpf-core/build/jpf.jar",
-	"jpf_run": "/home/godfried/dev/java/jpf/jpf-core/build/RunJPF.jar",
 	"checkstyle": "/home/godfried/applications/checkstyle-5.6/checkstyle-5.6-all.jar",
 	"gson": "/home/godfried/dev/go/src/github.com/godfried/impendulo/java/lib/gson-2.2.4.jar"
     },
@@ -23,9 +21,6 @@
 	"pmd_cfg": "/home/godfried/dev/go/src/github.com/godfried/impendulo/config/pmd_config.json"
     },
     "dir": {
-	"jpf_home": "/home/godfried/dev/java/jpf/jpf-core",
-	"jpf_runner": "/home/godfried/dev/go/src/github.com/godfried/impendulo/java/runner",
-	"jpf_finder": "/home/godfried/dev/go/src/github.com/godfried/impendulo/java/finder",
-	"junit_testing": "/home/godfried/dev/go/src/github.com/godfried/impendulo/java/testing"
+	"jpf_home": "/home/godfried/dev/java/jpf/jpf-core"
     }
 }		

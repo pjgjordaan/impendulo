@@ -177,19 +177,7 @@ func showResult(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 //analysisArgs loads arguments for displayResult
 func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{}, temps []string, err error) {
 	oldName := ctx.Browse.Result
-	err = ctx.Browse.SetUid(req)
-	if err != nil {
-		return
-	}
-	err = ctx.Browse.SetSid(req)
-	if err != nil {
-		return
-	}
-	err = ctx.Browse.SetResult(req)
-	if err != nil {
-		return
-	}
-	err = ctx.Browse.SetFile(req)
+	err = SetContext(req, ctx.Browse.SetUid, ctx.Browse.SetSid, ctx.Browse.SetResult, ctx.Browse.SetFile)
 	if err != nil {
 		return
 	}
@@ -306,19 +294,7 @@ func showChart(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 
 //chartArgs loads arguments for displaychart.
 func chartArgs(req *http.Request, ctx *Context) (args map[string]interface{}, err error) {
-	err = ctx.Browse.SetUid(req)
-	if err != nil {
-		return
-	}
-	err = ctx.Browse.SetSid(req)
-	if err != nil {
-		return
-	}
-	err = ctx.Browse.SetResult(req)
-	if err != nil {
-		return
-	}
-	err = ctx.Browse.SetFile(req)
+	err = SetContext(req, ctx.Browse.SetUid, ctx.Browse.SetSid, ctx.Browse.SetResult, ctx.Browse.SetFile)
 	if err != nil {
 		return
 	}

@@ -82,19 +82,19 @@ func GetClasses(tipe, fname string) (classes []*Class, err error) {
 //These classes are then written to a Json output file.
 func findClasses(tipe, fname string) (found []byte, err error) {
 	//Load configurations
-	finderDir, err := config.Directory(config.JPF_FINDER)
+	finderDir, err := config.JPF_FINDER.Path()
 	if err != nil {
 		return
 	}
-	home, err := config.Directory(config.JPF_HOME)
+	home, err := config.JPF_HOME.Path()
 	if err != nil {
 		return
 	}
-	gson, err := config.JarFile(config.GSON)
+	gson, err := config.GSON.Path()
 	if err != nil {
 		return
 	}
-	java, err := config.Binary(config.JAVA)
+	java, err := config.JAVA.Path()
 	if err != nil {
 		return
 	}

@@ -35,6 +35,18 @@ import (
 )
 
 type (
+	//Validator is a function used to validate a file.
+	Validator func(string) bool
+	//File is an interface which represents a file configuration.
+	File interface {
+		//Valid is used to validate the provided path to the file.
+		Valid(string) error
+		//Description provides a description about the type of file this is.
+		Description() string
+		//Path retrieves the path to this file.
+		Path() (string, error)
+	}
+
 	//Configuration is used to store Impendulo's Json configuration.
 	Configuration struct {
 		Bin map[Bin]string
@@ -143,91 +155,156 @@ func LoadConfigs(fname string) (err error) {
 	if err != nil {
 		return
 	}
+	javaPath := filepath.Join(util.InstallPath(), "java")
+	config.Dir[JPF_RUNNER] = filepath.Join(javaPath, "runner")
+	config.Dir[JPF_FINDER] = filepath.Join(javaPath, "finder")
+	config.Dir[JUNIT_TESTING] = filepath.Join(javaPath, "testing")
 	//Check if configurations are valid.
-	for _, bin := range config.Bin {
-		if !util.IsExec(bin) {
-			return Invalid("executable file", bin)
+	for bin, path := range config.Bin {
+		if err = bin.Valid(path); err != nil {
+			return
 		}
 	}
-	for _, cfg := range config.Cfg {
-		if !util.IsFile(cfg) {
-			return Invalid("file", cfg)
+	for cfg, path := range config.Cfg {
+		if err = cfg.Valid(path); err != nil {
+			return
 		}
 	}
-	for _, dir := range config.Dir {
-		if !util.IsDir(dir) {
-			return Invalid("directory", dir)
+	for dir, path := range config.Dir {
+		if err = dir.Valid(path); err != nil {
+			return
+		}
+		if dir == JPF_HOME {
+			jar := filepath.Join(path, filepath.Join("build", "jpf.jar"))
+			if err = JPF.Valid(jar); err != nil {
+				return
+			}
+			config.Jar[JPF] = jar
+			jar = filepath.Join(path, filepath.Join("build", "RunJPF.jar"))
+			if err = JPF_RUN.Valid(jar); err != nil {
+				return
+			}
+			config.Jar[JPF_RUN] = jar
 		}
 	}
-	for _, jar := range config.Jar {
-		if !util.IsFile(jar) {
-			return Invalid("file", jar)
+	for jar, path := range config.Jar {
+		if err = jar.Valid(path); err != nil {
+			return
 		}
 	}
-	for _, sh := range config.Sh {
-		if !util.IsExec(sh) {
-			return Invalid("executable file", sh)
+	for sh, path := range config.Sh {
+		if err = sh.Valid(path); err != nil {
+			return
 		}
 	}
 	return
 }
 
-//Binary attempts to retrieve the named binary's path.
-func Binary(name Bin) (ret string, err error) {
-	ret, ok := config.Bin[name]
-	if !ok {
-		err = NA(name)
+func (cfg Cfg) Valid(path string) error {
+	return valid(cfg, path, util.IsFile)
+}
+
+func (cfg Cfg) Description() string {
+	return "configuration file"
+}
+
+func (cfg Cfg) Path() (string, error) {
+	return path(cfg)
+}
+
+func (dir Dir) Valid(path string) error {
+	return valid(dir, path, util.IsDir)
+}
+
+func (dir Dir) Description() string {
+	return "directory"
+}
+
+func (dir Dir) Path() (string, error) {
+	return path(dir)
+}
+
+func (jar Jar) Valid(path string) error {
+	return valid(jar, path, util.IsFile)
+}
+
+func (jar Jar) Description() string {
+	return "jar file"
+}
+
+func (jar Jar) Path() (string, error) {
+	return path(jar)
+}
+
+func (sh Sh) Valid(path string) error {
+	return valid(sh, path, util.IsExec)
+}
+
+func (sh Sh) Description() string {
+	return "executable script"
+}
+
+func (sh Sh) Path() (string, error) {
+	return path(sh)
+}
+
+func (bin Bin) Valid(path string) error {
+	return valid(bin, path, util.IsExec)
+}
+
+func (bin Bin) Description() string {
+	return "executable file"
+}
+
+func (bin Bin) Path() (string, error) {
+	return path(bin)
+}
+
+//valid determines whether the provided path is valid for corresponding file.
+func valid(file File, path string, validator Validator) (err error) {
+	if !validator(path) {
+		err = Invalid(file, path)
 	}
 	return
 }
 
-//Config attempts to retrieve the named config's path.
-func Config(name Cfg) (ret string, err error) {
-	ret, ok := config.Cfg[name]
-	if !ok {
-		err = NA(name)
+//path attempts to retrieve the file's path.
+func path(file File) (ret string, err error) {
+	var ok bool
+	switch t := file.(type) {
+	case Bin:
+		ret, ok = config.Bin[t]
+	case Cfg:
+		ret, ok = config.Cfg[t]
+	case Dir:
+		ret, ok = config.Dir[t]
+	case Jar:
+		ret, ok = config.Jar[t]
+	case Sh:
+		ret, ok = config.Sh[t]
+	default:
+		ok = true
+		err = &ConfigError{
+			msg: fmt.Sprintf("Unknown configuration type %s.", t),
+		}
 	}
-	return
-}
-
-//Directory attempts to retrieve the named directory's path.
-func Directory(name Dir) (ret string, err error) {
-	ret, ok := config.Dir[name]
 	if !ok {
-		err = NA(name)
-	}
-	return
-}
-
-//JarFile attempts to retrieve the named jar's path..
-func JarFile(name Jar) (ret string, err error) {
-	ret, ok := config.Jar[name]
-	if !ok {
-		err = NA(name)
-	}
-	return
-}
-
-//Script attempts to retrieve the named script's path..
-func Script(name Sh) (ret string, err error) {
-	ret, ok := config.Sh[name]
-	if !ok {
-		err = NA(name)
+		err = NA(file)
 	}
 	return
 }
 
 //NA creates a new ConfigError if a request is made for an unavailable configuration.
-func NA(name interface{}) error {
+func NA(file File) error {
 	return &ConfigError{
-		msg: fmt.Sprintf("Config %s not found.", name),
+		msg: fmt.Sprintf("Config %s not found.", file),
 	}
 }
 
 //Invalid creates a new ConfigError for a bad configuration specification.
-func Invalid(tipe, name string) error {
+func Invalid(file File, path string) error {
 	return &ConfigError{
-		msg: fmt.Sprintf("Bad configuration: %s is not a %s.", tipe, name),
+		msg: fmt.Sprintf("Bad configuration: %s is not a %s.", path, file.Description()),
 	}
 }
 

@@ -242,7 +242,7 @@ func CreatePMD(req *http.Request, ctx *Context) (msg string, err error) {
 		msg = "Could not read rules."
 		return
 	}
-	pmdRules, err := pmd.NewRules(projectId, toSet(rules))
+	pmdRules, err := pmd.NewRules(projectId, util.ToSet(rules))
 	if err != nil {
 		msg = "Could not create rules."
 		return
@@ -254,15 +254,6 @@ func CreatePMD(req *http.Request, ctx *Context) (msg string, err error) {
 		msg = "Successfully added rules."
 	}
 	return
-}
-
-//toSet converts an array to a set.
-func toSet(vals []string) map[string]bool {
-	ret := make(map[string]bool)
-	for _, v := range vals {
-		ret[v] = true
-	}
-	return ret
 }
 
 //RunTool runs a tool on submissions in a given project.

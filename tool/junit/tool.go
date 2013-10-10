@@ -50,15 +50,15 @@ type (
 //test is the JUnit Test to be run. dir is the location of the submission's tool directory.
 func New(test *Test, dir string) (junit *Tool, err error) {
 	//Load jar locations
-	junitJar, err := config.JarFile(config.JUNIT)
+	junitJar, err := config.JUNIT.Path()
 	if err != nil {
 		return
 	}
-	antJunit, err := config.JarFile(config.ANT_JUNIT)
+	antJunit, err := config.ANT_JUNIT.Path()
 	if err != nil {
 		return
 	}
-	ant, err := config.JarFile(config.ANT)
+	ant, err := config.ANT.Path()
 	if err != nil {
 		return
 	}
@@ -100,7 +100,7 @@ func (this *Tool) Name() string {
 //Run runs a JUnit test on the provided Java source file. The source and test files are first
 //compiled and we run the tests via a Java runner class which uses ant to generate XML output.
 func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
-	java, err := config.Binary(config.JAVA)
+	java, err := config.JAVA.Path()
 	if err != nil {
 		return
 	}

@@ -50,15 +50,15 @@ type (
 //Any errors returned will of type config.ConfigError.
 func New() (tool *Tool, err error) {
 	tool = new(Tool)
-	tool.java, err = config.Binary(config.JAVA)
+	tool.java, err = config.JAVA.Path()
 	if err != nil {
 		return
 	}
-	tool.cmd, err = config.JarFile(config.CHECKSTYLE)
+	tool.cmd, err = config.CHECKSTYLE.Path()
 	if err != nil {
 		return
 	}
-	tool.cfg, err = config.Config(config.CHECKSTYLE_CFG)
+	tool.cfg, err = config.CHECKSTYLE_CFG.Path()
 	return
 }
 

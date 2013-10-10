@@ -104,13 +104,13 @@ func RunTLS() {
 }
 
 //Run starts up the webserver if it is not currently running.
-func Run() {
+func Run(port string) {
 	if Active() {
 		return
 	}
 	setActive(true)
 	defer setActive(false)
-	if err := http.ListenAndServe(":8080", router); err != nil {
+	if err := http.ListenAndServe(":"+port, router); err != nil {
 		util.Log(err)
 	}
 }

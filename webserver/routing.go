@@ -79,7 +79,7 @@ func defaultPosters() map[string]Poster {
 		"addproject": AddProject, "changeskeleton": ChangeSkeleton,
 		"submitarchive": SubmitArchive, "runtool": RunTool,
 		"deleteproject": DeleteProject, "deleteuser": DeleteUser,
-		"clonedata": CloneData,
+		"importdata": ImportData, "exportdata": ExportData,
 	}
 }
 
@@ -108,9 +108,10 @@ func defaultViews() map[string]string {
 		"homeView": "home", "userResult": "home", "projectResult": "home",
 		"skeletonView": "submit", "archiveView": "submit", "projectView": "submit",
 		"registerView":        "register",
-		"projectDownloadView": "download", "cloneDataView": "download",
-		"projectDeleteView": "delete", "userDeleteView": "delete",
+		"projectDownloadView": "download",
+		"projectDeleteView":   "delete", "userDeleteView": "delete",
 		"statusView": "status", "runToolView": "tool",
+		"importDataView": "data", "exportDataView": "data",
 	}
 }
 
@@ -144,8 +145,9 @@ func defaultPermissions() map[string]user.Permission {
 		"configview":        user.TEACHER,
 		"projectdeleteview": user.ADMIN, "deleteproject": user.ADMIN,
 		"userdeleteview": user.ADMIN, "deleteuser": user.ADMIN,
-		"statusview": user.ADMIN, "clonedataview": user.ADMIN,
-		"clonedata": user.ADMIN,
+		"importdataview": user.ADMIN, "exportdataview": user.ADMIN,
+		"importdata": user.ADMIN, "exportdata": user.ADMIN,
+		"statusview": user.ADMIN,
 	}
 }
 
