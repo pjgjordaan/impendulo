@@ -47,13 +47,15 @@
   </li>
   {{end}}
   {{end}}
+  {{if .ctx.Browse.Level.Is "files"}}
   {{$project := projectName .ctx.Browse.Pid}}
   {{$uid := .ctx.Browse.Uid}}
-  {{$sid := .ctx.Browse.Sid}}
-  {{if .ctx.Browse.Level.Is "files"}}
   <li class="active">{{$uid}}'s
     {{$project}} Submission</li>
   {{else if or (.ctx.Browse.Level.Is "analysis") (.ctx.Browse.Level.Is "chart")}}
+  {{$project := projectName .ctx.Browse.Pid}}
+  {{$uid := .ctx.Browse.Uid}}
+  {{$sid := .ctx.Browse.Sid}}
   <li><a href="{{getFiles .ctx.Browse.Sid}}">{{$uid}}'s
       {{$project}} Submission</a></li>
   {{$resultName := .ctx.Browse.Result}}
