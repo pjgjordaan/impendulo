@@ -80,6 +80,7 @@ func defaultPosters() map[string]Poster {
 		"submitarchive": SubmitArchive, "runtool": RunTool,
 		"deleteproject": DeleteProject, "deleteuser": DeleteUser,
 		"importdata": ImportData, "exportdata": ExportData,
+		"evaluatesubmissions": EvaluateSubmissions,
 	}
 }
 
@@ -110,7 +111,8 @@ func defaultViews() map[string]string {
 		"registerView":        "register",
 		"projectDownloadView": "download",
 		"projectDeleteView":   "delete", "userDeleteView": "delete",
-		"statusView": "status", "runToolView": "tool",
+		"statusView":  "status",
+		"runToolView": "tool", "evaluateSubmissionsView": "tool",
 		"importDataView": "data", "exportDataView": "data",
 	}
 }
@@ -136,6 +138,7 @@ func defaultPermissions() map[string]user.Permission {
 		"userresult": user.NONE, "": user.NONE, "displaychart": user.NONE,
 		"displayresult": user.NONE, "getfiles": user.NONE,
 		"index": user.NONE, "favicon.ico": user.NONE, "getsubmissions": user.NONE,
+		"getsubmissionschart": user.NONE,
 		"projectdownloadview": user.STUDENT, "skeleton.zip": user.STUDENT,
 		"archiveview": user.STUDENT, "submitarchive": user.STUDENT,
 		"logout":       user.STUDENT,
@@ -147,7 +150,8 @@ func defaultPermissions() map[string]user.Permission {
 		"userdeleteview": user.ADMIN, "deleteuser": user.ADMIN,
 		"importdataview": user.ADMIN, "exportdataview": user.ADMIN,
 		"importdata": user.ADMIN, "exportdata": user.ADMIN,
-		"statusview": user.ADMIN,
+		"statusview": user.ADMIN, "evaluatesubmissionsview": user.ADMIN,
+		"evaluatesubmissions": user.ADMIN,
 	}
 }
 

@@ -98,7 +98,7 @@ func (this *Result) GetReport() tool.Report {
 
 //Success
 func (this *Result) Success() bool {
-	return this.Report.Success()
+	return this.Report != nil && this.Report.Success()
 }
 
 //ChartNames
@@ -110,10 +110,10 @@ func (this *Result) ChartNames() []string {
 }
 
 //ChartVals
-func (this *Result) ChartVals() map[string]float64 {
-	return map[string]float64{
-		"Errors":   float64(this.Report.Errors),
-		"Failures": float64(this.Report.Failures),
+func (this *Result) ChartVals() []tool.ChartVal {
+	return []tool.ChartVal{
+		{"Errors", float64(this.Report.Errors), true},
+		{"Failures", float64(this.Report.Failures), true},
 	}
 }
 

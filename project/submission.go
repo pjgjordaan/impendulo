@@ -38,7 +38,22 @@ type (
 		User      string        "user"
 		Mode      string        "mode"
 		Time      int64         "time"
+		Status    Status        "status"
 	}
+	Status int
+)
+
+const (
+	UNKNOWN Status = iota
+	BUSY
+	FAILED
+	NOTJUNIT
+	NOTJPF
+	JUNIT_NOTJPF
+	JPF_NOTJUNIT
+	JUNIT
+	JPF
+	ALL
 )
 
 //SetMode
@@ -58,8 +73,35 @@ func (this *Submission) String() string {
 		"; Time: " + util.Date(this.Time)
 }
 
+func (this *Submission) Result() string {
+	switch this.Status {
+	case UNKNOWN:
+		return "Unknown status."
+	case BUSY:
+		return "Busy evaluating snapshots."
+	case FAILED:
+		return "Submission provided incorrect solution."
+	case NOTJUNIT:
+		return "Failed unit tests."
+	case NOTJPF:
+		return "Failed JPF evaluation."
+	case JPF_NOTJUNIT:
+		return "Passed JPF evaluation but not all unit tests passed."
+	case JUNIT_NOTJPF:
+		return "All unit tests passed, but failed JPF evaluation."
+	case JUNIT:
+		return "Successfuly passed unit tests."
+	case JPF:
+		return "Successfully passed JPF evaluation."
+	case ALL:
+		return "Successfully passed JPF and unit testing evaluation."
+	default:
+		return fmt.Sprintf("Invalid status %d.", this.Status)
+	}
+}
+
 //NewSubmission
 func NewSubmission(projectId bson.ObjectId, user, mode string, time int64) *Submission {
 	subId := bson.NewObjectId()
-	return &Submission{subId, projectId, user, mode, time}
+	return &Submission{subId, projectId, user, mode, time, BUSY}
 }

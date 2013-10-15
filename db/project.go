@@ -26,6 +26,7 @@ package db
 
 import (
 	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -118,6 +119,8 @@ func Submission(matcher, selector interface{}) (ret *project.Submission, err err
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		err = &DBGetError{"submission", err, matcher}
+	} else if ret.Status == project.UNKNOWN {
+		err = UpdateStatus(ret)
 	}
 	return
 }
@@ -247,4 +250,93 @@ func RemoveProjectById(id interface{}) (err error) {
 	}
 	err = RemoveById(PROJECTS, id)
 	return
+}
+
+func LastFile(sub *project.Submission) (file *project.File, err error) {
+	matcher := bson.M{project.TYPE: project.SRC, project.SUBID: sub.Id}
+	selector := bson.M{project.RESULTS: 1, project.TIME: 1}
+	files, err := Files(matcher, selector, "-"+project.TIME)
+	if err != nil {
+		return
+	}
+	if len(files) == 0 {
+		if sub.Status != project.BUSY {
+			RemoveSubmissionById(sub.Id)
+		}
+		return
+	}
+	file = files[0]
+	return
+}
+
+func UpdateStatus(sub *project.Submission) (err error) {
+	file, err := LastFile(sub)
+	if err != nil || file == nil {
+		return
+	}
+	junitStatus := CheckJUnit(sub.ProjectId, file)
+	jpfStatus := CheckJPF(sub.ProjectId, file)
+	switch junitStatus {
+	case project.JUNIT:
+		switch jpfStatus {
+		case project.UNKNOWN:
+			sub.Status = project.JUNIT
+		case project.JPF:
+			sub.Status = project.ALL
+		case project.NOTJPF:
+			sub.Status = project.JUNIT_NOTJPF
+		}
+	case project.NOTJUNIT:
+		switch jpfStatus {
+		case project.UNKNOWN:
+			sub.Status = project.NOTJUNIT
+		case project.JPF:
+			sub.Status = project.JPF_NOTJUNIT
+		case project.NOTJPF:
+			sub.Status = project.FAILED
+		}
+	case project.UNKNOWN:
+		switch jpfStatus {
+		case project.UNKNOWN:
+			sub.Status = project.UNKNOWN
+		case project.JPF:
+			sub.Status = project.JPF
+		case project.NOTJPF:
+			sub.Status = project.NOTJPF
+		}
+	}
+	change := bson.M{SET: bson.M{project.STATUS: sub.Status}}
+	err = Update(SUBMISSIONS, bson.M{project.ID: sub.Id}, change)
+	return
+}
+
+func CheckJUnit(projectId bson.ObjectId, file *project.File) project.Status {
+	tests, err := JUnitTests(bson.M{project.PROJECT_ID: projectId}, bson.M{project.NAME: 1})
+	if err != nil || len(tests) == 0 {
+		return project.UNKNOWN
+	}
+	for _, test := range tests {
+		name := tool.NewTarget(test.Name, "", "", "").Name
+		id, ok := file.Results[name].(bson.ObjectId)
+		if !ok {
+			return project.NOTJUNIT
+		}
+		testResult, terr := JUnitResult(bson.M{project.ID: id}, nil)
+		if terr != nil || !testResult.Success() {
+			return project.NOTJUNIT
+		}
+	}
+	return project.JUNIT
+}
+
+func CheckJPF(projectId bson.ObjectId, file *project.File) project.Status {
+	_, err := JPFConfig(bson.M{project.PROJECT_ID: projectId}, bson.M{project.ID: 1})
+	if err != nil {
+		return project.UNKNOWN
+	}
+	res, jerr := JPFResult(bson.M{project.FILEID: file.Id}, nil)
+	if jerr == nil && res.Success() {
+		return project.JPF
+	}
+	return project.NOTJPF
 }

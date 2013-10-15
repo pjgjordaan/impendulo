@@ -109,6 +109,10 @@ processing:
 			break processing
 		}
 	}
+	err := db.UpdateStatus(this.sub)
+	if err != nil {
+		util.Log(err)
+	}
 	util.Log("Processed submission", this.sub)
 }
 

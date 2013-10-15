@@ -110,9 +110,9 @@ func (this *Result) ChartNames() []string {
 }
 
 //ChartVals
-func (this *Result) ChartVals() map[string]float64 {
-	return map[string]float64{
-		"Errors": float64(this.Report.Errors),
+func (this *Result) ChartVals() []tool.ChartVal {
+	return []tool.ChartVal{
+		{"Errors", float64(this.Report.Errors), true},
 	}
 }
 

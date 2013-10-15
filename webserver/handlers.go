@@ -147,6 +147,27 @@ func getSubmissions(w http.ResponseWriter, req *http.Request, ctx *Context) erro
 	return T(getNav(ctx), temp).Execute(w, args)
 }
 
+//getSubmissionsChart displays a chart of submissions.
+func getSubmissionsChart(w http.ResponseWriter, req *http.Request, ctx *Context) error {
+	subs, err := RetrieveSubmissions(req, ctx)
+	if err != nil {
+		ctx.AddMessage("Could not retrieve submissions.", true)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
+	}
+	chart := SubmissionChart(subs)
+	var temp string
+	if ctx.Browse.IsUser {
+		temp = "userSubmissionChart"
+	} else {
+		temp = "projectSubmissionChart"
+	}
+	ctx.Browse.View = "home"
+	ctx.Browse.Level = SUBMISSIONS
+	args := map[string]interface{}{"ctx": ctx, "chart": chart.Data}
+	return T(getNav(ctx), temp).Execute(w, args)
+}
+
 //getFiles diplays information about files.
 func getFiles(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	fileinfo, err := RetrieveFileInfo(req, ctx)
@@ -195,7 +216,7 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 		for index, file := range files {
 			if file.Time == time {
 				ctx.Browse.Current = index
-				ctx.Browse.Next = index + 1
+				ctx.Browse.Next = (index + 1) % len(files)
 				found = true
 				break
 			}

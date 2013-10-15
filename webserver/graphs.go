@@ -69,7 +69,37 @@ func LoadChart(resultName string, files []*project.File, startTime int64) (chart
 		return
 	}
 	for _, launch := range launches {
-		chart.Add(sub, float64(launch.Time), adjust, map[string]float64{"Launches": 0.0})
+		chart.Add(sub, float64(launch.Time), adjust, []tool.ChartVal{{"Launches", 0.0, false}})
+	}
+	return
+}
+
+func SubmissionChart(subs []*project.Submission) (ret tool.Chart) {
+	ret = tool.NewChart()
+	for _, sub := range subs {
+		snapshots, err := fileCount(sub.Id, project.SRC)
+		if err != nil {
+			continue
+		}
+		launches, err := fileCount(sub.Id, project.LAUNCH)
+		if err != nil {
+			continue
+		}
+		name, err := projectName(sub.ProjectId)
+		if err != nil {
+			continue
+		}
+		lastFile, err := db.LastFile(sub)
+		if err != nil {
+			continue
+		}
+		time := (lastFile.Time - sub.Time) / 1000.0
+		point := map[string]interface{}{
+			"snapshots": snapshots, "launches": launches, "project": name,
+			"key": sub.Id.Hex(), "user": sub.User, "status": sub.Status,
+			"description": sub.Result(), "time": time,
+		}
+		ret.Data = append(ret.Data, point)
 	}
 	return
 }

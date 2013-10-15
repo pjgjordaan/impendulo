@@ -104,16 +104,16 @@ func (this *Result) ChartNames() []string {
 }
 
 //ChartVals
-func (this *Result) ChartVals() map[string]float64 {
+func (this *Result) ChartVals() []tool.ChartVal {
 	yE, yW := 0.0, 0.0
 	if this.Report.Errors() {
 		yE = float64(this.Report.Count)
 	} else if this.Report.Warnings() {
 		yW = float64(this.Report.Count)
 	}
-	return map[string]float64{
-		"Errors":   yE,
-		"Warnings": yW,
+	return []tool.ChartVal{
+		{"Errors", yE, true},
+		{"Warnings", yW, false},
 	}
 }
 

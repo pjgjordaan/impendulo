@@ -195,6 +195,7 @@ func (this *SubmissionHandler) createSubmission(subInfo map[string]interface{}) 
 	if err != nil {
 		return
 	}
+	this.submission.Status = project.BUSY
 	err = db.Add(db.SUBMISSIONS, this.submission)
 	if err == nil {
 		err = this.writeJson(this.submission)
@@ -210,6 +211,11 @@ func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{}
 		return
 	}
 	id, err := util.ReadId(idStr)
+	if err != nil {
+		return
+	}
+	change := bson.M{db.SET: bson.M{project.STATUS: project.BUSY}}
+	err = db.Update(db.SUBMISSIONS, bson.M{project.ID: id}, change)
 	if err != nil {
 		return
 	}

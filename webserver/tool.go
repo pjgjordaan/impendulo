@@ -261,7 +261,8 @@ func CreatePMD(req *http.Request, ctx *Context) (msg string, err error) {
 //should be rerun on all fi
 func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
 	projectId, msg, err := getProjectId(req)
-	if err != nil {
+	all := req.FormValue("project") == "all"
+	if err != nil && !all {
 		return
 	}
 	tool, err := GetString(req, "tool")
@@ -269,8 +270,14 @@ func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
 		msg = "Could not read tool."
 		return
 	}
+	var matcher bson.M
+	if all {
+		matcher = bson.M{}
+	} else {
+		matcher = bson.M{project.PROJECT_ID: projectId}
+	}
 	submissions, err := db.Submissions(
-		bson.M{project.PROJECT_ID: projectId},
+		matcher,
 		bson.M{project.ID: 1},
 	)
 	if err != nil {
@@ -317,6 +324,34 @@ func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
 		}
 	}
 	msg = fmt.Sprintf("Successfully started running %s on project.", tool)
+	return
+}
+
+func EvaluateSubmissions(req *http.Request, ctx *Context) (msg string, err error) {
+	projectId, msg, err := getProjectId(req)
+	all := req.FormValue("project") == "all"
+	if err != nil && !all {
+		return
+	}
+	var matcher bson.M
+	if all {
+		matcher = bson.M{}
+	} else {
+		matcher = bson.M{project.PROJECT_ID: projectId}
+	}
+	submissions, err := db.Submissions(matcher, nil)
+	if err != nil {
+		msg = "Could not retrieve submissions."
+		return
+	}
+	for _, submission := range submissions {
+		err = db.UpdateStatus(submission)
+		if err != nil {
+			msg = fmt.Sprintf("Could not evaluate submission %s.", submission.Id.Hex())
+			return
+		}
+	}
+	msg = "Successfully evaluated submissions."
 	return
 }
 

@@ -223,8 +223,11 @@ function timeChart(fileName, resultName, chartData, compare) {
 	.style('stroke', chartColour)
 	.attr('d', function(d) { 
 	    return line(d.values); 
+	})
+	.style('opacity', function(d){
+	    return d.values[0].show ? 1.0 : 0.0;
 	});
-    
+
     chartBody.selectAll('.link')
 	.data(tools)
 	.enter()
@@ -232,6 +235,9 @@ function timeChart(fileName, resultName, chartData, compare) {
 	.attr('xlink:href', loadLink)
 	.attr('class', 'link')
 	.attr('key', chartKey)
+	.style('opacity', function(d){
+	    return d.show ? 1.0 : 0.0;
+	})
 	.append('svg:circle')
 	.attr('class', 'dot')
 	.attr('fill', chartColour)
@@ -254,6 +260,9 @@ function timeChart(fileName, resultName, chartData, compare) {
     	.attr('cx', loadDate)
 	.attr('cy', y(mid))
 	.attr('key', chartKey)
+	.style('opacity', function(d){
+	    return 0.0;
+	})
 	.on('mouseover', showTooltip)
 	.on('mouseout', hideTooltip);
 
@@ -319,6 +328,9 @@ function timeChart(fileName, resultName, chartData, compare) {
 	.attr('height', 15)
 	.attr('showing', true)
 	.style('fill', chartColour)
+	.style('opacity', function(d){
+	    return d.show ? 1.0 : 0.3;
+	})
 	.on('click', toggleVisibility);
     
     legendElements.selectAll('.legendtext')
@@ -330,6 +342,9 @@ function timeChart(fileName, resultName, chartData, compare) {
 	.attr('x', w+50)
 	.attr('y', function(d, i){ 
 	    return (i *  25) + 13 + d.offset;
+	})
+	.style('opacity', function(d){
+	    return d.show ? 1.0 : 0.3;
 	})
 	.attr('font-size','10px')
 	.text(getName);

@@ -50,4 +50,5 @@ const (
 	FILEID       = "fileid"
 	SKELETON     = "skeleton"
 	REPORT       = "report"
+	STATUS       = "status"
 )

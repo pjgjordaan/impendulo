@@ -2,6 +2,10 @@
 <!-- This is the breadcrumb which allows us to browse through the --
   -- hierarchy quickly -->
 {{template "breadcrumb" .}}
+<ul class="nav nav-pills">
+  <li class="active"><a>Table</a></a></li>
+  <li><a href="{{getProjectChart .ctx.Browse.Pid}}">Chart</a></li>
+</ul>
 <h2 class="text-center"><small>project</small> {{projectName .ctx.Browse.Pid}}</h2>
 <!-- Here we display a table of the different submissions within this project --
   -- . Included are users' names and date to allow us to differentiate between --
@@ -13,6 +17,7 @@
       <th>Created</th>
       <th>Snapshots</th>
       <th>Launches</th>
+      <th>Status</th>
     </tr>
   </thead>
   <tbody data-provides="rowlink" >
@@ -30,6 +35,9 @@
       </a></td>
       <td><a class="rowlink" href="{{getFiles $subId}}">
 	  {{launches .Id}}
+      </a></td>
+      <td><a class="rowlink" href="{{getFiles $subId}}">
+	  {{.Result}}
       </a></td>
     </tr>
     {{end}}

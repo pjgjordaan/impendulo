@@ -41,6 +41,11 @@ const (
 )
 
 type (
+	ChartVal struct {
+		Name string
+		Y    float64
+		Show bool
+	}
 	//Chart represents the x and y values used to draw the charts.
 	Chart struct {
 		Data []map[string]interface{}
@@ -48,7 +53,7 @@ type (
 
 	//ChartResult is used to display result data in a chart.
 	ChartResult interface {
-		ChartVals() map[string]float64
+		ChartVals() []ChartVal
 		GetName() string
 		ChartNames() []string
 	}
@@ -131,12 +136,12 @@ type (
 )
 
 //Add inserts new coordinates into data used to display a chart.
-func (chart *Chart) Add(sub *project.Submission, x, adjust float64, ys map[string]float64) {
-	for name, val := range ys {
+func (chart *Chart) Add(sub *project.Submission, x, adjust float64, vals []ChartVal) {
+	for _, val := range vals {
 		point := map[string]interface{}{
-			"x": x, "y": val, "key": name + " " + sub.Id.Hex(),
-			"name": name, "subId": sub.Id.Hex(), "user": sub.User,
-			"created": sub.Time, "adjust": adjust,
+			"x": x, "y": val.Y, "key": val.Name + " " + sub.Id.Hex(),
+			"name": val.Name, "subId": sub.Id.Hex(), "user": sub.User,
+			"created": sub.Time, "adjust": adjust, "show": val.Show,
 		}
 		chart.Data = append(chart.Data, point)
 	}

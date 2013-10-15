@@ -111,10 +111,10 @@ func (this *Result) ChartNames() []string {
 }
 
 //ChartVals
-func (this *Result) ChartVals() map[string]float64 {
-	return map[string]float64{
-		"Total Errors":  float64(this.Report.Total),
-		"Unique Errors": float64(this.Report.ErrorCount()),
+func (this *Result) ChartVals() []tool.ChartVal {
+	return []tool.ChartVal{
+		{"Total Errors", float64(this.Report.Total), true},
+		{"Unique Errors", float64(this.Report.ErrorCount()), false},
 	}
 }
 

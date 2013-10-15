@@ -1,0 +1,17 @@
+{{define "view"}}
+{{template "breadcrumb" .}}
+<ul class="nav nav-pills">
+  <li><a href="{{getProjectSubmissions .ctx.Browse.Pid}}">Table</a></li>
+  <li class="active"><a>Chart</a></li>
+</ul>
+<h2 class="text-center"><small>project</small> {{projectName .ctx.Browse.Pid}}</h2>
+<div id="chart" class="chart" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <div id="tooltip" class="tooltip"></div>
+</div>
+<script language="javascript" src="/static/js/jquery-2.0.2.min.js"></script>
+<script language="javascript" src="/static/js/d3.v3.min.js"></script>
+<script language="javascript" src="/static/js/submissionsChart.js"></script> 
+<script>
+  submissionsChart({{.chart}}, "project");
+</script>
+{{end}}

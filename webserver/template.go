@@ -81,6 +81,8 @@ var (
 		"displayResult":         displayResult,
 		"displayResultLines":    displayResultLines,
 		"getFiles":              func(subId bson.ObjectId) string { return fmt.Sprintf("getfiles?sid=%s", subId.Hex()) },
+		"getUserChart":          func(user string) string { return fmt.Sprintf("getsubmissionschart?uid=%s", user) },
+		"getProjectChart":       func(id bson.ObjectId) string { return fmt.Sprintf("getsubmissionschart?pid=%s", id.Hex()) },
 		"getUserSubmissions":    func(user string) string { return fmt.Sprintf("getsubmissions?uid=%s", user) },
 		"getProjectSubmissions": func(id bson.ObjectId) string { return fmt.Sprintf("getsubmissions?pid=%s", id.Hex()) },
 		"singleChart":           singleChart,

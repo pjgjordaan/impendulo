@@ -107,12 +107,12 @@ func (this *Result) ChartNames() []string {
 }
 
 //ChartVals
-func (this *Result) ChartVals() map[string]float64 {
-	return map[string]float64{
-		"All":        float64(this.Report.Summary.BugCount),
-		"Priority 1": float64(this.Report.Summary.Priority1),
-		"Priority 2": float64(this.Report.Summary.Priority2),
-		"Priority 3": float64(this.Report.Summary.Priority3),
+func (this *Result) ChartVals() []tool.ChartVal {
+	return []tool.ChartVal{
+		{"All", float64(this.Report.Summary.BugCount), true},
+		{"Priority 1", float64(this.Report.Summary.Priority1), false},
+		{"Priority 2", float64(this.Report.Summary.Priority2), false},
+		{"Priority 3", float64(this.Report.Summary.Priority3), false},
 	}
 }
 
