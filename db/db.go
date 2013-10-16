@@ -234,3 +234,10 @@ func Count(col string, matcher interface{}) (n int, err error) {
 	}
 	return
 }
+
+func Collections() []string {
+	return []string{
+		USERS, SUBMISSIONS, FILES,
+		RESULTS, TESTS, PROJECTS, JPF, PMD,
+	}
+}

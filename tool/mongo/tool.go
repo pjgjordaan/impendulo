@@ -17,7 +17,7 @@ type (
 	Importer string
 )
 
-func ExportData(db, outFile string, cols ...string) error {
+func ExportData(db, outFile string, cols []string) error {
 	files := make(map[string][]byte, len(cols))
 	for _, col := range cols {
 		outFile := filepath.Join(os.TempDir(), col+".json")

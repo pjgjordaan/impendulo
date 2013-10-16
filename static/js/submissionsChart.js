@@ -162,6 +162,7 @@ function submissionsChart(chartData, tipe) {
 		'\nSnapshots:\t' + d.snapshots+
 		'\nLaunches:\t' + d.launches;
 	});
+    
     sub.append('text')
 	.attr('class', 'title')
 	.attr('dy', '-1.0em')
@@ -181,6 +182,7 @@ function submissionsChart(chartData, tipe) {
 	.append('g');
 
     legendElements.append('text')
+	.attr('class', 'clickable')
 	.attr('x', 20)
 	.attr('y', function(d, i){
 	    return i*20+60;
@@ -189,10 +191,11 @@ function submissionsChart(chartData, tipe) {
 	.attr('font-size','12px')
 	.text(function(d){
 	    return d;
-	});
+	})
+	.on('click', toggleVisibility);
     
     legendElements.append('rect')
-	.attr('class', 'legendrect')
+	.attr('class', 'legendrect clickable')
 	.attr('x', 0)
 	.attr('y', function(d, i){ 
 	    return i*20 + 50;

@@ -44,7 +44,7 @@ function timeChart(fileName, resultName, chartData, compare) {
     var mid = (d3.max(tools, getY)-d3.min(tools, getY))/2;
     var getColour = d3.scale.ordinal()
 	.range(COLOURS) 
-        .domain(d3.keys(chartData[0]).filter(function(key) { return key == 'name'; }));  
+        .domain(d3.keys(chartData[0]).filter(function(key) { return key === 'name'; }));  
     var chartColour = function(d) { 
 	return getColour(getKey(d)); 
     };    
@@ -134,24 +134,13 @@ function timeChart(fileName, resultName, chartData, compare) {
 		.ease(ease)
 		.call(yAxis);
 	    chart.selectAll('.line')
-	    	.attr('class', 'line')
-		.style('stroke', chartColour)
-		.attr('key', chartKey)
 		.transition()
 		.duration(duration)
 	    	.ease(ease)
 		.attr('d', function(d) { 
 		    return line(d.values); 
 		});
-	    chartBody.selectAll('.link')
-	    	.attr('xlink:href', loadLink)
-		.attr('class', 'link')
-		.attr('key', chartKey)
-		.select('.dot')
-		.attr('class', 'dot')
-		.attr('fill', chartColour)
-    		.on('mouseover', showTooltip)
-		.on('mouseout', hideTooltip)
+	    chartBody.selectAll('.dot')
 		.transition()
 		.duration(duration)
 		.ease(ease)
@@ -159,12 +148,7 @@ function timeChart(fileName, resultName, chartData, compare) {
 		.attr('cy', loadY)
 		.attr('r', DOT_RADIUS);
 	    chartBody.selectAll('.launch')
-		.attr('class', 'launch')
-		.attr('fill', chartColour)
-		.attr('key', chartKey)
-		.on('mouseover', showTooltip)
-		.on('mouseout', hideTooltip)
-    		.transition()
+		.transition()
 		.duration(duration)
 		.ease(ease)
 		.attr('points', function(d){
@@ -435,10 +419,10 @@ function star(x, y, scale)
     var angle = Math.PI / arms;
     for (var i = 0; i < 2 * arms; i++)
     {
-	var r = (i & 1) == 0 ? outerRadius : innerRadius;
+	var r = (i & 1) === 0 ? outerRadius : innerRadius;
 	var currX = x + Math.cos(i * angle) * r;
 	var currY = y + Math.sin(i * angle) * r;
-	if (i == 0)
+	if (i === 0)
 	{
             results = currX + ',' + currY;
 	}

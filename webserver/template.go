@@ -87,6 +87,9 @@ var (
 		"getProjectSubmissions": func(id bson.ObjectId) string { return fmt.Sprintf("getsubmissions?pid=%s", id.Hex()) },
 		"singleChart":           singleChart,
 		"compareChart":          compareChart,
+		"collections":           db.Collections,
+		"overviewChart":         overviewChart,
+		"typeCounts":            TypeCounts,
 	}
 	templateDir   string
 	baseTemplates []string

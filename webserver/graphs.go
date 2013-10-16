@@ -25,6 +25,7 @@
 package webserver
 
 import (
+	"fmt"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
@@ -100,6 +101,87 @@ func SubmissionChart(subs []*project.Submission) (ret tool.Chart) {
 			"description": sub.Result(), "time": time,
 		}
 		ret.Data = append(ret.Data, point)
+	}
+	return
+}
+
+func overviewChart(tipe string) (ret []map[string]interface{}, err error) {
+	var chart tool.Chart
+	switch tipe {
+	case "user":
+		chart, err = UserChart()
+	case "project":
+		chart, err = ProjectChart()
+	default:
+		return nil, fmt.Errorf("Unknown type %s.", tipe)
+	}
+	if err == nil {
+		ret = chart.Data
+	}
+	return
+
+}
+
+func UserChart() (ret tool.Chart, err error) {
+	ret = tool.NewChart()
+	users, err := db.Users(bson.M{})
+	if err != nil {
+		return
+	}
+	for _, u := range users {
+		counts := TypeCounts(u.Name)
+		point := map[string]interface{}{
+			"key": u.Name, "submissions": counts[0],
+			"snapshots": counts[1], "launches": counts[2],
+		}
+		ret.Data = append(ret.Data, point)
+	}
+	return
+}
+
+func ProjectChart() (ret tool.Chart, err error) {
+	ret = tool.NewChart()
+	projects, err := db.Projects(bson.M{}, nil)
+	if err != nil {
+		return
+	}
+	for _, p := range projects {
+		counts := TypeCounts(p.Id)
+		point := map[string]interface{}{
+			"key": p.Name, "submissions": counts[0],
+			"snapshots": counts[1], "launches": counts[2],
+		}
+		ret.Data = append(ret.Data, point)
+	}
+	return
+}
+
+func TypeCounts(id interface{}) (counts []int) {
+	counts = []int{0, 0, 0}
+	var matcher string
+	switch id.(type) {
+	case string:
+		matcher = project.USER
+	case bson.ObjectId:
+		matcher = project.PROJECT_ID
+	default:
+		return
+	}
+	subs, err := db.Submissions(bson.M{matcher: id}, nil)
+	if err != nil {
+		return
+	}
+	counts[0] = len(subs)
+	if counts[0] == 0 {
+		return
+	}
+	for _, sub := range subs {
+		if s, serr := fileCount(sub.Id, project.SRC); serr == nil {
+			counts[1] += s
+		}
+		if l, lerr := fileCount(sub.Id, project.LAUNCH); lerr == nil {
+			counts[2] += l
+		}
 	}
 	return
 }

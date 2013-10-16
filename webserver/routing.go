@@ -107,6 +107,7 @@ func Views() map[string]string {
 func defaultViews() map[string]string {
 	return map[string]string{
 		"homeView": "home", "userResult": "home", "projectResult": "home",
+		"userChart": "home", "projectChart": "home",
 		"skeletonView": "submit", "archiveView": "submit", "projectView": "submit",
 		"registerView":        "register",
 		"projectDownloadView": "download",
@@ -137,8 +138,9 @@ func defaultPermissions() map[string]user.Permission {
 		"homeview": user.NONE, "projectresult": user.NONE,
 		"userresult": user.NONE, "": user.NONE, "displaychart": user.NONE,
 		"displayresult": user.NONE, "getfiles": user.NONE,
-		"index": user.NONE, "favicon.ico": user.NONE, "getsubmissions": user.NONE,
-		"getsubmissionschart": user.NONE,
+		"favicon.ico": user.NONE, "getsubmissions": user.NONE,
+		"getsubmissionschart": user.NONE, "index": user.NONE,
+		"userchart": user.NONE, "projectchart": user.NONE,
 		"projectdownloadview": user.STUDENT, "skeleton.zip": user.STUDENT,
 		"archiveview": user.STUDENT, "submitarchive": user.STUDENT,
 		"logout":       user.STUDENT,

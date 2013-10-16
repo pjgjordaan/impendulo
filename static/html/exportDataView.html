@@ -1,11 +1,23 @@
 {{define "view"}}
 <h3 class="heading">Export Impendulo Data</h3>
 <form class="form-horizontal" action="exportdata" method="post">
-<div class="form-group">
+  <div class="form-group">
     <label class="col-lg-offset-3 col-lg-2 control-label" for="db">Database</label>
     <div class="col-lg-3">
       <input class="form-control" name="db" type="text" id="db"
 	     placeholder="Database to export from">
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="col-lg-offset-3 col-lg-2 control-label" for="collections">Collections</label>
+    <div class="col-lg-3">
+      <select class="form-control" name="collections" id="collections"
+	      multiple>
+	{{$cols := collections}}
+	{{range $cols}}
+	<option selected value={{.}}>{{.}}</option>
+	{{end}}
+      </select>
     </div>
   </div>
   <div class="form-group">

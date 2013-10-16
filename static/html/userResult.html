@@ -1,16 +1,43 @@
 {{define "view"}}
 {{template "breadcrumb" .}}
+<ul class="nav nav-pills">
+  <li class="active"><a>Table</a></li>
+  <li><a  href="userchart">Chart</a></li>
+</ul>
 <table class="table table-hover table-striped">
-  <thead><tr class="info">
+  <thead>
+    <tr class="info">
       <th>User</th>
       <th>Submissions</th>
-  </tr></thead>
+      <th>Snapshots</th>
+      <th>Launches</th>
+    </tr>
+  </thead>
   <tbody data-provides="rowlink" >
      {{$users := users}}
      {{range $users}}
+     {{$counts := typeCounts .Name}}
      <tr>
-       <td><a class="rowlink" href="{{getUserSubmissions .Name}}">{{.Name}}</a></td>
-       <td><a class="rowlink" href="{{getUserSubmissions .Name}}">{{submissionCount .Name}}</a></td>
+       <td>
+	 <a class="rowlink" href="{{getUserSubmissions .Name}}">
+	   {{.Name}}
+	 </a>
+       </td>
+       <td>
+	 <a class="rowlink" href="{{getUserSubmissions .Name}}">
+	   {{index $counts 0}}
+	 </a>
+       </td>
+       <td>
+	 <a class="rowlink" href="{{getUserSubmissions .Name}}">
+	   {{index $counts 1}}
+	 </a>
+       </td>
+       <td>
+	 <a class="rowlink" href="{{getUserSubmissions .Name}}">
+	   {{index $counts 2}}
+	 </a>
+       </td>
      </tr>
      {{end}}
   </tbody>

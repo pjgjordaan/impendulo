@@ -78,12 +78,17 @@ func ImportData(req *http.Request, ctx *Context) (msg string, err error) {
 func ExportData(req *http.Request, ctx *Context) (msg string, err error) {
 	dbName, err := GetString(req, "db")
 	if err != nil {
-		msg = "Could not read db to import to."
+		msg = "Could not read db to export."
+		return
+	}
+	collections, err := GetStrings(req, "collections")
+	if err != nil {
+		msg = "Could not read collections to export."
 		return
 	}
 	name := strconv.FormatInt(time.Now().Unix(), 10)
 	path := filepath.Join(util.BaseDir(), "exports", name+".zip")
-	err = mongo.ExportData(dbName, path, db.USERS, db.SUBMISSIONS, db.FILES, db.PROJECTS, db.JPF, db.PMD)
+	err = mongo.ExportData(dbName, path, collections)
 	if err != nil {
 		msg = "Unable to export db data."
 	} else {

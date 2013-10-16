@@ -42,7 +42,7 @@ func TestRun(t *testing.T) {
 	defer os.RemoveAll(location)
 	os.Mkdir(srcLocation, util.DPERM)
 	os.Mkdir(testLocation, util.DPERM)
-	testDir, err := config.Directory(config.JUNIT_TESTING)
+	testDir, err := config.JUNIT_TESTING.Path()
 	if err != nil {
 		t.Error(err)
 	}
