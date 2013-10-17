@@ -32,7 +32,6 @@ import (
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
-	"labix.org/v2/mgo/bson"
 	"net/http"
 	"strconv"
 )
@@ -197,7 +196,6 @@ func showResult(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 
 //analysisArgs loads arguments for displayResult
 func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{}, temps []string, err error) {
-	oldName := ctx.Browse.Result
 	err = SetContext(req, ctx.Browse.SetUid, ctx.Browse.SetSid, ctx.Browse.SetResult, ctx.Browse.SetFile)
 	if err != nil {
 		return
@@ -251,16 +249,19 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 		return
 	}
 	if ctx.Browse.Result == tool.CODE {
-		lines, id := highlightArgs(req, oldName)
-		if lines != nil {
-			if id == currentFile.Id {
-				currentResult.(*tool.CodeResult).Lines = lines
-			} else if id == nextFile.Id {
-				nextResult.(*tool.CodeResult).Lines = lines
-			} else {
-				err = fmt.Errorf("Caller %v does not match any files.", id)
-				return
-			}
+		var bug *tool.Bug
+		bug, err = codeBug(req)
+		if err != nil {
+			return
+		}
+		switch bug.FileId {
+		case currentFile.Id:
+			currentResult.(*tool.CodeResult).Bug = bug
+		case nextFile.Id:
+			nextResult.(*tool.CodeResult).Bug = bug
+		default:
+			err = fmt.Errorf("Result %s does not match any files.", bug.FileId.Hex())
+			return
 		}
 	}
 	args = map[string]interface{}{
@@ -280,22 +281,25 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 	return
 }
 
-//highlightArgs loads the file's id which we want to highlight the lines in as well as the lines.
-func highlightArgs(req *http.Request, name string) (lines []int, id bson.ObjectId) {
-	resId, err := util.ReadId(req.FormValue("caller"))
+//codeBug loads a bug to display in the code.
+func codeBug(req *http.Request) (bug *tool.Bug, err error) {
+	resId, rerr := util.ReadId(req.FormValue("rid"))
+	if rerr != nil {
+		return
+	}
+	bugId, err := GetString(req, "bid")
 	if err != nil {
 		return
 	}
-	result, err := db.ToolResult(name, bson.M{project.ID: resId}, bson.M{project.FILEID: 1})
+	index, err := GetInt(req, "bindex")
 	if err != nil {
-		util.Log(err)
 		return
 	}
-	id = result.GetFileId()
-	lines, err = GetLines(req)
+	result, err := db.BugResult(resId, nil)
 	if err != nil {
-		util.Log(err)
+		return
 	}
+	bug, err = result.Bug(bugId, index)
 	return
 }
 

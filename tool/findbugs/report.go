@@ -109,6 +109,7 @@ type (
 	//It contains information describing its location and state
 	//as well as its category, severity and type.
 	BugInstance struct {
+		Id           bson.ObjectId
 		Type         string         `xml:"type,attr"`
 		Priority     int            `xml:"priority,attr"`
 		Abbreviation string         `xml:"abbrev,attr"`
@@ -210,6 +211,9 @@ func NewReport(id bson.ObjectId, data []byte) (res *Report, err error) {
 	}
 	res.loadMaps()
 	res.Id = id
+	for _, bug := range res.Instances {
+		bug.Id = bson.NewObjectId()
+	}
 	return
 }
 

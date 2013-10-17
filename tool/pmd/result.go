@@ -120,6 +120,27 @@ func (this *Result) Template() string {
 	return "pmdResult"
 }
 
+func (this *Result) Bug(id string, index int) (bug *tool.Bug, err error) {
+	for _, file := range this.Report.Files {
+		for _, violation := range file.Violations {
+			if violation.Id.Hex() == id {
+				if index < 0 || index > len(violation.Starts) {
+					err = fmt.Errorf("Index %d out of bounds for PMD Violation lines array.", index)
+					return
+				}
+				content := []interface{}{
+					violation.Rule,
+					violation.Description,
+				}
+				bug = tool.NewBug(this, id, content, violation.Starts[index], violation.Ends[index])
+				return
+			}
+		}
+	}
+	err = fmt.Errorf("Could not find bug matching id %s and index %d.", id, index)
+	return
+}
+
 //NewResult creates a new PMD Result.
 //Any error returned will be as a result of creating a PMD Report
 //from the XML in data.

@@ -171,3 +171,7 @@ dl dd{
     text-align: center;
     margin-bottom: 40px;
 }
+
+.tooltip-inner {
+    white-space:pre-wrap;
+}

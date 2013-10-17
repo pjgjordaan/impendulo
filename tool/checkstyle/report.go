@@ -56,6 +56,7 @@ type (
 	//Error represents an occurrence of an error detected by checkstyle.
 	//It gives the location of the error, its severity and a thorough description.
 	Error struct {
+		Id       bson.ObjectId
 		Line     int           `xml:"line,attr"`
 		Column   int           `xml:"column,attr"`
 		Severity string        `xml:"severity,attr"`
@@ -128,6 +129,7 @@ func (this *File) CompressErrors() {
 		index, ok := indices[e.Source]
 		if !ok {
 			e.Lines = make([]int, 0, len(this.Errors))
+			e.Id = bson.NewObjectId()
 			compressed = append(compressed, e)
 			index = len(compressed) - 1
 			indices[e.Source] = index

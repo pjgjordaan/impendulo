@@ -10,7 +10,7 @@
 {{$current := .state.Current}}
 {{$next := .state.Next}}
 {{$file := $report.File $fileName}}
-{{$id := $report.Id.Hex}}
+{{$rid := $report.Id.Hex}}
 {{$addr := address $report}}
 <h4 class="text-danger">{{$report.Errors}} problems detected.</h4>
 <div class="panel-group" id="pmdaccordion{{$addr}}">
@@ -30,9 +30,10 @@
 	  <dt>Location</dt>
 	  <dd>Lines: 
 	    {{$ends := .Ends}}
+	    {{$id := .Id.Hex}}
 	    {{range $i, $start :=  .Starts}}
 	    {{$end := index $ends $i}}
-	    <a href="{{displayResultLines $sid $uid $code $fileName $current $next $id $start $end}}">
+	    <a href="{{displayCodeBug $sid $uid $code $fileName $current $next $rid $id $i}}">
 	      {{$start}} to {{$end}}; 
 	    </a>
 	    {{end}}

@@ -21,7 +21,7 @@
   {{$fileName := .state.File}}
   {{$current := .state.Current}}
   {{$next := .state.Next}}
-  {{$id := $report.Id.Hex}}
+  {{$rid := $report.Id.Hex}}
   <div class="panel panel-default">
     <div class="panel-heading">
       <a class="accordion-toggle" data-toggle="collapse"
@@ -31,30 +31,32 @@
     </div>
     <div id="errors{{$addr}}" class="panel-collapse collapse in">
       <div class="accordion-inner">
-	{{range $report.Errors}}
-	{{$details := setBreaks .Details}}
+	{{range $i, $err := $report.Errors}}
+	{{$details := setBreaks $err.Details}}
+	{{$errAddr := address $err}}
 	<dl class="dl">
-	  <dt>Type</dt><dd>{{.Property}}</dd>
+	  <dt>Type</dt><dd>{{shortName $err.Property}}</dd>
 	  <dt>Details</dt><dd>{{$details}}</dd>
 	</dl>
-	<div class="panel-group" id="threadaccordion{{$addr}}">
+	<div class="panel-group" id="threadaccordion{{$errAddr}}">
 	  <div class="panel panel-default">
 	    <div class="panel-heading">
 	      <a class="accordion-toggle" data-toggle="collapse"
-		 data-parent="#threadaccordion{{$addr}}" href="#threads{{$addr}}">
+		 data-parent="#threadaccordion{{$addr}}" href="#threads{{$errAddr}}">
 		<h5 class="text-center">Threads</h5>
 	      </a>
 	    </div>
-	    <div id="threads{{$addr}}" class="panel-collapse collapse">
+	    <div id="threads{{$errAddr}}" class="panel-collapse collapse">
 	      <div class="accordion-inner">
-		{{range .Threads}}
+		{{range $err.Threads}}
 		<h5 class="thread-title"><strong>{{.Name}}</strong> <small>Status</small> {{.Status}}</h5>
 		<p class="thread-content">
 		  {{range .Frames}}
 		  {{if eq .Line -1}}
 		  {{.Details}}
 		  {{else}}
-		  <a href="{{displayResultLines $sid $uid $code $fileName $current $next $id .Line .Line}}">
+		  {{$id := .Id}}
+		  <a href="{{displayCodeBug $sid $uid $code $fileName $current $next $rid $id $i}}">
 		    {{.Details}}
 		  </a>
 		  {{end}}

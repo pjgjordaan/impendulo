@@ -150,6 +150,7 @@ func ProjectChart() (ret tool.Chart, err error) {
 		point := map[string]interface{}{
 			"key": p.Name, "submissions": counts[0],
 			"snapshots": counts[1], "launches": counts[2],
+			"id": p.Id,
 		}
 		ret.Data = append(ret.Data, point)
 	}

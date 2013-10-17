@@ -122,40 +122,6 @@ func GetInt64(req *http.Request, name string) (found int64, err error) {
 	return
 }
 
-//GetLines retrieves an array of size m-n+1 with values
-//starting at n and ending at m where n and m are start and end
-//values retrieved from req.
-func GetLines(req *http.Request) (lines []int, err error) {
-	lineStr, err := GetString(req, "lines")
-	if err != nil {
-		return
-	}
-	locs := strings.Split(lineStr, "-")
-	start, err := strconv.Atoi(locs[0])
-	if err != nil {
-		return
-	}
-	if start < 0 {
-		err = fmt.Errorf("Invalid code highlight start value %d.", start)
-		return
-	}
-	end := start
-	if len(locs) == 2 {
-		end, err = strconv.Atoi(locs[1])
-		if err != nil {
-			return
-		} else if end < start {
-			err = fmt.Errorf("Code highlight end value %d less than start %d.", end, start)
-			return
-		}
-	}
-	lines = make([]int, end-start+1)
-	for i := start; i <= end; i++ {
-		lines[i-start] = i
-	}
-	return
-}
-
 //GetStrings retrieves a string value from a request form.
 func GetStrings(req *http.Request, name string) (vals []string, err error) {
 	if req.Form == nil {

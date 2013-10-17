@@ -9,7 +9,7 @@
 {{$fileName := .state.File}}
 {{$current := .state.Current}}
 {{$next := .state.Next}}
-{{$id := $report.Id.Hex}}
+{{$rid := $report.Id.Hex}}
 {{$addr := address $report}}
 <h4 class="text-danger">{{$report.Summary.BugCount}} bugs found</h4>
 <div class="panel-group" id="fbaccordion{{$addr}}">
@@ -46,11 +46,11 @@
 	<div class="panel-group" id="fbbugsaccordion{{$addr}}">
 	  {{$patterns := $report.PatternMap}}
 	  {{$categories := $report.CategoryMap}}
-	  {{range $report.Instances}}
-	  {{$pattern := index $patterns .Type}}
-	  {{$category := index $categories .Category}}
+	  {{range $i, $bug := $report.Instances}}
+	  {{$pattern := index $patterns $bug.Type}}
+	  {{$category := index $categories $bug.Category}}
 	  <div class="panel panel-default">
-	    {{$bugAddress := address .}} 
+	    {{$bugAddress := address $bug}} 
 	    <div class="panel-heading">
 	      <a class="accordion-toggle" data-toggle="collapse" 
 		 data-parent="#fbbugsaccordion{{$addr}}" href="#bug{{$bugAddress}}">
@@ -60,16 +60,17 @@
 	    <div id="bug{{$bugAddress}}" class="panel-collapse collapse">
 	      <div class="accordion-inner">
 		<dl class="dl-horizontal">
-		  <dt>Priority</dt><dd>{{.Priority}}</dd>
+		  <dt>Priority</dt><dd>{{$bug.Priority}}</dd>
 		  <dt>Category</dt><dd>{{$category.Description}}</dd>
-		  <dt>Rank</dt><dd>{{.Rank}}</dd>
-		  <dt>Description</dt><dd>{{.LongMessage}}</dd>
+		  <dt>Rank</dt><dd>{{$bug.Rank}}</dd>
+		  <dt>Description</dt><dd>{{$bug.LongMessage}}</dd>
 		  <dt>
 		    Source Line
 		  </dt>
 		  <dd>
-		    <a href="{{displayResultLines $sid $uid $code $fileName $current $next $id .Line.Start .Line.End}}">
-		      {{.Line.Message}}
+		    {{$id := $bug.Id.Hex}}
+		    <a href="{{displayCodeBug $sid $uid $code $fileName $current $next $rid $id $i}}">
+		      {{$bug.Line.Message}}
 		    </a>
 		  </dd>
 		</dl>

@@ -72,3 +72,13 @@ func EqualsOne(test interface{}, args ...interface{}) bool {
 	}
 	return false
 }
+
+//ShortName gets the shortened class name of a Java class.
+func ShortName(exec string) string {
+	elements := strings.Split(exec, `.`)
+	num := len(elements)
+	if num < 2 {
+		return exec
+	}
+	return strings.Join(elements[num-2:], `.`)
+}

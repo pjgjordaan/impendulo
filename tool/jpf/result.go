@@ -27,6 +27,7 @@ package jpf
 import (
 	"fmt"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -120,6 +121,28 @@ func (this *Result) ChartVals() []tool.ChartVal {
 
 func (this *Result) Template() string {
 	return "jpfResult"
+}
+
+func (this *Result) Bug(id string, index int) (bug *tool.Bug, err error) {
+	if index < 0 || index > len(this.Report.Errors) {
+		err = fmt.Errorf("Index %d out of bounds for JPF Errors array.", index)
+		return
+	}
+	content := []interface{}{
+		"Violation: " + util.ShortName(this.Report.Errors[index].Property),
+		this.Report.Errors[index].Details,
+	}
+	threads := this.Report.Errors[index].Threads
+	for _, thread := range threads {
+		for _, frame := range thread.Frames {
+			if frame.Id == id {
+				bug = tool.NewBug(this, id, content, frame.Line, frame.Line)
+				return
+			}
+		}
+	}
+	err = fmt.Errorf("Could not find bug matching id %s and index %d.", id, index)
+	return
 }
 
 //NewResult creates a new JPF result. The data []byte is in XML format and

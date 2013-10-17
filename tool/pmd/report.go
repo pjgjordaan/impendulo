@@ -56,6 +56,7 @@ type (
 
 	//Violation describes an error detected by PMD.
 	Violation struct {
+		Id          bson.ObjectId
 		Begin       int          `xml:"beginline,attr"`
 		End         int          `xml:"endline,attr"`
 		Rule        string       `xml:"rule,attr"`
@@ -126,6 +127,7 @@ func (this *File) CompressViolations() {
 			//Only store if the Violation type has not been stored yet.
 			v.Starts = make([]int, 0, len(this.Violations))
 			v.Ends = make([]int, 0, len(this.Violations))
+			v.Id = bson.NewObjectId()
 			compressed = append(compressed, v)
 			index = len(compressed) - 1
 			indices[v.Rule] = index

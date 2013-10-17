@@ -1,8 +1,17 @@
 {{define "result"}}
 {{$report := .Report}}
-{{$size := sum (len $report.Lines) -1}}
 {{$addr := address $report}}
-<pre class="brush: java; highlight: [{{range $i, $v := $report.Lines}}{{$v}}{{if ne $i $size}}, {{end}}{{end}}];" id="code{{$addr}}">
+{{if $report.Bug}}
+{{$size := sum (len $report.Bug.Lines) -1}}
+<pre class="brush: java; highlight: [{{range $i, $v := $report.Bug.Lines}}{{$v}}{{if ne $i $size}}, {{end}}{{end}}];" id="code{{$addr}}">
 {{$report.Data}}
 </pre>
+<script>
+  highlight({{$report.Bug.Content}});
+</script>
+{{else}}
+<pre class="brush: java;" id="code{{$addr}}">
+{{$report.Data}}
+</pre>
+{{end}}
 {{end}}

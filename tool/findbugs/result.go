@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
+	"strconv"
 )
 
 const (
@@ -118,6 +119,26 @@ func (this *Result) ChartVals() []tool.ChartVal {
 
 func (this *Result) Template() string {
 	return "findbugsResult"
+}
+
+func (this *Result) Bug(id string, index int) (bug *tool.Bug, err error) {
+	if index < 0 || index > len(this.Report.Instances) {
+		err = fmt.Errorf("Index %d out of bounds for Findbugs Bugs array.", index)
+		return
+	}
+	instance := this.Report.Instances[index]
+	if bId := instance.Id.Hex(); bId != id {
+		err = fmt.Errorf("Provided id %s does not Findbugs bug id %s.", id, bId)
+		return
+	}
+	content := []interface{}{
+		this.Report.PatternMap[instance.Type].Description,
+		this.Report.CategoryMap[instance.Category].Description,
+		"Priority: " + strconv.Itoa(instance.Priority),
+		"Rank: " + strconv.Itoa(instance.Rank),
+	}
+	bug = tool.NewBug(this, id, content, instance.Line.Start, instance.Line.End)
+	return
 }
 
 //NewResult

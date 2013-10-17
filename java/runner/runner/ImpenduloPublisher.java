@@ -36,6 +36,7 @@ import gov.nasa.jpf.vm.ThreadList;
 
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * This class extends XMLPublisher so that we can easily customise the XML
@@ -123,8 +124,9 @@ public class ImpenduloPublisher extends XMLPublisher {
 					// stack frames
 					for (StackFrame frame : ti) {
 						if (!frame.isDirectCallFrame()) {
+							String id = UUID.randomUUID().toString();
 							out.println("          <frame line=\""
-									+ frame.getLine() + "\">"
+									+ frame.getLine() + "\" frameid=\"" + id + "\">"
 									+ frame.getStackTraceInfo() + "</frame>");
 						}
 					}

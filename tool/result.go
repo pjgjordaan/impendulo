@@ -105,6 +105,17 @@ type (
 		Template() string
 	}
 
+	BugResult interface {
+		Bug(id string, index int) (*Bug, error)
+	}
+
+	Bug struct {
+		Id               string
+		ResultId, FileId bson.ObjectId
+		Content          []interface{}
+		Lines            []int
+	}
+
 	//Report is an interface which represents a tool report on a snapshot.
 	Report interface{}
 
@@ -117,8 +128,8 @@ type (
 
 	//CodeResult is a DisplayResult used to display a source file's code.
 	CodeResult struct {
-		Data  string
-		Lines []int
+		Data string
+		Bug  *Bug
 	}
 
 	//SummaryResult is a DisplayResult used to provide a summary of all results.
@@ -190,8 +201,7 @@ func (this *ErrorResult) Template() string {
 //NewCodeResult
 func NewCodeResult(data []byte) *CodeResult {
 	return &CodeResult{
-		Data:  strings.TrimSpace(string(data)),
-		Lines: []int{},
+		Data: strings.TrimSpace(string(data)),
 	}
 }
 
@@ -235,4 +245,18 @@ func (this *SummaryResult) Template() string {
 //list of summaries.
 func (this *SummaryResult) AddSummary(result ToolResult) {
 	this.summary = append(this.summary, result.Summary())
+}
+
+func NewBug(result ToolResult, id string, content []interface{}, start, end int) *Bug {
+	lines := make([]int, end-start+1)
+	for i := start; i <= end; i++ {
+		lines[i-start] = i
+	}
+	return &Bug{
+		Id:       id,
+		ResultId: result.GetId(),
+		FileId:   result.GetFileId(),
+		Content:  content,
+		Lines:    lines,
+	}
 }

@@ -23,20 +23,20 @@
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 function movevalue(srcParentId, destParentId, src) {
-    var dest = document.createElement("option");
+    var dest = document.createElement('option');
     dest.innerHTML = src.innerHTML;
-    dest.setAttribute("value", src.value);
-    dest.setAttribute("onclick", "movevalue('"+destParentId+"', '"+srcParentId+"', this)");
+    dest.setAttribute('value', src.value);
+    dest.setAttribute('onclick', "movevalue('"+destParentId+"', '"+srcParentId+"', this)");
     var destParent = document.getElementById(destParentId);
     var srcParent = document.getElementById(srcParentId);
     srcParent.removeChild(src);
-    if(destParent.getAttribute("added") === "true"){
-	dest.setAttribute("selected", true);
+    if(destParent.getAttribute('added') === 'true'){
+	dest.setAttribute('selected', true);
     } else{
 	var nodes = srcParent.childNodes;
 	for(var i=0; i<nodes.length; i++) {
 	    if (nodes[i].nodeName.toLowerCase() == 'option') {
-		nodes[i].setAttribute("selected", true);
+		nodes[i].setAttribute('selected', true);
 	    }
 	}
     }
@@ -44,7 +44,7 @@ function movevalue(srcParentId, destParentId, src) {
 }
 
 function unhide(it, box) {
-    var check = (box.checked) ? "block" : "none";
+    var check = (box.checked) ? 'block' : 'none';
     document.getElementById(it).style.display = check;
 }
 
@@ -54,38 +54,37 @@ function replacevalue(srcParentID, destID, src) {
 	return;
     }
     var srcParent = document.getElementById(srcParentID);
-    if(dest.value != ""){
-	var newChild = document.createElement("option");
+    if(dest.value != ''){
+	var newChild = document.createElement('option');
 	newChild.innerHTML = dest.value;
-	newChild.setAttribute("value", dest.value);
-	newChild.setAttribute("onclick", "replacevalue('"+srcParentID+"', '"+destID+"', this)");
+	newChild.setAttribute('value', dest.value);
+	newChild.setAttribute('onclick', "replacevalue('"+srcParentID+"', '"+destID+"', this)");
     	srcParent.appendChild(newChild);
     }
-    dest.setAttribute("value", src.value);
-    dest.setAttribute("onclick", "movevalueback('"+srcParentID+"', this)");
+    dest.setAttribute('value', src.value);
+    dest.setAttribute('onclick', "movevalueback('"+srcParentID+"', this)");
     srcParent.removeChild(src);
 }
 
 function movevalueback(destParent, src) {
-    var dest = document.createElement("option");
+    var dest = document.createElement('option');
     dest.innerHTML = src.value;
-    dest.setAttribute("value", src.value);
-    dest.setAttribute("onclick", "replacevalue('"+destParent+"', '"+src.getAttribute("id")+"', this)");
+    dest.setAttribute('value', src.value);
+    dest.setAttribute('onclick', "replacevalue('"+destParent+"', '"+src.getAttribute("id")+"', this)");
     document.getElementById(destParent).appendChild(dest);
-    src.setAttribute("value", "");
+    src.setAttribute('value', '');
 }
 
 function showdescription(description) {
-    document.getElementById("description").innerHTML = description;
+    document.getElementById('description').innerHTML = description;
 }
 
 function movedescriptionvalue(srcParent, destParent, srcId) {
     var src = document.getElementById(srcId);
-    console.log(src);
-    var id = src.getAttribute("ruleid");
-    var name = src.getAttribute("rulename");
-    var description = src.getAttribute("ruledescription");
-    var dest = document.createElement("option");
+    var id = src.getAttribute('ruleid');
+    var name = src.getAttribute('rulename');
+    var description = src.getAttribute('ruledescription');
+    var dest = document.createElement('option');
     dest.innerHTML = name;
     dest.setAttribute("ruleid", id);
     dest.setAttribute("rulename", name);
@@ -128,4 +127,30 @@ function addalert(srcParent, destParent, src) {
     dest.appendChild(destAnchor);
     document.getElementById(destParent).appendChild(dest);
     document.getElementById(srcParent).removeChild(src);
+}
+
+function highlight(content){
+    SyntaxHighlighter.defaults['toolbar'] = false;
+    SyntaxHighlighter.defaults['class-name'] = 'error';
+    SyntaxHighlighter.all();
+    window.onload = function(){
+	var lines = document.getElementsByClassName("highlighted");
+	if(lines[0] != undefined){
+	    lines[0].scrollIntoView();
+	    var body = '';
+	    for(var i = 0; i < content.length; i ++){
+		body += content[i].trim();
+		if(i < content.length - 1){
+		    body += '\n';
+		}
+	    }
+	    $(".highlighted").tooltip({
+		title: body,
+		container : 'body',
+		trigger: 'hover',
+		placement: 'bottom'
+	    });
+	    $('.highlighted').attr('style', 'background-color: #ff7777 !important;');
+	}
+    }
 }

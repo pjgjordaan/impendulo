@@ -55,7 +55,7 @@ var (
 		"setBreaks":             func(s string) template.HTML { return template.HTML(setBreaks(s)) },
 		"address":               func(i interface{}) string { return fmt.Sprint(&i) },
 		"base":                  filepath.Base,
-		"shortName":             shortName,
+		"shortName":             util.ShortName,
 		"sum":                   sum,
 		"langs":                 tool.Langs,
 		"submissionCount":       submissionCount,
@@ -79,7 +79,7 @@ var (
 		"projects":              func() ([]*project.Project, error) { return db.Projects(nil, bson.M{project.SKELETON: 0}, project.NAME) },
 		"users":                 func() ([]*user.User, error) { return db.Users(nil, user.ID) },
 		"displayResult":         displayResult,
-		"displayResultLines":    displayResultLines,
+		"displayCodeBug":        displayCodeBug,
 		"getFiles":              func(subId bson.ObjectId) string { return fmt.Sprintf("getfiles?sid=%s", subId.Hex()) },
 		"getUserChart":          func(user string) string { return fmt.Sprintf("getsubmissionschart?uid=%s", user) },
 		"getProjectChart":       func(id bson.ObjectId) string { return fmt.Sprintf("getsubmissionschart?pid=%s", id.Hex()) },
@@ -112,9 +112,9 @@ func displayResult(sid bson.ObjectId, uid, result, file string, current, next in
 		sid.Hex(), uid, result, file, current, next)
 }
 
-func displayResultLines(sid bson.ObjectId, uid, result, file string, current, next int, caller string, start, end int) string {
+func displayCodeBug(sid bson.ObjectId, uid, result, file string, current, next int, resultId, bugId string, index int) string {
 	return displayResult(sid, uid, result, file, current, next) +
-		fmt.Sprintf("&caller=%s&lines=%d-%d", caller, start, end)
+		fmt.Sprintf("&rid=%s&bid=%s&bindex=%d", resultId, bugId, index)
 }
 
 func projectSubmissions(id bson.ObjectId) (subs []*project.Submission, err error) {
@@ -212,16 +212,6 @@ func sum(vals ...int) (ret int) {
 		ret += val
 	}
 	return
-}
-
-//shortName gets the shortened class name of a Java class.
-func shortName(exec string) string {
-	elements := strings.Split(exec, `.`)
-	num := len(elements)
-	if num < 2 {
-		return exec
-	}
-	return strings.Join(elements[num-2:], `.`)
 }
 
 //setBreaks replaces newlines with HTML break tags.

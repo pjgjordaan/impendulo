@@ -86,6 +86,7 @@ type (
 	//Frame represents a thread's stack frame
 	//See gov.nasa.jpf.vm.StackFrame
 	Frame struct {
+		Id      string `xml:"frameid,attr"`
 		Line    int    `xml:"line,attr"`
 		Details string `xml:",innerxml"`
 	}
@@ -93,7 +94,7 @@ type (
 	//Transition is used to store an execution path.
 	//See gov.nasa.jpf.vm.Transition
 	Transition struct {
-		Id       int              `xml:"id,attr"`
+		Id       int              `xml:"frameid,attr"`
 		ThreadId int              `xml:"thread,attr"`
 		CG       *ChoiceGenerator `xml:"cg"`
 		Insns    []*Instruction   `xml:"insn"`

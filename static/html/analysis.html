@@ -102,17 +102,5 @@
     {{end}}
   </div>
 </div>
-{{if (eq $resultName "Code")}}
-<script type="text/javascript">
-  SyntaxHighlighter.all();
-  window.onload = function(){
-  var lines = document.getElementsByClassName("highlighted");
-  console.log(lines[0]);
-  if(lines[0] != undefined){
-  lines[0].scrollIntoView();
-  }
-  };
-</script>
-{{end}}
 {{end}}
 {{end}}

@@ -16,6 +16,23 @@ function overviewChart(chartData, tipe){
             .domain(categories)(tipe); 
     };    
 
+    var getSubmissions = function(d){
+	var url = '';
+	if(tipe === 'project'){
+	    for(var i = 0; i < chartData.length; i ++){
+		if(chartData[i].key === d){
+		    url = 'getsubmissions?pid='+chartData[i].id;
+		    break;
+		}
+	    }
+	} else if(tipe === 'user'){
+	    url = 'getsubmissions?uid='+d;
+	}
+	if(url !== ''){
+	    window.location = url;
+	}
+    }
+
     var xScale = d3.scale.ordinal()
 	.domain(names)
 	.rangeBands([0, w]);
@@ -242,6 +259,11 @@ function overviewChart(chartData, tipe){
 	.attr('class', 'x axis')
 	.attr('transform', 'translate(0,' + h + ')')
 	.call(xAxis);
+
+    chart.select('.x.axis')
+	.selectAll('.tick.major')
+	.attr('class', 'tick major clickable')
+	.on('click',getSubmissions)
 
     chart.append('text')
         .attr('x', w/2 )

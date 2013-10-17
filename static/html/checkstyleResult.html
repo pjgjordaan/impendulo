@@ -10,7 +10,7 @@
 {{$current := .state.Current}}
 {{$next := .state.Next}}
 {{$file := $report.File $fileName}}
-{{$id := $report.Id.Hex}}
+{{$rid := $report.Id.Hex}}
 <h4 class="text-danger">{{$report.Errors}} problems detected.</h4>
 {{$addr := address $report}}
 <div class="panel-group" id="checkstyleaccordion{{$addr}}">
@@ -29,9 +29,10 @@
 	<dl class="dl-horizontal">
 	  <dt>Locations</dt>
 	  <dd>
-	    {{range .Lines}}
-	    <a href="{{displayResultLines $sid $uid $code $fileName $current $next $id . .}}">
-	      Line {{.}};
+	    {{$id := .Id.Hex}}
+	    {{range $i, $line := .Lines}}
+	    <a href="{{displayCodeBug $sid $uid $code $fileName $current $next $rid $id $i}}">
+	      Line {{$line}};
 	    </a>
 	    {{end}}
 	  </dd>	
