@@ -32,6 +32,8 @@ import (
 	"io/ioutil"
 	"labix.org/v2/mgo/bson"
 	"net/http"
+	"net/url"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -190,6 +192,22 @@ func getString(req *http.Request, name string) (val, msg string, err error) {
 	val, err = GetString(req, name)
 	if err != nil {
 		msg = fmt.Sprintf("Could not read %s.", name)
+	}
+	return
+}
+
+func ServePath(u *url.URL, src string) (servePath string, err error) {
+	if !strings.HasPrefix(u.Path, "/") {
+		u.Path = "/" + u.Path
+	}
+	cleaned := path.Clean(u.Path)
+	ext, err := filepath.Rel("/"+filepath.Base(src), cleaned)
+	if err != nil {
+		return
+	}
+	servePath = filepath.Join(src, ext)
+	if util.IsDir(servePath) && !strings.HasSuffix(u.Path, "/") {
+		u.Path = u.Path + "/"
 	}
 	return
 }

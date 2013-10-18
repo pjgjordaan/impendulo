@@ -39,6 +39,7 @@ import (
 	"html"
 	"html/template"
 	"labix.org/v2/mgo/bson"
+	"net/url"
 	"path/filepath"
 	"strings"
 )
@@ -67,6 +68,7 @@ var (
 		"rules":                 pmd.RuleSet,
 		"tools":                 tools,
 		"unescape":              html.UnescapeString,
+		"escape":                url.QueryEscape,
 		"snapshots":             func(id bson.ObjectId) (int, error) { return fileCount(id, project.SRC) },
 		"launches":              func(id bson.ObjectId) (int, error) { return fileCount(id, project.LAUNCH) },
 		"html":                  func(s string) template.HTML { return template.HTML(s) },

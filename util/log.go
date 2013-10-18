@@ -33,10 +33,6 @@ import (
 	"time"
 )
 
-var (
-	errLogger, infoLogger *Logger
-)
-
 type (
 	//Logger allows for concurrent logging.
 	Logger struct {
@@ -45,23 +41,35 @@ type (
 	}
 )
 
+var (
+	errLogger, infoLogger *Logger
+	logDir                string
+)
+
 //init sets up the loggers.
 func init() {
-	logDir := filepath.Join(BaseDir(), "logs")
 	y, m, d := time.Now().Date()
-	dir := filepath.Join(logDir, strconv.Itoa(y), m.String(), strconv.Itoa(d))
+	dir := filepath.Join(LogDir(), strconv.Itoa(y), m.String(), strconv.Itoa(d))
 	err := os.MkdirAll(dir, DPERM)
 	if err != nil {
 		panic(err)
 	}
-	errLogger, err = NewLogger(filepath.Join(dir, "E_"+time.Now().String()+".log"))
+	now := time.Now().Format(layout)
+	errLogger, err = NewLogger(filepath.Join(dir, "E_"+now+".log"))
 	if err != nil {
 		panic(err)
 	}
-	infoLogger, err = NewLogger(filepath.Join(dir, "I_"+time.Now().String()+".log"))
+	infoLogger, err = NewLogger(filepath.Join(dir, "I_"+now+".log"))
 	if err != nil {
 		panic(err)
 	}
+}
+
+func LogDir() string {
+	if logDir == "" {
+		logDir = filepath.Join(BaseDir(), "logs")
+	}
+	return logDir
 }
 
 //SetErrorConsoleLogging sets whether errors should be logged to the console.

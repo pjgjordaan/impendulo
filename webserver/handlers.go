@@ -64,10 +64,9 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//Load our context from session
 	ctx := LoadContext(sess)
 	buf := new(HttpBuffer)
-	err = CheckAccess(req.URL, ctx)
+	err = CheckAccess(req.URL.Path, ctx)
 	if err != nil {
 		ctx.AddMessage(err.Error(), true)
-		err = nil
 		http.Redirect(buf, req, getRoute("index"), http.StatusSeeOther)
 	} else {
 		err = h(buf, req, ctx)
@@ -80,6 +79,43 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	buf.Apply(w)
+}
+
+func RedirectHandler(dest string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		http.Redirect(w, req, dest, http.StatusSeeOther)
+	})
+}
+
+func FileHandler(origin string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		sess, err := store.Get(req, "impendulo")
+		if err != nil {
+			util.Log(err, LOG_HANDLERS)
+		}
+		//Load our context from session
+		ctx := LoadContext(sess)
+		buf := new(HttpBuffer)
+		err = CheckAccess(req.URL.Path, ctx)
+		var servePath string
+		if err == nil {
+			servePath, err = ServePath(req.URL, origin)
+		}
+		if err != nil {
+			ctx.AddMessage(err.Error(), true)
+			http.Redirect(buf, req, getRoute("index"), http.StatusSeeOther)
+		} else {
+			http.ServeFile(buf, req, servePath)
+		}
+		if err != nil {
+			util.Log(err, LOG_HANDLERS)
+		}
+		if err = ctx.Save(req, buf); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		buf.Apply(w)
+	})
 }
 
 //getNav retrieves the navbar to display.

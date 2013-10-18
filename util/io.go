@@ -144,12 +144,15 @@ func (this *copier) copy(path string, f os.FileInfo) (err error) {
 		//Should never happen but lets still handle it.
 		return
 	}
+	if destPath == "." {
+		destPath = filepath.Base(path)
+	}
 	if f == nil {
 		return
 	}
 	destPath = filepath.Join(this.dest, destPath)
 	if f.IsDir() {
-		err = os.MkdirAll(destPath, os.ModePerm)
+		os.MkdirAll(destPath, os.ModePerm)
 		return
 	}
 	srcFile, err := os.Open(path)

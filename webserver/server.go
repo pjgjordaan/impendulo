@@ -62,7 +62,10 @@ func init() {
 	router.Add("GET", "/getsubmissionschart", Handler(getSubmissionsChart)).Name("getsubmissionschart")
 	router.Add("GET", "/getsubmissions", Handler(getSubmissions)).Name("getsubmissions")
 	router.Add("GET", "/skeleton.zip", Handler(downloadProject))
-	router.Add("GET", "/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(StaticDir()))))
+	router.Add("GET", "/static/", FileHandler(StaticDir()))
+	router.Add("GET", "/static", RedirectHandler("/static/"))
+	router.Add("GET", "/logs/", FileHandler(util.LogDir()))
+	router.Add("GET", "/logs", RedirectHandler("/logs/"))
 	router.Add("GET", "/", Handler(LoadView("homeView", "home"))).Name("index")
 }
 

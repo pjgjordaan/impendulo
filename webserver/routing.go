@@ -30,7 +30,6 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/user"
 	"net/http"
-	"net/url"
 	"strings"
 )
 
@@ -48,6 +47,29 @@ var (
 	posters     map[string]Poster
 	viewRoutes  map[string]string
 	permissions map[string]user.Permission
+	out         = []string{
+		"registerview", "register", "login",
+	}
+	none = []string{
+		"index", "", "homeview", "projectresult",
+		"userresult", "displaychart", "displayresult", "getfiles",
+		"favicon.ico", "getsubmissions", "getsubmissionschart",
+		"static", "userchart", "projectchart",
+	}
+	student = []string{
+		"projectdownloadview", "skeleton.zip",
+		"archiveview", "submitarchive", "logout",
+	}
+	teacher = []string{
+		"skeletonview", "changeskeleton", "projectview",
+		"addproject", "runtoolview", "runtool", "configview",
+	}
+	admin = []string{
+		"projectdeleteview", "deleteproject", "userdeleteview",
+		"deleteuser", "importdataview", "exportdataview",
+		"importdata", "exportdata", "statusview",
+		"evaluatesubmissionsview", "evaluatesubmissions", "logs",
+	}
 )
 
 //CreatePost loads a post request handler.
@@ -124,37 +146,22 @@ func Permissions() map[string]user.Permission {
 		return permissions
 	}
 	permissions = toolPermissions()
-	defualt := defaultPermissions()
-	for k, v := range defualt {
-		permissions[k] = v
+	for _, name := range none {
+		permissions[name] = user.NONE
+	}
+	for _, name := range out {
+		permissions[name] = OUT
+	}
+	for _, name := range student {
+		permissions[name] = user.STUDENT
+	}
+	for _, name := range teacher {
+		permissions[name] = user.TEACHER
+	}
+	for _, name := range admin {
+		permissions[name] = user.ADMIN
 	}
 	return permissions
-}
-
-//defaultPermissions loads default permissions.
-func defaultPermissions() map[string]user.Permission {
-	return map[string]user.Permission{
-		"registerview": OUT, "register": OUT, "login": OUT,
-		"homeview": user.NONE, "projectresult": user.NONE,
-		"userresult": user.NONE, "": user.NONE, "displaychart": user.NONE,
-		"displayresult": user.NONE, "getfiles": user.NONE,
-		"favicon.ico": user.NONE, "getsubmissions": user.NONE,
-		"getsubmissionschart": user.NONE, "index": user.NONE,
-		"userchart": user.NONE, "projectchart": user.NONE,
-		"projectdownloadview": user.STUDENT, "skeleton.zip": user.STUDENT,
-		"archiveview": user.STUDENT, "submitarchive": user.STUDENT,
-		"logout":       user.STUDENT,
-		"skeletonview": user.TEACHER, "changeskeleton": user.TEACHER,
-		"projectview": user.TEACHER, "addproject": user.TEACHER,
-		"runtoolview": user.TEACHER, "runtool": user.TEACHER,
-		"configview":        user.TEACHER,
-		"projectdeleteview": user.ADMIN, "deleteproject": user.ADMIN,
-		"userdeleteview": user.ADMIN, "deleteuser": user.ADMIN,
-		"importdataview": user.ADMIN, "exportdataview": user.ADMIN,
-		"importdata": user.ADMIN, "exportdata": user.ADMIN,
-		"statusview": user.ADMIN, "evaluatesubmissionsview": user.ADMIN,
-		"evaluatesubmissions": user.ADMIN,
-	}
 }
 
 //GenerateViews is used to load all the basic views used by our web app.
@@ -182,28 +189,34 @@ func LoadView(name, view string) Handler {
 }
 
 //CheckAccess verifies that a user is allowed access to a url.
-func CheckAccess(url *url.URL, ctx *Context) (err error) {
+func CheckAccess(path string, ctx *Context) (err error) {
 	//Rertieve the location they are requesting
-	start := strings.LastIndex(url.Path, "/") + 1
-	end := strings.Index(url.Path, "?")
-	if end < 0 {
-		end = len(url.Path)
+	name := path
+	if strings.HasPrefix(name, "/") {
+		if len(name) > 1 {
+			name = name[1:]
+		} else {
+			name = ""
+		}
 	}
-	if start > end {
-		err = fmt.Errorf("Invalid request %s", url.Path)
-		return
+	if index := strings.Index(name, "/"); index != -1 {
+		name = name[:index]
 	}
-	name := url.Path[start:end]
+
+	if index := strings.Index(name, "?"); index != -1 {
+		name = name[:index]
+	}
 	perms := Permissions()
 	//Get the permission and check it.
 	val, ok := perms[name]
 	if !ok {
-		err = fmt.Errorf("Could not find request %s", url.Path)
+		err = fmt.Errorf("Could not find request %s", name)
 		return
 	}
 	var msg string
 	//Check permission levels.
 	switch val {
+	case user.NONE:
 	case OUT:
 		if ctx.LoggedIn() {
 			msg = "Cannot access %s when logged in."
@@ -221,9 +234,12 @@ func CheckAccess(url *url.URL, ctx *Context) (err error) {
 				msg = "You have insufficient permissions to access %s"
 			}
 		}
+	default:
+		msg = "Unknown url %s"
+
 	}
 	if msg != "" {
-		err = fmt.Errorf(msg, url.Path)
+		err = fmt.Errorf(msg, path)
 	}
 	return
 }
