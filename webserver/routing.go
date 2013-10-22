@@ -34,7 +34,7 @@ import (
 )
 
 type (
-	//A function used to add data to the database.
+	//A function used to fullfill a request.
 	Poster func(*http.Request, *Context) (string, error)
 	Perm   int
 )
@@ -44,10 +44,11 @@ const (
 )
 
 var (
-	posters     map[string]Poster
-	viewRoutes  map[string]string
-	permissions map[string]user.Permission
-	out         = []string{
+	indexPosters map[string]bool
+	posters      map[string]Poster
+	viewRoutes   map[string]string
+	permissions  map[string]user.Permission
+	out          = []string{
 		"registerview", "register", "login",
 	}
 	none = []string{
@@ -73,11 +74,15 @@ var (
 )
 
 //CreatePost loads a post request handler.
-func (this Poster) CreatePost() Handler {
+func (this Poster) CreatePost(indexDest bool) Handler {
 	return func(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 		msg, err := this(req, ctx)
 		ctx.AddMessage(msg, err != nil)
-		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		if err == nil && indexDest {
+			http.Redirect(w, req, getRoute("index"), http.StatusSeeOther)
+		} else {
+			http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		}
 		return err
 	}
 }
@@ -103,14 +108,26 @@ func defaultPosters() map[string]Poster {
 		"deleteproject": DeleteProject, "deleteuser": DeleteUser,
 		"importdata": ImportData, "exportdata": ExportData,
 		"evaluatesubmissions": EvaluateSubmissions,
+		"login":               Login, "register": Register,
+		"logout": Logout,
 	}
 }
 
+//indexPosters loads the posters which need to be redirected to the home page on success.
+func IndexPosters() map[string]bool {
+	if indexPosters == nil {
+		indexPosters = map[string]bool{
+			"login": true, "register": true,
+			"logout": true,
+		}
+	}
+	return indexPosters
+}
+
 //GeneratePosts loads post request handlers and adds them to the router.
-func GeneratePosts(router *pat.Router) {
-	posts := Posters()
+func GeneratePosts(router *pat.Router, posts map[string]Poster, indexPosts map[string]bool) {
 	for name, fn := range posts {
-		handleFunc := fn.CreatePost()
+		handleFunc := fn.CreatePost(indexPosts[name])
 		pattern := "/" + name
 		router.Add("POST", pattern, Handler(handleFunc)).Name(name)
 	}
@@ -165,8 +182,7 @@ func Permissions() map[string]user.Permission {
 }
 
 //GenerateViews is used to load all the basic views used by our web app.
-func GenerateViews(router *pat.Router) {
-	views := Views()
+func GenerateViews(router *pat.Router, views map[string]string) {
 	for name, view := range views {
 		handleFunc := LoadView(name, view)
 		lname := strings.ToLower(name)
@@ -178,8 +194,7 @@ func GenerateViews(router *pat.Router) {
 //LoadView loads a view so that it is accessible in our web app.
 func LoadView(name, view string) Handler {
 	return func(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-		views := Views()
-		ctx.Browse.View = views[name]
+		ctx.Browse.View = view
 		if ctx.Browse.View == "home" {
 			ctx.Browse.SetLevel(name)
 		}
@@ -189,8 +204,8 @@ func LoadView(name, view string) Handler {
 }
 
 //CheckAccess verifies that a user is allowed access to a url.
-func CheckAccess(path string, ctx *Context) (err error) {
-	//Rertieve the location they are requesting
+func CheckAccess(path string, ctx *Context, perms map[string]user.Permission) (err error) {
+	//Retrieve the location they are requesting
 	name := path
 	if strings.HasPrefix(name, "/") {
 		if len(name) > 1 {
@@ -202,44 +217,43 @@ func CheckAccess(path string, ctx *Context) (err error) {
 	if index := strings.Index(name, "/"); index != -1 {
 		name = name[:index]
 	}
-
 	if index := strings.Index(name, "?"); index != -1 {
 		name = name[:index]
 	}
-	perms := Permissions()
 	//Get the permission and check it.
 	val, ok := perms[name]
 	if !ok {
 		err = fmt.Errorf("Could not find request %s", name)
 		return
 	}
-	var msg string
+	if msg := checkPermission(ctx, val); msg != "" {
+		err = fmt.Errorf(msg, path)
+	}
+	return
+}
+
+func checkPermission(ctx *Context, perm user.Permission) (msg string) {
 	//Check permission levels.
-	switch val {
+	loggedIn := ctx.LoggedIn()
+	switch perm {
 	case user.NONE:
 	case OUT:
-		if ctx.LoggedIn() {
+		if loggedIn {
 			msg = "Cannot access %s when logged in."
 		}
 	case user.STUDENT:
-		if !ctx.LoggedIn() {
+		if !loggedIn {
 			msg = "You need to be logged in to access %s"
 		}
 	case user.ADMIN, user.TEACHER:
-		if !ctx.LoggedIn() {
+		uname, err := ctx.Username()
+		if err != nil {
 			msg = "You need to be logged in to access %s"
-		} else {
-			uname, _ := ctx.Username()
-			if !checkUserPermission(uname, val) {
-				msg = "You have insufficient permissions to access %s"
-			}
+		} else if !checkUserPermission(uname, perm) {
+			msg = "You have insufficient permissions to access %s"
 		}
 	default:
 		msg = "Unknown url %s"
-
-	}
-	if msg != "" {
-		err = fmt.Errorf(msg, path)
 	}
 	return
 }

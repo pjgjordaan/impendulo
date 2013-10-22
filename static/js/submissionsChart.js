@@ -113,7 +113,6 @@ function submissionsChart(chartData, tipe) {
 	.style('text-anchor', 'middle')
         .text('Status');    
 
-
     chart.append('svg:g')
 	.attr('class', 'y axis')
 	.attr('font-size','10px')

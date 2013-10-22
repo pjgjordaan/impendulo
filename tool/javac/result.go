@@ -95,25 +95,25 @@ func (this *Result) GetReport() tool.Report {
 	return this.Report
 }
 
-//ChartNames
-func (this *Result) ChartNames() []string {
-	return []string{
-		"Errors",
-		"Warnings",
-	}
-}
-
 //ChartVals
-func (this *Result) ChartVals() []tool.ChartVal {
-	yE, yW := 0.0, 0.0
+func (this *Result) ChartVals(summary bool) []tool.ChartVal {
+	yE := 0.0
 	if this.Report.Errors() {
 		yE = float64(this.Report.Count)
-	} else if this.Report.Warnings() {
-		yW = float64(this.Report.Count)
 	}
-	return []tool.ChartVal{
-		{"Errors", yE, true},
-		{"Warnings", yW, false},
+	if summary {
+		return []tool.ChartVal{
+			{"Javac Errors", yE, true},
+		}
+	} else {
+		yW := 0.0
+		if this.Report.Warnings() {
+			yW = float64(this.Report.Count)
+		}
+		return []tool.ChartVal{
+			{"Errors", yE, true},
+			{"Warnings", yW, false},
+		}
 	}
 }
 

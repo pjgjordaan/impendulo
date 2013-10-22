@@ -64,7 +64,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//Load our context from session
 	ctx := LoadContext(sess)
 	buf := new(HttpBuffer)
-	err = CheckAccess(req.URL.Path, ctx)
+	err = CheckAccess(req.URL.Path, ctx, Permissions())
 	if err != nil {
 		ctx.AddMessage(err.Error(), true)
 		http.Redirect(buf, req, getRoute("index"), http.StatusSeeOther)
@@ -96,7 +96,7 @@ func FileHandler(origin string) http.Handler {
 		//Load our context from session
 		ctx := LoadContext(sess)
 		buf := new(HttpBuffer)
-		err = CheckAccess(req.URL.Path, ctx)
+		err = CheckAccess(req.URL.Path, ctx, Permissions())
 		var servePath string
 		if err == nil {
 			servePath, err = ServePath(req.URL, origin)
@@ -142,11 +142,11 @@ func getNav(ctx *Context) string {
 //downloadProject makes a project skeleton available for download.
 func downloadProject(w http.ResponseWriter, req *http.Request, ctx *Context) error {
 	path, err := LoadSkeleton(req)
-	if err == nil {
-		http.ServeFile(w, req, path)
-	} else {
+	if err != nil {
 		ctx.AddMessage("Could not load project skeleton.", true)
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+	} else {
+		http.ServeFile(w, req, path)
 	}
 	return err
 }
@@ -190,7 +190,7 @@ func getSubmissionsChart(w http.ResponseWriter, req *http.Request, ctx *Context)
 		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
 		return err
 	}
-	chart := SubmissionChart(subs)
+	chartData := SubmissionChart(subs)
 	var temp string
 	if ctx.Browse.IsUser {
 		temp = "userSubmissionChart"
@@ -199,7 +199,7 @@ func getSubmissionsChart(w http.ResponseWriter, req *http.Request, ctx *Context)
 	}
 	ctx.Browse.View = "home"
 	ctx.Browse.Level = SUBMISSIONS
-	args := map[string]interface{}{"ctx": ctx, "chart": chart.Data}
+	args := map[string]interface{}{"ctx": ctx, "chart": chartData}
 	return T(getNav(ctx), temp).Execute(w, args)
 }
 
@@ -268,7 +268,7 @@ func analysisArgs(req *http.Request, ctx *Context) (args map[string]interface{},
 	if err != nil {
 		return
 	}
-	results, err := db.ResultNames(ctx.Browse.Pid, true)
+	results, err := db.AllResultNames(ctx.Browse.Pid)
 	if err != nil {
 		return
 	}
@@ -363,12 +363,15 @@ func chartArgs(req *http.Request, ctx *Context) (args map[string]interface{}, er
 	if err != nil {
 		return
 	}
-	results, err := db.ResultNames(ctx.Browse.Pid, false)
+	results, err := db.ChartResultNames(ctx.Browse.Pid)
 	if err != nil {
 		return
 	}
 	startTime := files[0].Time
-	chart := LoadChart(ctx.Browse.Result, files, startTime).Data
+	chart, err := LoadChart(ctx.Browse.Result, files, startTime)
+	if err != nil {
+		return
+	}
 	compareStr := ""
 	compareId, cerr := util.ReadId(req.FormValue("compare"))
 	if cerr == nil {
@@ -377,7 +380,11 @@ func chartArgs(req *http.Request, ctx *Context) (args map[string]interface{}, er
 		if err != nil {
 			return
 		}
-		compareChart := LoadChart(ctx.Browse.Result, compareFiles, startTime).Data
+		var compareChart tool.ChartData
+		compareChart, err = LoadChart(ctx.Browse.Result, compareFiles, startTime)
+		if err != nil {
+			return
+		}
 		chart = append(chart, compareChart...)
 		compareStr = compareId.Hex()
 	}
@@ -386,32 +393,4 @@ func chartArgs(req *http.Request, ctx *Context) (args map[string]interface{}, er
 		"chart": chart, "compare": compareStr,
 	}
 	return
-}
-
-//login logs a user into the system.
-func login(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	msg, err := Login(req, ctx)
-	ctx.AddMessage(msg, err != nil)
-	http.Redirect(w, req, getRoute("index"), http.StatusSeeOther)
-	return err
-}
-
-//register registers a user with the system.
-func register(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	msg, err := Register(req, ctx)
-	if err != nil {
-		ctx.AddMessage(msg, true)
-		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
-	} else {
-		ctx.AddMessage(msg, false)
-		http.Redirect(w, req, getRoute("index"), http.StatusSeeOther)
-	}
-	return err
-}
-
-//Logout logs a user out of the system.
-func Logout(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	delete(ctx.Session.Values, "user")
-	http.Redirect(w, req, getRoute("index"), http.StatusSeeOther)
-	return nil
 }

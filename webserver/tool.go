@@ -26,6 +26,7 @@ package webserver
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processing"
@@ -73,7 +74,7 @@ func toolPermissions() map[string]user.Permission {
 	}
 }
 
-//toolPosters
+//toolRequesters
 func toolPosters() map[string]Poster {
 	return map[string]Poster{
 		"createpmd":        CreatePMD,
@@ -169,23 +170,11 @@ func CreateJPF(req *http.Request, ctx *Context) (msg string, err error) {
 	if err != nil {
 		return
 	}
-	vals := make(map[string][]string)
-	//Read configured listeners and search.
-	listeners, err := GetStrings(req, "addedlisteners")
-	if err == nil {
-		vals["listener"] = listeners
-	}
-	search, err := GetString(req, "addedsearches")
-	if err == nil {
-		vals["search.class"] = []string{search}
-	}
-	//Read other set properties.
-	other, err := GetString(req, "other")
-	if err == nil {
-		props := readProperties(other)
-		for k, v := range props {
-			vals[k] = v
-		}
+	//Read JPF properties.
+	vals, err := readProperties(req)
+	if err != nil {
+		msg = err.Error()
+		return
 	}
 	//Convert to JPF property file style.
 	data, err := jpf.JPFBytes(vals)
@@ -205,28 +194,65 @@ func CreateJPF(req *http.Request, ctx *Context) (msg string, err error) {
 }
 
 //readProperties reads JPF properties from a raw string and stores them in a map.
-func readProperties(raw string) (props map[string][]string) {
-	props = make(map[string][]string)
-	lines := strings.Split(raw, "\n")
+func readProperties(req *http.Request) (vals map[string][]string, err error) {
+	vals = make(map[string][]string)
+	//Read configured listeners and search.
+	listeners, getErr := GetStrings(req, "addedlisteners")
+	if getErr == nil {
+		vals["listener"] = listeners
+	}
+	search, getErr := GetString(req, "addedsearches")
+	if getErr == nil {
+		vals["search.class"] = []string{search}
+	}
+	other, getErr := GetString(req, "other")
+	if getErr != nil {
+		return
+	}
+	lines := strings.Split(other, "\n")
 	for _, line := range lines {
-		params := strings.Split(util.RemoveEmpty(line), "=")
-		if len(params) == 2 {
-			key, val := params[0], params[1]
-			if len(key) > 0 && len(val) > 0 && jpf.Allowed(key) {
-				split := strings.Split(val, ",")
-				vals := make([]string, 0, len(split))
-				for _, v := range split {
-					if v != "" {
-						vals = append(vals, v)
-					}
-				}
-				if v, ok := props[key]; ok {
-					props[key] = append(v, vals...)
-				} else {
-					props[key] = vals
-				}
-			}
+		line = strings.TrimSpace(line)
+		if len(line) == 0 {
+			continue
 		}
+		err = readProperty(line, vals)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func readProperty(line string, props map[string][]string) (err error) {
+	params := strings.Split(util.RemoveEmpty(line), "=")
+	if len(params) != 2 {
+		err = fmt.Errorf("Invalid JPF property %s.", line)
+		return
+	}
+	key, val := params[0], params[1]
+	if len(key) == 0 {
+		err = errors.New("JPF key cannot be empty.")
+		return
+	}
+	if len(val) == 0 {
+		err = fmt.Errorf("JPF value for %s cannot be empty.", key)
+		return
+	}
+	if !jpf.Allowed(key) {
+		err = fmt.Errorf("Cannot set JPF property for %s.", key)
+		return
+	}
+	split := strings.Split(val, ",")
+	vals := make([]string, 0, len(split))
+	for _, v := range split {
+		if v != "" {
+			vals = append(vals, v)
+		}
+	}
+	if v, ok := props[key]; ok {
+		props[key] = append(v, vals...)
+	} else {
+		props[key] = vals
 	}
 	return
 }
@@ -276,10 +302,7 @@ func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
 	} else {
 		matcher = bson.M{project.PROJECT_ID: projectId}
 	}
-	submissions, err := db.Submissions(
-		matcher,
-		bson.M{project.ID: 1},
-	)
+	submissions, err := db.Submissions(matcher, bson.M{project.ID: 1})
 	if err != nil {
 		msg = "Could not retrieve submissions."
 		return
@@ -290,39 +313,7 @@ func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
 	} else {
 		runAll = true
 	}
-	for _, submission := range submissions {
-		files, err := db.Files(
-			bson.M{project.SUBID: submission.Id},
-			bson.M{project.DATA: 0},
-		)
-		if err != nil {
-			util.Log(err)
-			continue
-		}
-		err = processing.StartSubmission(submission.Id)
-		if err != nil {
-			util.Log(err)
-			continue
-		}
-		for _, file := range files {
-			if runAll {
-				if tool == "all" {
-					removeAll(file)
-				} else {
-					removeOne(file, tool)
-				}
-
-			}
-			err = processing.AddFile(file)
-			if err != nil {
-				util.Log(err)
-			}
-		}
-		err = processing.EndSubmission(submission.Id)
-		if err != nil {
-			util.Log(err)
-		}
-	}
+	runTools(submissions, tool, runAll)
 	msg = fmt.Sprintf("Successfully started running %s on project.", tool)
 	return
 }
@@ -353,6 +344,41 @@ func EvaluateSubmissions(req *http.Request, ctx *Context) (msg string, err error
 	}
 	msg = "Successfully evaluated submissions."
 	return
+}
+
+func runTools(submissions []*project.Submission, tool string, runAll bool) {
+	selector := bson.M{project.DATA: 0}
+	for _, submission := range submissions {
+		matcher := bson.M{project.SUBID: submission.Id}
+		files, err := db.Files(matcher, selector)
+		if err != nil {
+			util.Log(err)
+			continue
+		}
+		err = processing.StartSubmission(submission.Id)
+		if err != nil {
+			util.Log(err)
+			continue
+		}
+		for _, file := range files {
+			if runAll {
+				if tool == "all" {
+					removeAll(file)
+				} else {
+					removeOne(file, tool)
+				}
+
+			}
+			err = processing.AddFile(file)
+			if err != nil {
+				util.Log(err)
+			}
+		}
+		err = processing.EndSubmission(submission.Id)
+		if err != nil {
+			util.Log(err)
+		}
+	}
 }
 
 //removeAll removes all of the specified file's results from the db.

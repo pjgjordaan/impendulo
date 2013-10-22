@@ -321,8 +321,29 @@ func ChartResults(fileId bson.ObjectId) (ret []tool.ChartResult, err error) {
 	return
 }
 
-//ResultNames retrieves all result names for a given project.
-func ResultNames(projectId bson.ObjectId, nonTool bool) (ret []string, err error) {
+//AllResultNames retrieves all result names for a given project.
+func AllResultNames(projectId bson.ObjectId) (ret []string, err error) {
+	ret, err = ToolResultNames(projectId)
+	if err != nil {
+		return
+	}
+	ret = append(ret, tool.CODE, diff.NAME, tool.SUMMARY)
+	sort.Strings(ret)
+	return
+}
+
+//ChartResultNames retrieves all result names for a given project.
+func ChartResultNames(projectId bson.ObjectId) (ret []string, err error) {
+	ret, err = ToolResultNames(projectId)
+	if err != nil {
+		return
+	}
+	ret = append(ret, tool.SUMMARY)
+	sort.Strings(ret)
+	return
+}
+
+func ToolResultNames(projectId bson.ObjectId) (ret []string, err error) {
 	tests, err := JUnitTests(bson.M{project.PROJECT_ID: projectId},
 		bson.M{project.NAME: 1})
 	if err != nil {
@@ -340,9 +361,6 @@ func ResultNames(projectId bson.ObjectId, nonTool bool) (ret []string, err error
 	_, perr := PMDRules(bson.M{project.PROJECT_ID: projectId}, bson.M{project.ID: 1})
 	if perr == nil {
 		ret = append(ret, pmd.NAME)
-	}
-	if nonTool {
-		ret = append(ret, tool.CODE, diff.NAME, tool.SUMMARY)
 	}
 	sort.Strings(ret)
 	return

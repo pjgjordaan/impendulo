@@ -46,8 +46,12 @@ func TestCopier(t *testing.T) {
 		realDest + "," + realSrcFile: true,
 	}
 	os.Mkdir(realDest, os.ModeDir|os.ModePerm)
+	defer os.RemoveAll(realDest)
 	os.Mkdir(realSrcDir, os.ModeDir|os.ModePerm)
+	os.Create(filepath.Join(realSrcDir, realSrcFile))
+	defer os.RemoveAll(realSrcDir)
 	os.Create(realSrcFile)
+	defer os.RemoveAll(realSrcFile)
 	for test, valid := range tests {
 		err := tcopy(test, valid)
 		if err != nil {
@@ -55,9 +59,6 @@ func TestCopier(t *testing.T) {
 		}
 
 	}
-	os.RemoveAll(realSrcFile)
-	os.RemoveAll(realDest)
-	os.RemoveAll(realSrcDir)
 }
 
 func tcopy(destSrc string, valid bool) error {

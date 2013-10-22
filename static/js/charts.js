@@ -26,6 +26,14 @@ var DOT_RADIUS = 4;
 var FOCUS_COLOUR = 'black';
 var COLOURS = ['#1f77b4', '#ff7f0e', '#2ca02c',  '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
 var LAUNCH = 'Launches';
+
+function showChart(fileName, resultName, chartData, compare){
+    if (resultName === 'Summary'){
+	summaryTimeChart(fileName, resultName, chartData, compare);
+    } else{
+	timeChart(fileName, resultName, chartData, compare);
+    }
+}
       
 function timeChart(fileName, resultName, chartData, compare) {
     if (chartData === null){
@@ -42,9 +50,14 @@ function timeChart(fileName, resultName, chartData, compare) {
     var w = 1100 - m[1] - m[3];
     var h = 500 - m[0] - m[2];
     var mid = (d3.max(tools, getY)-d3.min(tools, getY))/2;
+    var unique = getUnique(chartData);
+    var names = unique
+	.map(function(d){
+	    return d.key;
+	});
     var getColour = d3.scale.ordinal()
 	.range(COLOURS) 
-        .domain(d3.keys(chartData[0]).filter(function(key) { return key === 'name'; }));  
+        .domain(names);  
     var chartColour = function(d) { 
 	return getColour(getKey(d)); 
     };    
@@ -254,7 +267,311 @@ function timeChart(fileName, resultName, chartData, compare) {
 	.key(function(d){
 	    return d.subId;
 	})
-	.entries(getUnique(chartData));
+	.entries(unique);
+    
+    var legend = chart.append('g')
+	.attr('class', 'legend')
+    	.attr('height', 100)
+	.attr('width', 100)
+	.attr('transform', 'translate(-20,50)');  
+    
+    var legendElements = legend.selectAll('g')
+	.data(legendData)
+	.enter()
+	.append('g');
+    legendElements.append('text')
+	.attr('x', w+20)
+	.attr('y', function(d, i){
+	    var offset = i * (d.values.length + 1) * 25;
+	    return (offset) + 13;
+	})
+	.attr('font-size','10px')
+	.attr('class', 'clickable')
+	.text(function(d){
+	    return d.values[0].user;
+	})
+	.on('click', function(d, i){
+	    for(var j = 0; j < d.values.length; j++){
+		toggleVisibility(d.values[j]);
+	    }
+	    var opacity = d3.select(this).style('opacity');
+	    opacity = opacity === '1' ? 0.3 : 1.0;
+	    d3.select(this)
+		.transition()
+		.duration(500)
+		.ease('linear')
+		.style('opacity', opacity);
+	});
+    
+    var elemData = function(d, i){
+	var offset = (i * (d.values.length +1) * 25) + 25;
+	return legendData[i].values.map(function(d){
+	    d.offset = offset;
+	    return d;
+	});
+    };
+
+    legendElements.selectAll('.legendrect')
+	.data(elemData)
+	.enter()
+	.append('rect')
+	.attr('class', 'legendrect clickable')
+	.attr('key', legendKey)
+	.attr('x', w+30)
+	.attr('y', function(d, i){ 
+	    return i *  25 + d.offset;
+	})
+	.attr('width', 15)
+	.attr('height', 15)
+	.attr('showing', true)
+	.style('fill', chartColour)
+	.style('opacity', function(d){
+	    return d.show ? 1.0 : 0.3;
+	})
+	.on('click', toggleVisibility);
+    
+    legendElements.selectAll('.legendtext')
+	.data(elemData)
+	.enter()
+	.append('text')
+	.attr('class', 'legendtext')
+	.attr('key', legendKey)
+	.attr('x', w+50)
+	.attr('y', function(d, i){ 
+	    return (i *  25) + 13 + d.offset;
+	})
+	.style('opacity', function(d){
+	    return d.show ? 1.0 : 0.3;
+	})
+	.attr('font-size','10px')
+	.text(getName);
+}
+
+function summaryTimeChart(fileName, resultName, chartData, compare) {
+    if (chartData === null){
+	return;
+    }
+    var tools = chartData.filter(function(d){
+	return !isLaunch(d);
+    });
+    var launches = chartData.filter(isLaunch);
+    var lineData = d3.nest()
+	.key(getKey)
+	.entries(tools);  
+    var m = [10, 150, 100, 100];
+    var w = 1100 - m[1] - m[3];
+    var h = 500 - m[0] - m[2];
+    var mid = (d3.max(tools, getY)-d3.min(tools, getY))/2;
+    var unique = getUnique(chartData);
+    var names = unique
+	.map(function(d){
+	    return d.key;
+	});
+    var getColour = d3.scale.ordinal()
+	.range(COLOURS) 
+        .domain(names);  
+    var chartColour = function(d) { 
+	return getColour(getKey(d)); 
+    };    
+    var scales = d3.map();
+    for(var i = 0; i < names.length; i ++){
+	var vals = chartData.filter(function(d){
+	    return d.key === names[i];
+	});
+	scales[names[i]] = d3.scale.linear()
+	    .domain(d3.extent(vals, getY))
+	    .range([h, 0]);
+    }
+    var x = d3.time.scale()
+	.domain(d3.extent(chartData, getChartX))
+	.range([0, w]);  
+
+    var loadLink = function(d) {
+	var href = 'displayresult?time='+d.x+
+	    '&result='+resultName+
+	    '&file='+fileName+
+	    '&sid='+d.subId+
+	    '&uid='+d.user;
+	href = compare ? href + compare : href;
+	return href;
+    };
+
+    var loadDate = function(d,i) { 
+	return x(new Date(getChartX(d))); 
+    };
+
+    var loadY = function(d) {
+	return scales[d.key](d.y);
+    }
+    
+    var hideTooltip = function(d) {
+	var selected = d3.select(this);
+	var attr = 'r';
+	var val = DOT_RADIUS;
+	if(isLaunch(d)){
+	    var xPos = parseFloat(d3.select(this).attr('cx'));
+	    var yPos = parseFloat(d3.select(this).attr('cy'));
+	    attr = 'points';
+	    val = function(d){
+		return star(xPos, yPos);
+	    };
+	}
+	selected
+	    .transition()
+            .duration(500)
+            .ease('linear')
+	    .attr('fill', chartColour)
+	    .attr(attr, val);
+	d3.select('#tooltip')
+	    .transition()
+            .duration(500)
+            .ease('linear')
+	    .style('opacity', 0);
+    };
+
+    var line = d3.svg.line()
+	.interpolate('linear')
+    	.x(loadDate)
+	.y(loadY);
+    
+    var xAxis = d3.svg.axis()
+	.scale(x)
+	.ticks(7)
+	.tickSize(-h)
+	.orient('bottom')
+	.tickSubdivide(true);
+       
+    var zoom = d3.behavior.zoom()
+	.x(x)
+	.on('zoom', function(){
+	    var duration = 1000;
+	    var ease = 'linear';
+	    chart.select('.x.axis')
+		.transition()
+		.duration(duration)
+		.ease(ease)
+		.call(xAxis);
+	    chart.selectAll('.line')
+		.transition()
+		.duration(duration)
+	    	.ease(ease)
+		.attr('d', function(d) { 
+		    return line(d.values); 
+		});
+	    chartBody.selectAll('.dot')
+		.transition()
+		.duration(duration)
+		.ease(ease)
+		.attr('cx', loadDate)
+		.attr('cy', loadY)
+		.attr('r', DOT_RADIUS);
+	    chartBody.selectAll('.launch')
+		.transition()
+		.duration(duration)
+		.ease(ease)
+		.attr('points', function(d){
+		    return star(loadDate(d), scales[d.key](mid));
+		})
+    		.attr('cx', loadDate)
+		.attr('cy', function(d){
+		    return scales[d.key](mid);
+		});
+	});
+    
+    var chart = d3.select('#chart')
+	.append('svg:svg')
+	.attr('width', w + m[1] + m[3])
+	.attr('height', h + m[0] + m[2])
+	.append('svg:g')
+	.attr('transform', 'translate(' + m[3] + ',' + m[0] + ')')
+	.call(zoom);
+
+    chart.append('svg:rect')
+	.attr('width', w)
+	.attr('height', h)
+	.attr('class', 'plot');
+    
+    chart.append('svg:g')
+	.attr('class', 'x axis')
+	.attr('transform', 'translate(0,' + h + ')')
+	.call(xAxis);
+
+    chart.append('text')
+        .attr('x', w/2 )
+        .attr('y',  h+40)
+        .style('text-anchor', 'middle')
+        .text('Time');
+       
+    chart.append('svg:clipPath')
+	.attr('id', 'clip')
+	.append('svg:rect')
+	.attr('x', -10)
+	.attr('y', -10)
+	.attr('width', w+20)
+	.attr('height', h+20);
+
+    var chartBody = chart.append('g')
+	.attr('clip-path', 'url(#clip)');
+
+    chartBody.selectAll('.line')
+	.data(lineData, getKey)
+	.enter()
+	.append('path')
+	.attr('class', 'line')
+	.attr('key', chartKey)
+	.style('stroke', chartColour)
+	.attr('d', function(d) { 
+	    return line(d.values); 
+	})
+	.style('opacity', function(d){
+	    return d.values[0].show ? 1.0 : 0.0;
+	});
+
+    chartBody.selectAll('.link')
+	.data(tools)
+	.enter()
+	.append('svg:a')
+	.attr('xlink:href', loadLink)
+	.attr('class', 'link')
+	.attr('key', chartKey)
+	.style('opacity', function(d){
+	    return d.show ? 1.0 : 0.0;
+	})
+	.append('svg:circle')
+	.attr('class', 'dot')
+	.attr('fill', chartColour)
+    	.attr('cx', loadDate)
+	.attr('cy', loadY)
+	.attr('r', DOT_RADIUS)
+	.on('mouseover', showTooltip)
+	.on('mouseout', hideTooltip);
+
+
+    chartBody.selectAll('.launch')
+	.data(launches)
+	.enter()
+	.append('svg:polygon')
+	.attr('class', 'launch')
+	.attr('fill', chartColour)
+    	.attr('points', function(d){
+	    return star(loadDate(d), scales[d.key](mid));
+	})
+    	.attr('cx', loadDate)
+	.attr('cy', function(d){
+	    return scales[d.key](mid);
+	})
+	.attr('key', chartKey)
+	.style('opacity', function(d){
+	    return 0.0;
+	})
+	.on('mouseover', showTooltip)
+	.on('mouseout', hideTooltip);
+
+    var legendData = d3.nest()
+	.key(function(d){
+	    return d.subId;
+	})
+	.entries(unique);
     
     var legend = chart.append('g')
 	.attr('class', 'legend')
@@ -334,6 +651,7 @@ function timeChart(fileName, resultName, chartData, compare) {
 	.text(getName);
 
 }
+
 
 function legendKey(d){
     return 'legend'+trimKey(d);

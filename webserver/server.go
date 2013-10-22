@@ -46,13 +46,9 @@ const (
 func init() {
 	//Setup the router.
 	router = pat.New()
-	router.Add("POST", "/login", Handler(login))
-	router.Add("POST", "/register", Handler(register))
-	router.Add("POST", "/logout", Handler(Logout))
+	GeneratePosts(router, Posters(), IndexPosters())
 
-	GeneratePosts(router)
-
-	GenerateViews(router)
+	GenerateViews(router, Views())
 
 	router.Add("GET", "/configview", Handler(configView)).Name("configview")
 

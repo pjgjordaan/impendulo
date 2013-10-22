@@ -94,3 +94,9 @@ func DeleteUser(req *http.Request, ctx *Context) (msg string, err error) {
 	}
 	return
 }
+
+//Logout logs a user out of the system.
+func Logout(req *http.Request, ctx *Context) (string, error) {
+	delete(ctx.Session.Values, "user")
+	return "Successfully logged out.", nil
+}

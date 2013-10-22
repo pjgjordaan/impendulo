@@ -139,20 +139,22 @@ func (this *copier) copyFile(path string, f os.FileInfo, err error) error {
 
 //copy
 func (this *copier) copy(path string, f os.FileInfo) (err error) {
-	destPath, err := filepath.Rel(this.src, path)
 	if err != nil {
-		//Should never happen but lets still handle it.
 		return
-	}
-	if destPath == "." {
-		destPath = filepath.Base(path)
 	}
 	if f == nil {
 		return
 	}
+	destPath, err := filepath.Rel(this.src, path)
+	if err != nil {
+		return
+	}
+	if destPath == "." {
+		destPath = ""
+	}
 	destPath = filepath.Join(this.dest, destPath)
 	if f.IsDir() {
-		os.MkdirAll(destPath, os.ModePerm)
+		err = os.MkdirAll(destPath, os.ModePerm)
 		return
 	}
 	srcFile, err := os.Open(path)

@@ -103,17 +103,16 @@ func (this *Result) Success() bool {
 	return true
 }
 
-//ChartNames
-func (this *Result) ChartNames() []string {
-	return []string{
-		"Errors",
-	}
-}
-
 //ChartVals
-func (this *Result) ChartVals() []tool.ChartVal {
-	return []tool.ChartVal{
-		{"Errors", float64(this.Report.Errors), true},
+func (this *Result) ChartVals(summary bool) []tool.ChartVal {
+	if summary {
+		return []tool.ChartVal{
+			{"Checkstyle Errors", float64(this.Report.Errors), true},
+		}
+	} else {
+		return []tool.ChartVal{
+			{"Errors", float64(this.Report.Errors), true},
+		}
 	}
 }
 

@@ -67,7 +67,7 @@ func TestCreateJPF(t *testing.T) {
 	id := bson.NewObjectId().Hex()
 	lPkg := "gov.nasa.jpf.listener."
 	sPkg := "gov.nasa.jpf.search."
-	other := html.EscapeString("target.args = 2,1,2\nsearch.multiple_errors = true\nasdas8823\n  ")
+	other := html.EscapeString("target.args = 2,1,2\nsearch.multiple_errors = true\nasdas8823=quesq,322\n ")
 	requests := []postHolder{
 		postHolder{"/createjpf?project=" + id + "&addedL=" +
 			lPkg + "ExecTracker&addedL=" + lPkg +

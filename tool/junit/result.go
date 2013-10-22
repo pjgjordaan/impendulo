@@ -101,19 +101,17 @@ func (this *Result) Success() bool {
 	return this.Report != nil && this.Report.Success()
 }
 
-//ChartNames
-func (this *Result) ChartNames() []string {
-	return []string{
-		"Errors",
-		"Failures",
-	}
-}
-
 //ChartVals
-func (this *Result) ChartVals() []tool.ChartVal {
-	return []tool.ChartVal{
-		{"Errors", float64(this.Report.Errors), true},
-		{"Failures", float64(this.Report.Failures), true},
+func (this *Result) ChartVals(summary bool) []tool.ChartVal {
+	if summary {
+		return []tool.ChartVal{
+			{this.TestName + " Errors", float64(this.Report.Errors) + float64(this.Report.Failures), true},
+		}
+	} else {
+		return []tool.ChartVal{
+			{"Errors", float64(this.Report.Errors), true},
+			{"Failures", float64(this.Report.Failures), true},
+		}
 	}
 }
 

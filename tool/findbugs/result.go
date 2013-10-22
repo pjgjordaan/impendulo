@@ -97,23 +97,19 @@ func (this *Result) GetReport() tool.Report {
 	return this.Report
 }
 
-//ChartNames
-func (this *Result) ChartNames() []string {
-	return []string{
-		"All",
-		"Priority 1",
-		"Priority 2",
-		"Priority 3",
-	}
-}
-
 //ChartVals
-func (this *Result) ChartVals() []tool.ChartVal {
-	return []tool.ChartVal{
-		{"All", float64(this.Report.Summary.BugCount), true},
-		{"Priority 1", float64(this.Report.Summary.Priority1), false},
-		{"Priority 2", float64(this.Report.Summary.Priority2), false},
-		{"Priority 3", float64(this.Report.Summary.Priority3), false},
+func (this *Result) ChartVals(summary bool) []tool.ChartVal {
+	if summary {
+		return []tool.ChartVal{
+			{"Findbugs Bugs", float64(this.Report.Summary.BugCount), true},
+		}
+	} else {
+		return []tool.ChartVal{
+			{"All", float64(this.Report.Summary.BugCount), true},
+			{"Priority 1", float64(this.Report.Summary.Priority1), false},
+			{"Priority 2", float64(this.Report.Summary.Priority2), false},
+			{"Priority 3", float64(this.Report.Summary.Priority3), false},
+		}
 	}
 }
 
