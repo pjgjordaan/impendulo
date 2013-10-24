@@ -207,3 +207,16 @@ func IsExec(path string) bool {
 	}
 	return !stat.IsDir() && (stat.Mode()&0100) != 0
 }
+
+func CopyFile(dest, src string) (err error) {
+	r, err := os.Open(src)
+	if err != nil {
+		return
+	}
+	w, err := os.Create(dest)
+	if err != nil {
+		return
+	}
+	_, err = io.Copy(w, r)
+	return
+}

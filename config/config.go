@@ -121,7 +121,14 @@ func DefaultConfig() string {
 	if defaultFile != "" {
 		return defaultFile
 	}
-	defaultFile = filepath.Join(util.InstallPath(), "config", "config.json")
+	defaultFile = filepath.Join(util.BaseDir(), "config.json")
+	if !util.IsFile(defaultFile) {
+		installedConfig := filepath.Join(util.InstallPath(), "config", "config.json")
+		err := util.CopyFile(defaultFile, installedConfig)
+		if err != nil {
+			return ""
+		}
+	}
 	return defaultFile
 }
 
