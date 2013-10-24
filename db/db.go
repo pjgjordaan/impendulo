@@ -32,29 +32,6 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
-const (
-	//Mongodb collection name.
-	USERS       = "users"
-	SUBMISSIONS = "submissions"
-	FILES       = "files"
-	RESULTS     = "results"
-	TESTS       = "tests"
-	PROJECTS    = "projects"
-	JPF         = "jpf"
-	PMD         = "pmd"
-	//Mongodb command
-	SET = "$set"
-	//Mongodb connection and db names
-	ADDRESS      = "mongodb://localhost/"
-	DEFAULT_DB   = "impendulo"
-	DEBUG_DB     = "impendulo_debug"
-	TEST_DB      = "impendulo_test"
-	BACKUP_DB    = "impendulo_backup"
-	DEFAULT_CONN = ADDRESS + DEFAULT_DB
-	DEBUG_CONN   = "mongodb://localhost/impendulo_debug"
-	TEST_CONN    = "mongodb://localhost/impendulo_test"
-)
-
 var (
 	sessionChan chan *mgo.Session
 	requestChan chan bool
@@ -205,6 +182,23 @@ func Update(col string, matcher, change interface{}) (err error) {
 	defer session.Close()
 	tcol := session.DB("").C(col)
 	err = tcol.Update(matcher, change)
+	if err != nil {
+		err = fmt.Errorf(
+			"Encountered error %q when updating %q matching %q to %q in db",
+			err, col, matcher, change,
+		)
+	}
+	return
+}
+
+func UpdateAll(col string, matcher, change interface{}) (err error) {
+	session, err := Session()
+	if err != nil {
+		return
+	}
+	defer session.Close()
+	tcol := session.DB("").C(col)
+	_, err = tcol.UpdateAll(matcher, change)
 	if err != nil {
 		err = fmt.Errorf(
 			"Encountered error %q when updating %q matching %q to %q in db",

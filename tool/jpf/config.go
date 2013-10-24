@@ -38,7 +38,6 @@ type (
 	Config struct {
 		Id        bson.ObjectId "_id"
 		ProjectId bson.ObjectId "projectid"
-		User      string        "user"
 		Time      int64         "time"
 		//Contains configured JPF properties
 		Data []byte "data"
@@ -77,15 +76,14 @@ func Allowed(key string) bool {
 func (this *Config) String() string {
 	return "Type: project.Config; Id: " + this.Id.Hex() +
 		"; ProjectId: " + this.ProjectId.Hex() +
-		"; User: " + this.User + "; Time: " + util.Date(this.Time)
+		"; Time: " + util.Date(this.Time)
 }
 
 //NewConfig creates a new JPF configuration for a certain project.
-func NewConfig(projectId bson.ObjectId, user string, data []byte) *Config {
+func NewConfig(projectId bson.ObjectId, data []byte) *Config {
 	return &Config{
 		Id:        bson.NewObjectId(),
 		ProjectId: projectId,
-		User:      user,
 		Time:      util.CurMilis(),
 		Data:      data,
 	}

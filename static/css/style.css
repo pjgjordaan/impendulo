@@ -172,6 +172,10 @@ dl dd{
     margin-bottom: 40px;
 }
 
+.centered{
+    text-align: center;
+}
+
 .tooltip-inner {
     white-space:pre-wrap;
 }

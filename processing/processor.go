@@ -56,11 +56,11 @@ type (
 //NewProcessor creates a Processor and sets up the environment and
 //tools for it.
 func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
-	sub, err := db.Submission(bson.M{project.ID: subId}, nil)
+	sub, err := db.Submission(bson.M{db.ID: subId}, nil)
 	if err != nil {
 		return
 	}
-	matcher := bson.M{project.ID: sub.ProjectId}
+	matcher := bson.M{db.ID: sub.ProjectId}
 	proj, err := db.Project(matcher, nil)
 	if err != nil {
 		return
@@ -93,7 +93,7 @@ processing:
 		select {
 		case fId := <-fileChan:
 			//Retrieve file and process it.
-			file, err := db.File(bson.M{project.ID: fId}, nil)
+			file, err := db.File(bson.M{db.ID: fId}, nil)
 			if err != nil {
 				util.Log(err, LOG_PROCESSOR)
 			} else {
@@ -110,6 +110,10 @@ processing:
 		}
 	}
 	err := db.UpdateStatus(this.sub)
+	if err != nil {
+		util.Log(err)
+	}
+	err = db.UpdateTime(this.sub)
 	if err != nil {
 		util.Log(err)
 	}
@@ -153,15 +157,15 @@ func (this *Processor) Extract(archive *project.File) error {
 	if err != nil {
 		util.Log(err, LOG_PROCESSOR)
 	}
-	fIds, err := db.Files(bson.M{project.SUBID: this.sub.Id},
-		bson.M{project.TIME: 1, project.ID: 1}, project.TIME)
+	fIds, err := db.Files(bson.M{db.SUBID: this.sub.Id},
+		bson.M{db.TIME: 1, db.ID: 1}, db.TIME)
 	if err != nil {
 		return err
 	}
 	ChangeStatus(Status{len(fIds), 0})
 	//Process archive files.
 	for _, fId := range fIds {
-		file, err := db.File(bson.M{project.ID: fId.Id}, nil)
+		file, err := db.File(bson.M{db.ID: fId.Id}, nil)
 		if err != nil {
 			util.Log(err, LOG_PROCESSOR)
 		} else {
@@ -182,7 +186,7 @@ func (this *Processor) StoreFile(name string, data []byte) (err error) {
 	if err != nil {
 		return
 	}
-	matcher := bson.M{project.SUBID: this.sub.Id, project.TYPE: file.Type, project.TIME: file.Time}
+	matcher := bson.M{db.SUBID: this.sub.Id, db.TYPE: file.Type, db.TIME: file.Time}
 	if !db.Contains(db.FILES, matcher) {
 		file.SubId = this.sub.Id
 		file.Data = data

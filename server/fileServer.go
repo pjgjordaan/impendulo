@@ -125,7 +125,7 @@ func (this *SubmissionHandler) Login() (err error) {
 		return
 	}
 	//Read user details
-	this.submission.User, err = util.GetString(loginInfo, project.USER)
+	this.submission.User, err = util.GetString(loginInfo, db.USER)
 	if err != nil {
 		return
 	}
@@ -151,7 +151,7 @@ func (this *SubmissionHandler) Login() (err error) {
 		return
 	}
 	//Send a list of available projects to the user.
-	projects, err := db.Projects(nil, bson.M{project.SKELETON: 0}, project.NAME)
+	projects, err := db.Projects(nil, bson.M{db.SKELETON: 0}, db.NAME)
 	if err == nil {
 		err = this.writeJson(projects)
 	}
@@ -183,7 +183,7 @@ func (this *SubmissionHandler) LoadInfo() (err error) {
 //Submission info is read from the subInfo map and used to create a new
 //submission in the db.
 func (this *SubmissionHandler) createSubmission(subInfo map[string]interface{}) (err error) {
-	idStr, err := util.GetString(subInfo, project.PROJECT_ID)
+	idStr, err := util.GetString(subInfo, db.PROJECTID)
 	if err != nil {
 		return
 	}
@@ -191,7 +191,7 @@ func (this *SubmissionHandler) createSubmission(subInfo map[string]interface{}) 
 	if err != nil {
 		return
 	}
-	this.submission.Time, err = util.GetInt64(subInfo, project.TIME)
+	this.submission.Time, err = util.GetInt64(subInfo, db.TIME)
 	if err != nil {
 		return
 	}
@@ -206,7 +206,7 @@ func (this *SubmissionHandler) createSubmission(subInfo map[string]interface{}) 
 //continueSubmission is used when a client wishes to continue with a previous submission.
 //The submission id is read from the subInfo map and then the submission os loaded from the db.
 func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{}) (err error) {
-	idStr, err := util.GetString(subInfo, project.SUBID)
+	idStr, err := util.GetString(subInfo, db.SUBID)
 	if err != nil {
 		return
 	}
@@ -214,12 +214,12 @@ func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{}
 	if err != nil {
 		return
 	}
-	change := bson.M{db.SET: bson.M{project.STATUS: project.BUSY}}
-	err = db.Update(db.SUBMISSIONS, bson.M{project.ID: id}, change)
+	change := bson.M{db.SET: bson.M{db.STATUS: project.BUSY}}
+	err = db.Update(db.SUBMISSIONS, bson.M{db.ID: id}, change)
 	if err != nil {
 		return
 	}
-	this.submission, err = db.Submission(bson.M{project.ID: id}, nil)
+	this.submission, err = db.Submission(bson.M{db.ID: id}, nil)
 	if err != nil {
 		return
 	}

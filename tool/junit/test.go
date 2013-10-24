@@ -35,7 +35,6 @@ type (
 		Id        bson.ObjectId "_id"
 		ProjectId bson.ObjectId "projectid"
 		Name      string        "name"
-		User      string        "user"
 		Package   string        "pkg"
 		Time      int64         "time"
 		//The test file
@@ -50,11 +49,11 @@ func (this *Test) String() string {
 	return "Type: junit.Test; Id: " + this.Id.Hex() +
 		"; ProjectId: " + this.ProjectId.Hex() +
 		"; Name: " + this.Name + "; Package: " + this.Package +
-		"; User: " + this.User + "; Time: " + util.Date(this.Time)
+		"; Time: " + util.Date(this.Time)
 }
 
 //NewTest
-func NewTest(projectId bson.ObjectId, name, user, pkg string, test, data []byte) *Test {
+func NewTest(projectId bson.ObjectId, name, pkg string, test, data []byte) *Test {
 	id := bson.NewObjectId()
-	return &Test{id, projectId, name, user, pkg, util.CurMilis(), test, data}
+	return &Test{id, projectId, name, pkg, util.CurMilis(), test, data}
 }

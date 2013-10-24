@@ -30,6 +30,7 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"net/http"
@@ -100,8 +101,8 @@ func ChangeSkeleton(req *http.Request, ctx *Context) (msg string, err error) {
 		return
 	}
 	err = db.Update(
-		db.PROJECTS, bson.M{project.ID: projectId},
-		bson.M{db.SET: bson.M{project.SKELETON: data}},
+		db.PROJECTS, bson.M{db.ID: projectId},
+		bson.M{db.SET: bson.M{db.SKELETON: data}},
 	)
 	if err != nil {
 		msg = "Could not update skeleton file."
@@ -113,7 +114,7 @@ func ChangeSkeleton(req *http.Request, ctx *Context) (msg string, err error) {
 
 //AddProject creates a new Impendulo Project.
 func AddProject(req *http.Request, ctx *Context) (msg string, err error) {
-	name, err := GetString(req, "name")
+	name, err := GetString(req, "projectname")
 	if err != nil {
 		msg = "Could not read project name."
 		return
@@ -157,20 +158,134 @@ func DeleteProject(req *http.Request, ctx *Context) (msg string, err error) {
 	return
 }
 
+//EditProject
+func EditProject(req *http.Request, ctx *Context) (msg string, err error) {
+	projectId, msg, err := getProjectId(req)
+	if err != nil {
+		return
+	}
+	name, err := GetString(req, "projectname")
+	if err != nil {
+		msg = "Could not read project name."
+		return
+	}
+	u, err := GetString(req, "user")
+	if err != nil {
+		msg = "Could not read user."
+		return
+	}
+	if !db.Contains(db.USERS, bson.M{db.ID: u}) {
+		err = fmt.Errorf("Invalid user %s.", u)
+		msg = err.Error()
+		return
+	}
+	lang, err := GetString(req, "lang")
+	if err != nil {
+		msg = "Could not read language."
+		return
+	}
+	if !tool.Supported(lang) {
+		err = fmt.Errorf("Unsupported language %s.", lang)
+		msg = err.Error()
+		return
+	}
+	change := bson.M{db.SET: bson.M{db.NAME: name, db.USER: u, db.LANG: lang}}
+	err = db.Update(db.PROJECTS, bson.M{db.ID: projectId}, change)
+	if err != nil {
+		msg = "Could not edit project."
+	} else {
+		msg = "Successfully edited project."
+	}
+	return
+}
+
+//EditSubmission
+func EditSubmission(req *http.Request, ctx *Context) (msg string, err error) {
+	subId, err := util.ReadId(req.FormValue("subid"))
+	if err != nil {
+		msg = "Could not read submission id."
+		return
+	}
+	projectId, msg, err := getProjectId(req)
+	if err != nil {
+		return
+	}
+	if !db.Contains(db.PROJECTS, bson.M{db.ID: projectId}) {
+		err = fmt.Errorf("Invalid project %s.", projectId.Hex())
+		msg = err.Error()
+		return
+	}
+	u, err := GetString(req, "user")
+	if err != nil {
+		msg = "Could not read user."
+		return
+	}
+	if !db.Contains(db.USERS, bson.M{db.ID: u}) {
+		err = fmt.Errorf("Invalid user %s.", u)
+		msg = err.Error()
+		return
+	}
+	change := bson.M{db.SET: bson.M{db.PROJECTID: projectId, db.USER: u}}
+	err = db.Update(db.SUBMISSIONS, bson.M{db.ID: subId}, change)
+	if err != nil {
+		msg = "Could not edit submission."
+	} else {
+		msg = "Successfully edited submission."
+	}
+	return
+}
+
+//EditFile
+func EditFile(req *http.Request, ctx *Context) (msg string, err error) {
+	fileId, err := util.ReadId(req.FormValue("fileid"))
+	if err != nil {
+		msg = "Could not read file id."
+		return
+	}
+	subId, err := util.ReadId(req.FormValue("subid"))
+	if err != nil {
+		msg = "Could not read submission id."
+		return
+	}
+	if !db.Contains(db.SUBMISSIONS, bson.M{db.ID: subId}) {
+		err = fmt.Errorf("Invalid submission %s.", subId.Hex())
+		msg = err.Error()
+		return
+	}
+	name, err := GetString(req, "filename")
+	if err != nil {
+		msg = "Could not read file name."
+		return
+	}
+	pkg, err := GetString(req, "package")
+	if err != nil {
+		msg = "Could not read package."
+		return
+	}
+	change := bson.M{db.SET: bson.M{db.SUBID: subId, db.NAME: name, db.PKG: pkg}}
+	err = db.Update(db.FILES, bson.M{db.ID: fileId}, change)
+	if err != nil {
+		msg = "Could not edit file."
+	} else {
+		msg = "Successfully edited file."
+	}
+	return
+}
+
 //RetrieveFileInfo fetches all filenames in a submission.
 func RetrieveFileInfo(req *http.Request, ctx *Context) (ret []*db.FileInfo, err error) {
 	err = ctx.Browse.SetSid(req)
 	if err != nil {
 		return
 	}
-	matcher := bson.M{project.SUBID: ctx.Browse.Sid, project.TYPE: project.SRC}
+	matcher := bson.M{db.SUBID: ctx.Browse.Sid, db.TYPE: project.SRC}
 	ret, err = db.FileInfos(matcher)
 	if err != nil {
 		return
 	}
 	sub, err := db.Submission(
-		bson.M{project.ID: ctx.Browse.Sid},
-		bson.M{project.PROJECT_ID: 1, project.USER: 1},
+		bson.M{db.ID: ctx.Browse.Sid},
+		bson.M{db.PROJECTID: 1, db.USER: 1},
 	)
 	if err != nil {
 		return
@@ -182,10 +297,10 @@ func RetrieveFileInfo(req *http.Request, ctx *Context) (ret []*db.FileInfo, err 
 
 //Snapshots retrieves snapshots of a given file in a submission.
 func Snapshots(subId bson.ObjectId, fileName string) (ret []*project.File, err error) {
-	matcher := bson.M{project.SUBID: subId,
-		project.TYPE: project.SRC, project.NAME: fileName}
-	selector := bson.M{project.TIME: 1, project.SUBID: 1}
-	ret, err = db.Files(matcher, selector, project.TIME)
+	matcher := bson.M{db.SUBID: subId,
+		db.TYPE: project.SRC, db.NAME: fileName}
+	selector := bson.M{db.TIME: 1, db.SUBID: 1}
+	ret, err = db.Files(matcher, selector, db.TIME)
 	if err == nil && len(ret) == 0 {
 		err = fmt.Errorf("No files found with name %q.", fileName)
 	}
@@ -199,14 +314,14 @@ func RetrieveSubmissions(req *http.Request, ctx *Context) ([]*project.Submission
 	if perr == nil {
 		ctx.Browse.IsUser = false
 		return db.Submissions(
-			bson.M{project.PROJECT_ID: ctx.Browse.Pid},
-			nil, "-"+project.TIME,
+			bson.M{db.PROJECTID: ctx.Browse.Pid},
+			nil, "-"+db.TIME,
 		)
 	} else if uerr == nil {
 		ctx.Browse.IsUser = true
 		return db.Submissions(
-			bson.M{project.USER: ctx.Browse.Uid},
-			nil, "-"+project.TIME,
+			bson.M{db.USER: ctx.Browse.Uid},
+			nil, "-"+db.TIME,
 		)
 	} else {
 		return nil, errors.New("No id found.")
@@ -226,7 +341,7 @@ func LoadSkeleton(req *http.Request) (path string, err error) {
 	if util.Exists(path) {
 		return
 	}
-	p, err := db.Project(bson.M{project.ID: projectId}, nil)
+	p, err := db.Project(bson.M{db.ID: projectId}, nil)
 	if err != nil {
 		return
 	}
@@ -237,18 +352,51 @@ func LoadSkeleton(req *http.Request) (path string, err error) {
 
 //getFile
 func getFile(id bson.ObjectId) (file *project.File, err error) {
-	selector := bson.M{project.NAME: 1, project.TIME: 1}
-	file, err = db.File(bson.M{project.ID: id}, selector)
+	selector := bson.M{db.NAME: 1, db.TIME: 1}
+	file, err = db.File(bson.M{db.ID: id}, selector)
 	return
 }
 
 //projectName retrieves the project name associated with the project identified by id.
 func projectName(id bson.ObjectId) (name string, err error) {
-	proj, err := db.Project(bson.M{project.ID: id},
-		bson.M{project.NAME: 1})
+	proj, err := db.Project(bson.M{db.ID: id},
+		bson.M{db.NAME: 1})
 	if err != nil {
 		return
 	}
 	name = proj.Name
+	return
+}
+
+func EvaluateSubmissions(req *http.Request, ctx *Context) (msg string, err error) {
+	projectId, msg, err := getProjectId(req)
+	all := req.FormValue("project") == "all"
+	if err != nil && !all {
+		return
+	}
+	var matcher bson.M
+	if all {
+		matcher = bson.M{}
+	} else {
+		matcher = bson.M{db.PROJECTID: projectId}
+	}
+	submissions, err := db.Submissions(matcher, nil)
+	if err != nil {
+		msg = "Could not retrieve submissions."
+		return
+	}
+	for _, submission := range submissions {
+		err = db.UpdateStatus(submission)
+		if err != nil {
+			msg = fmt.Sprintf("Could not evaluate submission %s.", submission.Id.Hex())
+			return
+		}
+		err = db.UpdateTime(submission)
+		if err != nil {
+			msg = fmt.Sprintf("Could not evaluate submission %s.", submission.Id.Hex())
+			return
+		}
+	}
+	msg = "Successfully evaluated submissions."
 	return
 }

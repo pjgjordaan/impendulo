@@ -6,6 +6,7 @@ function submissionsChart(chartData, tipe) {
     var w = 1100 - m[1] - m[3];
     var h = 480 - m[0] - m[2];
     var tipes = ['Launches', 'Snapshots'];
+    var radius = 10;
     var chartColour = function(tipe) { 
 	return d3.scale.category10()
             .domain(tipes)(tipe); 
@@ -20,10 +21,10 @@ function submissionsChart(chartData, tipe) {
 
     var rs =  d3.scale.linear()
 	.domain([0, d3.max(chartData, function(d){return d.snapshots;})])
-	.range([0, 10]);
+	.range([0, radius]);
 
     var rl = function(offset){
-	var outerRadius = Math.sqrt(offset*offset + 100);
+	var outerRadius = Math.sqrt(offset*offset + radius*radius);
 	return d3.scale.linear()
 	    .domain([0, d3.max(chartData, function(d){return d.launches;})])
 	    .range([offset, outerRadius])

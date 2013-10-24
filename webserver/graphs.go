@@ -38,32 +38,32 @@ func LoadChart(resultName string, files []*project.File, startTime int64) (tool.
 	if len(files) == 0 {
 		return nil, errors.New("No files to load chart for.")
 	}
-	selector := bson.M{project.TIME: 1, project.RESULTS: 1}
-	sub, err := db.Submission(bson.M{project.ID: files[0].SubId}, nil)
+	selector := bson.M{db.TIME: 1, db.RESULTS: 1}
+	sub, err := db.Submission(bson.M{db.ID: files[0].SubId}, nil)
 	if err != nil {
 		return nil, err
 	}
-	chart := tool.NewChart(sub, float64(startTime-files[0].Time))
+	chart := tool.NewChart(*sub, float64(startTime-files[0].Time))
 	for _, f := range files {
-		matcher := bson.M{project.ID: f.Id}
+		matcher := bson.M{db.ID: f.Id}
 		file, err := db.File(matcher, selector)
 		if err != nil {
 			continue
 		}
 		switch resultName {
 		case tool.SUMMARY:
-			addAll(chart, file)
+			addAll(chart, *file)
 		default:
-			addSingle(chart, file, resultName)
+			addSingle(chart, *file, resultName)
 		}
 	}
-	file, err := db.File(bson.M{project.ID: files[0].Id}, bson.M{project.SUBID: 1})
+	file, err := db.File(bson.M{db.ID: files[0].Id}, bson.M{db.SUBID: 1})
 	if err != nil {
 		util.Log(err)
 		return chart.Data, nil
 	}
-	matcher := bson.M{project.SUBID: file.SubId, project.TYPE: project.LAUNCH}
-	launches, err := db.Files(matcher, nil, project.TIME)
+	matcher := bson.M{db.SUBID: file.SubId, db.TYPE: project.LAUNCH}
+	launches, err := db.Files(matcher, nil, db.TIME)
 	if err != nil {
 		util.Log(err)
 		return chart.Data, nil
@@ -75,10 +75,10 @@ func LoadChart(resultName string, files []*project.File, startTime int64) (tool.
 	return chart.Data, nil
 }
 
-func addAll(chart *tool.Chart, file *project.File) {
+func addAll(chart *tool.Chart, file project.File) {
 	ftime := float64(file.Time)
 	for name, id := range file.Results {
-		result, err := db.ChartResult(name, bson.M{project.ID: id}, nil)
+		result, err := db.ChartResult(name, bson.M{db.ID: id}, nil)
 		if err != nil {
 			continue
 		}
@@ -86,9 +86,9 @@ func addAll(chart *tool.Chart, file *project.File) {
 	}
 }
 
-func addSingle(chart *tool.Chart, file *project.File, resultName string) {
+func addSingle(chart *tool.Chart, file project.File, resultName string) {
 	result, err := db.ChartResult(resultName,
-		bson.M{project.ID: file.Results[resultName]}, nil)
+		bson.M{db.ID: file.Results[resultName]}, nil)
 	if err != nil {
 		return
 	}
@@ -110,7 +110,9 @@ func SubmissionChart(subs []*project.Submission) (ret tool.ChartData) {
 		if err != nil {
 			continue
 		}
-		lastFile, err := db.LastFile(sub)
+		matcher := bson.M{db.TYPE: project.SRC, db.SUBID: sub.Id}
+		selector := bson.M{db.TIME: 1}
+		lastFile, err := db.LastFile(matcher, selector)
 		if err != nil {
 			continue
 		}
@@ -178,9 +180,9 @@ func TypeCounts(id interface{}) (counts []int) {
 	var matcher string
 	switch id.(type) {
 	case string:
-		matcher = project.USER
+		matcher = db.USER
 	case bson.ObjectId:
-		matcher = project.PROJECT_ID
+		matcher = db.PROJECTID
 	default:
 		return
 	}

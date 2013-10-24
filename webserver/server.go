@@ -47,11 +47,13 @@ func init() {
 	//Setup the router.
 	router = pat.New()
 	GeneratePosts(router, Posters(), IndexPosters())
-
 	GenerateViews(router, Views())
-
 	router.Add("GET", "/configview", Handler(configView)).Name("configview")
-
+	router.Add("GET", "/editdbview", Handler(editDBView)).Name("editdbview")
+	router.Add("GET", "/loadproject", Handler(loadProject)).Name("loadproject")
+	router.Add("GET", "/loadsubmission", Handler(loadSubmission)).Name("loadsubmission")
+	router.Add("GET", "/loadfile", Handler(loadFile)).Name("loadfile")
+	router.Add("GET", "/loaduser", Handler(loadUser)).Name("loaduser")
 	router.Add("GET", "/displaychart", Handler(showChart)).Name("displaychart")
 	router.Add("GET", "/displayresult", Handler(showResult)).Name("displayresult")
 	router.Add("GET", "/getfiles", Handler(getFiles)).Name("getfiles")

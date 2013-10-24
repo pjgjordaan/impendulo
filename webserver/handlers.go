@@ -32,6 +32,7 @@ import (
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
+	"labix.org/v2/mgo/bson"
 	"net/http"
 	"strconv"
 )
@@ -393,4 +394,119 @@ func chartArgs(req *http.Request, ctx *Context) (args map[string]interface{}, er
 		"chart": chart, "compare": compareStr,
 	}
 	return
+}
+
+//editDBView
+func editDBView(w http.ResponseWriter, req *http.Request, ctx *Context) error {
+	editing, err := GetString(req, "editing")
+	if err != nil {
+		editing = "Project"
+	}
+	ctx.Browse.View = "data"
+	args := map[string]interface{}{"ctx": ctx, "editing": editing}
+	return T(getNav(ctx), "editDBView", "edit"+editing).Execute(w, args)
+}
+
+func loadProject(w http.ResponseWriter, req *http.Request, ctx *Context) error {
+	projectId, msg, err := getProjectId(req)
+	if err != nil {
+		ctx.AddMessage(msg, true)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
+	}
+	p, err := db.Project(bson.M{db.ID: projectId}, nil)
+	if err != nil {
+		ctx.AddMessage("Could not find project.", true)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
+	}
+	ctx.Browse.View = "data"
+	args := map[string]interface{}{"ctx": ctx, "editing": "Project", "project": p}
+	return T(getNav(ctx), "editDBView", "editProject").Execute(w, args)
+}
+
+func loadUser(w http.ResponseWriter, req *http.Request, ctx *Context) error {
+	uname, err := GetString(req, "user")
+	if err != nil {
+		ctx.AddMessage("Could not read user.", true)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
+	}
+	u, err := db.User(uname)
+	if err != nil {
+		ctx.AddMessage(fmt.Sprintf("Could not find user %s.", uname), true)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
+	}
+	ctx.Browse.View = "data"
+	args := map[string]interface{}{"ctx": ctx, "editing": "User", "user": u}
+	return T(getNav(ctx), "editDBView", "editUser").Execute(w, args)
+}
+
+func loadSubmission(w http.ResponseWriter, req *http.Request, ctx *Context) error {
+	projectId, msg, err := getProjectId(req)
+	if err != nil {
+		ctx.AddMessage(msg, true)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
+	}
+	subId, err := util.ReadId(req.FormValue("subid"))
+	if err != nil {
+		ctx.Browse.View = "data"
+		args := map[string]interface{}{
+			"ctx": ctx, "editing": "Submission", "projectId": projectId,
+		}
+		return T(getNav(ctx), "editDBView", "editSubmission").Execute(w, args)
+	}
+	submission, err := db.Submission(bson.M{db.ID: subId}, nil)
+	if err != nil {
+		ctx.AddMessage("Could not find submission.", true)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
+	}
+	ctx.Browse.View = "data"
+	args := map[string]interface{}{
+		"ctx": ctx, "editing": "Submission",
+		"projectId": projectId, "submission": submission,
+	}
+	return T(getNav(ctx), "editDBView", "editSubmission").Execute(w, args)
+}
+
+func loadFile(w http.ResponseWriter, req *http.Request, ctx *Context) error {
+	projectId, msg, err := getProjectId(req)
+	if err != nil {
+		ctx.AddMessage(msg, true)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
+	}
+	subId, err := util.ReadId(req.FormValue("subid"))
+	if err != nil {
+		ctx.Browse.View = "data"
+		args := map[string]interface{}{
+			"ctx": ctx, "editing": "File", "projectId": projectId,
+		}
+		return T(getNav(ctx), "editDBView", "editFile").Execute(w, args)
+	}
+	fileId, err := util.ReadId(req.FormValue("fileid"))
+	if err != nil {
+		ctx.Browse.View = "data"
+		args := map[string]interface{}{
+			"ctx": ctx, "editing": "File", "projectId": projectId,
+			"submissionId": subId,
+		}
+		return T(getNav(ctx), "editDBView", "editFile").Execute(w, args)
+	}
+	file, err := db.File(bson.M{db.ID: fileId}, nil)
+	if err != nil {
+		ctx.AddMessage("Could not find file.", true)
+		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+		return err
+	}
+	ctx.Browse.View = "data"
+	args := map[string]interface{}{
+		"ctx": ctx, "editing": "Submission",
+		"projectId": projectId, "submissionId": subId,
+		"file": file,
+	}
+	return T(getNav(ctx), "editDBView", "editFile").Execute(w, args)
 }

@@ -29,7 +29,9 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
+	"labix.org/v2/mgo/bson"
 	"net/http"
+	"strings"
 )
 
 //Login signs a user into the web app.
@@ -99,4 +101,47 @@ func DeleteUser(req *http.Request, ctx *Context) (msg string, err error) {
 func Logout(req *http.Request, ctx *Context) (string, error) {
 	delete(ctx.Session.Values, "user")
 	return "Successfully logged out.", nil
+}
+
+//EditUser
+func EditUser(req *http.Request, ctx *Context) (msg string, err error) {
+	oldName, err := GetString(req, "oldname")
+	if err != nil {
+		msg = "Could not read old username."
+		return
+	}
+	newName, err := GetString(req, "newname")
+	if err != nil {
+		msg = "Could not read new username."
+		return
+	}
+	access, err := GetInt(req, "access")
+	if err != nil {
+		msg = "Could not read user access level."
+		return
+	}
+	if !user.ValidPermission(access) {
+		err = fmt.Errorf("Invalid user access level %d.", access)
+		msg = err.Error()
+		return
+	}
+	if oldName != newName {
+		err = db.RenameUser(oldName, newName)
+		if err != nil {
+			msg = fmt.Sprintf("Could not rename user %s to %s.", oldName, newName)
+			return
+		}
+	}
+	change := bson.M{db.SET: bson.M{user.ACCESS: access}}
+	err = db.Update(db.USERS, bson.M{db.ID: newName}, change)
+	if err != nil {
+		msg = "Could not edit user."
+	} else {
+		msg = "Successfully edited user."
+	}
+	//Ugly hack should change this.
+	current := req.Header.Get("Referer")
+	current = current[:strings.LastIndex(current, "/")+1] + "editdbview?editing=User"
+	req.Header.Set("Referer", current)
+	return
 }

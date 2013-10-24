@@ -1,0 +1,10 @@
+{{define "view"}}
+{{$editing := .editing}}
+{{$data := editables}}
+<ul class="nav nav-pills">
+  {{range $data}}
+  <li {{if eq . $editing}} class="active"{{end}}><a href="editdbview?editing={{.}}">{{.}}</a></li>
+  {{end}}
+</ul>
+{{template "edit" .}}
+{{end}}

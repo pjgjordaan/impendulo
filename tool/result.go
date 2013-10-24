@@ -164,7 +164,7 @@ func (this *Chart) Add(x float64, vals []ChartVal) {
 }
 
 //NewChart initialises new chart data.
-func NewChart(submission *project.Submission, adjust float64) *Chart {
+func NewChart(submission project.Submission, adjust float64) *Chart {
 	return &Chart{
 		adjust: adjust,
 		time:   submission.Time,

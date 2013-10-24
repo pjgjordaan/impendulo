@@ -43,7 +43,7 @@ func TestRun(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not save file %q", err)
 	}
-	jpfConfig := NewConfig(bson.NewObjectId(), "user", jpfBytes)
+	jpfConfig := NewConfig(bson.NewObjectId(), jpfBytes)
 	jpf, err := New(jpfConfig, location)
 	if err != nil {
 		t.Errorf("Could not load jpf %q", err)

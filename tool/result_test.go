@@ -22,18 +22,16 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package project
+package tool
 
-//Constants used client and server-side to for submission data.
-const (
-	MODE         = "mode"
-	TYPE         = "type"
-	TIME         = "time"
-	FILE_MODE    = "file_remote"
-	ARCHIVE_MODE = "archive_remote"
-	NAME         = "name"
-	PKG          = "package"
-	JSRC         = ".java"
-	BIN_DIR      = "bin"
-	SRC_DIR      = "src"
+import (
+	"github.com/godfried/impendulo/project"
+	"labix.org/v2/mgo/bson"
+	"testing"
 )
+
+func TestChartAdd(t *testing.T) {
+	chart := NewChart(*project.NewSubmission(bson.NewObjectId(), "user", project.FILE_MODE, 100000), 1000)
+	chart.Add(0, nil)
+	chart.Add(0, []ChartVal{{}})
+}

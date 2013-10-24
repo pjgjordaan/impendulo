@@ -1,0 +1,83 @@
+{{define "edit"}}
+<h3 class="centered">Load Project</h3>
+<form class="form-horizontal" role="form" action="loadproject" method="get">
+  <div class="form-group">
+    <label class="col-lg-offset-3 col-lg-2 control-label" for="project">Project</label>
+    <div class="col-lg-3">
+      <select class="form-control" name="project" id="project">
+	{{$projects := projects}}
+	{{if .project}}
+	{{$projectId := .project.Id.Hex}}
+	{{range $projects}}
+	<option value={{.Id.Hex}} {{if eq $projectId .Id.Hex}}selected{{end}}>
+	  {{.Name}}
+	</option>
+	{{end}}
+	{{else}}
+	{{range $projects}}
+	<option value={{.Id.Hex}}>
+	  {{.Name}}
+	</option>
+	{{end}}
+	{{end}}
+      </select>
+    </div>
+  </div>
+  <div class="form-group">
+    <div class="col-lg-offset-5 col-lg-3">
+      <button type="submit" class="btn btn-default">
+	<span class="glyphicon glyphicon-download"></span> Load
+      </button>
+    </div>
+  </div>
+</form>
+{{with .project}}
+<h3 class="centered">Edit Project</h3>
+<form class="form-horizontal" role="form" action="editproject" method="post">
+  <div class="form-group">
+    <label class="col-lg-offset-3 col-lg-2 control-label" for="projectname">Name</label>
+    <div class="col-lg-3">
+      <input type="text" class="form-control" name="projectname" id="projectname" value="{{.Name}}">      
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="col-lg-offset-3 col-lg-2 control-label" for="user">User</label>
+    <div class="col-lg-3">
+      <select class="form-control" name="user" id="user">
+	{{$users := users}}
+	{{$currentUser := .User}}
+	{{range $users}}
+	<option value={{.Name}} 
+		{{if eq $currentUser .Name}}selected{{end}}>
+	  {{.Name}}
+	</option>
+	{{end}}
+      </select>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="col-lg-offset-3 col-lg-2 control-label" for="lang">Language</label>
+    <div class="col-lg-3">
+      <select class="form-control" name="lang" id="lang">
+	{{$langs := langs}}
+	{{$currentLang := .Lang}}
+	{{range $langs}}
+	<option value={{.}} 
+		{{if eq $currentLang .}}selected{{end}}>
+	  {{.}}
+	</option>
+	{{end}}
+      </select>
+    </div>
+  </div>
+  <div class="form-group">
+    <div class="col-lg-offset-5 col-lg-3">
+      <button type="submit" class="btn btn-default">
+	<span class="glyphicon glyphicon-upload"></span> Update
+      </button>
+    </div>
+  </div>
+  <input type="hidden" name="project" id="project" value="{{.Id.Hex}}">
+</form>
+{{end}}
+{{end}}

@@ -28,7 +28,6 @@ import (
 	"fmt"
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/findbugs"
@@ -107,7 +106,7 @@ func Compiler(proc *Processor) (compiler tool.Tool, err error) {
 func JPF(proc *Processor) (runnable tool.Tool, err error) {
 	//First we need the project's JPF configuration.
 	jpfFile, err := db.JPFConfig(
-		bson.M{project.PROJECT_ID: proc.project.Id}, nil)
+		bson.M{db.PROJECTID: proc.project.Id}, nil)
 	if err != nil {
 		return
 	}
@@ -118,7 +117,7 @@ func JPF(proc *Processor) (runnable tool.Tool, err error) {
 //PMD creates a new instance of the PMD tool.
 func PMD(proc *Processor) (pmdTool tool.Tool, err error) {
 	//First we need the project's PMD rules.
-	rules, err := db.PMDRules(bson.M{project.PROJECT_ID: proc.project.Id}, nil)
+	rules, err := db.PMDRules(bson.M{db.PROJECTID: proc.project.Id}, nil)
 	if err != nil || rules == nil || len(rules.Rules) == 0 {
 		rules, err = pmd.DefaultRules(proc.project.Id)
 		if err != nil {
@@ -133,7 +132,7 @@ func PMD(proc *Processor) (pmdTool tool.Tool, err error) {
 //JUnit creates a new JUnit tool instances for each available JUnit test for a given project.
 func JUnit(proc *Processor) (ret []tool.Tool, err error) {
 	//First we need the project's JUnit tests.
-	tests, err := db.JUnitTests(bson.M{project.PROJECT_ID: proc.project.Id}, nil)
+	tests, err := db.JUnitTests(bson.M{db.PROJECTID: proc.project.Id}, nil)
 	if err != nil {
 		return
 	}

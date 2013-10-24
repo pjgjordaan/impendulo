@@ -59,6 +59,10 @@ const (
 	ACCESS = "access"
 )
 
+var (
+	perms []Permission
+)
+
 //String
 func (this *User) String() string {
 	return "Type: user.User; Name: " + this.Name
@@ -93,4 +97,35 @@ func Read(fname string) (users []*User, err error) {
 	err = scanner.Err()
 	return
 
+}
+
+func ValidPermission(perm int) bool {
+	switch Permission(perm) {
+	case NONE, STUDENT, TEACHER, ADMIN:
+		return true
+	default:
+		return false
+	}
+}
+
+func (this Permission) Name() string {
+	switch this {
+	case NONE:
+		return "None"
+	case STUDENT:
+		return "Student"
+	case TEACHER:
+		return "Teacher"
+	case ADMIN:
+		return "Administrator"
+	default:
+		return "Unknown"
+	}
+}
+
+func Permissions() []Permission {
+	if perms == nil {
+		perms = []Permission{NONE, STUDENT, TEACHER, ADMIN}
+	}
+	return perms
 }

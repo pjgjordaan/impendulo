@@ -70,6 +70,9 @@ var (
 		"deleteuser", "importdataview", "exportdataview",
 		"importdata", "exportdata", "statusview",
 		"evaluatesubmissionsview", "evaluatesubmissions", "logs",
+		"editdbview", "loadproject", "editproject", "loaduser",
+		"edituser", "loadsubmission", "editsubmission", "loadfile",
+		"editfile",
 	}
 )
 
@@ -109,7 +112,9 @@ func defaultPosters() map[string]Poster {
 		"importdata": ImportData, "exportdata": ExportData,
 		"evaluatesubmissions": EvaluateSubmissions,
 		"login":               Login, "register": Register,
-		"logout": Logout,
+		"logout": Logout, "editproject": EditProject,
+		"edituser": EditUser, "editsubmission": EditSubmission,
+		"editfile": EditFile,
 	}
 }
 

@@ -26,7 +26,6 @@ package db
 
 import (
 	"encoding/gob"
-	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
@@ -38,7 +37,7 @@ const (
 
 //HasGridFile checks whether this query needs to get data from GridFS
 func HasGridFile(result tool.ToolResult, selector bson.M) bool {
-	return (selector == nil || selector[project.REPORT] == 1) && result.OnGridFS()
+	return (selector == nil || selector[REPORT] == 1) && result.OnGridFS()
 }
 
 //GridFile loads a GridFile matching id into a provided data structure from GridFS.

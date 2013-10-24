@@ -105,10 +105,6 @@ func CreateFindbugs(req *http.Request, ctx *Context) (msg string, err error) {
 
 //CreateJUnit adds a new JUnit test for a given project.
 func CreateJUnit(req *http.Request, ctx *Context) (msg string, err error) {
-	username, msg, err := getUser(ctx)
-	if err != nil {
-		return
-	}
 	projectId, msg, err := getProjectId(req)
 	if err != nil {
 		return
@@ -133,8 +129,7 @@ func CreateJUnit(req *http.Request, ctx *Context) (msg string, err error) {
 	//Read package name from file.
 	pkg := util.GetPackage(bytes.NewReader(testBytes))
 	test := junit.NewTest(
-		projectId, testName, username,
-		pkg, testBytes, dataBytes,
+		projectId, testName, pkg, testBytes, dataBytes,
 	)
 	err = db.AddJUnitTest(test)
 	return
@@ -151,11 +146,7 @@ func AddJPF(req *http.Request, ctx *Context) (msg string, err error) {
 		msg = "Could not read JPF configuration file."
 		return
 	}
-	username, msg, err := getUser(ctx)
-	if err != nil {
-		return
-	}
-	jpfConfig := jpf.NewConfig(projectId, username, data)
+	jpfConfig := jpf.NewConfig(projectId, data)
 	err = db.AddJPFConfig(jpfConfig)
 	return
 }
@@ -163,10 +154,6 @@ func AddJPF(req *http.Request, ctx *Context) (msg string, err error) {
 //CreateJPF replaces a project's JPF configuration with a new, provided configuration.
 func CreateJPF(req *http.Request, ctx *Context) (msg string, err error) {
 	projectId, msg, err := getProjectId(req)
-	if err != nil {
-		return
-	}
-	username, msg, err := getUser(ctx)
 	if err != nil {
 		return
 	}
@@ -183,7 +170,7 @@ func CreateJPF(req *http.Request, ctx *Context) (msg string, err error) {
 		return
 	}
 	//Save to db.
-	jpfConfig := jpf.NewConfig(projectId, username, data)
+	jpfConfig := jpf.NewConfig(projectId, data)
 	err = db.AddJPFConfig(jpfConfig)
 	if err != nil {
 		msg = "Could not create JPF configuration."
@@ -300,9 +287,9 @@ func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
 	if all {
 		matcher = bson.M{}
 	} else {
-		matcher = bson.M{project.PROJECT_ID: projectId}
+		matcher = bson.M{db.PROJECTID: projectId}
 	}
-	submissions, err := db.Submissions(matcher, bson.M{project.ID: 1})
+	submissions, err := db.Submissions(matcher, bson.M{db.ID: 1})
 	if err != nil {
 		msg = "Could not retrieve submissions."
 		return
@@ -318,38 +305,10 @@ func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
 	return
 }
 
-func EvaluateSubmissions(req *http.Request, ctx *Context) (msg string, err error) {
-	projectId, msg, err := getProjectId(req)
-	all := req.FormValue("project") == "all"
-	if err != nil && !all {
-		return
-	}
-	var matcher bson.M
-	if all {
-		matcher = bson.M{}
-	} else {
-		matcher = bson.M{project.PROJECT_ID: projectId}
-	}
-	submissions, err := db.Submissions(matcher, nil)
-	if err != nil {
-		msg = "Could not retrieve submissions."
-		return
-	}
-	for _, submission := range submissions {
-		err = db.UpdateStatus(submission)
-		if err != nil {
-			msg = fmt.Sprintf("Could not evaluate submission %s.", submission.Id.Hex())
-			return
-		}
-	}
-	msg = "Successfully evaluated submissions."
-	return
-}
-
 func runTools(submissions []*project.Submission, tool string, runAll bool) {
-	selector := bson.M{project.DATA: 0}
+	selector := bson.M{db.DATA: 0}
 	for _, submission := range submissions {
-		matcher := bson.M{project.SUBID: submission.Id}
+		matcher := bson.M{db.SUBID: submission.Id}
 		files, err := db.Files(matcher, selector)
 		if err != nil {
 			util.Log(err)
@@ -395,10 +354,10 @@ func removeAll(file *project.File) {
 	}
 	change := bson.M{
 		db.SET: bson.M{
-			project.RESULTS: bson.M{},
+			db.RESULTS: bson.M{},
 		},
 	}
-	err := db.Update(db.FILES, bson.M{project.ID: file.Id}, change)
+	err := db.Update(db.FILES, bson.M{db.ID: file.Id}, change)
 	if err != nil {
 		util.Log(err)
 	}
@@ -413,10 +372,10 @@ func removeOne(file *project.File, name string) {
 	delete(file.Results, name)
 	change := bson.M{
 		db.SET: bson.M{
-			project.RESULTS: file.Results,
+			db.RESULTS: file.Results,
 		},
 	}
-	err := db.Update(db.FILES, bson.M{project.ID: file.Id}, change)
+	err := db.Update(db.FILES, bson.M{db.ID: file.Id}, change)
 	if err != nil {
 		util.Log(err)
 	}
@@ -434,7 +393,7 @@ func removeOne(file *project.File, name string) {
 //GetResult retrieves a DisplayResult for a given file and result name.
 func GetResult(resultName string, fileId bson.ObjectId) (res tool.DisplayResult, err error) {
 	var file *project.File
-	matcher := bson.M{project.ID: fileId}
+	matcher := bson.M{db.ID: fileId}
 	file, err = db.File(matcher, nil)
 	if err != nil {
 		return
@@ -451,7 +410,7 @@ func GetResult(resultName string, fileId bson.ObjectId) (res tool.DisplayResult,
 			var currentRes tool.ToolResult
 			currentRes, err = db.ToolResult(
 				name, bson.M{
-					project.ID: resid,
+					db.ID: resid,
 				}, nil,
 			)
 			if err != nil {
@@ -468,7 +427,7 @@ func GetResult(resultName string, fileId bson.ObjectId) (res tool.DisplayResult,
 		switch val := ival.(type) {
 		case bson.ObjectId:
 			//Retrieve result from the db.
-			matcher = bson.M{project.ID: val}
+			matcher = bson.M{db.ID: val}
 			res, err = db.DisplayResult(
 				resultName, matcher, nil,
 			)

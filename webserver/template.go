@@ -78,7 +78,8 @@ var (
 		"isError":               isError,
 		"hasChart":              func(n string) bool { return n != tool.CODE && n != diff.NAME && n != tool.SUMMARY },
 		"submissions":           projectSubmissions,
-		"projects":              func() ([]*project.Project, error) { return db.Projects(nil, bson.M{project.SKELETON: 0}, project.NAME) },
+		"files":                 submissionFiles,
+		"projects":              func() ([]*project.Project, error) { return db.Projects(nil, bson.M{db.SKELETON: 0}, db.NAME) },
 		"users":                 func() ([]*user.User, error) { return db.Users(nil, user.ID) },
 		"displayResult":         displayResult,
 		"displayCodeBug":        displayCodeBug,
@@ -92,6 +93,8 @@ var (
 		"collections":           db.Collections,
 		"overviewChart":         overviewChart,
 		"typeCounts":            TypeCounts,
+		"editables":             func() []string { return []string{"Project", "User", "Submission", "File"} },
+		"permissions":           user.Permissions,
 	}
 	templateDir   string
 	baseTemplates []string
@@ -120,8 +123,14 @@ func displayCodeBug(sid bson.ObjectId, uid, result, file string, current, next i
 }
 
 func projectSubmissions(id bson.ObjectId) (subs []*project.Submission, err error) {
-	matcher := bson.M{project.PROJECT_ID: id}
-	subs, err = db.Submissions(matcher, nil, "-"+project.TIME)
+	matcher := bson.M{db.PROJECTID: id}
+	subs, err = db.Submissions(matcher, nil, "-"+db.TIME)
+	return
+}
+
+func submissionFiles(id bson.ObjectId) (files []*project.File, err error) {
+	matcher := bson.M{db.SUBID: id}
+	files, err = db.Files(matcher, nil, "-"+db.TIME)
 	return
 }
 
@@ -163,8 +172,8 @@ func fileCount(subId bson.ObjectId, tipe project.Type) (int, error) {
 	return db.Count(
 		db.FILES,
 		bson.M{
-			project.SUBID: subId,
-			project.TYPE:  tipe,
+			db.SUBID: subId,
+			db.TYPE:  tipe,
 		},
 	)
 }
@@ -200,9 +209,9 @@ func adjustment(files []*project.File, selected int) (ret int) {
 func submissionCount(id interface{}) (int, error) {
 	switch tipe := id.(type) {
 	case bson.ObjectId:
-		return db.Count(db.SUBMISSIONS, bson.M{project.PROJECT_ID: tipe})
+		return db.Count(db.SUBMISSIONS, bson.M{db.PROJECTID: tipe})
 	case string:
-		return db.Count(db.SUBMISSIONS, bson.M{project.USER: tipe})
+		return db.Count(db.SUBMISSIONS, bson.M{db.USER: tipe})
 	default:
 		return -1, fmt.Errorf("Unknown id type %q.", id)
 	}

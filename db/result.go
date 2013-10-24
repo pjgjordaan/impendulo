@@ -26,7 +26,6 @@ package db
 
 import (
 	"fmt"
-	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/diff"
@@ -49,7 +48,7 @@ func CheckstyleResult(matcher, selector bson.M) (ret *checkstyle.Result, err err
 	}
 	defer session.Close()
 	c := session.DB("").C(RESULTS)
-	matcher[project.NAME] = checkstyle.NAME
+	matcher[NAME] = checkstyle.NAME
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
@@ -68,7 +67,7 @@ func PMDResult(matcher, selector bson.M) (ret *pmd.Result, err error) {
 	}
 	defer session.Close()
 	c := session.DB("").C(RESULTS)
-	matcher[project.NAME] = pmd.NAME
+	matcher[NAME] = pmd.NAME
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
@@ -87,7 +86,7 @@ func FindbugsResult(matcher, selector bson.M) (ret *findbugs.Result, err error) 
 	}
 	defer session.Close()
 	c := session.DB("").C(RESULTS)
-	matcher[project.NAME] = findbugs.NAME
+	matcher[NAME] = findbugs.NAME
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
@@ -106,7 +105,7 @@ func JPFResult(matcher, selector bson.M) (ret *jpf.Result, err error) {
 	}
 	defer session.Close()
 	c := session.DB("").C(RESULTS)
-	matcher[project.NAME] = jpf.NAME
+	matcher[NAME] = jpf.NAME
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
@@ -143,7 +142,7 @@ func JavacResult(matcher, selector bson.M) (ret *javac.Result, err error) {
 	}
 	defer session.Close()
 	c := session.DB("").C(RESULTS)
-	matcher[project.NAME] = javac.NAME
+	matcher[NAME] = javac.NAME
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
@@ -235,10 +234,10 @@ func BugResult(id interface{}, selector bson.M) (ret tool.BugResult, err error) 
 	defer session.Close()
 	c := session.DB("").C(RESULTS)
 	var names []string
-	matcher := bson.M{project.ID: id}
+	matcher := bson.M{ID: id}
 	err = c.Find(matcher).
-		Select(bson.M{project.NAME: 1}).
-		Distinct(project.NAME, &names)
+		Select(bson.M{NAME: 1}).
+		Distinct(NAME, &names)
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
 		return
@@ -294,15 +293,15 @@ func AddResult(res tool.ToolResult) (err error) {
 
 //AddFileResult adds or updates a result in a file's results.
 func AddFileResult(fileId bson.ObjectId, name string, value interface{}) error {
-	matcher := bson.M{project.ID: fileId}
-	change := bson.M{SET: bson.M{project.RESULTS + "." + name: value}}
+	matcher := bson.M{ID: fileId}
+	change := bson.M{SET: bson.M{RESULTS + "." + name: value}}
 	return Update(FILES, matcher, change)
 }
 
 //ChartResults retrieves all tool.DisplayResults matching
 //the given file Id from the active database.
 func ChartResults(fileId bson.ObjectId) (ret []tool.ChartResult, err error) {
-	file, err := File(bson.M{project.ID: fileId}, bson.M{project.RESULTS: 1})
+	file, err := File(bson.M{ID: fileId}, bson.M{RESULTS: 1})
 	if err != nil {
 		return
 	}
@@ -311,7 +310,7 @@ func ChartResults(fileId bson.ObjectId) (ret []tool.ChartResult, err error) {
 		if _, ok := id.(bson.ObjectId); !ok {
 			continue
 		}
-		res, err := ChartResult(name, bson.M{project.ID: id}, nil)
+		res, err := ChartResult(name, bson.M{ID: id}, nil)
 		if err != nil {
 			err = nil
 			continue
@@ -344,8 +343,8 @@ func ChartResultNames(projectId bson.ObjectId) (ret []string, err error) {
 }
 
 func ToolResultNames(projectId bson.ObjectId) (ret []string, err error) {
-	tests, err := JUnitTests(bson.M{project.PROJECT_ID: projectId},
-		bson.M{project.NAME: 1})
+	tests, err := JUnitTests(bson.M{PROJECTID: projectId},
+		bson.M{NAME: 1})
 	if err != nil {
 		return
 	}
@@ -354,11 +353,11 @@ func ToolResultNames(projectId bson.ObjectId) (ret []string, err error) {
 		ret[i] = strings.Split(test.Name, ".")[0]
 	}
 	ret = append(ret, checkstyle.NAME, findbugs.NAME, javac.NAME)
-	_, jerr := JPFConfig(bson.M{project.PROJECT_ID: projectId}, bson.M{project.ID: 1})
+	_, jerr := JPFConfig(bson.M{PROJECTID: projectId}, bson.M{ID: 1})
 	if jerr == nil {
 		ret = append(ret, jpf.NAME)
 	}
-	_, perr := PMDRules(bson.M{project.PROJECT_ID: projectId}, bson.M{project.ID: 1})
+	_, perr := PMDRules(bson.M{PROJECTID: projectId}, bson.M{ID: 1})
 	if perr == nil {
 		ret = append(ret, pmd.NAME)
 	}

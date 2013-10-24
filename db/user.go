@@ -26,13 +26,12 @@ package db
 
 import (
 	"fmt"
-	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/user"
 	"labix.org/v2/mgo/bson"
 )
 
 //User retrieves a user matching the given id from the active database.
-func User(id interface{}) (ret *user.User, err error) {
+func User(id string) (ret *user.User, err error) {
 	session, err := Session()
 	if err != nil {
 		return
@@ -84,9 +83,9 @@ func AddUsers(users ...*user.User) (err error) {
 
 //RemoveUserById removes a user matching
 //the given id from the active database.
-func RemoveUserById(id interface{}) (err error) {
-	subs, err := Submissions(bson.M{project.USER: id},
-		bson.M{project.ID: 1})
+func RemoveUserById(id string) (err error) {
+	subs, err := Submissions(bson.M{USER: id},
+		bson.M{ID: 1})
 	if err != nil {
 		return
 	}
@@ -97,5 +96,29 @@ func RemoveUserById(id interface{}) (err error) {
 		}
 	}
 	err = RemoveById(USERS, id)
+	return
+}
+
+func RenameUser(oldName, newName string) (err error) {
+	u, err := User(oldName)
+	if err != nil {
+		return
+	}
+	u.Name = newName
+	err = Add(USERS, u)
+	if err != nil {
+		return
+	}
+	change := bson.M{SET: bson.M{USER: newName}}
+	matcher := bson.M{USER: oldName}
+	err = UpdateAll(PROJECTS, matcher, change)
+	if err != nil {
+		return
+	}
+	err = UpdateAll(SUBMISSIONS, matcher, change)
+	if err != nil {
+		return
+	}
+	err = RemoveUserById(oldName)
 	return
 }

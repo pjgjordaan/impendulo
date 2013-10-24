@@ -25,7 +25,6 @@
 package db
 
 import (
-	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/tool/pmd"
@@ -55,7 +54,7 @@ func AddJPFConfig(cfg *jpf.Config) (err error) {
 	}
 	defer session.Close()
 	col := session.DB("").C(JPF)
-	matcher := bson.M{project.PROJECT_ID: cfg.ProjectId}
+	matcher := bson.M{PROJECTID: cfg.ProjectId}
 	col.RemoveAll(matcher)
 	err = col.Insert(cfg)
 	if err != nil {
@@ -87,7 +86,7 @@ func AddPMDRules(rules *pmd.Rules) (err error) {
 	}
 	defer session.Close()
 	col := session.DB("").C(PMD)
-	matcher := bson.M{project.PROJECT_ID: rules.ProjectId}
+	matcher := bson.M{PROJECTID: rules.ProjectId}
 	col.RemoveAll(matcher)
 	err = col.Insert(rules)
 	if err != nil {
@@ -135,7 +134,7 @@ func AddJUnitTest(t *junit.Test) (err error) {
 	}
 	defer session.Close()
 	col := session.DB("").C(TESTS)
-	matcher := bson.M{project.PROJECT_ID: t.ProjectId, project.NAME: t.Name}
+	matcher := bson.M{PROJECTID: t.ProjectId, NAME: t.Name}
 	col.RemoveAll(matcher)
 	err = col.Insert(t)
 	if err != nil {

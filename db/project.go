@@ -25,6 +25,7 @@
 package db
 
 import (
+	"fmt"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
@@ -82,7 +83,7 @@ func FileInfos(matcher bson.M) (ret []*FileInfo, err error) {
 	for i, name := range names {
 		ret[i] = new(FileInfo)
 		ret[i].Name = name
-		matcher[project.NAME] = name
+		matcher[NAME] = name
 		ret[i].Count, err = Count(FILES, matcher)
 		if err != nil {
 			return
@@ -100,7 +101,7 @@ func FileNames(matcher interface{}) (ret []string, err error) {
 	}
 	defer session.Close()
 	c := session.DB("").C(FILES)
-	err = c.Find(matcher).Distinct(project.NAME, &ret)
+	err = c.Find(matcher).Distinct(NAME, &ret)
 	if err != nil {
 		err = &DBGetError{"filenames", err, matcher}
 	}
@@ -183,7 +184,7 @@ func Projects(matcher, selector interface{}, sort ...string) (ret []*project.Pro
 
 //RemoveFileById removes a file matching the given id from the active database.
 func RemoveFileById(id interface{}) (err error) {
-	file, err := File(bson.M{project.ID: id}, bson.M{project.RESULTS: 1})
+	file, err := File(bson.M{ID: id}, bson.M{RESULTS: 1})
 	if err != nil {
 		return
 	}
@@ -203,8 +204,8 @@ func RemoveFileById(id interface{}) (err error) {
 //RemoveSubmissionById removes a submission matching
 //the given id from the active database.
 func RemoveSubmissionById(id interface{}) (err error) {
-	files, err := Files(bson.M{project.SUBID: id},
-		bson.M{project.ID: 1})
+	files, err := Files(bson.M{SUBID: id},
+		bson.M{ID: 1})
 	if err != nil {
 		return
 	}
@@ -221,8 +222,8 @@ func RemoveSubmissionById(id interface{}) (err error) {
 //RemoveProjectById removes a project matching
 //the given id from the active database.
 func RemoveProjectById(id interface{}) (err error) {
-	projectMatch := bson.M{project.PROJECT_ID: id}
-	idSelect := bson.M{project.ID: 1}
+	projectMatch := bson.M{PROJECTID: id}
+	idSelect := bson.M{ID: 1}
 	subs, err := Submissions(projectMatch, idSelect)
 	if err != nil {
 		return
@@ -252,25 +253,31 @@ func RemoveProjectById(id interface{}) (err error) {
 	return
 }
 
-func LastFile(sub *project.Submission) (file *project.File, err error) {
-	matcher := bson.M{project.TYPE: project.SRC, project.SUBID: sub.Id}
-	selector := bson.M{project.RESULTS: 1, project.TIME: 1}
-	files, err := Files(matcher, selector, "-"+project.TIME)
+func LastFile(matcher, selector interface{}) (file *project.File, err error) {
+	files, err := Files(matcher, selector, "-"+TIME)
 	if err != nil {
 		return
 	}
 	if len(files) == 0 {
-		if sub.Status != project.BUSY {
-			RemoveSubmissionById(sub.Id)
-		}
+		err = fmt.Errorf("No files for matcher %q", matcher)
 		return
 	}
 	file = files[0]
 	return
 }
 
+func statusFile(sub *project.Submission) (file *project.File, err error) {
+	matcher := bson.M{TYPE: project.SRC, SUBID: sub.Id}
+	selector := bson.M{RESULTS: 1, TIME: 1}
+	file, err = LastFile(matcher, selector)
+	if err != nil && sub.Status != project.BUSY {
+		err = RemoveSubmissionById(sub.Id)
+	}
+	return
+}
+
 func UpdateStatus(sub *project.Submission) (err error) {
-	file, err := LastFile(sub)
+	file, err := statusFile(sub)
 	if err != nil || file == nil {
 		return
 	}
@@ -305,13 +312,43 @@ func UpdateStatus(sub *project.Submission) (err error) {
 			sub.Status = project.NOTJPF
 		}
 	}
-	change := bson.M{SET: bson.M{project.STATUS: sub.Status}}
-	err = Update(SUBMISSIONS, bson.M{project.ID: sub.Id}, change)
+	change := bson.M{SET: bson.M{STATUS: sub.Status}}
+	err = Update(SUBMISSIONS, bson.M{ID: sub.Id}, change)
+	return
+}
+
+func timeFile(sub *project.Submission) (file *project.File, err error) {
+	matcher := bson.M{SUBID: sub.Id}
+	selector := bson.M{TIME: 1}
+	files, err := Files(matcher, selector, TIME)
+	if err != nil {
+		return
+	}
+	if len(files) == 0 {
+		if sub.Status != project.BUSY {
+			err = RemoveSubmissionById(sub.Id)
+		}
+		return
+	}
+	file = files[0]
+	return
+}
+
+func UpdateTime(sub *project.Submission) (err error) {
+	file, err := timeFile(sub)
+	if err != nil || file == nil {
+		return
+	}
+	if file.Time >= sub.Time {
+		return
+	}
+	change := bson.M{SET: bson.M{TIME: file.Time}}
+	err = Update(SUBMISSIONS, bson.M{ID: sub.Id}, change)
 	return
 }
 
 func CheckJUnit(projectId bson.ObjectId, file *project.File) project.Status {
-	tests, err := JUnitTests(bson.M{project.PROJECT_ID: projectId}, bson.M{project.NAME: 1})
+	tests, err := JUnitTests(bson.M{PROJECTID: projectId}, bson.M{NAME: 1})
 	if err != nil || len(tests) == 0 {
 		return project.UNKNOWN
 	}
@@ -321,7 +358,7 @@ func CheckJUnit(projectId bson.ObjectId, file *project.File) project.Status {
 		if !ok {
 			return project.NOTJUNIT
 		}
-		testResult, terr := JUnitResult(bson.M{project.ID: id}, nil)
+		testResult, terr := JUnitResult(bson.M{ID: id}, nil)
 		if terr != nil || !testResult.Success() {
 			return project.NOTJUNIT
 		}
@@ -330,11 +367,11 @@ func CheckJUnit(projectId bson.ObjectId, file *project.File) project.Status {
 }
 
 func CheckJPF(projectId bson.ObjectId, file *project.File) project.Status {
-	_, err := JPFConfig(bson.M{project.PROJECT_ID: projectId}, bson.M{project.ID: 1})
+	_, err := JPFConfig(bson.M{PROJECTID: projectId}, bson.M{ID: 1})
 	if err != nil {
 		return project.UNKNOWN
 	}
-	res, jerr := JPFResult(bson.M{project.FILEID: file.Id}, nil)
+	res, jerr := JPFResult(bson.M{FILEID: file.Id}, nil)
 	if jerr == nil && res.Success() {
 		return project.JPF
 	}

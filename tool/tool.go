@@ -43,6 +43,7 @@ const (
 
 var (
 	timeLimit = 5 * time.Minute
+	langs     []string
 )
 
 type (
@@ -65,7 +66,19 @@ type (
 
 //Langs returns the languages supported by Impendulo
 func Langs() []string {
-	return []string{JAVA}
+	if langs == nil {
+		langs = []string{JAVA}
+	}
+	return langs
+}
+
+func Supported(lang string) bool {
+	for _, l := range Langs() {
+		if l == lang {
+			return true
+		}
+	}
+	return false
 }
 
 //SetTimeout sets the maximum time for which the RunCommand function can run.
