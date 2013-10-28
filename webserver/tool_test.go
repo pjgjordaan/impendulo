@@ -139,7 +139,8 @@ func TestRunTool(t *testing.T) {
 		t.Error(err)
 	}
 	store := sessions.NewCookieStore(util.CookieKeys())
-	go processing.Serve(5)
+	processing.SetClientAddress("", 8045)
+	go processing.Serve(5, 8045)
 	req, err := http.NewRequest("POST", "/runtool?projectid="+p.Id.Hex()+
 		"&tool="+findbugs.NAME+"&runempty-check=true", nil)
 	if err != nil {

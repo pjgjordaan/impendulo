@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"github.com/godfried/impendulo/util"
 	"net"
+	"strconv"
 )
 
 type (
@@ -50,9 +51,9 @@ type (
 //spawn a new goroutine for each connection.
 //Each goroutine launched will handle its connection and
 //its type is determined by HandlerSpawner.
-func Run(port string, spawner HandlerSpawner) {
+func Run(port int, spawner HandlerSpawner) {
 	//Start listening for connections
-	netListen, err := net.Listen("tcp", ":"+port)
+	netListen, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	if err != nil {
 		util.Log(fmt.Errorf(
 			"Encountered error %q when listening on port %q",

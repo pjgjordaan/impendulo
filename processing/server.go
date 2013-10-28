@@ -29,7 +29,6 @@ package processing
 import (
 	"container/list"
 	"fmt"
-	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 )
@@ -39,15 +38,22 @@ const (
 )
 
 var (
-	fileChan, startSubmissionChan, endSubmissionChan chan *Request
-	processedChan                                    chan interface{}
-	statusChan                                       chan Status
+	processedChan chan interface{}
+	statusChan    chan Status
 )
 
 type (
-	//Request is used to carry requests to process submissions and files.
-	Request struct {
-		Id, ParentId bson.ObjectId
+	//FileRequest is used to carry requests to process files.
+	FileRequest struct {
+		Id, SubId bson.ObjectId
+		//Used to return errors
+		Response chan error
+	}
+
+	//SubRequest is used to carry requests to process submissions.
+	SubRequest struct {
+		Id    bson.ObjectId
+		Start bool
 		//Used to return errors
 		Response chan error
 	}
@@ -61,7 +67,7 @@ type (
 	}
 
 	//empty
-	empty struct{}
+	Empty struct{}
 
 	//ProcHelper is used to help handle a submission's files.
 	ProcHelper struct {
@@ -74,9 +80,6 @@ type (
 )
 
 func init() {
-	fileChan = make(chan *Request)
-	startSubmissionChan = make(chan *Request)
-	endSubmissionChan = make(chan *Request)
 	processedChan = make(chan interface{})
 	statusChan = make(chan Status)
 }
@@ -93,13 +96,6 @@ func ChangeStatus(change Status) {
 	statusChan <- change
 }
 
-//GetStatus retrieves Impendulo's current processing status.
-func GetStatus() (ret Status) {
-	statusChan <- Status{0, 0}
-	ret = <-statusChan
-	return
-}
-
 //monitorStatus keeps track of Impendulo's current processing status.
 func monitorStatus() {
 	//This is Impendulo's actual processing status.
@@ -114,44 +110,6 @@ func monitorStatus() {
 			status.add(val)
 		}
 	}
-}
-
-//AddFile sends a file id to be processed.
-func AddFile(file *project.File) error {
-	//We only need to process source files  and archives.
-	if !file.CanProcess() {
-		return nil
-	}
-	errChan := make(chan error)
-	//We send the file's db id as well as the id of the submission to which it belongs.
-	fileChan <- &Request{
-		Id:       file.Id,
-		ParentId: file.SubId,
-		Response: errChan,
-	}
-	//Return any errors which occured while adding the file.
-	return <-errChan
-}
-
-//StartSubmission signals that this submission will now receive files.
-func StartSubmission(subId bson.ObjectId) error {
-	errChan := make(chan error)
-	//We send the submission's db id as a reference.
-	startSubmissionChan <- &Request{
-		Id:       subId,
-		Response: errChan,
-	}
-	return <-errChan
-}
-
-//EndSubmission signals that this submission has stopped receiving files.
-func EndSubmission(subId bson.ObjectId) error {
-	errChan := make(chan error)
-	endSubmissionChan <- &Request{
-		Id:       subId,
-		Response: errChan,
-	}
-	return <-errChan
 }
 
 //submissionProcessed
@@ -172,13 +130,16 @@ func Shutdown() {
 
 //None provides an empty struct
 func None() interface{} {
-	return empty{}
+	return Empty{}
 }
 
 //Serve spawns new processing routines for each submission started.
 //Added files are received here and then sent to the relevant submission goroutine.
-func Serve(maxProcs int) {
+func Serve(port, maxProcs int) {
+	fileCh := make(chan *FileRequest)
+	subCh := make(chan *SubRequest)
 	//Begin monitoring processing status
+	setupRPC(port, subCh, fileCh, statusChan)
 	go monitorStatus()
 	helpers := make(map[bson.ObjectId]*ProcHelper)
 	fileQueues := make(map[bson.ObjectId]*list.List)
@@ -203,43 +164,40 @@ func Serve(maxProcs int) {
 			break
 		}
 		select {
-		case request := <-fileChan:
+		case request := <-fileCh:
 			var err error
-			if helper, ok := helpers[request.ParentId]; ok {
+			if helper, ok := helpers[request.SubId]; ok {
 				if helper.started {
 					//Send file to goroutine if
 					//submission processing has started.
 					helper.serveChan <- request.Id
 				} else {
 					//Add file to queue if not.
-					fileQueues[request.ParentId].PushBack(request.Id)
+					fileQueues[request.SubId].PushBack(request.Id)
 				}
 				ChangeStatus(Status{1, 0})
 			} else {
 				err = fmt.Errorf("No submission %q found for file %q.",
-					request.ParentId, request.Id)
+					request.SubId, request.Id)
 			}
 			request.Response <- err
-		case request := <-startSubmissionChan:
+		case request := <-subCh:
 			var err error
-			if _, ok := helpers[request.Id]; !ok {
+			helper, ok := helpers[request.Id]
+			if request.Start && !ok {
 				//Add submission to queue.
 				subQueue.PushBack(request.Id)
 				helpers[request.Id] = NewProcHelper(request.Id)
 				fileQueues[request.Id] = list.New()
 				ChangeStatus(Status{0, 1})
-			} else {
-				err = fmt.Errorf("Can't start submission %q, already being processed.", request.Id)
-			}
-			request.Response <- err
-		case request := <-endSubmissionChan:
-			var err error
-			if helper, ok := helpers[request.Id]; ok {
+			} else if !request.Start && ok {
 				//Submission will receive no more files.
 				helper.SetDone()
 				if helper.Started() {
 					delete(helpers, request.Id)
 				}
+			} else if request.Start && ok {
+				err = fmt.Errorf("Can't start submission %q, already being processed.", request.Id)
 			} else {
 				err = fmt.Errorf("No submission %q found to end.", request.Id)
 			}

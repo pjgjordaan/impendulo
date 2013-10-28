@@ -109,6 +109,7 @@ func TestArchive(t *testing.T) {
 		archives[i] = archive
 	}
 	go func() {
+		SetClientAddress("", 8045)
 		for j, sub := range subs {
 			StartSubmission(sub.Id)
 			AddFile(archives[j])
@@ -116,7 +117,7 @@ func TestArchive(t *testing.T) {
 		}
 		Shutdown()
 	}()
-	Serve(10)
+	Serve(8045, 10)
 	return
 }
 
