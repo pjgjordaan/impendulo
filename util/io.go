@@ -213,6 +213,10 @@ func CopyFile(dest, src string) (err error) {
 	if err != nil {
 		return
 	}
+	err = os.MkdirAll(filepath.Dir(dest), DPERM)
+	if err != nil {
+		return
+	}
 	w, err := os.Create(dest)
 	if err != nil {
 		return

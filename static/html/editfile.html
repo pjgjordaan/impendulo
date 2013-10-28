@@ -2,9 +2,9 @@
 <h3 class="centered">Load File</h3>
 <form class="form-horizontal" role="form" action="loadfile" method="get">
   <div class="form-group">
-    <label class="col-lg-offset-3 col-lg-2 control-label" for="project">Project</label>
+    <label class="col-lg-offset-3 col-lg-2 control-label" for="projectid">Project</label>
     <div class="col-lg-3">
-      <select class="form-control" name="project" id="project">
+      <select class="form-control" name="projectid" id="projectid">
 	{{$projects := projects}}
 	{{if .projectId}}
 	{{$pid := .projectId.Hex}}
@@ -60,7 +60,7 @@
       </button>
     </div>
   </div>
-  <input type="hidden" name="project" id="project" value="{{.projectId.Hex}}">
+  <input type="hidden" name="projectid" id="projectid" value="{{.projectId.Hex}}">
 </form>
 {{end}}
 {{if .submissionId}}
@@ -95,7 +95,7 @@
       </button>
     </div>
   </div>
-  <input type="hidden" name="project" id="project" value="{{.projectId.Hex}}">
+  <input type="hidden" name="projectid" id="projectid" value="{{.projectId.Hex}}">
   <input type="hidden" name="subid" id="subid" value="{{.submissionId.Hex}}">
 </form>
 {{end}}
@@ -122,7 +122,7 @@
     </div>
   </div>
   <input type="hidden" name="subid" id="subid" value="{{.file.SubId.Hex}}">
-  <input type="hidden" name="project" id="project" value="{{.projectId.Hex}}">
+  <input type="hidden" name="projectid" id="projectid" value="{{.projectId.Hex}}">
   <input type="hidden" name="fileid" id="fileid" value="{{.file.Id.Hex}}">
 </form>
 {{end}}

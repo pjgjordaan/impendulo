@@ -34,9 +34,7 @@ import (
 )
 
 type (
-	//A function used to fullfill a request.
-	Poster func(*http.Request, *Context) (string, error)
-	Perm   int
+	Perm int
 )
 
 const (
@@ -44,11 +42,9 @@ const (
 )
 
 var (
-	indexPosters map[string]bool
-	posters      map[string]Poster
-	viewRoutes   map[string]string
-	permissions  map[string]user.Permission
-	out          = []string{
+	viewRoutes  map[string]string
+	permissions map[string]user.Permission
+	out         = []string{
 		"registerview", "register", "login",
 	}
 	none = []string{
@@ -74,92 +70,59 @@ var (
 		"edituser", "loadsubmission", "editsubmission", "loadfile",
 		"editfile",
 	}
+
+	homeViews = []string{
+		"homeview", "userresult", "projectresult",
+		"userchart", "projectchart", "displaychart",
+		"displayresult", "getfiles", "getsubmissionschart",
+		"getsubmissions",
+	}
+	submitViews = []string{
+		"skeletonview", "archiveview", "projectview",
+		"configview",
+	}
+	registerViews = []string{"registerview"}
+	downloadViews = []string{"projectdownloadview"}
+	deleteViews   = []string{"projectdeleteview", "userdeleteview"}
+	statusViews   = []string{"statusview"}
+	toolViews     = []string{"runtoolview", "evaluatesubmissionsview"}
+	dataViews     = []string{
+		"importdataview", "exportdataview", "editdbview",
+		"loadproject", "loadsubmission", "loadfile", "loaduser",
+	}
 )
-
-//CreatePost loads a post request handler.
-func (this Poster) CreatePost(indexDest bool) Handler {
-	return func(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-		msg, err := this(req, ctx)
-		ctx.AddMessage(msg, err != nil)
-		if err == nil && indexDest {
-			http.Redirect(w, req, getRoute("index"), http.StatusSeeOther)
-		} else {
-			http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
-		}
-		return err
-	}
-}
-
-//Posters retrieves all posters
-func Posters() map[string]Poster {
-	if posters != nil {
-		return posters
-	}
-	posters = toolPosters()
-	defualt := defaultPosters()
-	for k, v := range defualt {
-		posters[k] = v
-	}
-	return posters
-}
-
-//defaultPosters loads the default posters.
-func defaultPosters() map[string]Poster {
-	return map[string]Poster{
-		"addproject": AddProject, "changeskeleton": ChangeSkeleton,
-		"submitarchive": SubmitArchive, "runtool": RunTool,
-		"deleteproject": DeleteProject, "deleteuser": DeleteUser,
-		"importdata": ImportData, "exportdata": ExportData,
-		"evaluatesubmissions": EvaluateSubmissions,
-		"login":               Login, "register": Register,
-		"logout": Logout, "editproject": EditProject,
-		"edituser": EditUser, "editsubmission": EditSubmission,
-		"editfile": EditFile,
-	}
-}
-
-//indexPosters loads the posters which need to be redirected to the home page on success.
-func IndexPosters() map[string]bool {
-	if indexPosters == nil {
-		indexPosters = map[string]bool{
-			"login": true, "register": true,
-			"logout": true,
-		}
-	}
-	return indexPosters
-}
-
-//GeneratePosts loads post request handlers and adds them to the router.
-func GeneratePosts(router *pat.Router, posts map[string]Poster, indexPosts map[string]bool) {
-	for name, fn := range posts {
-		handleFunc := fn.CreatePost(indexPosts[name])
-		pattern := "/" + name
-		router.Add("POST", pattern, Handler(handleFunc)).Name(name)
-	}
-}
 
 //Views loads all views.
 func Views() map[string]string {
 	if viewRoutes != nil {
 		return viewRoutes
 	}
-	viewRoutes = defaultViews()
-	return viewRoutes
-}
-
-//defaultViews loads default views.
-func defaultViews() map[string]string {
-	return map[string]string{
-		"homeView": "home", "userResult": "home", "projectResult": "home",
-		"userChart": "home", "projectChart": "home",
-		"skeletonView": "submit", "archiveView": "submit", "projectView": "submit",
-		"registerView":        "register",
-		"projectDownloadView": "download",
-		"projectDeleteView":   "delete", "userDeleteView": "delete",
-		"statusView":  "status",
-		"runToolView": "tool", "evaluateSubmissionsView": "tool",
-		"importDataView": "data", "exportDataView": "data",
+	viewRoutes = make(map[string]string)
+	for _, name := range homeViews {
+		viewRoutes[name] = "home"
 	}
+	for _, name := range submitViews {
+		viewRoutes[name] = "submit"
+	}
+	for _, name := range registerViews {
+		viewRoutes[name] = "register"
+	}
+	for _, name := range downloadViews {
+		viewRoutes[name] = "download"
+	}
+	for _, name := range deleteViews {
+		viewRoutes[name] = "delete"
+	}
+	for _, name := range statusViews {
+		viewRoutes[name] = "status"
+	}
+	for _, name := range toolViews {
+		viewRoutes[name] = "tool"
+	}
+	for _, name := range dataViews {
+		viewRoutes[name] = "data"
+	}
+	return viewRoutes
 }
 
 //Permissions loads all permissions.
@@ -190,9 +153,8 @@ func Permissions() map[string]user.Permission {
 func GenerateViews(router *pat.Router, views map[string]string) {
 	for name, view := range views {
 		handleFunc := LoadView(name, view)
-		lname := strings.ToLower(name)
-		pattern := "/" + lname
-		router.Add("GET", pattern, Handler(handleFunc)).Name(lname)
+		pattern := "/" + name
+		router.Add("GET", pattern, Handler(handleFunc)).Name(name)
 	}
 }
 

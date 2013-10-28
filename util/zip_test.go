@@ -169,13 +169,6 @@ func TestExtractFile(t *testing.T) {
 			t.Error(err)
 		}
 	}
-	/*badFiles := []*zip.File{new(zip.File), nil}
-	for _, zf := range badFiles {
-		err = ExtractFile(zf, dir)
-		if err == nil {
-			t.Error("Expected error for invalid zip file.")
-		}
-	}*/
 	badLocations := []string{"/dev", "/gibberish"}
 	for _, loc := range badLocations {
 		err = ExtractFile(zr.File[0], loc)

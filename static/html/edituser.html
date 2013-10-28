@@ -2,9 +2,9 @@
 <h3 class="centered">Load User</h3>
 <form class="form-horizontal" role="form" action="loaduser" method="get">
   <div class="form-group">
-    <label class="col-lg-offset-3 col-lg-2 control-label" for="user">User</label>
+    <label class="col-lg-offset-3 col-lg-2 control-label" for="userid">User</label>
     <div class="col-lg-3">
-      <select class="form-control" name="user" id="user">
+      <select class="form-control" name="userid" id="userid">
 	{{$users := users}}
 	{{if .user}}
 	{{$userId := .user.Name}}

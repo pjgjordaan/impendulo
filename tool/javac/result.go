@@ -118,7 +118,7 @@ func (this *Result) ChartVals(summary bool) []tool.ChartVal {
 }
 
 func (this *Result) Template() string {
-	return "javacResult"
+	return "javacresult"
 }
 
 //NewResult

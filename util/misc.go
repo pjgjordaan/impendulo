@@ -25,6 +25,7 @@
 package util
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,27 +38,32 @@ var (
 //InstallPath retrieves the location where Impendulo is currently installed.
 //It first checks for the IMPENDULO_PATH environment variable otherwise the
 //install path is constructed from GOPATH and the Impendulo's package.
-func InstallPath() string {
+func InstallPath() (string, error) {
 	if installPath != "" {
-		return installPath
+		return installPath, nil
 	}
 	installPath = os.Getenv("IMPENDULO_PATH")
 	if installPath != "" {
-		return installPath
+		return installPath, nil
 	}
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
-		panic("GOPATH is not set.")
+		return "", errors.New("GOPATH is not set.")
 	}
-	installPath = filepath.Join(gopath, "src",
-		"github.com", "godfried", "impendulo")
-	return installPath
+	installPath = filepath.Join(
+		gopath, "src", "github.com",
+		"godfried", "impendulo",
+	)
+	return installPath, nil
 }
 
 //RemoveEmpty removes whitespace characters from a string.
 func RemoveEmpty(toChange string) string {
-	symbs := []string{" ", "\n", "\t", "\r"}
-	for _, symb := range symbs {
+	return RemoveAll(toChange, " ", "\n", "\t", "\r")
+}
+
+func RemoveAll(toChange string, symbols ...string) string {
+	for _, symb := range symbols {
 		toChange = strings.Replace(toChange, symb, "", -1)
 	}
 	return toChange
@@ -75,10 +81,10 @@ func EqualsOne(test interface{}, args ...interface{}) bool {
 
 //ShortName gets the shortened class name of a Java class.
 func ShortName(exec string) string {
-	elements := strings.Split(exec, `.`)
+	elements := strings.Split(exec, ".")
 	num := len(elements)
 	if num < 2 {
 		return exec
 	}
-	return strings.Join(elements[num-2:], `.`)
+	return strings.Join(elements[num-2:], ".")
 }

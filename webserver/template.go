@@ -45,7 +45,7 @@ import (
 )
 
 type (
-	//Args represents arguments passed to html templates.
+	//Args represents arguments passed to html templates or to template.Execute.
 	Args map[string]interface{}
 )
 
@@ -81,13 +81,13 @@ var (
 		"files":                 submissionFiles,
 		"projects":              func() ([]*project.Project, error) { return db.Projects(nil, bson.M{db.SKELETON: 0}, db.NAME) },
 		"users":                 func() ([]*user.User, error) { return db.Users(nil, user.ID) },
-		"displayResult":         displayResult,
+		"displayResult":         dispRes,
 		"displayCodeBug":        displayCodeBug,
-		"getFiles":              func(subId bson.ObjectId) string { return fmt.Sprintf("getfiles?sid=%s", subId.Hex()) },
-		"getUserChart":          func(user string) string { return fmt.Sprintf("getsubmissionschart?uid=%s", user) },
-		"getProjectChart":       func(id bson.ObjectId) string { return fmt.Sprintf("getsubmissionschart?pid=%s", id.Hex()) },
-		"getUserSubmissions":    func(user string) string { return fmt.Sprintf("getsubmissions?uid=%s", user) },
-		"getProjectSubmissions": func(id bson.ObjectId) string { return fmt.Sprintf("getsubmissions?pid=%s", id.Hex()) },
+		"getFiles":              func(subId bson.ObjectId) string { return fmt.Sprintf("getfiles?subid=%s", subId.Hex()) },
+		"getUserChart":          func(user string) string { return fmt.Sprintf("getsubmissionschart?userid=%s", user) },
+		"getProjectChart":       func(id bson.ObjectId) string { return fmt.Sprintf("getsubmissionschart?projectid=%s", id.Hex()) },
+		"getUserSubmissions":    func(user string) string { return fmt.Sprintf("getsubmissions?userid=%s", user) },
+		"getProjectSubmissions": func(id bson.ObjectId) string { return fmt.Sprintf("getsubmissions?projectid=%s", id.Hex()) },
 		"singleChart":           singleChart,
 		"compareChart":          compareChart,
 		"collections":           db.Collections,
@@ -109,16 +109,16 @@ func compareChart(sid bson.ObjectId, uid, result, file, compare string) string {
 }
 
 func singleChart(sid bson.ObjectId, uid, result, file string) string {
-	return fmt.Sprintf("displaychart?sid=%s&uid=%s&result=%s&file=%s", sid.Hex(), uid, result, file)
+	return fmt.Sprintf("displaychart?subid=%s&userid=%s&result=%s&file=%s", sid.Hex(), uid, result, file)
 }
 
-func displayResult(sid bson.ObjectId, uid, result, file string, current, next int) string {
-	return fmt.Sprintf("displayresult?sid=%s&uid=%s&result=%s&file=%s&current=%d&next=%d",
+func dispRes(sid bson.ObjectId, uid, result, file string, current, next int) string {
+	return fmt.Sprintf("displayresult?subid=%s&userid=%s&result=%s&file=%s&current=%d&next=%d",
 		sid.Hex(), uid, result, file, current, next)
 }
 
 func displayCodeBug(sid bson.ObjectId, uid, result, file string, current, next int, resultId, bugId string, index int) string {
-	return displayResult(sid, uid, result, file, current, next) +
+	return dispRes(sid, uid, result, file, current, next) +
 		fmt.Sprintf("&rid=%s&bid=%s&bindex=%d", resultId, bugId, index)
 }
 

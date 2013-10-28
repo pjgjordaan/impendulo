@@ -2,9 +2,9 @@
 <h3 class="centered">Load Project</h3>
 <form class="form-horizontal" role="form" action="loadproject" method="get">
   <div class="form-group">
-    <label class="col-lg-offset-3 col-lg-2 control-label" for="project">Project</label>
+    <label class="col-lg-offset-3 col-lg-2 control-label" for="projectid">Project</label>
     <div class="col-lg-3">
-      <select class="form-control" name="project" id="project">
+      <select class="form-control" name="projectid" id="projectid">
 	{{$projects := projects}}
 	{{if .project}}
 	{{$projectId := .project.Id.Hex}}
@@ -41,9 +41,9 @@
     </div>
   </div>
   <div class="form-group">
-    <label class="col-lg-offset-3 col-lg-2 control-label" for="user">User</label>
+    <label class="col-lg-offset-3 col-lg-2 control-label" for="userid">User</label>
     <div class="col-lg-3">
-      <select class="form-control" name="user" id="user">
+      <select class="form-control" name="userid" id="userid">
 	{{$users := users}}
 	{{$currentUser := .User}}
 	{{range $users}}
@@ -77,7 +77,7 @@
       </button>
     </div>
   </div>
-  <input type="hidden" name="project" id="project" value="{{.Id.Hex}}">
+  <input type="hidden" name="projectid" id="projectid" value="{{.Id.Hex}}">
 </form>
 {{end}}
 {{end}}

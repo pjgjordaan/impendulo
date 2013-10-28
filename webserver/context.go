@@ -29,7 +29,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"net/http"
 	"strings"
@@ -155,7 +154,7 @@ func LoadContext(sess *sessions.Session) *Context {
 }
 
 func (b *Browse) SetUid(req *http.Request) (err error) {
-	uid, err := GetString(req, "uid")
+	uid, _, err := getUserId(req)
 	if err == nil {
 		b.Uid = uid
 	}
@@ -163,7 +162,7 @@ func (b *Browse) SetUid(req *http.Request) (err error) {
 }
 
 func (b *Browse) SetSid(req *http.Request) (err error) {
-	sid, err := util.ReadId(req.FormValue("sid"))
+	sid, _, err := getSubId(req)
 	if err == nil {
 		b.Sid = sid
 	}
@@ -171,7 +170,7 @@ func (b *Browse) SetSid(req *http.Request) (err error) {
 }
 
 func (b *Browse) SetPid(req *http.Request) (err error) {
-	pid, err := util.ReadId(req.FormValue("pid"))
+	pid, _, err := getProjectId(req)
 	if err == nil {
 		b.Pid = pid
 	}
@@ -205,12 +204,23 @@ func SetContext(req *http.Request, setters ...Setter) error {
 
 func (b *Browse) SetLevel(route string) {
 	switch route {
-	case "homeView":
+	case "homeview":
 		b.Level = HOME
-	case "projectResult":
+	case "projectresult":
 		b.Level = PROJECTS
-	case "userResult":
+	case "userresult":
 		b.Level = USERS
+	case "getsubmissions":
+		b.Level = SUBMISSIONS
+	case "getfiles":
+		b.Level = FILES
+	case "getsubmissionschart":
+		b.Level = SUBMISSIONS
+	case "displaychart":
+		b.Level = CHART
+	case "displayresult":
+		b.Level = ANALYSIS
+
 	}
 }
 

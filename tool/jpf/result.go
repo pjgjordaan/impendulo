@@ -118,7 +118,7 @@ func (this *Result) ChartVals(summary bool) []tool.ChartVal {
 }
 
 func (this *Result) Template() string {
-	return "jpfResult"
+	return "jpfresult"
 }
 
 func (this *Result) Bug(id string, index int) (bug *tool.Bug, err error) {

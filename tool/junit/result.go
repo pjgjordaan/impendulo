@@ -116,7 +116,7 @@ func (this *Result) ChartVals(summary bool) []tool.ChartVal {
 }
 
 func (this *Result) Template() string {
-	return "junitResult"
+	return "junitresult"
 }
 
 //NewResult creates a new junit.Result from provided XML data.

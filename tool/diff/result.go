@@ -80,5 +80,5 @@ func (this *Result) GetReport() tool.Report {
 }
 
 func (this *Result) Template() string {
-	return "diffResult"
+	return "diffresult"
 }

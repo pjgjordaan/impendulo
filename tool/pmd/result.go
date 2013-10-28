@@ -118,7 +118,7 @@ func (this *Result) String() (ret string) {
 }
 
 func (this *Result) Template() string {
-	return "pmdResult"
+	return "pmdresult"
 }
 
 func (this *Result) Bug(id string, index int) (bug *tool.Bug, err error) {

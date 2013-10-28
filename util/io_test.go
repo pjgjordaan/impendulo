@@ -28,6 +28,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -162,6 +163,40 @@ func TestGetPackage(t *testing.T) {
 		if v != pkg {
 			t.Error(fmt.Sprintf("Expected package %q but got %q.", v, pkg))
 		}
+	}
+}
+
+func TestCopyFile(t *testing.T) {
+	validSrc := filepath.Join(os.TempDir(), "src", "from")
+	invalidSrc := filepath.Join(os.TempDir(), "src", "nofile")
+	validDest := filepath.Join(os.TempDir(), "dest", "to")
+	invalidDest := "/root/file"
+	defer func() {
+		os.Remove(validSrc)
+		os.Remove(validDest)
+	}()
+	err := SaveFile(validSrc, []byte(file1))
+	if err != nil {
+		t.Error(err)
+	}
+	err = CopyFile(validDest, validSrc)
+	if err != nil {
+		t.Error(err)
+	}
+	data, err := ioutil.ReadFile(validDest)
+	if err != nil {
+		t.Error(err)
+	}
+	if !bytes.Equal([]byte(file1), data) {
+		t.Error("Bytes not equal")
+	}
+	err = CopyFile(invalidDest, validSrc)
+	if err == nil {
+		t.Error(fmt.Errorf("Expected error copying to %s.", invalidDest))
+	}
+	err = CopyFile(validDest, invalidSrc)
+	if err == nil {
+		t.Error(fmt.Errorf("Expected error copying from %s.", invalidSrc))
 	}
 }
 
@@ -353,8 +388,9 @@ public class File
   }
 }`
 
-var file2 = `package za.ac.sun.cs.intlola.file;
-
+var file2 = `
+package za.ac.sun.cs.intlola.file;
+		    
 import com.google.gson.JsonObject;
 
 public class ArchiveFile implements IntlolaFile {
@@ -383,8 +419,8 @@ public class ArchiveFile implements IntlolaFile {
 	}
 
 }`
-var file3 = `
 
+var file3 = `
 import com.google.gson.JsonObject;
 
 public class ArchiveFile implements IntlolaFile {

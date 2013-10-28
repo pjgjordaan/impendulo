@@ -69,15 +69,15 @@ func TestCreateJPF(t *testing.T) {
 	sPkg := "gov.nasa.jpf.search."
 	other := html.EscapeString("target.args = 2,1,2\nsearch.multiple_errors = true\nasdas8823=quesq,322\n ")
 	requests := []postHolder{
-		postHolder{"/createjpf?project=" + id + "&addedL=" +
-			lPkg + "ExecTracker&addedL=" + lPkg +
-			"DeadlockAnalyzer&addedS=" + sPkg + "DFSearch&other=" + other, true},
+		postHolder{"/createjpf?projectid=" + id + "&addedlisteners=" +
+			lPkg + "ExecTracker&addedlisteners=" + lPkg +
+			"DeadlockAnalyzer&addedsearches=" + sPkg + "DFSearch&other=" + other, true},
 		postHolder{"/createjpf?", false},
-		postHolder{"/createjpf?project=" + id, true},
-		postHolder{"/createjpf?project=" + id + "&addedL=" +
-			lPkg + "ExecTracker&addedL=" + lPkg +
-			"DeadlockAnalyzer&addedS=" + sPkg + "DFSearch", true},
-		postHolder{"/createjpf?project=" + id + "&addedL=" + lPkg, true},
+		postHolder{"/createjpf?projectid=" + id, true},
+		postHolder{"/createjpf?projectid=" + id + "&addedlisteners=" +
+			lPkg + "ExecTracker&addedlisteners=" + lPkg +
+			"DeadlockAnalyzer&addedsearches=" + sPkg + "DFSearch", true},
+		postHolder{"/createjpf?projectid=" + id + "&addedlisteners=" + lPkg, true},
 	}
 	testToolFunc(t, CreateJPF, requests)
 }
@@ -85,10 +85,10 @@ func TestCreateJPF(t *testing.T) {
 func TestCreatePMD(t *testing.T) {
 	id := bson.NewObjectId().Hex()
 	requests := []postHolder{
-		postHolder{"/createpmd?project=" + id + "&ruleid=java-basic&ruleid=java-controversial", true},
-		postHolder{"/createpmd?project=" + id + "&ruleid=", true},
-		postHolder{"/createpmd?project=" + id + "&ruleid=java-basic", true},
-		postHolder{"/createpmd?project=", false},
+		postHolder{"/createpmd?projectid=" + id + "&ruleid=java-basic&ruleid=java-controversial", true},
+		postHolder{"/createpmd?projectid=" + id + "&ruleid=", true},
+		postHolder{"/createpmd?projectid=" + id + "&ruleid=java-basic", true},
+		postHolder{"/createpmd?projectid=", false},
 		postHolder{"/createpmd?", false},
 	}
 	testToolFunc(t, CreatePMD, requests)
@@ -140,7 +140,7 @@ func TestRunTool(t *testing.T) {
 	}
 	store := sessions.NewCookieStore(util.CookieKeys())
 	go processing.Serve(5)
-	req, err := http.NewRequest("POST", "/runtool?project="+p.Id.Hex()+
+	req, err := http.NewRequest("POST", "/runtool?projectid="+p.Id.Hex()+
 		"&tool="+findbugs.NAME+"&runempty-check=true", nil)
 	if err != nil {
 		t.Error(err)

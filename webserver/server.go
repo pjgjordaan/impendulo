@@ -46,19 +46,9 @@ const (
 func init() {
 	//Setup the router.
 	router = pat.New()
+	GenerateGets(router, Getters(), Views())
 	GeneratePosts(router, Posters(), IndexPosters())
 	GenerateViews(router, Views())
-	router.Add("GET", "/configview", Handler(configView)).Name("configview")
-	router.Add("GET", "/editdbview", Handler(editDBView)).Name("editdbview")
-	router.Add("GET", "/loadproject", Handler(loadProject)).Name("loadproject")
-	router.Add("GET", "/loadsubmission", Handler(loadSubmission)).Name("loadsubmission")
-	router.Add("GET", "/loadfile", Handler(loadFile)).Name("loadfile")
-	router.Add("GET", "/loaduser", Handler(loadUser)).Name("loaduser")
-	router.Add("GET", "/displaychart", Handler(showChart)).Name("displaychart")
-	router.Add("GET", "/displayresult", Handler(showResult)).Name("displayresult")
-	router.Add("GET", "/getfiles", Handler(getFiles)).Name("getfiles")
-	router.Add("GET", "/getsubmissionschart", Handler(getSubmissionsChart)).Name("getsubmissionschart")
-	router.Add("GET", "/getsubmissions", Handler(getSubmissions)).Name("getsubmissions")
 	router.Add("GET", "/skeleton.zip", Handler(downloadProject))
 	router.Add("GET", "/static/", FileHandler(StaticDir()))
 	router.Add("GET", "/static", RedirectHandler("/static/"))
@@ -72,7 +62,11 @@ func StaticDir() string {
 	if staticDir != "" {
 		return staticDir
 	}
-	staticDir = filepath.Join(util.InstallPath(), "static")
+	iPath, err := util.InstallPath()
+	if err != nil {
+		return ""
+	}
+	staticDir = filepath.Join(iPath, "static")
 	return staticDir
 }
 
@@ -83,26 +77,6 @@ func getRoute(name string) string {
 		return "/"
 	}
 	return u.Path
-}
-
-//RunTLS
-func RunTLS() {
-	if Active() {
-		return
-	}
-	setActive(true)
-	defer setActive(false)
-	cert := filepath.Join(util.BaseDir(), "cert.pem")
-	key := filepath.Join(util.BaseDir(), "key.pem")
-	if !util.Exists(cert) || !util.Exists(key) {
-		err := util.GenCertificate(cert, key)
-		if err != nil {
-			util.Log(err, LOG_SERVER)
-		}
-	}
-	if err := http.ListenAndServeTLS(":8080", cert, key, router); err != nil {
-		util.Log(err, LOG_SERVER)
-	}
 }
 
 //Run starts up the webserver if it is not currently running.

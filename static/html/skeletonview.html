@@ -2,9 +2,9 @@
 <h3 class="heading">Change Project Skeleton</h3>
 <form class="form-horizontal" action="changeskeleton" method="post" enctype="multipart/form-data">
   <div class="form-group">
-    <label class="col-lg-offset-3 col-lg-2 control-label" for="project">Project</label>
+    <label class="col-lg-offset-3 col-lg-2 control-label" for="projectid">Project</label>
     <div class="col-lg-3">
-      <select class="form-control" name="project" id="project">
+      <select class="form-control" name="projectid" id="projectid">
 	{{$projects := projects}}
 	{{range $projects}}
 	<option value={{.Id.Hex}}>{{.Name}}</option>

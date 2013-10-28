@@ -209,7 +209,7 @@ func (this *ErrorResult) GetReport() Report {
 
 //Template
 func (this *ErrorResult) Template() string {
-	return "emptyResult"
+	return "emptyresult"
 }
 
 //NewCodeResult
@@ -230,7 +230,7 @@ func (this *CodeResult) GetReport() Report {
 }
 
 func (this *CodeResult) Template() string {
-	return "codeResult"
+	return "coderesult"
 }
 
 //NewSummaryResult
@@ -252,7 +252,7 @@ func (this *SummaryResult) GetReport() Report {
 
 //Template
 func (this *SummaryResult) Template() string {
-	return "summaryResult"
+	return "summaryresult"
 }
 
 //AddSummary adds a ToolResult's summary to this SummaryResult's

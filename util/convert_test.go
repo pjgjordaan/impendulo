@@ -27,6 +27,7 @@ package util
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"labix.org/v2/mgo/bson"
 	"reflect"
 	"testing"
@@ -135,4 +136,30 @@ func TestGetStrings(t *testing.T) {
 			t.Error(errors.New("Error function should not cast"), k, res)
 		}
 	}
+}
+
+func TestToStrings(t *testing.T) {
+	valid := []interface{}{
+		[]string{"data", "some"},
+		[]interface{}{"data", "some"},
+		interface{}([]string{"data some"}),
+	}
+	for _, data := range valid {
+		_, err := toStrings(data)
+		if err != nil {
+			t.Error(err)
+		}
+	}
+	invalid := []interface{}{
+		[]int{22, 32},
+		[]interface{}{"data", 32, []byte("hi")},
+		interface{}(new(ErrorWriter)),
+	}
+	for _, data := range invalid {
+		_, err := toStrings(data)
+		if err == nil {
+			t.Error(fmt.Errorf("Expected error for %q,", data))
+		}
+	}
+
 }

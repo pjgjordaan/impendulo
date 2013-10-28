@@ -25,8 +25,11 @@
 package webserver
 
 import (
+	"errors"
 	"fmt"
 	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/mongo"
 	"github.com/godfried/impendulo/util"
 	"io/ioutil"
@@ -39,20 +42,6 @@ import (
 	"strings"
 	"time"
 )
-
-//CloneData
-func CloneData(req *http.Request, ctx *Context) (msg string, err error) {
-	remote, err := GetString(req, "remote")
-	if err != nil {
-		msg = "Could not read remote data location."
-		return
-	}
-	err = db.CloneData(remote)
-	if err != nil {
-		msg = fmt.Sprintf("Could not clone data from %s.", remote)
-	}
-	return
-}
 
 //ImportData
 func ImportData(req *http.Request, ctx *Context) (msg string, err error) {
@@ -170,19 +159,42 @@ func getNext(req *http.Request, maxSize int) (int, error) {
 }
 
 //getProjectId
-func getProjectId(req *http.Request) (id bson.ObjectId, msg string, err error) {
-	id, err = util.ReadId(req.FormValue("project"))
+func getProjectId(req *http.Request) (bson.ObjectId, string, error) {
+	return getId(req, "projectid", "project")
+}
+
+//getSubId
+func getSubId(req *http.Request) (bson.ObjectId, string, error) {
+	return getId(req, "subid", "submission")
+}
+
+//getFileId
+func getFileId(req *http.Request) (bson.ObjectId, string, error) {
+	return getId(req, "fileid", "file")
+}
+
+func getId(req *http.Request, ident, name string) (id bson.ObjectId, msg string, err error) {
+	id, err = util.ReadId(req.FormValue(ident))
 	if err != nil {
-		msg = "Could not read project."
+		msg = fmt.Sprintf("Could not read %s.", name)
 	}
 	return
 }
 
-//getUser
-func getUser(ctx *Context) (user, msg string, err error) {
+//getActiveUser
+func getActiveUser(ctx *Context) (user, msg string, err error) {
 	user, err = ctx.Username()
 	if err != nil {
 		msg = "Could not retrieve user."
+	}
+	return
+}
+
+//getUserId
+func getUserId(req *http.Request) (userid, msg string, err error) {
+	userid, err = GetString(req, "userid")
+	if err != nil {
+		msg = "Could not read user."
 	}
 	return
 }
@@ -209,5 +221,106 @@ func ServePath(u *url.URL, src string) (servePath string, err error) {
 	if util.IsDir(servePath) && !strings.HasSuffix(u.Path, "/") {
 		u.Path = u.Path + "/"
 	}
+	return
+}
+
+//codeBug loads a bug to display in the code.
+func codeBug(req *http.Request) (bug *tool.Bug, err error) {
+	resId, rerr := util.ReadId(req.FormValue("rid"))
+	if rerr != nil {
+		return
+	}
+	bugId, err := GetString(req, "bid")
+	if err != nil {
+		return
+	}
+	index, err := GetInt(req, "bindex")
+	if err != nil {
+		return
+	}
+	result, err := db.BugResult(resId, nil)
+	if err != nil {
+		return
+	}
+	bug, err = result.Bug(bugId, index)
+	return
+}
+
+//getCredentials
+func getCredentials(req *http.Request) (uname, pword, msg string, err error) {
+	uname, msg, err = getString(req, "username")
+	if err != nil {
+		return
+	}
+	pword, msg, err = getString(req, "password")
+	return
+}
+
+//Snapshots retrieves snapshots of a given file in a submission.
+func Snapshots(subId bson.ObjectId, fileName string) (ret []*project.File, err error) {
+	matcher := bson.M{db.SUBID: subId,
+		db.TYPE: project.SRC, db.NAME: fileName}
+	selector := bson.M{db.TIME: 1, db.SUBID: 1}
+	ret, err = db.Files(matcher, selector, db.TIME)
+	if err == nil && len(ret) == 0 {
+		err = fmt.Errorf("No files found with name %q.", fileName)
+	}
+	return
+}
+
+//RetrieveSubmissions fetches all submissions in a project or by a user.
+func RetrieveSubmissions(req *http.Request, ctx *Context) ([]*project.Submission, error) {
+	perr := ctx.Browse.SetPid(req)
+	if perr == nil {
+		ctx.Browse.IsUser = false
+		matcher := bson.M{db.PROJECTID: ctx.Browse.Pid}
+		return db.Submissions(matcher, nil, "-"+db.TIME)
+	}
+	uerr := ctx.Browse.SetUid(req)
+	if uerr == nil {
+		ctx.Browse.IsUser = true
+		matcher := bson.M{db.USER: ctx.Browse.Uid}
+		return db.Submissions(matcher, nil, "-"+db.TIME)
+	}
+	return nil, errors.New("No id found.")
+}
+
+//LoadSkeleton makes a project skeleton available for download.
+func LoadSkeleton(req *http.Request) (path string, err error) {
+	projectId, _, err := getProjectId(req)
+	if err != nil {
+		return
+	}
+	name := bson.NewObjectId().Hex()
+	path = filepath.Join(util.BaseDir(), "skeletons", name+".zip")
+	//If the skeleton is saved for downloading we don't need to store it again.
+	if util.Exists(path) {
+		return
+	}
+	p, err := db.Project(bson.M{db.ID: projectId}, nil)
+	if err != nil {
+		return
+	}
+	//Save file to filesystem and return path to it.
+	err = util.SaveFile(path, p.Skeleton)
+	return
+}
+
+//getFile
+func getFile(id bson.ObjectId) (file *project.File, err error) {
+	selector := bson.M{db.NAME: 1, db.TIME: 1}
+	file, err = db.File(bson.M{db.ID: id}, selector)
+	return
+}
+
+//projectName retrieves the project name associated with the project identified by id.
+func projectName(id bson.ObjectId) (name string, err error) {
+	matcher := bson.M{db.ID: id}
+	selector := bson.M{db.NAME: 1}
+	proj, err := db.Project(matcher, selector)
+	if err != nil {
+		return
+	}
+	name = proj.Name
 	return
 }

@@ -49,12 +49,12 @@ import (
 var (
 	//Here we keep our tool configs' html template names.
 	templates = map[string]string{
-		jpf.NAME:        "jpfConfig",
-		pmd.NAME:        "pmdConfig",
-		junit.NAME:      "junitConfig",
-		findbugs.NAME:   "findbugsConfig",
-		checkstyle.NAME: "checkstyleConfig",
-		"none":          "noConfig",
+		jpf.NAME:        "jpfconfig",
+		pmd.NAME:        "pmdconfig",
+		junit.NAME:      "junitconfig",
+		findbugs.NAME:   "findbugsconfig",
+		checkstyle.NAME: "checkstyleconfig",
+		"none":          "noconfig",
 	}
 )
 
@@ -274,7 +274,7 @@ func CreatePMD(req *http.Request, ctx *Context) (msg string, err error) {
 //should be rerun on all fi
 func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
 	projectId, msg, err := getProjectId(req)
-	all := req.FormValue("project") == "all"
+	all := req.FormValue("projectid") == "all"
 	if err != nil && !all {
 		return
 	}

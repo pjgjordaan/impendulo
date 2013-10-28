@@ -109,7 +109,10 @@ var (
 )
 
 func init() {
-	err := LoadConfigs(DefaultConfig())
+	location, err := DefaultConfig()
+	if err == nil {
+		err = LoadConfigs(location)
+	}
 	if err != nil {
 		util.Log(err)
 	}
@@ -117,19 +120,22 @@ func init() {
 
 //DefaultConfig retrieves the default configuration file path.
 //This is $IMPENDULO_PATH/config/config.json
-func DefaultConfig() string {
+func DefaultConfig() (string, error) {
 	if defaultFile != "" {
-		return defaultFile
+		return defaultFile, nil
 	}
 	defaultFile = filepath.Join(util.BaseDir(), "config.json")
-	if !util.IsFile(defaultFile) {
-		installedConfig := filepath.Join(util.InstallPath(), "config", "config.json")
-		err := util.CopyFile(defaultFile, installedConfig)
-		if err != nil {
-			return ""
-		}
+	if util.IsFile(defaultFile) {
+		return defaultFile, nil
+	} else if util.IsDir(defaultFile) {
+		return "", fmt.Errorf("%s is a directory.", defaultFile)
 	}
-	return defaultFile
+	iPath, err := util.InstallPath()
+	if err != nil {
+		return "", err
+	}
+	installedConfig := filepath.Join(iPath, "config", "config.json")
+	return defaultFile, util.CopyFile(defaultFile, installedConfig)
 }
 
 //LoadConfigs loads configurations from a file.
@@ -162,7 +168,11 @@ func LoadConfigs(fname string) (err error) {
 	if err != nil {
 		return
 	}
-	javaPath := filepath.Join(util.InstallPath(), "java")
+	iPath, err := util.InstallPath()
+	if err != nil {
+		return
+	}
+	javaPath := filepath.Join(iPath, "java")
 	config.Dir[JPF_RUNNER] = filepath.Join(javaPath, "runner")
 	config.Dir[JPF_FINDER] = filepath.Join(javaPath, "finder")
 	config.Dir[JUNIT_TESTING] = filepath.Join(javaPath, "testing")
