@@ -55,7 +55,7 @@ func init() {
 	router.Add("GET", "/static", RedirectHandler("/static/"))
 	router.Add("GET", "/logs/", FileHandler(util.LogDir()))
 	router.Add("GET", "/logs", RedirectHandler("/logs/"))
-	router.Add("GET", "/", Handler(LoadView("homeView", "home"))).Name("index")
+	router.Add("GET", "/", Handler(LoadView("homeview", "home"))).Name("index")
 }
 
 //StaticDir retrieves the directory containing all the static files for the web server.
