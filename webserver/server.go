@@ -45,6 +45,10 @@ const (
 )
 
 func init() {
+	logs, err := util.LogDir()
+	if err != nil {
+		panic(err)
+	}
 	//Setup the router.
 	router = pat.New()
 	GenerateGets(router, Getters(), Views())
@@ -53,7 +57,7 @@ func init() {
 	router.Add("GET", "/skeleton.zip", Handler(downloadProject))
 	router.Add("GET", "/static/", FileHandler(StaticDir()))
 	router.Add("GET", "/static", RedirectHandler("/static/"))
-	router.Add("GET", "/logs/", FileHandler(util.LogDir()))
+	router.Add("GET", "/logs/", FileHandler(logs))
 	router.Add("GET", "/logs", RedirectHandler("/logs/"))
 	router.Add("GET", "/", Handler(LoadView("homeview", "home"))).Name("index")
 }

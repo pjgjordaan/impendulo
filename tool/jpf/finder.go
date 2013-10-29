@@ -62,13 +62,16 @@ func Searches() ([]*Class, error) {
 //GetClasses retrieves an array of classes matching a specific type and writes them to a
 //provided output file for future use.
 func GetClasses(tipe, fname string) (classes []*Class, err error) {
-	var data []byte
-	path := filepath.Join(util.BaseDir(), fname)
+	base, err := util.BaseDir()
+	if err != nil {
+		return
+	}
+	path := filepath.Join(base, fname)
 	classes, err = loadClasses(path)
 	if err == nil {
 		return
 	}
-	data, err = findClasses(tipe, path)
+	data, err := findClasses(tipe, path)
 	if err != nil {
 		return
 	}

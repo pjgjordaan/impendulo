@@ -32,7 +32,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/user"
 	"path/filepath"
 	"strings"
 )
@@ -49,15 +48,6 @@ type (
 		dest, src string
 	}
 )
-
-//BaseDir retrieves the Impendulo directory.
-func BaseDir() string {
-	cur, err := user.Current()
-	if err != nil {
-		panic(err)
-	}
-	return filepath.Join(cur.HomeDir, ".impendulo")
-}
 
 //ReadData reads data from a reader until io.EOF or []byte("eof") is encountered.
 func ReadData(r io.Reader) ([]byte, error) {
@@ -209,6 +199,7 @@ func IsExec(path string) bool {
 }
 
 func CopyFile(dest, src string) (err error) {
+	fmt.Println(dest, src)
 	r, err := os.Open(src)
 	if err != nil {
 		return

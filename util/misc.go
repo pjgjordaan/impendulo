@@ -27,12 +27,13 @@ package util
 import (
 	"errors"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 )
 
 var (
-	installPath string
+	baseDir, installPath string
 )
 
 //InstallPath retrieves the location where Impendulo is currently installed.
@@ -55,6 +56,28 @@ func InstallPath() (string, error) {
 		"godfried", "impendulo",
 	)
 	return installPath, nil
+}
+
+//BaseDir retrieves the Impendulo directory.
+func BaseDir() (string, error) {
+	if baseDir != "" {
+		return baseDir, nil
+	}
+	cur, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+	dir := filepath.Join(cur.HomeDir, ".impendulo")
+	if Exists(dir) {
+		baseDir = dir
+		return baseDir, nil
+	}
+	err = os.MkdirAll(dir, DPERM)
+	if err != nil {
+		return "", err
+	}
+	baseDir = dir
+	return baseDir, nil
 }
 
 //RemoveEmpty removes whitespace characters from a string.

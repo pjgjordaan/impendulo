@@ -246,12 +246,13 @@ func BaseTemplates() []string {
 	if baseTemplates != nil {
 		return baseTemplates
 	}
+	tdir := TemplateDir()
 	baseTemplates = []string{
-		filepath.Join(TemplateDir(), "base.html"),
-		filepath.Join(TemplateDir(), "index.html"),
-		filepath.Join(TemplateDir(), "messages.html"),
-		filepath.Join(TemplateDir(), "footer.html"),
-		filepath.Join(TemplateDir(), "breadcrumb.html"),
+		filepath.Join(tdir, "base.html"),
+		filepath.Join(tdir, "index.html"),
+		filepath.Join(tdir, "messages.html"),
+		filepath.Join(tdir, "footer.html"),
+		filepath.Join(tdir, "breadcrumb.html"),
 	}
 	return baseTemplates
 }

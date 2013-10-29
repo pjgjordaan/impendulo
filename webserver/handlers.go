@@ -47,7 +47,11 @@ type (
 )
 
 func init() {
-	store = sessions.NewCookieStore(util.CookieKeys())
+	auth, enc, err := util.CookieKeys()
+	if err != nil {
+		panic(err)
+	}
+	store = sessions.NewCookieStore(auth, enc)
 }
 
 //ServeHTTP loads a the current session, handles  the request and

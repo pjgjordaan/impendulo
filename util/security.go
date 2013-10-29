@@ -41,22 +41,28 @@ var (
 )
 
 //CookieKeys generates cookie keys.
-func CookieKeys() (auth, enc []byte) {
-	auth, enc = cookieKey(authName), cookieKey(encName)
+func CookieKeys() (auth, enc []byte, err error) {
+	auth, err = cookieKey(authName)
+	if err != nil {
+		return
+	}
+	enc, err = cookieKey(encName)
 	return
 }
 
-func cookieKey(fname string) (data []byte) {
-	var err error
-	data, err = ioutil.ReadFile(filepath.Join(BaseDir(), fname))
+func cookieKey(fname string) (data []byte, err error) {
+	base, err := BaseDir()
 	if err != nil {
-		data = securecookie.GenerateRandomKey(32)
-		err = SaveFile(filepath.Join(BaseDir(), fname), data)
-		if err != nil {
-			Log(err)
-		}
+		return
 	}
-	return data
+	fpath := filepath.Join(base, fname)
+	data, rerr := ioutil.ReadFile(fpath)
+	if rerr == nil {
+		return
+	}
+	data = securecookie.GenerateRandomKey(32)
+	err = SaveFile(fpath, data)
+	return
 }
 
 //Validate authenticates a provided password against a hashed password.

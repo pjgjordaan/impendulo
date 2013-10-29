@@ -46,9 +46,13 @@ func Diff(orig, change string) (ret string, err error) {
 	if err != nil {
 		return
 	}
+	base, err := util.BaseDir()
+	if err != nil {
+		return
+	}
 	//Store one string temporarily on disk since we can only pipe one
 	//argument to diff.
-	origName := filepath.Join(util.BaseDir(), fmt.Sprint(&orig)+fmt.Sprint(&change))
+	origName := filepath.Join(base, fmt.Sprint(&orig)+fmt.Sprint(&change))
 	err = util.SaveFile(origName, []byte(orig))
 	if err != nil {
 		return

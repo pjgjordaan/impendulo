@@ -49,8 +49,12 @@ var (
 //init sets up the loggers.
 func init() {
 	y, m, d := time.Now().Date()
-	dir := filepath.Join(LogDir(), strconv.Itoa(y), m.String(), strconv.Itoa(d))
-	err := os.MkdirAll(dir, DPERM)
+	base, err := LogDir()
+	if err != nil {
+		panic(err)
+	}
+	dir := filepath.Join(base, strconv.Itoa(y), m.String(), strconv.Itoa(d))
+	err = os.MkdirAll(dir, DPERM)
 	if err != nil {
 		panic(err)
 	}
@@ -65,11 +69,16 @@ func init() {
 	}
 }
 
-func LogDir() string {
-	if logDir == "" {
-		logDir = filepath.Join(BaseDir(), "logs")
+func LogDir() (string, error) {
+	if logDir != "" {
+		return logDir, nil
 	}
-	return logDir
+	base, err := BaseDir()
+	if err != nil {
+		return "", err
+	}
+	logDir = filepath.Join(base, "logs")
+	return logDir, nil
 }
 
 //SetErrorConsoleLogging sets whether errors should be logged to the console.

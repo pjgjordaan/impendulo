@@ -78,7 +78,12 @@ func ExportData(req *http.Request, ctx *Context) (msg string, err error) {
 		return
 	}
 	name := strconv.FormatInt(time.Now().Unix(), 10)
-	path := filepath.Join(util.BaseDir(), "exports", name+".zip")
+	base, err := util.BaseDir()
+	if err != nil {
+		msg = "Unable to export db data."
+		return
+	}
+	path := filepath.Join(base, "exports", name+".zip")
 	err = mongo.ExportData(dbName, path, collections)
 	if err != nil {
 		msg = "Unable to export db data."
@@ -292,7 +297,11 @@ func LoadSkeleton(req *http.Request) (path string, err error) {
 		return
 	}
 	name := bson.NewObjectId().Hex()
-	path = filepath.Join(util.BaseDir(), "skeletons", name+".zip")
+	base, err := util.BaseDir()
+	if err != nil {
+		return
+	}
+	path = filepath.Join(base, "skeletons", name+".zip")
 	//If the skeleton is saved for downloading we don't need to store it again.
 	if util.Exists(path) {
 		return
