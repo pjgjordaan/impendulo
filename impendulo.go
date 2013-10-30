@@ -160,7 +160,7 @@ func modifyAccess() error {
 	if err != nil {
 		return fmt.Errorf("Could not update user %s's access permissions.", params[0])
 	}
-	fmt.Println("Updated %s's permission level to %s.", params[0], newPerm.Name())
+	fmt.Printf("Updated %s's permission level to %s.\n", params[0], newPerm.Name())
 	return nil
 }
 
@@ -176,7 +176,7 @@ func backup() (err error) {
 	defer db.Close()
 	err = db.CopyDB(db.DEFAULT_DB, backupDB)
 	if err == nil {
-		fmt.Println("Successfully Backed-up Main Database to %s.", backupDB)
+		fmt.Printf("Successfully Backed-up Main Database to %s.\n", backupDB)
 	}
 	return
 }

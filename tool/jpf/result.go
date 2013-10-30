@@ -95,7 +95,7 @@ func (this *Result) Summary() *tool.Summary {
 
 //Success is true if no errors were found.
 func (this *Result) Success() bool {
-	return this.Report.Success()
+	return this.Report != nil && this.Report.Success()
 }
 
 //GetReport
