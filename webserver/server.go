@@ -51,10 +51,10 @@ func init() {
 	}
 	//Setup the router.
 	router = pat.New()
+	GenerateDownloads(router, Downloaders())
 	GenerateGets(router, Getters(), Views())
 	GeneratePosts(router, Posters(), IndexPosters())
 	GenerateViews(router, Views())
-	router.Add("GET", "/skeleton.zip", Handler(downloadProject))
 	router.Add("GET", "/static/", FileHandler(StaticDir()))
 	router.Add("GET", "/static", RedirectHandler("/static/"))
 	router.Add("GET", "/logs/", FileHandler(logs))

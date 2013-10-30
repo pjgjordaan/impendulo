@@ -82,7 +82,11 @@ func testUserFunc(t *testing.T, f Poster, requests []postHolder) {
 	if err != nil {
 		t.Error(err)
 	}
-	store := sessions.NewCookieStore(util.CookieKeys())
+	auth, enc, err := util.CookieKeys()
+	if err != nil {
+		t.Error(err)
+	}
+	store := sessions.NewCookieStore(auth, enc)
 	for _, ph := range requests {
 		req, err := http.NewRequest("POST", ph.url, nil)
 		if err != nil {

@@ -30,7 +30,6 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/tool/mongo"
 	"github.com/godfried/impendulo/util"
 	"io/ioutil"
 	"labix.org/v2/mgo/bson"
@@ -40,58 +39,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 )
-
-//ImportData
-func ImportData(req *http.Request, ctx *Context) (msg string, err error) {
-	dbName, err := GetString(req, "db")
-	if err != nil {
-		msg = "Could not read db to import to."
-		return
-	}
-	var data []byte
-	_, data, err = ReadFormFile(req, "data")
-	if err != nil {
-		msg = "Unable to read data file."
-		return
-	}
-	err = mongo.ImportData(dbName, data)
-	if err != nil {
-		msg = "Unable to import db data."
-	} else {
-		msg = "Successfully imported db data."
-	}
-	return
-}
-
-//ExportData
-func ExportData(req *http.Request, ctx *Context) (msg string, err error) {
-	dbName, err := GetString(req, "db")
-	if err != nil {
-		msg = "Could not read db to export."
-		return
-	}
-	collections, err := GetStrings(req, "collections")
-	if err != nil {
-		msg = "Could not read collections to export."
-		return
-	}
-	name := strconv.FormatInt(time.Now().Unix(), 10)
-	base, err := util.BaseDir()
-	if err != nil {
-		msg = "Unable to export db data."
-		return
-	}
-	path := filepath.Join(base, "exports", name+".zip")
-	err = mongo.ExportData(dbName, path, collections)
-	if err != nil {
-		msg = "Unable to export db data."
-	} else {
-		msg = "Successfully exported db data."
-	}
-	return
-}
 
 //ReadFormFile reads a file's name and data from a request form.
 func ReadFormFile(req *http.Request, name string) (fname string, data []byte, err error) {
@@ -288,31 +236,6 @@ func RetrieveSubmissions(req *http.Request, ctx *Context) ([]*project.Submission
 		return db.Submissions(matcher, nil, "-"+db.TIME)
 	}
 	return nil, errors.New("No id found.")
-}
-
-//LoadSkeleton makes a project skeleton available for download.
-func LoadSkeleton(req *http.Request) (path string, err error) {
-	projectId, _, err := getProjectId(req)
-	if err != nil {
-		return
-	}
-	name := bson.NewObjectId().Hex()
-	base, err := util.BaseDir()
-	if err != nil {
-		return
-	}
-	path = filepath.Join(base, "skeletons", name+".zip")
-	//If the skeleton is saved for downloading we don't need to store it again.
-	if util.Exists(path) {
-		return
-	}
-	p, err := db.Project(bson.M{db.ID: projectId}, nil)
-	if err != nil {
-		return
-	}
-	//Save file to filesystem and return path to it.
-	err = util.SaveFile(path, p.Skeleton)
-	return
 }
 
 //getFile

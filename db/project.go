@@ -192,10 +192,7 @@ func RemoveFileById(id interface{}) (err error) {
 		if _, ok := resId.(bson.ObjectId); !ok {
 			continue
 		}
-		err = RemoveById(RESULTS, resId)
-		if err != nil {
-			return
-		}
+		RemoveById(RESULTS, resId)
 	}
 	err = RemoveById(FILES, id)
 	return

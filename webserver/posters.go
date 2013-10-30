@@ -31,6 +31,7 @@ import (
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/mongo"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
@@ -66,7 +67,7 @@ func defaultPosters() map[string]Poster {
 		"addproject": AddProject, "changeskeleton": ChangeSkeleton,
 		"submitarchive": SubmitArchive, "runtool": RunTool,
 		"deleteproject": DeleteProject, "deleteuser": DeleteUser,
-		"importdata": ImportData, "exportdata": ExportData,
+		"deleteresults": DeleteResults, "importdata": ImportData,
 		"evaluatesubmissions": EvaluateSubmissions,
 		"login":               Login, "register": Register,
 		"logout": Logout, "editproject": EditProject,
@@ -225,6 +226,52 @@ func DeleteProject(req *http.Request, ctx *Context) (msg string, err error) {
 	} else {
 		msg = "Successfully deleted project."
 	}
+	return
+}
+
+//DeleteResults removes all results for a specic project.
+func DeleteResults(req *http.Request, ctx *Context) (msg string, err error) {
+	projectId, msg, err := getProjectId(req)
+	if err != nil {
+		return
+	}
+	matcher := bson.M{db.PROJECTID: projectId}
+	submissions, err := db.Submissions(matcher, bson.M{db.ID: 1})
+	if err != nil {
+		msg = "Could not retrieve submissions."
+		return
+	}
+	selector := bson.M{db.DATA: 0}
+	for _, submission := range submissions {
+		matcher := bson.M{db.SUBID: submission.Id}
+		files, ferr := db.Files(matcher, selector)
+		if ferr != nil {
+			util.Log(ferr)
+			continue
+		}
+		for _, file := range files {
+			for _, resId := range file.Results {
+				id, ok := resId.(bson.ObjectId)
+				if !ok {
+					continue
+				}
+				rerr := db.RemoveById(db.RESULTS, id)
+				if rerr != nil {
+					util.Log(rerr)
+				}
+			}
+			change := bson.M{
+				db.SET: bson.M{
+					db.RESULTS: bson.M{},
+				},
+			}
+			uerr := db.Update(db.FILES, bson.M{db.ID: file.Id}, change)
+			if uerr != nil {
+				util.Log(uerr)
+			}
+		}
+	}
+	msg = "Successfully deleted results."
 	return
 }
 
@@ -469,5 +516,27 @@ func EditUser(req *http.Request, ctx *Context) (msg string, err error) {
 	current := req.Header.Get("Referer")
 	current = current[:strings.LastIndex(current, "/")+1] + "editdbview?editing=User"
 	req.Header.Set("Referer", current)
+	return
+}
+
+//ImportData
+func ImportData(req *http.Request, ctx *Context) (msg string, err error) {
+	dbName, err := GetString(req, "db")
+	if err != nil {
+		msg = "Could not read db to import to."
+		return
+	}
+	var data []byte
+	_, data, err = ReadFormFile(req, "data")
+	if err != nil {
+		msg = "Unable to read data file."
+		return
+	}
+	err = mongo.ImportData(dbName, data)
+	if err != nil {
+		msg = "Unable to import db data."
+	} else {
+		msg = "Successfully imported db data."
+	}
 	return
 }

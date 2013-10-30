@@ -1,0 +1,23 @@
+{{define "view"}}
+<h3 class="heading">Delete Project Results</h3>
+<form class="form-horizontal" action="deleteresults" method="post">
+  <div class="form-group">
+    <label class="col-lg-offset-3 col-lg-2 control-label" for="projectid">Project</label>
+    <div class="col-lg-3">
+      <select class="form-control" name="projectid" id="projectid">
+	{{$projects := projects}}
+	{{range $projects}}
+	<option value={{.Id.Hex}}>{{.Name}}</option>
+	{{end}}
+      </select>
+    </div>
+  </div>
+  <div class="form-group">
+    <div class="col-lg-offset-5 col-lg-3">
+      <button type="submit" class="btn btn-default">
+	<span class="glyphicon glyphicon-remove"></span> Delete
+      </button>
+    </div>
+  </div>
+</form>
+{{end}}

@@ -127,14 +127,14 @@ func getFiles(req *http.Request, ctx *Context) (a Args, t Temps, msg string, err
 	if err != nil {
 		return
 	}
-	matcher := bson.M{db.SUBID: ctx.Browse.Sid, db.TYPE: project.SRC}
+	matcher := bson.M{db.SUBID: sid, db.TYPE: project.SRC}
 	fileInfo, err := db.FileInfos(matcher)
 	if err != nil {
 		msg = "Could not retrieve files."
 		return
 	}
 	sub, err := db.Submission(
-		bson.M{db.ID: ctx.Browse.Sid},
+		bson.M{db.ID: sid},
 		bson.M{db.PROJECTID: 1, db.USER: 1},
 	)
 	if err != nil {

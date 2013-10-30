@@ -97,7 +97,11 @@ func TestCreatePMD(t *testing.T) {
 func testToolFunc(t *testing.T, f Poster, requests []postHolder) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
-	store := sessions.NewCookieStore(util.CookieKeys())
+	auth, enc, err := util.CookieKeys()
+	if err != nil {
+		t.Error(err)
+	}
+	store := sessions.NewCookieStore(auth, enc)
 	for _, ph := range requests {
 		req, err := http.NewRequest("POST", ph.url, nil)
 		if err != nil {
@@ -138,7 +142,8 @@ func TestRunTool(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	store := sessions.NewCookieStore(util.CookieKeys())
+	auth, enc, err := util.CookieKeys()
+	store := sessions.NewCookieStore(auth, enc)
 	processing.SetClientAddress("", 8045)
 	go processing.Serve(5, 8045)
 	req, err := http.NewRequest("POST", "/runtool?projectid="+p.Id.Hex()+

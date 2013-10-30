@@ -63,8 +63,9 @@ var (
 	}
 	admin = []string{
 		"projectdeleteview", "deleteproject", "userdeleteview",
-		"deleteuser", "importdataview", "exportdataview",
-		"importdata", "exportdata", "statusview",
+		"deleteuser", "resultsdeleteview", "deleteresults",
+		"importdataview", "exportdataview",
+		"importdata", "exportdb.zip", "statusview",
 		"evaluatesubmissionsview", "evaluatesubmissions", "logs",
 		"editdbview", "loadproject", "editproject", "loaduser",
 		"edituser", "loadsubmission", "editsubmission", "loadfile",
@@ -83,7 +84,7 @@ var (
 	}
 	registerViews = []string{"registerview"}
 	downloadViews = []string{"projectdownloadview"}
-	deleteViews   = []string{"projectdeleteview", "userdeleteview"}
+	deleteViews   = []string{"projectdeleteview", "userdeleteview", "resultsdeleteview"}
 	statusViews   = []string{"statusview"}
 	toolViews     = []string{"runtoolview", "evaluatesubmissionsview"}
 	dataViews     = []string{
