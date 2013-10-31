@@ -128,10 +128,10 @@ func (this *Result) Bug(id string, index int) (bug *tool.Bug, err error) {
 		return
 	}
 	content := []interface{}{
-		this.Report.PatternMap[instance.Type].Description,
 		this.Report.CategoryMap[instance.Category].Description,
-		"Priority: " + strconv.Itoa(instance.Priority),
-		"Rank: " + strconv.Itoa(instance.Rank),
+		this.Report.PatternMap[instance.Type].Description,
+		"Priority: " + strconv.Itoa(instance.Priority) + ", " +
+			"Rank: " + strconv.Itoa(instance.Rank),
 	}
 	bug = tool.NewBug(this, id, content, instance.Line.Start, instance.Line.End)
 	return

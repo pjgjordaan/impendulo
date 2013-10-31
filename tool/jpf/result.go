@@ -95,7 +95,7 @@ func (this *Result) Summary() *tool.Summary {
 
 //Success is true if no errors were found.
 func (this *Result) Success() bool {
-	return this.Report != nil && this.Report.Success()
+	return this.Report.Success()
 }
 
 //GetReport
@@ -127,7 +127,7 @@ func (this *Result) Bug(id string, index int) (bug *tool.Bug, err error) {
 		return
 	}
 	content := []interface{}{
-		"Violation: " + util.ShortName(this.Report.Errors[index].Property),
+		util.ShortName(this.Report.Errors[index].Property),
 		this.Report.Errors[index].Details,
 	}
 	threads := this.Report.Errors[index].Threads

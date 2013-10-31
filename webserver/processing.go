@@ -191,7 +191,12 @@ func codeBug(req *http.Request) (bug *tool.Bug, err error) {
 	if err != nil {
 		return
 	}
-	result, err := db.BugResult(resId, nil)
+	matcher := bson.M{db.ID: resId}
+	name, err := db.ResultName(matcher)
+	if err != nil {
+		return
+	}
+	result, err := db.BugResult(name, matcher, nil)
 	if err != nil {
 		return
 	}

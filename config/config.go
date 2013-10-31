@@ -136,7 +136,6 @@ func DefaultConfig() (string, error) {
 	}
 	iPath, err := util.InstallPath()
 	if err != nil {
-		fmt.Println(defaultFile, err)
 		return "", err
 	}
 	installedConfig := filepath.Join(iPath, "config", "config.json")

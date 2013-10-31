@@ -6,9 +6,6 @@
 <pre class="brush: java; highlight: [{{range $i, $v := $report.Bug.Lines}}{{$v}}{{if ne $i $size}}, {{end}}{{end}}];" id="code{{$addr}}">
 {{$report.Data}}
 </pre>
-<script>
-  highlight({{$report.Bug.Content}});
-</script>
 {{else}}
 <pre class="brush: java;" id="code{{$addr}}">
 {{$report.Data}}

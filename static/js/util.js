@@ -129,15 +129,19 @@ function addalert(srcParent, destParent, src) {
     document.getElementById(srcParent).removeChild(src);
 }
 
-function highlight(content){
+function highlight(bug){
     SyntaxHighlighter.defaults['toolbar'] = false;
     SyntaxHighlighter.defaults['class-name'] = 'error';
     SyntaxHighlighter.all();
+    if(bug == undefined){
+	return;
+    }
     window.onload = function(){
-	var lines = document.getElementsByClassName("highlighted");
+	var lines = document.getElementsByClassName('highlighted');
 	if(lines[0] != undefined){
 	    lines[0].scrollIntoView();
-	    var body = '';
+	    var body = bug.Title + '\n';
+	    var content = bug.Content;
 	    for(var i = 0; i < content.length; i ++){
 		body += content[i].trim();
 		if(i < content.length - 1){

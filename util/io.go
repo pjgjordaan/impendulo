@@ -199,7 +199,6 @@ func IsExec(path string) bool {
 }
 
 func CopyFile(dest, src string) (err error) {
-	fmt.Println(dest, src)
 	r, err := os.Open(src)
 	if err != nil {
 		return

@@ -314,11 +314,6 @@ func runTools(submissions []*project.Submission, tool string, runAll bool) {
 			util.Log(err)
 			continue
 		}
-		err = processing.StartSubmission(submission.Id)
-		if err != nil {
-			util.Log(err)
-			continue
-		}
 		for _, file := range files {
 			if runAll {
 				if tool == "all" {
@@ -328,12 +323,8 @@ func runTools(submissions []*project.Submission, tool string, runAll bool) {
 				}
 
 			}
-			err = processing.AddFile(file)
-			if err != nil {
-				util.Log(err)
-			}
 		}
-		err = processing.EndSubmission(submission.Id)
+		err = processing.RedoSubmission(submission.Id)
 		if err != nil {
 			util.Log(err)
 		}
@@ -428,9 +419,7 @@ func GetResult(resultName string, fileId bson.ObjectId) (res tool.DisplayResult,
 		case bson.ObjectId:
 			//Retrieve result from the db.
 			matcher = bson.M{db.ID: val}
-			res, err = db.DisplayResult(
-				resultName, matcher, nil,
-			)
+			res, err = db.DisplayResult(resultName, matcher, nil)
 		case string:
 			//Error, so create new error result.
 			res = tool.NewErrorResult(val, resultName)

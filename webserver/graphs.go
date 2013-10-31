@@ -34,7 +34,7 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
-func LoadChart(resultName string, files []*project.File, startTime int64) (tool.ChartData, error) {
+func LoadChart(resultName string, files []*project.File) (tool.ChartData, error) {
 	if len(files) == 0 {
 		return nil, errors.New("No files to load chart for.")
 	}
@@ -43,7 +43,7 @@ func LoadChart(resultName string, files []*project.File, startTime int64) (tool.
 	if err != nil {
 		return nil, err
 	}
-	chart := tool.NewChart(*sub, float64(startTime-files[0].Time))
+	chart := tool.NewChart(*sub)
 	for _, f := range files {
 		matcher := bson.M{db.ID: f.Id}
 		file, err := db.File(matcher, selector)
@@ -70,13 +70,13 @@ func LoadChart(resultName string, files []*project.File, startTime int64) (tool.
 	}
 	for _, launch := range launches {
 		val := []tool.ChartVal{{"Launches", 0.0, false}}
-		chart.Add(float64(launch.Time), val)
+		chart.Add(launch.Time, val)
 	}
 	return chart.Data, nil
 }
 
 func addAll(chart *tool.Chart, file project.File) {
-	ftime := float64(file.Time)
+	ftime := file.Time
 	for name, id := range file.Results {
 		result, err := db.ChartResult(name, bson.M{db.ID: id}, nil)
 		if err != nil {
@@ -92,7 +92,7 @@ func addSingle(chart *tool.Chart, file project.File, resultName string) {
 	if err != nil {
 		return
 	}
-	chart.Add(float64(file.Time), result.ChartVals(false))
+	chart.Add(file.Time, result.ChartVals(false))
 }
 
 func SubmissionChart(subs []*project.Submission) (ret tool.ChartData) {

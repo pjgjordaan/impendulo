@@ -48,11 +48,10 @@ type (
 	}
 	//Chart represents the x and y values used to draw the charts.
 	Chart struct {
-		adjust float64
-		time   int64
-		user   string
-		subId  string
-		Data   ChartData
+		start int64
+		user  string
+		subId string
+		Data  ChartData
 	}
 
 	ChartData []map[string]interface{}
@@ -117,6 +116,7 @@ type (
 	Bug struct {
 		Id               string
 		ResultId, FileId bson.ObjectId
+		Title            string
 		Content          []interface{}
 		Lines            []int
 	}
@@ -152,25 +152,25 @@ type (
 )
 
 //Add inserts new coordinates into data used to display a chart.
-func (this *Chart) Add(x float64, vals []ChartVal) {
+func (this *Chart) Add(time int64, vals []ChartVal) {
+	x := float64(time-this.start) / 1000
 	for _, val := range vals {
 		point := map[string]interface{}{
 			"x": x, "y": val.Y, "key": val.Name + " " + this.subId,
 			"name": val.Name, "subId": this.subId, "user": this.user,
-			"created": this.time, "adjust": this.adjust, "show": val.Show,
+			"created": this.start, "time": time, "show": val.Show,
 		}
 		this.Data = append(this.Data, point)
 	}
 }
 
 //NewChart initialises new chart data.
-func NewChart(submission project.Submission, adjust float64) *Chart {
+func NewChart(submission project.Submission) *Chart {
 	return &Chart{
-		adjust: adjust,
-		time:   submission.Time,
-		user:   submission.User,
-		subId:  submission.Id.Hex(),
-		Data:   NewChartData(),
+		start: submission.Time,
+		user:  submission.User,
+		subId: submission.Id.Hex(),
+		Data:  NewChartData(),
 	}
 }
 
@@ -270,6 +270,7 @@ func NewBug(result ToolResult, id string, content []interface{}, start, end int)
 		Id:       id,
 		ResultId: result.GetId(),
 		FileId:   result.GetFileId(),
+		Title:    result.GetName() + " Violation",
 		Content:  content,
 		Lines:    lines,
 	}

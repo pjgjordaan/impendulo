@@ -148,9 +148,6 @@ func JavacResult(matcher, selector bson.M) (ret *javac.Result, err error) {
 		err = &DBGetError{"result", err, matcher}
 	} else if HasGridFile(ret, selector) {
 		err = GridFile(ret.GetId(), &ret.Report)
-		if err != nil {
-			return
-		}
 	}
 	return
 }
@@ -226,27 +223,8 @@ func ChartResult(name string, matcher, selector bson.M) (ret tool.ChartResult, e
 
 //BugResult retrieves a tool.BugResult matching
 //the given interface and name from the active database.
-func BugResult(id interface{}, selector bson.M) (ret tool.BugResult, err error) {
-	session, err := Session()
-	if err != nil {
-		return
-	}
-	defer session.Close()
-	c := session.DB("").C(RESULTS)
-	var names []string
-	matcher := bson.M{ID: id}
-	err = c.Find(matcher).
-		Select(bson.M{NAME: 1}).
-		Distinct(NAME, &names)
-	if err != nil {
-		err = &DBGetError{"result", err, matcher}
-		return
-	}
-	if len(names) == 0 {
-		err = fmt.Errorf("Could not retrieve result name.")
-		return
-	}
-	switch names[0] {
+func BugResult(name string, matcher, selector bson.M) (ret tool.BugResult, err error) {
+	switch name {
 	case jpf.NAME:
 		ret, err = JPFResult(matcher, selector)
 	case findbugs.NAME:
@@ -256,7 +234,28 @@ func BugResult(id interface{}, selector bson.M) (ret tool.BugResult, err error) 
 	case checkstyle.NAME:
 		ret, err = CheckstyleResult(matcher, selector)
 	default:
-		err = fmt.Errorf("Unsupported result %q.", names[0])
+		err = fmt.Errorf("Unsupported result %q.", name)
+	}
+	return
+}
+
+func ResultName(matcher bson.M) (name string, err error) {
+	session, err := Session()
+	if err != nil {
+		return
+	}
+	defer session.Close()
+	c := session.DB("").C(RESULTS)
+	var names []string
+	err = c.Find(matcher).
+		Select(bson.M{NAME: 1}).
+		Distinct(NAME, &names)
+	if err != nil {
+		err = &DBGetError{"result", err, matcher}
+	} else if len(names) == 0 {
+		err = fmt.Errorf("Could not retrieve result name.")
+	} else {
+		name = names[0]
 	}
 	return
 }

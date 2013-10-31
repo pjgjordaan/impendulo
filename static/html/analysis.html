@@ -107,4 +107,15 @@
   </div>
 </div>
 {{end}}
+{{if (eq $resultName "Code")}}
+<script>
+  var bug = undefined;
+  {{if .currentResult.GetReport.Bug}}
+  bug = {{.currentResult.GetReport.Bug}};
+  {{else if .nextResult.GetReport.Bug}}
+  bug = {{.nextResult.GetReport.Bug}};
+  {{end}}
+  highlight(bug);
+</script>
+{{end}}
 {{end}}

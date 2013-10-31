@@ -275,7 +275,7 @@ func DeleteResults(req *http.Request, ctx *Context) (msg string, err error) {
 	return
 }
 
-//EditProject
+//EditProject is used to modify a project's metadata.
 func EditProject(req *http.Request, ctx *Context) (msg string, err error) {
 	projectId, msg, err := getProjectId(req)
 	if err != nil {

@@ -63,24 +63,24 @@ function timeChart(fileName, resultName, chartData, compare) {
     };    
     var y = d3.scale.linear()
 	.domain(d3.extent(chartData, getY))
-	.range([h, 0]);
-    
-    var x = d3.time.scale()
-	.domain(d3.extent(chartData, getChartX))
+	.range([h, 0]);  
+
+    var x = d3.scale.linear()
+	.domain(d3.extent(chartData, getX))
 	.range([0, w]);  
 
     var loadLink = function(d) {
-	var href = 'displayresult?time='+d.x+
+	var href = 'displayresult?time='+d.time+
 	    '&result='+resultName+
 	    '&file='+fileName+
-	    '&sid='+d.subId+
-	    '&uid='+d.user;
+	    '&subid='+d.subId+
+	    '&userid='+d.user;
 	href = compare ? href + compare : href;
 	return href;
     };
 
-    var loadDate = function(d,i) { 
-	return x(new Date(getChartX(d))); 
+    var loadX = function(d,i) { 
+	return x(getX(d)); 
     };
 
     var loadY = function(d) {
@@ -114,7 +114,7 @@ function timeChart(fileName, resultName, chartData, compare) {
 
     var line = d3.svg.line()
 	.interpolate('linear')
-    	.x(loadDate)
+    	.x(loadX)
 	.y(loadY);
     
     var xAxis = d3.svg.axis()
@@ -157,7 +157,7 @@ function timeChart(fileName, resultName, chartData, compare) {
 		.transition()
 		.duration(duration)
 		.ease(ease)
-		.attr('cx', loadDate)
+		.attr('cx', loadX)
 		.attr('cy', loadY)
 		.attr('r', DOT_RADIUS);
 	    chartBody.selectAll('.launch')
@@ -165,9 +165,9 @@ function timeChart(fileName, resultName, chartData, compare) {
 		.duration(duration)
 		.ease(ease)
 		.attr('points', function(d){
-		    return star(loadDate(d), y(mid));
+		    return star(loadX(d), y(mid));
 		})
-    		.attr('cx', loadDate)
+    		.attr('cx', loadX)
 		.attr('cy', y(mid));
 	});
     
@@ -193,7 +193,7 @@ function timeChart(fileName, resultName, chartData, compare) {
         .attr('x', w/2 )
         .attr('y',  h+40)
         .style('text-anchor', 'middle')
-        .text('Time');
+        .text('Running Time (s)');
     
     chart.append('svg:g')
 	.attr('class', 'y axis')
@@ -238,7 +238,7 @@ function timeChart(fileName, resultName, chartData, compare) {
 	.append('svg:circle')
 	.attr('class', 'dot')
 	.attr('fill', chartColour)
-    	.attr('cx', loadDate)
+    	.attr('cx', loadX)
 	.attr('cy', loadY)
 	.attr('r', DOT_RADIUS)
 	.on('mouseover', showTooltip)
@@ -252,9 +252,9 @@ function timeChart(fileName, resultName, chartData, compare) {
 	.attr('class', 'launch')
 	.attr('fill', chartColour)
     	.attr('points', function(d){
-	    return star(loadDate(d), y(mid));
+	    return star(loadX(d), y(mid));
 	})
-    	.attr('cx', loadDate)
+    	.attr('cx', loadX)
 	.attr('cy', y(mid))
 	.attr('key', chartKey)
 	.style('opacity', function(d){
@@ -382,22 +382,22 @@ function summaryTimeChart(fileName, resultName, chartData, compare) {
 	    .domain(d3.extent(vals, getY))
 	    .range([h, 0]);
     }
-    var x = d3.time.scale()
-	.domain(d3.extent(chartData, getChartX))
+    var x = d3.linear.scale()
+	.domain(d3.extent(chartData, getX))
 	.range([0, w]);  
 
     var loadLink = function(d) {
-	var href = 'displayresult?time='+d.x+
+	var href = 'displayresult?time='+d.time+
 	    '&result='+resultName+
 	    '&file='+fileName+
-	    '&sid='+d.subId+
-	    '&uid='+d.user;
+	    '&subid='+d.subId+
+	    '&userid='+d.user;
 	href = compare ? href + compare : href;
 	return href;
     };
 
-    var loadDate = function(d,i) { 
-	return x(new Date(getChartX(d))); 
+    var loadX = function(d,i) { 
+	return x(getX(d)); 
     };
 
     var loadY = function(d) {
@@ -431,7 +431,7 @@ function summaryTimeChart(fileName, resultName, chartData, compare) {
 
     var line = d3.svg.line()
 	.interpolate('linear')
-    	.x(loadDate)
+    	.x(loadX)
 	.y(loadY);
     
     var xAxis = d3.svg.axis()
@@ -462,7 +462,7 @@ function summaryTimeChart(fileName, resultName, chartData, compare) {
 		.transition()
 		.duration(duration)
 		.ease(ease)
-		.attr('cx', loadDate)
+		.attr('cx', loadX)
 		.attr('cy', loadY)
 		.attr('r', DOT_RADIUS);
 	    chartBody.selectAll('.launch')
@@ -470,9 +470,9 @@ function summaryTimeChart(fileName, resultName, chartData, compare) {
 		.duration(duration)
 		.ease(ease)
 		.attr('points', function(d){
-		    return star(loadDate(d), scales[d.key](mid));
+		    return star(loadX(d), scales[d.key](mid));
 		})
-    		.attr('cx', loadDate)
+    		.attr('cx', loadX)
 		.attr('cy', function(d){
 		    return scales[d.key](mid);
 		});
@@ -500,7 +500,7 @@ function summaryTimeChart(fileName, resultName, chartData, compare) {
         .attr('x', w/2 )
         .attr('y',  h+40)
         .style('text-anchor', 'middle')
-        .text('Time');
+        .text('Running Time (s)');
        
     chart.append('svg:clipPath')
 	.attr('id', 'clip')
@@ -540,7 +540,7 @@ function summaryTimeChart(fileName, resultName, chartData, compare) {
 	.append('svg:circle')
 	.attr('class', 'dot')
 	.attr('fill', chartColour)
-    	.attr('cx', loadDate)
+    	.attr('cx', loadX)
 	.attr('cy', loadY)
 	.attr('r', DOT_RADIUS)
 	.on('mouseover', showTooltip)
@@ -554,9 +554,9 @@ function summaryTimeChart(fileName, resultName, chartData, compare) {
 	.attr('class', 'launch')
 	.attr('fill', chartColour)
     	.attr('points', function(d){
-	    return star(loadDate(d), scales[d.key](mid));
+	    return star(loadX(d), scales[d.key](mid));
 	})
-    	.attr('cx', loadDate)
+    	.attr('cx', loadX)
 	.attr('cy', function(d){
 	    return scales[d.key](mid);
 	})
@@ -674,7 +674,7 @@ function getUnique(arr){
 }
 
 function showTooltip(d){
-    var xVal = new Date(getChartX(d)).toLocaleTimeString();
+    var xVal = getX(d);
     var xPos = parseFloat(d3.select(this).attr('cx'));
     var yPos = parseFloat(d3.select(this).attr('cy'));
     var text = d.name+': '+d.y;
@@ -708,18 +708,10 @@ function showTooltip(d){
 	.append('p')
 	.attr('class', 'tooltip-line')
 	.text(text);
-    if(d.adjust > 0){
-	var adjustment = ' (+'+new Date(d.adjust).toLocaleTimeString()+')'
-	tooltip
-	    .append('p')
-	    .attr('class', 'tooltip-line')
-	    .text(xVal + adjustment)
-    } else{
-	tooltip
-	    .append('p')
-	    .attr('class', 'tooltip-line')
-	    .text(xVal);
-    }
+    tooltip
+	.append('p')
+	.attr('class', 'tooltip-line')
+	.text(xVal);
     tooltip
 	.transition()
         .duration(500)	
@@ -774,11 +766,7 @@ function toggleVisibility(d){
 	.style('opacity', chartOpacity);
 }
 
-function getChartX(d){
-    return +(d.x + d.adjust);
-}
-
-function getActualX(d){
+function getX(d){
     return +d.x;
 }
 

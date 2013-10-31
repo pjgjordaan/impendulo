@@ -34,10 +34,7 @@ import (
 )
 
 type (
-	//Report stores the results of running Findbugs. It is
-	//populated from XML output produced by findbugs.
-	Report struct {
-		Id      bson.ObjectId
+	DummyReport struct {
 		Time    int      `xml:"analysisTimestamp,attr"`
 		Summary *Summary `xml:"FindBugsSummary"`
 		//Instances is all the bugs found by Findbugs
@@ -46,6 +43,16 @@ type (
 		Categories []*BugCategory `xml:"BugCategory"`
 		//Patterns is the bug patterns found by Findbugs.
 		Patterns []*BugPattern `xml:"BugPattern"`
+	}
+
+	//Report stores the results of running Findbugs. It is
+	//populated from XML output produced by findbugs.
+	Report struct {
+		Id      bson.ObjectId
+		Time    int
+		Summary *Summary
+		//Instances is all the bugs found by Findbugs
+		Instances []*BugInstance
 		//CategoryMap and PatternMap make it easier to use the bug categories and patterns.
 		CategoryMap map[string]*BugCategory
 		PatternMap  map[string]*BugPattern
@@ -205,12 +212,25 @@ func init() {
 
 //NewReport
 func NewReport(id bson.ObjectId, data []byte) (res *Report, err error) {
-	if err = xml.Unmarshal(data, &res); err != nil {
+	var dummy *DummyReport
+	if err = xml.Unmarshal(data, &dummy); err != nil {
 		err = tool.NewXMLError(err, "findbugs/findbugsResult.go")
 		return
 	}
-	res.loadMaps()
-	res.Id = id
+	res = &Report{
+		Id:          id,
+		Time:        dummy.Time,
+		Summary:     dummy.Summary,
+		Instances:   dummy.Instances,
+		CategoryMap: make(map[string]*BugCategory),
+		PatternMap:  make(map[string]*BugPattern),
+	}
+	for _, cat := range dummy.Categories {
+		res.CategoryMap[cat.Name] = cat
+	}
+	for _, pat := range dummy.Patterns {
+		res.PatternMap[pat.Type] = pat
+	}
 	for _, bug := range res.Instances {
 		bug.Id = bson.NewObjectId()
 	}
@@ -226,20 +246,6 @@ func (this *Report) Success() bool {
 func (this *Report) String() string {
 	return fmt.Sprintf("Id: %q; Summary: %s",
 		this.Id, this.Summary)
-}
-
-//loadMaps generates maps from Categories and Paterns for easier access.
-func (this *Report) loadMaps() {
-	this.CategoryMap = make(map[string]*BugCategory)
-	this.PatternMap = make(map[string]*BugPattern)
-	for _, cat := range this.Categories {
-		this.CategoryMap[cat.Name] = cat
-	}
-	this.Categories = nil
-	for _, pat := range this.Patterns {
-		this.PatternMap[pat.Type] = pat
-	}
-	this.Patterns = nil
 }
 
 //String

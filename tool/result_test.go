@@ -31,7 +31,7 @@ import (
 )
 
 func TestChartAdd(t *testing.T) {
-	chart := NewChart(*project.NewSubmission(bson.NewObjectId(), "user", project.FILE_MODE, 100000), 1000)
+	chart := NewChart(*project.NewSubmission(bson.NewObjectId(), "user", project.FILE_MODE, 100000))
 	chart.Add(0, nil)
 	chart.Add(0, []ChartVal{{}})
 }

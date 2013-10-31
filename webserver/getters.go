@@ -252,8 +252,7 @@ func displayChart(req *http.Request, ctx *Context) (a Args, t Temps, msg string,
 	if err != nil {
 		return
 	}
-	startTime := files[0].Time
-	chart, err := LoadChart(ctx.Browse.Result, files, startTime)
+	chart, err := LoadChart(ctx.Browse.Result, files)
 	if err != nil {
 		return
 	}
@@ -266,7 +265,7 @@ func displayChart(req *http.Request, ctx *Context) (a Args, t Temps, msg string,
 			return
 		}
 		var compChart tool.ChartData
-		compChart, err = LoadChart(ctx.Browse.Result, compFiles, startTime)
+		compChart, err = LoadChart(ctx.Browse.Result, compFiles)
 		if err != nil {
 			return
 		}
@@ -345,15 +344,16 @@ func displayResult(req *http.Request, ctx *Context) (a Args, t Temps, msg string
 		bug, err = codeBug(req)
 		if err != nil {
 			return
-		}
-		switch bug.FileId {
-		case currentFile.Id:
-			currentResult.(*tool.CodeResult).Bug = bug
-		case nextFile.Id:
-			nextResult.(*tool.CodeResult).Bug = bug
-		default:
-			err = fmt.Errorf("Result %s does not match any files.", bug.FileId.Hex())
-			return
+		} else if bug != nil {
+			switch bug.FileId {
+			case currentFile.Id:
+				currentResult.(*tool.CodeResult).Bug = bug
+			case nextFile.Id:
+				nextResult.(*tool.CodeResult).Bug = bug
+			default:
+				err = fmt.Errorf("Result %s does not match any files.", bug.FileId.Hex())
+				return
+			}
 		}
 	}
 	a = Args{

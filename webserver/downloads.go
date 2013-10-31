@@ -118,6 +118,6 @@ func ExportData(req *http.Request) (path string, err error) {
 		return
 	}
 	path = filepath.Join(base, "exports", name+".zip")
-	err = mongo.ExportData(dbName, path, collections)
+	err = mongo.ExportData(path, dbName, collections)
 	return
 }
