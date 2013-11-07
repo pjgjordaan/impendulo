@@ -1,11 +1,11 @@
 {{define "config"}}
-<h3>Change JPF Configuration File</h3>
-<form class="form-horizontal" action="addjpf" method="post" enctype="multipart/form-data">
+<h3>Change Project Makefile</h3>
+<form class="form-horizontal" action="createmake" method="post" enctype="multipart/form-data">
   <div class="form-group">
     <label class="col-lg-2 control-label" for="projectid">Project</label>
     <div class="col-lg-3">
       <select class="form-control" name="projectid" id="projectid">
-	{{$projects := langProjects "Java"}}
+	{{$projects := langProjects "C"}}
 	{{range $projects}}
 	<option value={{.Id.Hex}}>{{.Name}}</option>
 	{{end}}
@@ -13,9 +13,9 @@
     </div>
   </div>
   <div class="form-group">
-    <label class="col-lg-2 control-label" for="jpf">JPF Configuration File</label>
+    <label class="col-lg-2 control-label" for="jpf">Makefile</label>
     <div class="col-lg-3">
-      <input class="form-control" name="jpf" type="file" id="jpf">
+      <input class="form-control" name="makefile" type="file" id="makefile">
     </div>
   </div>
   <div class="form-group">

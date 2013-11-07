@@ -29,7 +29,7 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
-	"html/template"
+	//"html/template"
 	"strings"
 )
 
@@ -58,13 +58,12 @@ func NewResult(file *project.File) *Result {
 
 //Create calculates the diff of two Results' code, converts it to HTML
 //and returns this.
-func (this *Result) Create(next *Result) (ret template.HTML, err error) {
-	diff, err := Diff(this.data, next.data)
+func (this *Result) Create(next *Result) (ret string, err error) {
+	ret, err = Diff(this.data, next.data)
 	if err != nil {
 		return
 	}
-	diff = SetHeader(diff, this.header, next.header)
-	ret, err = Diff2HTML(diff)
+	ret = SetHeader(ret, this.header, next.header)
 	return
 
 }

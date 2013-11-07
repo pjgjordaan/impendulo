@@ -6,13 +6,43 @@
 <h2 class="text-center"><small>user</small> {{.ctx.Browse.Uid}} <br>
   <small>project</small> {{$project}}</h2>
 <ul class="list-unstyled">
+  {{$charts := chartNames .ctx.Browse.Pid}}
+  {{$tools := analysisNames .ctx.Browse.Pid}}
   {{range .fileInfo}}
+  {{$fileName := .Name}}
   <li>
-    <h3>{{.Name}}</h3>
+    <h3>{{$fileName}}</h3>
     <h5>{{.Count}} Snapshots</h5>
-    {{$javac := "Javac"}}
-    <a href="{{displayResult $sid $uid $javac .Name 0 1}}">Analysis</a>
-    <a href="{{singleChart $sid $uid $javac .Name}}">Charts</a>
+    <ul class="list-inline">
+      <li class="dropdown">
+	<a class="dropdown-toggle" data-toggle="dropdown" href="#">
+	  Analysis <span class="caret"></span>
+	</a>
+	<ul class="dropdown-menu" role="menu">
+	  {{range $tools}}  
+	  <li>
+	    <a href="{{displayResult $sid $uid . $fileName 0 1}}">
+	      {{.}}
+	    </a>
+	  </li>
+	  {{end}}
+	</ul>
+      </li>
+      <li class="dropdown">
+	<a class="dropdown-toggle" data-toggle="dropdown" href="#">
+	  Charts <span class="caret"></span>
+	</a>
+	<ul class="dropdown-menu" role="menu">
+	  {{range $charts}}  
+	  <li>
+	    <a href="{{singleChart $sid $uid . $fileName}}">
+	      {{.}}
+	    </a>
+	  </li>
+	  {{end}}
+	</ul>
+      </li>
+    </ul>
   </li>
   {{end}}
 </ul>

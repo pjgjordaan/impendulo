@@ -61,7 +61,7 @@ func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
 		return
 	}
 	matcher := bson.M{db.ID: sub.ProjectId}
-	proj, err := db.Project(matcher, nil)
+	proj, err := db.Project(matcher, bson.M{db.SKELETON: 0})
 	if err != nil {
 		return
 	}
@@ -129,8 +129,7 @@ func (this *Processor) ProcessFile(file *project.File) (err error) {
 		err = this.Extract(file)
 	case project.SRC:
 		//Create a target for the tools to run on and save the file.
-		target := tool.NewTarget(file.Name,
-			this.project.Lang, file.Package, this.srcDir)
+		target := tool.NewTarget(file.Name, file.Package, this.srcDir, tool.Language(this.project.Lang))
 		err = util.SaveFile(target.FilePath(), file.Data)
 		if err == nil {
 			this.RunTools(file, target)

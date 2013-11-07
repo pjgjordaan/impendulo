@@ -43,7 +43,7 @@ const (
 type (
 	ChartVal struct {
 		Name string
-		Y    float64
+		Y    int
 		Show bool
 	}
 	//Chart represents the x and y values used to draw the charts.
@@ -58,7 +58,7 @@ type (
 
 	//ChartResult is used to display result data in a chart.
 	ChartResult interface {
-		ChartVals(summary bool) []ChartVal
+		ChartVals() []ChartVal
 		GetName() string
 	}
 
@@ -133,6 +133,7 @@ type (
 
 	//CodeResult is a DisplayResult used to display a source file's code.
 	CodeResult struct {
+		Lang string
 		Data string
 		Bug  *Bug
 	}
@@ -149,6 +150,19 @@ type (
 		//The text to be displayed in the summary.
 		Body string
 	}
+	//CompileType tells us what type of result compilation gave us.
+	CompileType int
+)
+
+const (
+	//The different types of compilation that we can have.
+	SUCCESS CompileType = iota
+	WARNINGS
+	ERRORS
+)
+
+var (
+	COMPILE_SUCCESS = []byte("Compiled successfully")
 )
 
 //Add inserts new coordinates into data used to display a chart.
@@ -189,7 +203,7 @@ func NewErrorResult(tipe, resultName string) *ErrorResult {
 		err = fmt.Errorf("No result available for %s.", resultName)
 	default:
 		tipe = ERROR
-		err = fmt.Errorf("Could not retrieve result for %s.", resultName)
+		err = fmt.Errorf("Error %s: could not retrieve result for %s.", tipe, resultName)
 	}
 	return &ErrorResult{
 		err:  err,
@@ -213,8 +227,9 @@ func (this *ErrorResult) Template() string {
 }
 
 //NewCodeResult
-func NewCodeResult(data []byte) *CodeResult {
+func NewCodeResult(lang string, data []byte) *CodeResult {
 	return &CodeResult{
+		Lang: strings.ToLower(lang),
 		Data: strings.TrimSpace(string(data)),
 	}
 }

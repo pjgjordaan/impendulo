@@ -42,8 +42,9 @@ type (
 
 	//EndError is an error used to indicate that a command gave an error upon completion.
 	EndError struct {
-		args []string
-		err  error
+		args   []string
+		err    error
+		stdErr string
 	}
 
 	//CompileError is used to indicate that compilation failed.
@@ -112,8 +113,8 @@ func (this *StartError) Error() string {
 
 //Error
 func (this *EndError) Error() string {
-	return fmt.Sprintf("Encountered end error %q executing command %q",
-		this.err, this.args)
+	return fmt.Sprintf("Encountered end error %q: %s executing command %q",
+		this.err, this.stdErr, this.args)
 }
 
 //NewCompileError

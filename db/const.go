@@ -34,6 +34,7 @@ const (
 	PROJECTS    = "projects"
 	JPF         = "jpf"
 	PMD         = "pmd"
+	MAKE        = "make"
 	//Mongodb command
 	SET = "$set"
 	//Mongodb connection and db names

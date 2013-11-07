@@ -26,6 +26,7 @@ package db
 
 import (
 	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/tool/javac"
@@ -128,7 +129,7 @@ func findbugsReport(id bson.ObjectId) *findbugs.Report {
 func javacReport(id bson.ObjectId) *javac.Report {
 	return &javac.Report{
 		Id:    id,
-		Type:  javac.ERRORS,
+		Type:  tool.ERRORS,
 		Count: 4,
 		Data:  []byte("some errors were found"),
 	}

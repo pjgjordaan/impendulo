@@ -39,8 +39,7 @@ func TestRun(t *testing.T) {
 	os.Mkdir(location, util.DPERM)
 	defer os.RemoveAll(location)
 	os.Mkdir(srcLocation, util.DPERM)
-	target := tool.NewTarget("Triangle.java",
-		tool.JAVA, "triangle", location)
+	target := tool.NewTarget("Triangle.java", "triangle", location, tool.JAVA)
 	err := util.SaveFile(target.FilePath(), file)
 	if err != nil {
 		t.Errorf("Could not save file %q", err)

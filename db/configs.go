@@ -27,6 +27,7 @@ package db
 import (
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
+	mk "github.com/godfried/impendulo/tool/make"
 	"github.com/godfried/impendulo/tool/pmd"
 	"labix.org/v2/mgo/bson"
 )
@@ -139,6 +140,36 @@ func AddJUnitTest(t *junit.Test) (err error) {
 	err = col.Insert(t)
 	if err != nil {
 		err = &DBAddError{t.String(), err}
+	}
+	return
+}
+
+func Makefile(matcher, selector interface{}) (ret *mk.Makefile, err error) {
+	session, err := Session()
+	if err != nil {
+		return
+	}
+	defer session.Close()
+	c := session.DB("").C(MAKE)
+	err = c.Find(matcher).Select(selector).One(&ret)
+	if err != nil {
+		err = &DBGetError{"makefile", err, matcher}
+	}
+	return
+}
+
+func AddMakefile(mfile *mk.Makefile) (err error) {
+	session, err := Session()
+	if err != nil {
+		return
+	}
+	defer session.Close()
+	col := session.DB("").C(MAKE)
+	matcher := bson.M{PROJECTID: mfile.ProjectId}
+	col.RemoveAll(matcher)
+	err = col.Insert(mfile)
+	if err != nil {
+		err = &DBAddError{"Makefile", err}
 	}
 	return
 }

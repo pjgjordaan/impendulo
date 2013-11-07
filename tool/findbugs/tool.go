@@ -52,7 +52,7 @@ func New() (tool *FindBugs, err error) {
 }
 
 //Lang is Java.
-func (this *FindBugs) Lang() string {
+func (this *FindBugs) Lang() tool.Language {
 	return tool.JAVA
 }
 
@@ -82,6 +82,9 @@ func (this *FindBugs) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.T
 		//Success
 		data := util.ReadBytes(resFile)
 		res, err = NewResult(fileId, data)
+		if err != nil && execRes.Err != nil {
+			err = execRes.Err
+		}
 	} else if execRes.HasStdErr() {
 		//Findbugs generated an error
 		err = fmt.Errorf("Could not run findbugs: %q.",

@@ -29,38 +29,38 @@ import (
 )
 
 func TestPackagePath(t *testing.T) {
-	targ := NewTarget("", "", ".c.a", "d/a/fa")
+	targ := NewTarget("", ".c.a", "d/a/fa", JAVA)
 	if targ.PackagePath() != "d/a/fa/c/a" {
 		t.Errorf("Invalid package path %s", targ.PackagePath())
 	}
-	targ = NewTarget("", "", "", "d/a/fa")
+	targ = NewTarget("", "", "d/a/fa", JAVA)
 	if targ.PackagePath() != "d/a/fa" {
 		t.Errorf("Invalid package path %s", targ.PackagePath())
 	}
-	targ = NewTarget("", "", "a.v.a", "")
+	targ = NewTarget("", "a.v.a", "", JAVA)
 	if targ.PackagePath() != "a/v/a" {
 		t.Errorf("Invalid package path %s", targ.PackagePath())
 	}
-	targ = NewTarget("", "", "..", "/")
+	targ = NewTarget("", "..", "/", JAVA)
 	if targ.PackagePath() != "/" {
 		t.Errorf("Invalid package path %s", targ.PackagePath())
 	}
 }
 
 func TestExecutable(t *testing.T) {
-	targ := NewTarget("hello.c", "", "c.a.d", "")
+	targ := NewTarget("hello.c", "c.a.d", "", JAVA)
 	if targ.Executable() != "c.a.d.hello" {
 		t.Errorf("Invalid executable %s", targ.Executable())
 	}
-	targ = NewTarget("hello.c.d.a", "", "", "")
+	targ = NewTarget("hello.c.d.a", "", "", JAVA)
 	if targ.Executable() != "hello" {
 		t.Errorf("Invalid executable %s", targ.Executable())
 	}
-	targ = NewTarget("", "", "", "")
+	targ = NewTarget("", "", "", JAVA)
 	if targ.Executable() != "" {
 		t.Errorf("Invalid executable %s", targ.Executable())
 	}
-	targ = NewTarget("", "", "a.b.c", "")
+	targ = NewTarget("", "a.b.c", "", JAVA)
 	if targ.Executable() != "a.b.c." {
 		t.Errorf("Invalid executable %s", targ.Executable())
 	}

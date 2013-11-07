@@ -77,6 +77,8 @@ const (
 	DIFF  Bin = "diff"
 	JAVA  Bin = "java"
 	JAVAC Bin = "javac"
+	GCC   Bin = "gcc"
+	MAKE  Bin = "make"
 
 	//Configurations
 	CHECKSTYLE_CFG Cfg = "checkstyle_cfg"

@@ -38,6 +38,7 @@ import (
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
+	mk "github.com/godfried/impendulo/tool/make"
 	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
@@ -54,6 +55,7 @@ var (
 		junit.NAME:      "junitconfig",
 		findbugs.NAME:   "findbugsconfig",
 		checkstyle.NAME: "checkstyleconfig",
+		mk.NAME:         "makeconfig",
 		"none":          "noconfig",
 	}
 )
@@ -71,6 +73,7 @@ func toolPermissions() map[string]user.Permission {
 		"createjunit":      user.TEACHER,
 		"createfindbugs":   user.TEACHER,
 		"createcheckstyle": user.TEACHER,
+		"createmake":       user.TEACHER,
 	}
 }
 
@@ -82,13 +85,14 @@ func toolPosters() map[string]Poster {
 		"createjunit":      CreateJUnit,
 		"createfindbugs":   CreateFindbugs,
 		"createcheckstyle": CreateCheckstyle,
+		"createmake":       CreateMake,
 	}
 }
 
 //tools
 func tools() []string {
 	return []string{
-		jpf.NAME, junit.NAME, pmd.NAME,
+		jpf.NAME, junit.NAME, pmd.NAME, mk.NAME,
 		findbugs.NAME, checkstyle.NAME, javac.NAME,
 	}
 }
@@ -100,6 +104,26 @@ func CreateCheckstyle(req *http.Request, ctx *Context) (msg string, err error) {
 
 //CreateFindbugs
 func CreateFindbugs(req *http.Request, ctx *Context) (msg string, err error) {
+	return
+}
+
+func CreateMake(req *http.Request, ctx *Context) (msg string, err error) {
+	projectId, msg, err := getProjectId(req)
+	if err != nil {
+		return
+	}
+	_, data, err := ReadFormFile(req, "makefile")
+	if err != nil {
+		msg = "Could not read Makefile."
+		return
+	}
+	makefile := mk.NewMakefile(projectId, data)
+	err = db.AddMakefile(makefile)
+	if err != nil {
+		msg = "Could not create Makefile."
+	} else {
+		msg = "Successfully created Makefile."
+	}
 	return
 }
 
@@ -315,14 +339,12 @@ func runTools(submissions []*project.Submission, tool string, runAll bool) {
 			continue
 		}
 		for _, file := range files {
-			if runAll {
-				if tool == "all" {
-					removeAll(file)
-				} else {
-					removeOne(file, tool)
-				}
-
+			if tool == "all" {
+				removeAll(file, runAll)
+			} else {
+				removeOne(file, tool, runAll)
 			}
+
 		}
 		err = processing.RedoSubmission(submission.Id)
 		if err != nil {
@@ -332,22 +354,22 @@ func runTools(submissions []*project.Submission, tool string, runAll bool) {
 }
 
 //removeAll removes all of the specified file's results from the db.
-func removeAll(file *project.File) {
-	for _, resId := range file.Results {
-		id, ok := resId.(bson.ObjectId)
-		if !ok {
+func removeAll(file *project.File, runAll bool) {
+	for name, resVal := range file.Results {
+		resId, isId := resVal.(bson.ObjectId)
+		if !runAll && isId {
 			continue
 		}
-		err := db.RemoveById(db.RESULTS, id)
+		delete(file.Results, name)
+		if !isId {
+			continue
+		}
+		err := db.RemoveById(db.RESULTS, resId)
 		if err != nil {
 			util.Log(err)
 		}
 	}
-	change := bson.M{
-		db.SET: bson.M{
-			db.RESULTS: bson.M{},
-		},
-	}
+	change := bson.M{db.SET: bson.M{db.RESULTS: file.Results}}
 	err := db.Update(db.FILES, bson.M{db.ID: file.Id}, change)
 	if err != nil {
 		util.Log(err)
@@ -355,23 +377,22 @@ func removeAll(file *project.File) {
 }
 
 //removeOne removes the specified file result from the db.
-func removeOne(file *project.File, name string) {
+func removeOne(file *project.File, name string, runAll bool) {
 	resultVal, ok := file.Results[name]
 	if !ok {
 		return
 	}
-	delete(file.Results, name)
-	change := bson.M{
-		db.SET: bson.M{
-			db.RESULTS: file.Results,
-		},
+	resultId, isId := resultVal.(bson.ObjectId)
+	if !runAll && isId {
+		return
 	}
+	delete(file.Results, name)
+	change := bson.M{db.SET: bson.M{db.RESULTS: file.Results}}
 	err := db.Update(db.FILES, bson.M{db.ID: file.Id}, change)
 	if err != nil {
 		util.Log(err)
 	}
-	resultId, ok := resultVal.(bson.ObjectId)
-	if !ok {
+	if !isId {
 		return
 	}
 	err = db.RemoveById(db.RESULTS, resultId)
@@ -391,7 +412,17 @@ func GetResult(resultName string, fileId bson.ObjectId) (res tool.DisplayResult,
 	}
 	switch resultName {
 	case tool.CODE:
-		res = tool.NewCodeResult(file.Data)
+		var sub *project.Submission
+		sub, err = db.Submission(bson.M{db.ID: file.SubId}, bson.M{db.PROJECTID: 1})
+		if err != nil {
+			return
+		}
+		var p *project.Project
+		p, err = db.Project(bson.M{db.ID: sub.ProjectId}, bson.M{db.LANG: 1})
+		if err != nil {
+			return
+		}
+		res = tool.NewCodeResult(p.Lang, file.Data)
 	case diff.NAME:
 		res = diff.NewResult(file)
 	case tool.SUMMARY:

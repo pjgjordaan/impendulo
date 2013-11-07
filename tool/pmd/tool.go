@@ -64,7 +64,7 @@ func New(rules *Rules) (tool *Tool, err error) {
 }
 
 //Lang is Java
-func (this *Tool) Lang() string {
+func (this *Tool) Lang() tool.Language {
 	return tool.JAVA
 }
 
@@ -86,6 +86,9 @@ func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolR
 		//Tests ran successfully.
 		data := util.ReadBytes(resFile)
 		res, err = NewResult(fileId, data)
+		if err != nil && execRes.Err != nil {
+			err = execRes.Err
+		}
 	} else if execRes.HasStdErr() {
 		err = fmt.Errorf("Could not run pmd: %q.", string(execRes.StdErr))
 	} else {

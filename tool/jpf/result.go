@@ -104,16 +104,10 @@ func (this *Result) GetReport() tool.Report {
 }
 
 //ChartVals
-func (this *Result) ChartVals(summary bool) []tool.ChartVal {
-	if summary {
-		return []tool.ChartVal{
-			{"JPF Errors", float64(this.Report.Total), true},
-		}
-	} else {
-		return []tool.ChartVal{
-			{"Total Errors", float64(this.Report.Total), true},
-			{"Unique Errors", float64(this.Report.ErrorCount()), false},
-		}
+func (this *Result) ChartVals() []tool.ChartVal {
+	return []tool.ChartVal{
+		{"Total Errors", this.Report.Total, true},
+		{"Unique Errors", this.Report.ErrorCount(), false},
 	}
 }
 

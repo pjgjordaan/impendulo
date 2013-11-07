@@ -50,7 +50,7 @@ func New(cp string) (tool *Tool, err error) {
 }
 
 //Lang is Java.
-func (this *Tool) Lang() string {
+func (this *Tool) Lang() tool.Language {
 	return tool.JAVA
 }
 
@@ -63,11 +63,12 @@ func (this *Tool) Name() string {
 //classes implicitly loaded by the source code. All compilation results will be stored (success,
 //errors and warnings).
 func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
-	if this.cp != "" {
-		this.cp += ":"
+	cp := this.cp
+	if cp != "" {
+		cp += ":"
 	}
-	this.cp += ti.Dir
-	args := []string{this.cmd, "-cp", this.cp + ":" + ti.Dir,
+	cp += ti.Dir
+	args := []string{this.cmd, "-cp", cp + ":" + ti.Dir,
 		"-implicit:class", "-Xlint", ti.FilePath()}
 	//Compile the file.
 	execRes := tool.RunCommand(args, nil)
@@ -83,7 +84,7 @@ func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolR
 		//Compiler warnings.
 		res = NewResult(fileId, execRes.StdErr)
 	} else {
-		res = NewResult(fileId, compSuccess)
+		res = NewResult(fileId, tool.COMPILE_SUCCESS)
 	}
 	return
 }

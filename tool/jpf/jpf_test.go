@@ -37,8 +37,7 @@ func TestRun(t *testing.T) {
 	location := filepath.Join(os.TempDir(), "Racer")
 	os.Mkdir(location, util.DPERM)
 	defer os.RemoveAll(location)
-	target := tool.NewTarget("Racer.java",
-		tool.JAVA, "", location)
+	target := tool.NewTarget("Racer.java", "", location, tool.JAVA)
 	err := util.SaveFile(target.FilePath(), srcFile)
 	if err != nil {
 		t.Errorf("Could not save file %q", err)

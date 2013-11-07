@@ -81,7 +81,7 @@ func init() {
 	rFlags = flag.NewFlagSet("receiver", flag.ExitOnError)
 	wFlags = flag.NewFlagSet("web", flag.ExitOnError)
 
-	pFlags.IntVar(&timeout, "t", 5, "Specify the time limit for a tool to run in, in minutes (default 5).")
+	pFlags.IntVar(&timeout, "t", 20, "Specify the time limit for a tool to run in, in minutes (default 20).")
 	pFlags.IntVar(&mProcs, "mp", 5, "Specify the maximum number of goroutines to run when processing submissions (default 5).")
 	pFlags.IntVar(&procPort, "p", 8045, "Specify the port to use for the processing server (default 8045).")
 

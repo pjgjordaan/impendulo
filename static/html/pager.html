@@ -33,9 +33,9 @@
   </li>
   {{end}}
   {{end}}
-  {{$last := sum $next 1}}
+  {{$nextnext := sum $next 1}}
   <li>
-    <a href="{{displayResult $sid $uid $resultName $fileName $current $last}}">
+    <a href="{{displayResult $sid $uid $resultName $fileName $next $nextnext}}">
       &raquo;
     </a>
   </li>

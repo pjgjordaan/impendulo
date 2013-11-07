@@ -50,8 +50,7 @@ func TestRun(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not copy directory %q", err)
 	}
-	target := tool.NewTarget("Triangle.java",
-		tool.JAVA, "triangle", location)
+	target := tool.NewTarget("Triangle.java", "triangle", location, tool.JAVA)
 	err = util.SaveFile(target.FilePath(), validFile)
 	if err != nil {
 		t.Errorf("Could not save file %q", err)
@@ -77,8 +76,7 @@ func TestRun(t *testing.T) {
 	if err == nil {
 		t.Errorf("Expected error.")
 	}
-	target = tool.NewTarget("File.java",
-		tool.JAVA, "", location)
+	target = tool.NewTarget("File.java", "", location, tool.JAVA)
 	_, err = junit.Run(bson.NewObjectId(), target)
 	if err == nil {
 		t.Error("Expected error")

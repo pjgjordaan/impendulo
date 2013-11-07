@@ -5,7 +5,7 @@
     <label class="col-lg-2 control-label" for="projectid">Project</label>
     <div class="col-lg-4">
       <select class="form-control" name="projectid" id="projectid">
-	{{$projects := projects}}
+	{{$projects := langProjects "Java"}}
 	{{range $projects}}
 	<option value={{.Id.Hex}}>{{.Name}}</option>
 	{{end}}

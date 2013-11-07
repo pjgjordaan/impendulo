@@ -102,7 +102,7 @@ func findClasses(tipe, fname string) (found []byte, err error) {
 		return
 	}
 	//Setup and compile JPFFinder
-	target := tool.NewTarget("JPFFinder.java", "java", "finder", finderDir)
+	target := tool.NewTarget("JPFFinder.java", "finder", finderDir, tool.JAVA)
 	cp := filepath.Join(home, "build", "main") + ":" + target.Dir + ":" + gson
 	comp, err := javac.New(cp)
 	if err != nil {

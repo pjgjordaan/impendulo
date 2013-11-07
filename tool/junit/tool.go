@@ -63,7 +63,7 @@ func New(test *Test, dir string) (junit *Tool, err error) {
 		return
 	}
 	//Save the test files to the submission's tool directory.
-	testInfo := tool.NewTarget(test.Name, tool.JAVA, test.Package, dir)
+	testInfo := tool.NewTarget(test.Name, test.Package, dir, tool.JAVA)
 	err = util.SaveFile(testInfo.FilePath(), test.Test)
 	if err != nil {
 		return
@@ -76,7 +76,7 @@ func New(test *Test, dir string) (junit *Tool, err error) {
 	}
 	dataLocation := filepath.Join(testInfo.PackagePath(), "data")
 	//This is used to run the JUnit test using ant.
-	runnerInfo := tool.NewTarget("TestRunner.java", "java", "testing", testInfo.Dir)
+	runnerInfo := tool.NewTarget("TestRunner.java", "testing", testInfo.Dir, tool.JAVA)
 	cp := testInfo.Dir + ":" + junitJar + ":" + antJunit + ":" + ant
 	junit = &Tool{
 		cp:           cp,
@@ -88,7 +88,7 @@ func New(test *Test, dir string) (junit *Tool, err error) {
 }
 
 //Lang is Java
-func (this *Tool) Lang() string {
+func (this *Tool) Lang() tool.Language {
 	return tool.JAVA
 }
 
@@ -104,11 +104,12 @@ func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolR
 	if err != nil {
 		return
 	}
-	if this.cp != "" {
-		this.cp += ":"
+	cp := this.cp
+	if cp != "" {
+		cp += ":"
 	}
-	this.cp += ti.Dir
-	comp, err := javac.New(this.cp)
+	cp += ti.Dir
+	comp, err := javac.New(cp)
 	if err != nil {
 		return
 	}
@@ -123,7 +124,7 @@ func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolR
 	}
 	//Set the arguments
 	outFile := filepath.Join(this.dataLocation, this.testInfo.Name+"_junit.xml")
-	args := []string{java, "-cp", this.cp, this.runnerInfo.Executable(),
+	args := []string{java, "-cp", cp, this.runnerInfo.Executable(),
 		this.testInfo.Executable(), this.dataLocation}
 	defer os.Remove(outFile)
 	//Run the tests and load the result
@@ -133,6 +134,9 @@ func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolR
 		//Tests ran successfully.
 		data := util.ReadBytes(resFile)
 		res, err = NewResult(fileId, this.testInfo.Name, data)
+		if err != nil && execRes.Err != nil {
+			err = execRes.Err
+		}
 	} else if execRes.HasStdErr() {
 		//The Java runner generated an error.
 		err = fmt.Errorf("Could not run junit: %q.", string(execRes.StdErr))

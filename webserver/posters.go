@@ -300,7 +300,7 @@ func EditProject(req *http.Request, ctx *Context) (msg string, err error) {
 		msg = "Could not read language."
 		return
 	}
-	if !tool.Supported(lang) {
+	if !tool.Supported(tool.Language(lang)) {
 		err = fmt.Errorf("Unsupported language %s.", lang)
 		msg = err.Error()
 		return

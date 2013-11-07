@@ -1,5 +1,7 @@
 {
     "bin": {
+	"gcc": "/usr/bin/gcc",
+	"make": "/usr/bin/make",
 	"java": "/usr/bin/java",
 	"javac": "/usr/bin/javac", 
 	"diff": "/usr/bin/diff"

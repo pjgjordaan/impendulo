@@ -35,8 +35,7 @@ import (
 
 func TestRun(t *testing.T) {
 	location := filepath.Join(os.TempDir(), "triangle")
-	target := tool.NewTarget("Triangle.java",
-		tool.JAVA, "", location)
+	target := tool.NewTarget("Triangle.java", "", location, tool.JAVA)
 	os.Mkdir(location, util.DPERM)
 	defer os.RemoveAll(location)
 	err := util.SaveFile(target.FilePath(), file)
@@ -59,8 +58,7 @@ func TestRun(t *testing.T) {
 	if err == nil {
 		t.Errorf("Expected error.")
 	}
-	target = tool.NewTarget("File.java",
-		tool.JAVA, "", location)
+	target = tool.NewTarget("File.java", "", location, tool.JAVA)
 	_, err = comp.Run(bson.NewObjectId(), target)
 	if err == nil {
 		t.Error("Expected error")

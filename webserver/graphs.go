@@ -82,17 +82,16 @@ func addAll(chart *tool.Chart, file project.File) {
 		if err != nil {
 			continue
 		}
-		chart.Add(ftime, result.ChartVals(true))
+		chart.Add(ftime, result.ChartVals()[:1])
 	}
 }
 
 func addSingle(chart *tool.Chart, file project.File, resultName string) {
-	result, err := db.ChartResult(resultName,
-		bson.M{db.ID: file.Results[resultName]}, nil)
+	result, err := db.ChartResult(resultName, bson.M{db.ID: file.Results[resultName]}, nil)
 	if err != nil {
 		return
 	}
-	chart.Add(file.Time, result.ChartVals(false))
+	chart.Add(file.Time, result.ChartVals())
 }
 
 func SubmissionChart(subs []*project.Submission) (ret tool.ChartData) {

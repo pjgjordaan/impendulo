@@ -35,24 +35,13 @@ import (
 	"time"
 )
 
-const (
-	JAVA = "Java"
-	//The maximum size in bytes that a ToolResult is allowed to have.
-	MAX_SIZE = 16000000
-)
-
-var (
-	timeLimit = 5 * time.Minute
-	langs     []string
-)
-
 type (
 	//Tool is an interface which represents various analysis tools used in Impendulo.
 	Tool interface {
 		//Name retrieves the Tool's name.
 		Name() string
 		//Lang retrieves the language which the Tool is used for.
-		Lang() string
+		Lang() Language
 		//Run runs the tool on a given file.
 		Run(fileId bson.ObjectId, target *TargetInfo) (ToolResult, error)
 	}
@@ -62,17 +51,30 @@ type (
 		StdOut, StdErr []byte
 		Err            error
 	}
+	Language string
+)
+
+const (
+	JAVA Language = "Java"
+	C    Language = "C"
+	//The maximum size in bytes that a ToolResult is allowed to have.
+	MAX_SIZE = 16000000
+)
+
+var (
+	timeLimit = 20 * time.Minute
+	langs     []Language
 )
 
 //Langs returns the languages supported by Impendulo
-func Langs() []string {
+func Langs() []Language {
 	if langs == nil {
-		langs = []string{JAVA}
+		langs = []Language{JAVA, C}
 	}
 	return langs
 }
 
-func Supported(lang string) bool {
+func Supported(lang Language) bool {
 	for _, l := range Langs() {
 		if l == lang {
 			return true
@@ -126,7 +128,7 @@ func RunCommand(args []string, stdin io.Reader) (res *ExecResult) {
 	select {
 	case err := <-doneChan:
 		if err != nil {
-			res.Err = &EndError{args, err}
+			res.Err = &EndError{args, err, string(stderr.Bytes())}
 		}
 		res.StdOut, res.StdErr = stdout.Bytes(), stderr.Bytes()
 	case <-time.After(timeLimit):

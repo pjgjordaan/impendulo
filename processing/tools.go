@@ -31,9 +31,11 @@ import (
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/findbugs"
+	"github.com/godfried/impendulo/tool/gcc"
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
+	mk "github.com/godfried/impendulo/tool/make"
 	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
@@ -42,15 +44,21 @@ import (
 //Tools retrieves the Impendulo tool suite for a Processor's language.
 //Each tool is already constructed.
 func Tools(proc *Processor) (tools []tool.Tool, err error) {
-	switch proc.project.Lang {
+	switch tool.Language(proc.project.Lang) {
 	case tool.JAVA:
 		tools = javaTools(proc)
+	case tool.C:
+		tools = cTools(proc)
 	default:
 		//Only Java is supported so far...
 		err = fmt.Errorf("No tools found for %s language.",
 			proc.project.Lang)
 	}
 	return
+}
+
+func cTools(proc *Processor) []tool.Tool {
+	return []tool.Tool{}
 }
 
 //javaTools retrieves Impendulo's Java tool suite.
@@ -92,9 +100,16 @@ func javaTools(proc *Processor) []tool.Tool {
 
 //Compiler retrieves a compiler for a Processor's language.
 func Compiler(proc *Processor) (compiler tool.Tool, err error) {
-	switch proc.project.Lang {
+	switch tool.Language(proc.project.Lang) {
 	case tool.JAVA:
 		compiler, err = javac.New("")
+	case tool.C:
+		makeFile, merr := db.Makefile(bson.M{db.PROJECTID: proc.project.Id}, nil)
+		if merr != nil {
+			compiler, err = gcc.New()
+		} else {
+			compiler, err = mk.New(makeFile, proc.toolDir)
+		}
 	default:
 		err = fmt.Errorf("No compiler found for %s language.",
 			proc.project.Lang)

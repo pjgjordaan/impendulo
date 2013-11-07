@@ -96,24 +96,17 @@ func (this *Result) GetReport() tool.Report {
 }
 
 //ChartVals
-func (this *Result) ChartVals(summary bool) []tool.ChartVal {
-	yE := 0.0
+func (this *Result) ChartVals() []tool.ChartVal {
+	var yE, yW int
 	if this.Report.Errors() {
-		yE = float64(this.Report.Count)
+		yE = this.Report.Count
 	}
-	if summary {
-		return []tool.ChartVal{
-			{"Javac Errors", yE, true},
-		}
-	} else {
-		yW := 0.0
-		if this.Report.Warnings() {
-			yW = float64(this.Report.Count)
-		}
-		return []tool.ChartVal{
-			{"Errors", yE, true},
-			{"Warnings", yW, false},
-		}
+	if this.Report.Warnings() {
+		yW = this.Report.Count
+	}
+	return []tool.ChartVal{
+		{"Errors", yE, true},
+		{"Warnings", yW, false},
 	}
 }
 

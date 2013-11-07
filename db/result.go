@@ -30,6 +30,7 @@ import (
 	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/diff"
 	"github.com/godfried/impendulo/tool/findbugs"
+	"github.com/godfried/impendulo/tool/gcc"
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
@@ -152,6 +153,23 @@ func JavacResult(matcher, selector bson.M) (ret *javac.Result, err error) {
 	return
 }
 
+func GCCResult(matcher, selector bson.M) (ret *gcc.Result, err error) {
+	session, err := Session()
+	if err != nil {
+		return
+	}
+	defer session.Close()
+	c := session.DB("").C(RESULTS)
+	matcher[NAME] = gcc.NAME
+	err = c.Find(matcher).Select(selector).One(&ret)
+	if err != nil {
+		err = &DBGetError{"result", err, matcher}
+	} else if HasGridFile(ret, selector) {
+		err = GridFile(ret.GetId(), &ret.Report)
+	}
+	return
+}
+
 //ToolResult retrieves a tool.ToolResult matching
 //the given interface and name from the active database.
 func ToolResult(name string, matcher, selector bson.M) (ret tool.ToolResult, err error) {
@@ -166,6 +184,8 @@ func ToolResult(name string, matcher, selector bson.M) (ret tool.ToolResult, err
 		ret, err = PMDResult(matcher, selector)
 	case checkstyle.NAME:
 		ret, err = CheckstyleResult(matcher, selector)
+	case gcc.NAME:
+		ret, err = GCCResult(matcher, selector)
 	default:
 		ret, err = JUnitResult(matcher, selector)
 		if err != nil {
@@ -189,6 +209,8 @@ func DisplayResult(name string, matcher, selector bson.M) (ret tool.DisplayResul
 		ret, err = PMDResult(matcher, selector)
 	case checkstyle.NAME:
 		ret, err = CheckstyleResult(matcher, selector)
+	case gcc.NAME:
+		ret, err = GCCResult(matcher, selector)
 	default:
 		ret, err = JUnitResult(matcher, selector)
 		if err != nil {
@@ -212,6 +234,8 @@ func ChartResult(name string, matcher, selector bson.M) (ret tool.ChartResult, e
 		ret, err = PMDResult(matcher, selector)
 	case checkstyle.NAME:
 		ret, err = CheckstyleResult(matcher, selector)
+	case gcc.NAME:
+		ret, err = GCCResult(matcher, selector)
 	default:
 		ret, err = JUnitResult(matcher, selector)
 		if err != nil {
@@ -342,8 +366,21 @@ func ChartResultNames(projectId bson.ObjectId) (ret []string, err error) {
 }
 
 func ToolResultNames(projectId bson.ObjectId) (ret []string, err error) {
-	tests, err := JUnitTests(bson.M{PROJECTID: projectId},
-		bson.M{NAME: 1})
+	p, err := Project(bson.M{ID: projectId}, bson.M{LANG: 1})
+	if err != nil {
+		return
+	}
+	switch tool.Language(p.Lang) {
+	case tool.JAVA:
+		ret, err = JavaResultNames(projectId)
+	case tool.C:
+		ret, err = CResultNames(projectId)
+	}
+	return
+}
+
+func JavaResultNames(projectId bson.ObjectId) (ret []string, err error) {
+	tests, err := JUnitTests(bson.M{PROJECTID: projectId}, bson.M{NAME: 1})
 	if err != nil {
 		return
 	}
@@ -361,5 +398,10 @@ func ToolResultNames(projectId bson.ObjectId) (ret []string, err error) {
 		ret = append(ret, pmd.NAME)
 	}
 	sort.Strings(ret)
+	return
+}
+
+func CResultNames(projectId bson.ObjectId) (ret []string, err error) {
+	ret = []string{gcc.NAME}
 	return
 }

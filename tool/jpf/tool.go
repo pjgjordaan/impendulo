@@ -81,8 +81,8 @@ func New(jpfConfig *Config, jpfDir string) (jpf *Tool, err error) {
 	//Setup classpath with the required JPF and Json jars.
 	cp := jpfDir + ":" + jpfJar + ":" + jpfRunJar + ":" + gson
 	//Compile JPF runner files
-	jpfInfo := tool.NewTarget("JPFRunner.java", "java", "runner", jpfDir)
-	pubInfo := tool.NewTarget("ImpenduloPublisher.java", "java", "runner", jpfDir)
+	jpfInfo := tool.NewTarget("JPFRunner.java", "runner", jpfDir, tool.JAVA)
+	pubInfo := tool.NewTarget("ImpenduloPublisher.java", "runner", jpfDir, tool.JAVA)
 	comp, err := javac.New(cp)
 	if err != nil {
 		return
@@ -105,7 +105,7 @@ func New(jpfConfig *Config, jpfDir string) (jpf *Tool, err error) {
 }
 
 //Lang is Java
-func (this *Tool) Lang() string {
+func (this *Tool) Lang() tool.Language {
 	return tool.JAVA
 }
 
@@ -135,6 +135,9 @@ func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolR
 		//Tests ran successfully.
 		data := util.ReadBytes(resFile)
 		res, err = NewResult(fileId, data)
+		if err != nil && execRes.Err != nil {
+			err = execRes.Err
+		}
 	} else if execRes.HasStdErr() {
 		err = fmt.Errorf("Could not execute jpf runner: %q.", string(execRes.StdErr))
 	} else {

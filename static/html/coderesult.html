@@ -3,11 +3,11 @@
 {{$addr := address $report}}
 {{if $report.Bug}}
 {{$size := sum (len $report.Bug.Lines) -1}}
-<pre class="brush: java; highlight: [{{range $i, $v := $report.Bug.Lines}}{{$v}}{{if ne $i $size}}, {{end}}{{end}}];" id="code{{$addr}}">
+<pre class="brush: {{$report.Lang}}; highlight: [{{range $i, $v := $report.Bug.Lines}}{{$v}}{{if ne $i $size}}, {{end}}{{end}}];" id="code{{$addr}}">
 {{$report.Data}}
 </pre>
 {{else}}
-<pre class="brush: java;" id="code{{$addr}}">
+<pre class="brush: {{$report.Lang}};" id="code{{$addr}}">
 {{$report.Data}}
 </pre>
 {{end}}

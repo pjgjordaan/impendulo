@@ -33,10 +33,10 @@ type (
 	//TargetInfo stores information about the target file.
 	TargetInfo struct {
 		Name    string
-		Lang    string
 		Package string
 		Ext     string
 		Dir     string
+		Lang    Language
 	}
 )
 
@@ -70,7 +70,7 @@ func (ti *TargetInfo) Executable() string {
 }
 
 //NewTarget
-func NewTarget(name, lang, pkg, dir string) *TargetInfo {
+func NewTarget(name, pkg, dir string, lang Language) *TargetInfo {
 	split := strings.Split(name, ".")
 	var ext string
 	if len(split) < 2 {
@@ -81,9 +81,9 @@ func NewTarget(name, lang, pkg, dir string) *TargetInfo {
 	}
 	return &TargetInfo{
 		Name:    name,
-		Lang:    lang,
 		Package: pkg,
 		Ext:     ext,
 		Dir:     dir,
+		Lang:    lang,
 	}
 }
