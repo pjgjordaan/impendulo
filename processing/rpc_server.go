@@ -42,7 +42,18 @@ type (
 	}
 )
 
+const (
+	LOG_RPCSERVER = "processing/rpc_server.go"
+)
+
+var (
+	registered bool
+)
+
 func setupRPC(port int, subCh chan *SubRequest, fileCh chan *FileRequest, statusCh chan Status) (err error) {
+	if registered {
+		return
+	}
 	handler := &RPCHandler{
 		sub:    subCh,
 		file:   fileCh,
@@ -54,6 +65,7 @@ func setupRPC(port int, subCh chan *SubRequest, fileCh chan *FileRequest, status
 	if err == nil {
 		go http.Serve(l, nil)
 	}
+	registered = true
 	return
 }
 
@@ -95,13 +107,13 @@ func redoSubmission(subId bson.ObjectId, subChan chan *SubRequest, fileChan chan
 	subChan <- sreq
 	err := <-sreq.Response
 	if err != nil {
-		util.Log(err)
+		util.Log(err, LOG_RPCSERVER)
 	}
 	matcher := bson.M{db.SUBID: subId}
 	selector := bson.M{db.DATA: 0}
 	files, err := db.Files(matcher, selector, db.TIME)
 	if err != nil {
-		util.Log(err)
+		util.Log(err, LOG_RPCSERVER)
 	}
 	for _, f := range files {
 		freq := &FileRequest{
@@ -112,7 +124,7 @@ func redoSubmission(subId bson.ObjectId, subChan chan *SubRequest, fileChan chan
 		fileChan <- freq
 		err = <-freq.Response
 		if err != nil {
-			util.Log(err)
+			util.Log(err, LOG_RPCSERVER)
 		}
 	}
 	sreq = &SubRequest{
@@ -123,6 +135,6 @@ func redoSubmission(subId bson.ObjectId, subChan chan *SubRequest, fileChan chan
 	subChan <- sreq
 	err = <-sreq.Response
 	if err != nil {
-		util.Log(err)
+		util.Log(err, LOG_RPCSERVER)
 	}
 }

@@ -22,9 +22,9 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//Package server provides a TCP server which receives user submissions and
+//Package receiver provides a TCP server which receives user submissions and
 //snapshots and sends them to be processed.
-package server
+package receiver
 
 import (
 	"fmt"
@@ -47,6 +47,10 @@ type (
 	}
 )
 
+const (
+	LOG_SERVER = "receiver/server.go"
+)
+
 //Run is used to listen for new tcp connections and
 //spawn a new goroutine for each connection.
 //Each goroutine launched will handle its connection and
@@ -56,7 +60,7 @@ func Run(port int, spawner HandlerSpawner) {
 	netListen, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	if err != nil {
 		util.Log(fmt.Errorf(
-			"Encountered error %q when listening on port %q",
+			"Encountered error %q when listening on port %d",
 			err, port), LOG_SERVER)
 		return
 	}

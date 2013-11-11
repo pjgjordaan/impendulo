@@ -86,7 +86,7 @@ func TestArchive(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	p := project.NewProject("Test", "user", string(tool.JAVA), []byte{})
+	p := project.New("Test", "user", string(tool.JAVA), []byte{})
 	err = db.Add(db.PROJECTS, p)
 	if err != nil {
 		t.Error(err)
@@ -122,7 +122,7 @@ func TestArchive(t *testing.T) {
 }
 
 func setupFile() (file *project.File, err error) {
-	p := project.NewProject("Triangle", "user", string(tool.JAVA), []byte{})
+	p := project.New("Triangle", "user", string(tool.JAVA), []byte{})
 	err = db.Add(db.PROJECTS, p)
 	if err != nil {
 		return

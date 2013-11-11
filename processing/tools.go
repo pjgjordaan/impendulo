@@ -41,6 +41,10 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
+const (
+	LOG_TOOLS = "processing/tools.go"
+)
+
 //Tools retrieves the Impendulo tool suite for a Processor's language.
 //Each tool is already constructed.
 func Tools(proc *Processor) (tools []tool.Tool, err error) {
@@ -69,38 +73,39 @@ func javaTools(proc *Processor) []tool.Tool {
 	if err == nil {
 		tools = append(tools, fbTool)
 	} else {
-		util.Log(err)
+		util.Log(err, LOG_TOOLS)
 	}
 	csTool, err := checkstyle.New()
 	if err == nil {
 		tools = append(tools, csTool)
 	} else {
-		util.Log(err)
+		util.Log(err, LOG_TOOLS)
 	}
 	jpfTool, err := JPF(proc)
 	if err == nil {
 		tools = append(tools, jpfTool)
 	} else {
-		util.Log(err)
+		util.Log(err, LOG_TOOLS)
 	}
 	pmdTool, err := PMD(proc)
 	if err == nil {
 		tools = append(tools, pmdTool)
 	} else {
-		util.Log(err)
+		util.Log(err, LOG_TOOLS)
 	}
 	tests, err := JUnit(proc)
 	if err == nil && len(tests) > 0 {
 		tools = append(tools, tests...)
-	} else {
-		util.Log(err)
+	} else if err != nil {
+		util.Log(err, LOG_TOOLS)
 	}
 	return tools
 }
 
 //Compiler retrieves a compiler for a Processor's language.
 func Compiler(proc *Processor) (compiler tool.Tool, err error) {
-	switch tool.Language(proc.project.Lang) {
+	l := tool.Language(proc.project.Lang)
+	switch l {
 	case tool.JAVA:
 		compiler, err = javac.New("")
 	case tool.C:
@@ -112,7 +117,7 @@ func Compiler(proc *Processor) (compiler tool.Tool, err error) {
 		}
 	default:
 		err = fmt.Errorf("No compiler found for %s language.",
-			proc.project.Lang)
+			l)
 	}
 	return
 }
@@ -164,7 +169,7 @@ func JUnit(proc *Processor) (ret []tool.Tool, err error) {
 	for _, test := range tests {
 		unitTest, terr := junit.New(test, proc.toolDir)
 		if terr != nil {
-			util.Log(terr)
+			util.Log(terr, LOG_TOOLS)
 		} else {
 			ret = append(ret, unitTest)
 		}

@@ -22,7 +22,7 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package webserver
+package web
 
 import (
 	"code.google.com/p/gorilla/sessions"
@@ -124,7 +124,7 @@ func testToolFunc(t *testing.T, f Poster, requests []postHolder) {
 func TestRunTool(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
-	p := project.NewProject("Triangle", "user", "Java", []byte("data"))
+	p := project.New("Triangle", "user", "Java", []byte("data"))
 	err := db.Add(db.PROJECTS, p)
 	if err != nil {
 		t.Error(err)

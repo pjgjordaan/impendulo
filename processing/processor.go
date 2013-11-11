@@ -85,7 +85,7 @@ func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
 
 //Process listens for a submission's incoming files and processes them.
 func (this *Processor) Process(fileChan chan bson.ObjectId, doneChan chan interface{}) {
-	util.Log("Processing submission", this.sub)
+	util.Log("Processing submission", this.sub, LOG_PROCESSOR)
 	defer os.RemoveAll(this.rootDir)
 	//Processing loop.
 processing:
@@ -111,19 +111,19 @@ processing:
 	}
 	err := db.UpdateStatus(this.sub)
 	if err != nil {
-		util.Log(err)
+		util.Log(err, LOG_PROCESSOR)
 	}
 	err = db.UpdateTime(this.sub)
 	if err != nil {
-		util.Log(err)
+		util.Log(err, LOG_PROCESSOR)
 	}
-	util.Log("Processed submission", this.sub)
+	util.Log("Processed submission", this.sub, LOG_PROCESSOR)
 }
 
 //ProcessFile extracts archives and runs tools on source files.
 func (this *Processor) ProcessFile(file *project.File) (err error) {
-	util.Log("Processing file:", file)
-	defer util.Log("Processed file:", file, err)
+	util.Log("Processing file:", file, LOG_PROCESSOR)
+	defer util.Log("Processed file:", file, err, LOG_PROCESSOR)
 	switch file.Type {
 	case project.ARCHIVE:
 		err = this.Extract(file)

@@ -22,9 +22,9 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//Package webserver provides a webserver which allows for: viewing
+//Package web provides a webserver which allows for: viewing
 //of results; administration of submissions, projects and tools; user management;
-package webserver
+package web
 
 import (
 	"code.google.com/p/gorilla/pat"

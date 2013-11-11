@@ -22,7 +22,7 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package server
+package receiver
 
 import (
 	"fmt"
@@ -46,18 +46,23 @@ type (
 		conn       net.Conn
 		submission *project.Submission
 	}
+
+	ProjectInfo struct {
+		Project     *project.Project
+		Submissions []*project.Submission
+	}
 )
 
 const (
-	OK                  = "ok"
-	SEND                = "send"
-	LOGIN               = "begin"
-	LOGOUT              = "end"
-	REQ                 = "req"
-	PROJECTS            = "projects"
-	SUBMISSION_NEW      = "submission_new"
-	SUBMISSION_CONTINUE = "submission_continue"
-	LOG_SERVER          = "server/server.go"
+	OK           = "ok"
+	SEND         = "send"
+	LOGIN        = "begin"
+	LOGOUT       = "end"
+	REQ          = "req"
+	PROJECTS     = "projects"
+	NEW          = "submission_new"
+	CONTINUE     = "submission_continue"
+	LOG_RECEIVER = "receiver/receiver.go"
 )
 
 //Spawn creates a new ConnHandler of type SubmissionHandler.
@@ -80,7 +85,7 @@ func (this *SubmissionHandler) End(err error) {
 	var msg string
 	if err != nil {
 		msg = "ERROR: " + err.Error()
-		util.Log(err)
+		util.Log(err, LOG_RECEIVER)
 	} else {
 		msg = OK
 	}
@@ -152,9 +157,19 @@ func (this *SubmissionHandler) Login() (err error) {
 	}
 	//Send a list of available projects to the user.
 	projects, err := db.Projects(nil, bson.M{db.SKELETON: 0}, db.NAME)
-	if err == nil {
-		err = this.writeJson(projects)
+	if err != nil {
+		return
 	}
+	projectInfos := make([]*ProjectInfo, len(projects))
+	matcher := bson.M{db.USER: this.submission.User}
+	i := 0
+	for _, p := range projects {
+		matcher[db.PROJECTID] = p.Id
+		subs, _ := db.Submissions(matcher, nil)
+		projectInfos[i] = &ProjectInfo{p, subs}
+		i++
+	}
+	err = this.writeJson(projectInfos)
 	return
 }
 
@@ -169,9 +184,9 @@ func (this *SubmissionHandler) LoadInfo() (err error) {
 	req, err := util.GetString(reqInfo, REQ)
 	if err != nil {
 		return
-	} else if req == SUBMISSION_NEW {
+	} else if req == NEW {
 		err = this.createSubmission(reqInfo)
-	} else if req == SUBMISSION_CONTINUE {
+	} else if req == CONTINUE {
 		err = this.continueSubmission(reqInfo)
 	} else {
 		err = fmt.Errorf("Invalid request %q", req)

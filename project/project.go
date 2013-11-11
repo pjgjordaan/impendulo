@@ -55,8 +55,8 @@ func (this *Project) String() string {
 		"; Lang: " + this.Lang + "; Time: " + util.Date(this.Time)
 }
 
-//NewProject
-func NewProject(name, user, lang string, data []byte) *Project {
+//New
+func New(name, user, lang string, data []byte) *Project {
 	id := bson.NewObjectId()
 	return &Project{id, name, user, lang, util.CurMilis(), data}
 }

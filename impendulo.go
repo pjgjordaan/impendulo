@@ -33,11 +33,11 @@ import (
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processing"
-	"github.com/godfried/impendulo/server"
+	"github.com/godfried/impendulo/receiver"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
-	"github.com/godfried/impendulo/webserver"
+	"github.com/godfried/impendulo/web"
 	"labix.org/v2/mgo/bson"
 	"os"
 	"runtime"
@@ -191,14 +191,14 @@ func setupConn() (err error) {
 func runWebServer() {
 	wFlags.Parse(os.Args[2:])
 	processing.SetClientAddress(rpcAddr, rpcPort)
-	webserver.Run(httpPort)
+	web.Run(httpPort)
 }
 
 //runFileReceiver runs the TCP file receiving server.
 func runFileReceiver() {
 	rFlags.Parse(os.Args[2:])
 	processing.SetClientAddress(rpcAddr, rpcPort)
-	server.Run(tcpPort, new(server.SubmissionSpawner))
+	receiver.Run(tcpPort, new(receiver.SubmissionSpawner))
 }
 
 //runFileProcessor runs the file processing server.

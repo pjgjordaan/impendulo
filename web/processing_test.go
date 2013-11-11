@@ -1,4 +1,4 @@
-package webserver
+package web
 
 import (
 	"fmt"

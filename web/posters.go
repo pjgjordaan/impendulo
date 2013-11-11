@@ -22,7 +22,7 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package webserver
+package web
 
 import (
 	"code.google.com/p/gorilla/pat"
@@ -204,7 +204,7 @@ func AddProject(req *http.Request, ctx *Context) (msg string, err error) {
 		msg = "Could not read skeleton file."
 		return
 	}
-	p := project.NewProject(name, username, lang, skeletonBytes)
+	p := project.New(name, username, lang, skeletonBytes)
 	err = db.Add(db.PROJECTS, p)
 	if err != nil {
 		msg = "Could not add project."
