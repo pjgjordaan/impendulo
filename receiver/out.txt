@@ -1,7 +1,0 @@
-warning: building out-of-date packages:
-	github.com/godfried/impendulo/processing
-installing these packages with 'go test -i' will speed future tests.
-
-# github.com/godfried/impendulo/processing
-../processing/rpc_server.go:32: imported and not used: "net/http"
-FAIL	github.com/godfried/impendulo/receiver [build failed]
