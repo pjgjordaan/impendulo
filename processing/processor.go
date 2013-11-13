@@ -118,6 +118,7 @@ processing:
 		util.Log(err, LOG_PROCESSOR)
 	}
 	util.Log("Processed submission", this.sub, LOG_PROCESSOR)
+	doneChan <- None()
 }
 
 //ProcessFile extracts archives and runs tools on source files.

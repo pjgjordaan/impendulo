@@ -13,6 +13,6 @@ for d in $dirs
 do  
     if [[ $d != .* ]] && [[ $d != static* ]] && [[ $d != java* ]] && [[ $d != scripts* ]]
 	then
-	go test "$base""$d"
+	go test  -bench=. "$base""$d"
 	fi
 done

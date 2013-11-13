@@ -3,6 +3,7 @@ package receiver
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processing"
@@ -16,13 +17,46 @@ import (
 	"time"
 )
 
+type (
+	clientSpawner struct {
+		users           map[string]string
+		mode            string
+		numFiles, rport int
+		data            []byte
+	}
+	client struct {
+		uname, pword, mode string
+		projectId          bson.ObjectId
+		submission         *project.Submission
+		conn               net.Conn
+	}
+)
+
 var (
-	nU, nF, rport, pport = 1, 2, 8010, 8020
+	pport = 9000
 )
 
 func init() {
 	fmt.Print()
-	util.SetErrorLogging("a")
+	//util.SetErrorLogging("a")
+	//util.SetInfoLogging("a")
+	go func() {
+		processing.SetClientAddress("", pport)
+		processing.Serve(pport, 10)
+	}()
+}
+
+func (this *clientSpawner) spawn() (*client, bool) {
+	for uname, pword := range this.users {
+		c := &client{
+			uname: uname,
+			pword: pword,
+			mode:  this.mode,
+		}
+		delete(this.users, uname)
+		return c, true
+	}
+	return nil, false
 }
 
 func addData(numUsers int) (users map[string]string, err error) {
@@ -52,26 +86,134 @@ func receive(port int) {
 	<-started
 }
 
-func login(uname, pword, mode string, port int) (conn net.Conn, infos []*ProjectInfo, err error) {
-	conn, err = net.Dial("tcp", fmt.Sprintf(":%d", port))
+func (this *client) login(port int) (projectId bson.ObjectId, err error) {
+	this.conn, err = net.Dial("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return
 	}
 	req := map[string]interface{}{
 		REQ:          LOGIN,
-		db.USER:      uname,
-		db.PWORD:     pword,
-		project.MODE: mode,
+		db.USER:      this.uname,
+		db.PWORD:     this.pword,
+		project.MODE: this.mode,
 	}
-	err = write(conn, req)
+	err = write(this.conn, req)
 	if err != nil {
 		return
 	}
-	read, err := util.ReadData(conn)
+	read, err := util.ReadData(this.conn)
 	if err != nil {
 		return
 	}
+	var infos []*ProjectInfo
 	err = json.Unmarshal(read, &infos)
+	if err != nil {
+		return
+	}
+	if len(infos) == 0 {
+		err = errors.New("No projects found.")
+	} else {
+		projectId = infos[0].Project.Id
+	}
+	return
+}
+
+func (this *client) create(projectId bson.ObjectId) (err error) {
+	req := map[string]interface{}{
+		REQ:          NEW,
+		db.PROJECTID: projectId,
+		db.TIME:      util.CurMilis(),
+	}
+	err = write(this.conn, req)
+	if err != nil {
+		return
+	}
+	read, err := util.ReadData(this.conn)
+	if err != nil {
+		return
+	}
+	err = json.Unmarshal(read, &this.submission)
+	return
+}
+
+func (this *client) logout() (err error) {
+	req := map[string]interface{}{
+		REQ: LOGOUT,
+	}
+	err = write(this.conn, req)
+	if err != nil {
+		return
+	}
+	err = readOk(this.conn)
+	return
+}
+
+func (this *client) send(numFiles int, data []byte) (err error) {
+	switch this.mode {
+	case project.FILE_MODE:
+		err = this.sendFile(numFiles, data)
+	case project.ARCHIVE_MODE:
+		err = this.sendArchive(data)
+	default:
+		err = fmt.Errorf("Unsupported mode %s.", this.mode)
+	}
+	return
+}
+
+func (this *client) sendArchive(data []byte) (err error) {
+	req := map[string]interface{}{
+		REQ: SEND,
+	}
+	err = write(this.conn, req)
+	if err != nil {
+		return
+	}
+	err = readOk(this.conn)
+	if err != nil {
+		return
+	}
+	_, err = this.conn.Write(data)
+	if err != nil {
+		return
+	}
+	_, err = this.conn.Write([]byte(util.EOT))
+	if err != nil {
+		return
+	}
+	err = readOk(this.conn)
+	return
+}
+
+func (this *client) sendFile(numFiles int, data []byte) (err error) {
+	req := map[string]interface{}{
+		REQ:          SEND,
+		project.TYPE: project.SRC,
+		db.NAME:      "Triangle.java",
+		db.PKG:       "triangle",
+	}
+	for i := 0; i < numFiles; i++ {
+		req[db.TIME] = util.CurMilis()
+		err = write(this.conn, req)
+		if err != nil {
+			return
+		}
+		err = readOk(this.conn)
+		if err != nil {
+			return
+		}
+		_, err = this.conn.Write(data)
+		if err != nil {
+			return
+		}
+		_, err = this.conn.Write([]byte(util.EOT))
+		if err != nil {
+			return
+		}
+		err = readOk(this.conn)
+		if err != nil {
+			return
+		}
+	}
 	return
 }
 
@@ -81,36 +223,6 @@ func write(conn net.Conn, data interface{}) (err error) {
 		return
 	}
 	_, err = conn.Write([]byte(util.EOT))
-	return
-}
-
-func create(conn net.Conn, projectId bson.ObjectId) (sub *project.Submission, err error) {
-	req := map[string]interface{}{
-		REQ:          NEW,
-		db.PROJECTID: projectId,
-		db.TIME:      util.CurMilis(),
-	}
-	err = write(conn, req)
-	if err != nil {
-		return
-	}
-	read, err := util.ReadData(conn)
-	if err != nil {
-		return
-	}
-	err = json.Unmarshal(read, &sub)
-	return
-}
-
-func logout(conn net.Conn) (err error) {
-	req := map[string]interface{}{
-		REQ: LOGOUT,
-	}
-	err = write(conn, req)
-	if err != nil {
-		return
-	}
-	err = readOk(conn)
 	return
 }
 
@@ -132,172 +244,171 @@ func loadZip(fileNum int) ([]byte, error) {
 	return util.ZipMap(data)
 }
 
-type sender func(net.Conn, []byte, int) error
-
-func sendArchive(conn net.Conn, zipped []byte, nF int) (err error) {
-	req := map[string]interface{}{
-		REQ: SEND,
-	}
-	err = write(conn, req)
-	if err != nil {
-		return
-	}
-	err = readOk(conn)
-	if err != nil {
-		return
-	}
-	_, err = conn.Write(zipped)
-	if err != nil {
-		return
-	}
-	_, err = conn.Write([]byte(util.EOT))
-	if err != nil {
-		return
-	}
-	err = readOk(conn)
+func testReceive(spawner *clientSpawner) (err error) {
+	clientChan := make(chan error)
+	go func() {
+		errChan := make(chan error)
+		nU := len(spawner.users)
+		ok := true
+		cli, ok := spawner.spawn()
+		for ok {
+			go func(c *client) {
+				var err error
+				defer func() {
+					errChan <- err
+				}()
+				projectId, err := c.login(spawner.rport)
+				if err != nil {
+					return
+				}
+				err = c.create(projectId)
+				if err != nil {
+					return
+				}
+				err = c.send(spawner.numFiles, spawner.data)
+				if err != nil {
+					return
+				}
+				err = c.logout()
+				return
+			}(cli)
+			cli, ok = spawner.spawn()
+		}
+		done := 1
+		var err error
+		for done < nU && err == nil {
+			err = <-errChan
+			done++
+		}
+		time.Sleep(100 * time.Millisecond)
+		ierr := processing.WaitIdle()
+		if err == nil && ierr != nil {
+			err = ierr
+		}
+		/*waiting := true
+		for waiting {
+			time.Sleep(100 * time.Millisecond)
+			status, serr := processing.GetStatus()
+			if serr != nil && err == nil {
+				err = serr
+			}
+			waiting = serr == nil && status.Submissions > 0
+		}*/
+		clientChan <- err
+	}()
+	err = <-clientChan
 	return
 }
 
-func sendFile(conn net.Conn, file []byte, nF int) (err error) {
-	req := map[string]interface{}{
-		REQ:          SEND,
-		project.TYPE: project.SRC,
-		db.NAME:      "Triangle.java",
-		db.PKG:       "triangle",
-	}
-	for i := 0; i < nF; i++ {
-		req[db.TIME] = util.CurMilis()
-		err = write(conn, req)
-		if err != nil {
-			return
-		}
-		err = readOk(conn)
-		if err != nil {
-			return
-		}
-		_, err = conn.Write(file)
-		if err != nil {
-			return
-		}
-		_, err = conn.Write([]byte(util.EOT))
-		if err != nil {
-			return
-		}
-		err = readOk(conn)
-		if err != nil {
-			return
-		}
-	}
-	return
-}
-
-func TestReceive(t *testing.T) {
-	db.Setup(db.TEST_CONN)
-	db.DeleteDB(db.TEST_DB)
-	db.Setup(db.TEST_CONN)
-	defer db.DeleteDB(db.TEST_DB)
+func TestFile(t *testing.T) {
+	nU, nF, rport := 1, 2, 8000
+	db.Setup(db.TEST_CONN + "tf")
+	db.DeleteDB(db.TEST_DB + "tf")
+	db.Setup(db.TEST_CONN + "tf")
+	defer db.DeleteDB(db.TEST_DB + "tf")
 	users, err := addData(nU)
 	if err != nil {
 		t.Error(err)
 	}
-	processing.SetClientAddress("", pport)
 	receive(rport)
-	testReceive(t, project.FILE_MODE, fileData, sendFile, users)
+	fspawner := &clientSpawner{
+		mode:     project.FILE_MODE,
+		data:     fileData,
+		users:    users,
+		numFiles: nF,
+		rport:    rport,
+	}
+	err = testReceive(fspawner)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestArchive(t *testing.T) {
+	nU, nF, rport := 1, 2, 8010
+	db.Setup(db.TEST_CONN + "ta")
+	db.DeleteDB(db.TEST_DB + "ta")
+	db.Setup(db.TEST_CONN + "ta")
+	defer db.DeleteDB(db.TEST_DB + "ta")
+	users, err := addData(nU)
+	if err != nil {
+		t.Error(err)
+	}
 	zipData, err := loadZip(nF)
 	if err != nil {
 		t.Error(err)
 	}
-	testReceive(t, project.ARCHIVE_MODE, zipData, sendArchive, users)
+	receive(rport)
+	aspawner := &clientSpawner{
+		mode:     project.ARCHIVE_MODE,
+		data:     zipData,
+		users:    users,
+		numFiles: nF,
+		rport:    rport,
+	}
+	err = testReceive(aspawner)
+	if err != nil {
+		t.Error(err)
+	}
 }
 
-func testReceive(t *testing.T, mode string, data []byte, send sender, users map[string]string) {
-	go func() {
-		doneChan := make(chan struct{})
-		for uname, pword := range users {
-			go func(u string) {
-				conn, infos, err := login(u, pword, mode, rport)
-				if err != nil {
-					t.Error(err)
-				}
-				_, err = create(conn, infos[0].Project.Id)
-				if err != nil {
-					t.Error(err)
-				}
-				err = send(conn, data, nF)
-				if err != nil {
-					t.Error(err)
-				}
-				err = logout(conn)
-				if err != nil {
-					t.Error(err)
-				}
-				doneChan <- struct{}{}
-			}(uname)
-		}
-		done := 1
-		for done < len(users) {
-			<-doneChan
-			done++
-		}
-		time.Sleep(1 * time.Second)
-		processing.Shutdown()
-	}()
-	processing.Serve(pport, 10)
-}
-
-/*
-func BenchmarkArchive(b *testing.B) {
-	nU, nF := 1, 2
-	db.Setup(db.TEST_CONN)
-	db.DeleteDB(db.TEST_DB)
-	db.Setup(db.TEST_CONN)
-	defer db.DeleteDB(db.TEST_DB)
-	util.SetErrorLogging("a")
-	processing.SetClientAddress("", 8040)
+func BenchmarkFile(b *testing.B) {
+	nU, nF, rport := 2, 1, 8020
+	db.Setup(db.TEST_CONN + "bf")
+	db.DeleteDB(db.TEST_DB + "bf")
+	db.Setup(db.TEST_CONN + "bf")
+	defer db.DeleteDB(db.TEST_DB + "bf")
 	users, err := addData(nU)
 	if err != nil {
 		b.Error(err)
 	}
-	zipped, err := loadZip(nF)
+	fspawner := &clientSpawner{
+		mode:     project.FILE_MODE,
+		data:     fileData,
+		users:    users,
+		numFiles: nF,
+		rport:    rport,
+	}
+	receive(rport)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		err = testReceive(fspawner)
+		if err != nil {
+			b.Error(err)
+		}
+	}
+}
+
+func BenchmarkArchive(b *testing.B) {
+	nU, nF, rport := 2, 1, 8030
+	db.Setup(db.TEST_CONN + "ba")
+	db.DeleteDB(db.TEST_DB + "ba")
+	db.Setup(db.TEST_CONN + "ba")
+	defer db.DeleteDB(db.TEST_DB + "ba")
+	users, err := addData(nU)
 	if err != nil {
 		b.Error(err)
 	}
-	receive()
-	b.ResetTimer()
-	for k := 0; k < b.N; k++ {
-		go func() {
-			doneChan := make(chan struct{})
-			for uname, pword := range users {
-				go func(u string) {
-					conn, infos, err := login(u, pword)
-					if err != nil {
-						b.Error(err)
-					}
-					_, err = create(conn, infos[0].Project.Id)
-					if err != nil {
-						b.Error(err)
-					}
-					err = sendArchive(conn, zipped)
-					if err != nil {
-						b.Error(err)
-					}
-					err = logout(conn)
-					if err != nil {
-						b.Error(err)
-					}
-					doneChan <- struct{}{}
-				}(uname)
-			}
-			done := 0
-			for done < len(users) {
-				<-doneChan
-				done++
-			}
-			processing.Shutdown()
-		}()
-		processing.Serve(8040, 10)
+	zipData, err := loadZip(nF)
+	if err != nil {
+		b.Error(err)
 	}
-}*/
+	aspawner := &clientSpawner{
+		mode:     project.ARCHIVE_MODE,
+		data:     zipData,
+		users:    users,
+		numFiles: nF,
+		rport:    rport,
+	}
+	receive(rport)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		err = testReceive(aspawner)
+		if err != nil {
+			b.Error(err)
+		}
+	}
+}
 
 var fileData = []byte(`
 package triangle;

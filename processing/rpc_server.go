@@ -32,6 +32,7 @@ import (
 	"net/http"
 	"net/rpc"
 	"strconv"
+	"time"
 )
 
 type (
@@ -62,16 +63,34 @@ func setupRPC(port int, subCh chan *SubRequest, fileCh chan *FileRequest, status
 	rpc.Register(handler)
 	rpc.HandleHTTP()
 	l, err := net.Listen("tcp", ":"+strconv.Itoa(port))
-	if err == nil {
-		go http.Serve(l, nil)
+	if err != nil {
+		return
 	}
+	go func() {
+		if herr := http.Serve(l, nil); herr != nil {
+			util.Log(herr)
+		}
+	}()
 	registered = true
 	return
 }
 
+func (this *RPCHandler) WaitIdle(arg Empty, ret *Empty) error {
+	idle := false
+	for !idle {
+		this.status <- Status{}
+		s := <-this.status
+		idle = s.Submissions == 0
+		if !idle {
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+	return nil
+}
+
 //GetStatus retrieves Impendulo's current processing status.
 func (this *RPCHandler) GetStatus(nothing Empty, ret *Status) error {
-	this.status <- Status{0, 0}
+	this.status <- Status{}
 	s := <-this.status
 	ret.Files, ret.Submissions = s.Files, s.Submissions
 	return nil

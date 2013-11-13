@@ -92,6 +92,15 @@ func GetStatus() (ret *Status, err error) {
 	return
 }
 
+func WaitIdle() (err error) {
+	client, err := rpc.DialHTTP("tcp", rpcAddress)
+	if err != nil {
+		return
+	}
+	err = client.Call("RPCHandler.WaitIdle", Empty{}, &Empty{})
+	return
+}
+
 func SetClientAddress(address string, port int) {
 	rpcAddress = address + ":" + strconv.Itoa(port)
 }

@@ -38,7 +38,7 @@ const (
 )
 
 var (
-	processedChan chan interface{}
+	processedChan chan Empty
 	statusChan    chan Status
 )
 
@@ -73,14 +73,14 @@ type (
 	ProcHelper struct {
 		subId     bson.ObjectId
 		serveChan chan bson.ObjectId
-		doneChan  chan interface{}
+		doneChan  chan Empty
 		started   bool
 		done      bool
 	}
 )
 
 func init() {
-	processedChan = make(chan interface{})
+	processedChan = make(chan Empty)
 	statusChan = make(chan Status)
 }
 
@@ -103,7 +103,7 @@ func monitorStatus() {
 	for {
 		val := <-statusChan
 		switch val {
-		case Status{0, 0}:
+		case Status{}:
 			//A zeroed Status indicates a request for the current Status.
 			statusChan <- *status
 		default:
@@ -129,7 +129,7 @@ func Shutdown() {
 }
 
 //None provides an empty struct
-func None() interface{} {
+func None() Empty {
 	return Empty{}
 }
 
@@ -215,7 +215,7 @@ func NewProcHelper(subId bson.ObjectId) *ProcHelper {
 	return &ProcHelper{
 		subId:     subId,
 		serveChan: make(chan bson.ObjectId),
-		doneChan:  make(chan interface{}),
+		doneChan:  make(chan Empty),
 		started:   false,
 		done:      false,
 	}
@@ -274,6 +274,7 @@ func (this *ProcHelper) Handle(fileQueue *list.List) {
 			} else if this.done {
 				//Not busy and we are done so we should finish up here.
 				stopChan <- None()
+				<-stopChan
 				submissionProcessed()
 				return
 			}
