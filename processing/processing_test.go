@@ -108,16 +108,13 @@ func TestArchive(t *testing.T) {
 		subs[i] = sub
 		archives[i] = archive
 	}
-	go func() {
-		SetClientAddress("", 8045)
-		for j, sub := range subs {
-			StartSubmission(sub.Id)
-			AddFile(archives[j])
-			EndSubmission(sub.Id)
-		}
-		Shutdown()
-	}()
-	Serve(8045, 10)
+	go Serve(10)
+	for j, sub := range subs {
+		StartSubmission(sub.Id)
+		AddFile(archives[j])
+		EndSubmission(sub.Id)
+	}
+	WaitIdle()
 	return
 }
 

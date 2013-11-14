@@ -29,29 +29,15 @@ package processing
 import (
 	"container/list"
 	"fmt"
+	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 )
 
-const (
-	LOG_SERVER = "processing/server.go"
-)
-
-var (
-	processedChan chan Empty
-	statusChan    chan Status
-)
-
 type (
-	//FileRequest is used to carry requests to process files.
-	FileRequest struct {
-		Id, SubId bson.ObjectId
-		//Used to return errors
-		Response chan error
-	}
 
-	//SubRequest is used to carry requests to process submissions.
-	SubRequest struct {
+	//Request is used to carry requests to process submissions and files.
+	Request struct {
 		Id    bson.ObjectId
 		Start bool
 		//Used to return errors
@@ -79,6 +65,16 @@ type (
 	}
 )
 
+const (
+	LOG_SERVER = "processing/server.go"
+)
+
+var (
+	processedChan chan Empty
+	statusChan    chan Status
+	active        bool
+)
+
 func init() {
 	processedChan = make(chan Empty)
 	statusChan = make(chan Status)
@@ -100,8 +96,7 @@ func ChangeStatus(change Status) {
 func monitorStatus() {
 	//This is Impendulo's actual processing status.
 	var status *Status = new(Status)
-	for {
-		val := <-statusChan
+	for val := range statusChan {
 		switch val {
 		case Status{}:
 			//A zeroed Status indicates a request for the current Status.
@@ -135,16 +130,28 @@ func None() Empty {
 
 //Serve spawns new processing routines for each submission started.
 //Added files are received here and then sent to the relevant submission goroutine.
-func Serve(port, maxProcs int) {
-	fileCh := make(chan *FileRequest)
-	subCh := make(chan *SubRequest)
-	//Begin monitoring processing status
-	setupRPC(port, subCh, fileCh, statusChan)
-	go monitorStatus()
+func Serve(maxProcs int) {
+	if active {
+		return
+	}
+	active = true
+	defer func() {
+		active = false
+	}()
+	fileCh := make(chan *Request)
+	subCh := make(chan *Request)
 	helpers := make(map[bson.ObjectId]*ProcHelper)
 	fileQueues := make(map[bson.ObjectId]*list.List)
 	subQueue := list.New()
 	busy := 0
+	//Begin monitoring processing status
+	go monitorStatus()
+	go func() {
+		err := startMQ(AMQP_URI, subCh, fileCh, statusChan)
+		if err != nil {
+			util.Log(err)
+		}
+	}()
 	for {
 		if busy < maxProcs && subQueue.Len() > 0 {
 			//If there is an available spot,
@@ -165,20 +172,21 @@ func Serve(port, maxProcs int) {
 		}
 		select {
 		case request := <-fileCh:
-			var err error
-			if helper, ok := helpers[request.SubId]; ok {
+			f, err := db.File(bson.M{db.ID: request.Id}, bson.M{db.SUBID: 1})
+			if err != nil {
+			} else if helper, ok := helpers[f.SubId]; ok {
 				if helper.started {
 					//Send file to goroutine if
 					//submission processing has started.
 					helper.serveChan <- request.Id
 				} else {
 					//Add file to queue if not.
-					fileQueues[request.SubId].PushBack(request.Id)
+					fileQueues[f.SubId].PushBack(request.Id)
 				}
 				ChangeStatus(Status{1, 0})
 			} else {
 				err = fmt.Errorf("No submission %q found for file %q.",
-					request.SubId, request.Id)
+					f.SubId, request.Id)
 			}
 			request.Response <- err
 		case request := <-subCh:

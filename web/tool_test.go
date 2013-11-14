@@ -144,8 +144,7 @@ func TestRunTool(t *testing.T) {
 	}
 	auth, enc, err := util.CookieKeys()
 	store := sessions.NewCookieStore(auth, enc)
-	processing.SetClientAddress("", 8045)
-	go processing.Serve(5, 8045)
+	go processing.Serve(5)
 	req, err := http.NewRequest("POST", "/runtool?projectid="+p.Id.Hex()+
 		"&tool="+findbugs.NAME+"&runempty-check=true", nil)
 	if err != nil {
@@ -159,5 +158,5 @@ func TestRunTool(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	processing.Shutdown()
+	processing.WaitIdle()
 }

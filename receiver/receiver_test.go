@@ -37,12 +37,10 @@ var (
 )
 
 func init() {
-	fmt.Print()
-	//util.SetErrorLogging("a")
-	//util.SetInfoLogging("a")
+	util.SetErrorLogging("a")
+	util.SetInfoLogging("a")
 	go func() {
-		processing.SetClientAddress("", pport)
-		processing.Serve(pport, 10)
+		processing.Serve(10)
 	}()
 }
 
@@ -245,58 +243,43 @@ func loadZip(fileNum int) ([]byte, error) {
 }
 
 func testReceive(spawner *clientSpawner) (err error) {
-	clientChan := make(chan error)
-	go func() {
-		errChan := make(chan error)
-		nU := len(spawner.users)
-		ok := true
-		cli, ok := spawner.spawn()
-		for ok {
-			go func(c *client) {
-				var err error
-				defer func() {
-					errChan <- err
-				}()
-				projectId, err := c.login(spawner.rport)
-				if err != nil {
-					return
-				}
-				err = c.create(projectId)
-				if err != nil {
-					return
-				}
-				err = c.send(spawner.numFiles, spawner.data)
-				if err != nil {
-					return
-				}
-				err = c.logout()
+	errChan := make(chan error)
+	nU := len(spawner.users)
+	ok := true
+	cli, ok := spawner.spawn()
+	for ok {
+		go func(c *client) {
+			var err error
+			defer func() {
+				errChan <- err
+			}()
+			projectId, err := c.login(spawner.rport)
+			if err != nil {
 				return
-			}(cli)
-			cli, ok = spawner.spawn()
-		}
-		done := 1
-		var err error
-		for done < nU && err == nil {
-			err = <-errChan
-			done++
-		}
-		time.Sleep(100 * time.Millisecond)
-		ierr := processing.WaitIdle()
-		if err == nil && ierr != nil {
-			err = ierr
-		}
-		/*waiting := true
-		for waiting {
-			time.Sleep(100 * time.Millisecond)
-			status, serr := processing.GetStatus()
-			if serr != nil && err == nil {
-				err = serr
 			}
-			waiting = serr == nil && status.Submissions > 0
-		}*/
-		clientChan <- err
-	}()
-	err = <-clientChan
+			err = c.create(projectId)
+			if err != nil {
+				return
+			}
+			err = c.send(spawner.numFiles, spawner.data)
+			if err != nil {
+				return
+			}
+			err = c.logout()
+			return
+		}(cli)
+		cli, ok = spawner.spawn()
+	}
+	done := 1
+	for done < nU && err == nil {
+		err = <-errChan
+		done++
+	}
+	time.Sleep(100 * time.Millisecond)
+	ierr := processing.WaitIdle()
+	if err == nil && ierr != nil {
+		err = ierr
+	}
 	return
 }
 

@@ -190,14 +190,14 @@ func setupConn() (err error) {
 //runWebServer runs the webserver
 func runWebServer() {
 	wFlags.Parse(os.Args[2:])
-	processing.SetClientAddress(rpcAddr, rpcPort)
+	//processing.SetClientAddress(rpcAddr, rpcPort)
 	web.Run(httpPort)
 }
 
 //runFileReceiver runs the TCP file receiving server.
 func runFileReceiver() {
 	rFlags.Parse(os.Args[2:])
-	processing.SetClientAddress(rpcAddr, rpcPort)
+	//processing.SetClientAddress(rpcAddr, rpcPort)
 	receiver.Run(tcpPort, new(receiver.SubmissionSpawner))
 }
 
