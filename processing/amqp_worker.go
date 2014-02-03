@@ -10,6 +10,38 @@ import (
 	"time"
 )
 
+type (
+	Consumer interface {
+		Consume(amqp.Delivery, amqp.Channel) error
+	}
+	Changer struct {
+		statusChan chan Status
+	}
+	RequestConsumer struct {
+		requestChan chan *Request
+	}
+	Loader struct {
+		statusChan chan Status
+		publishKey string
+	}
+	Waiter struct {
+		statusChan chan Status
+		publishKey string
+	}
+	Redoer struct {
+		requestChan chan *Request
+	}
+	MessageHandler struct {
+		conn                 *amqp.Connection
+		ch                   *amqp.Channel
+		tag, queue, exchange string
+		done                 chan error
+		Consumer
+	}
+	NewStatusHandler  func(amqpURI string, statusChan chan Status) (*MessageHandler, error)
+	NewRequestHandler func(amqpURI string, statusChan chan *Request) (*MessageHandler, error)
+)
+
 const (
 	AMQP_URI                        = "amqp://guest:guest@localhost:5672/"
 	LOG_AMQPWORKER                  = "processing/amqp_worker.go"
@@ -20,148 +52,196 @@ const (
 	ERR_ID, ERR_REQUEST, ERR_STATUS = "error_id", "error_request", "error_status"
 	PREFETCH_COUNT                  = 3
 	PREFETCH_SIZE                   = 0
+	DIRECT                          = "direct"
+	FANOUT                          = "fanout"
 )
 
-func startMQ(uri string, subCh, fileCh chan *Request, statusCh chan Status) (err error) {
-	conn, err := amqp.Dial(uri)
+func NewHandler(amqpURI, exchange, exchangeType, queue, key, ctag string, consumer Consumer) (mh *MessageHandler, err error) {
+	defer func() {
+		if err != nil {
+			if mh.ch != nil {
+				mh.ch.Close()
+			}
+			if mh.conn != nil {
+				mh.conn.Close()
+			}
+		}
+	}()
+	mh = &MessageHandler{
+		exchange: exchange,
+		tag:      ctag,
+		done:     make(chan error),
+		Consumer: consumer,
+	}
+	mh.conn, err = amqp.Dial(amqpURI)
 	if err != nil {
 		return
 	}
-	defer conn.Close()
-	ch, err := conn.Channel()
+	mh.ch, err = mh.conn.Channel()
 	if err != nil {
 		return
 	}
-	defer ch.Close()
-	q, err := ch.QueueDeclare(
-		WORKER_QUEUE, // name
+	err = mh.ch.ExchangeDeclare(
+		exchange,     // name of the exchange
+		exchangeType, // type
 		true,         // durable
-		false,        // delete when unused
-		false,        // exclusive
+		false,        // delete when complete
+		false,        // internal
 		false,        // noWait
 		nil,          // arguments
 	)
 	if err != nil {
 		return
 	}
-	ch.Qos(PREFETCH_COUNT, PREFETCH_SIZE, false)
-	msgs, err := ch.Consume(q.Name, "", false, false, false, false, nil)
+	q, err := mh.ch.QueueDeclare(
+		queue, // name of the queue
+		true,  // durable
+		false, // delete when usused
+		false, // exclusive
+		false, // noWait
+		nil,   // arguments
+	)
 	if err != nil {
 		return
 	}
-	for d := range msgs {
-		var body []byte
-		var tipe string
-		switch d.MessageId {
-		case SUB_REDO:
-			body, tipe = redoSubmission(subCh, fileCh, string(d.Body))
-		case SUB_START, SUB_END:
-			body, tipe = sendRequest(subCh, string(d.Body), d.MessageId == SUB_START)
-		case FILE:
-			body, tipe = sendRequest(fileCh, string(d.Body), false)
-		case STATUS:
-			body, tipe = getStatus(statusCh)
-		case IDLE:
-			waitIdle(statusCh)
+	mh.ch.Qos(PREFETCH_COUNT, PREFETCH_SIZE, false)
+	mh.queue = q.Name
+	err = mh.ch.QueueBind(
+		q.Name,   // name of the queue
+		key,      // bindingKey
+		exchange, // sourceExchange
+		false,    // noWait
+		nil,      // arguments
+	)
+	return
+}
+
+func (mh *MessageHandler) Handle() (err error) {
+	defer func() {
+		mh.done <- err
+	}()
+	deliveries, err := mh.ch.Consume(
+		mh.queue, // name
+		mh.tag,   // Tag,
+		false,    // noAck
+		false,    // exclusive
+		false,    // noLocal
+		false,    // noWait
+		nil,      // arguments
+	)
+	if err != nil {
+		return
+	}
+	for d := range deliveries {
+		cerr := mh.Consume(d, *mh.ch)
+		if err != nil {
+			util.Log(cerr)
 		}
+	}
+	return
+}
+
+func (mh *MessageHandler) Shutdown() (err error) {
+	err = mh.ch.Cancel(mh.tag, true)
+	if err != nil {
+		return
+	}
+	err = mh.conn.Close()
+	if err != nil {
+		return
+	}
+	defer util.Log("AMQP shutdown OK")
+	err = <-mh.done
+	mh = nil
+	return
+}
+
+func (rc *RequestConsumer) Consume(d amqp.Delivery, ch amqp.Channel) (err error) {
+	defer func() {
 		d.Ack(false)
-		pub := amqp.Publishing{
-			MessageId:     tipe,
-			CorrelationId: d.CorrelationId,
-			DeliveryMode:  amqp.Persistent,
-			ContentType:   "text/plain",
-			Body:          body,
-		}
-		perr := ch.Publish("", d.ReplyTo, true, false, pub)
-		if perr != nil {
-			util.Log(perr)
-		}
+	}()
+	req := new(Request)
+	if err = json.Unmarshal(d.Body, &req); err != nil {
+		return
 	}
+	rc.requestChan <- req
 	return
 }
 
-func sendRequest(ch chan *Request, val string, start bool) (body []byte, tipe string) {
-	if !bson.IsObjectIdHex(val) {
-		body = []byte(fmt.Sprintf("Not a valid Id %s", val))
-		tipe = ERR_ID
+func (c *Changer) Consume(d amqp.Delivery, ch amqp.Channel) (err error) {
+	defer func() {
+		d.Ack(false)
+	}()
+	status := new(Status)
+	if err = json.Unmarshal(d.Body, &status); err != nil {
 		return
 	}
-	req := &Request{
-		Id:       bson.ObjectIdHex(val),
-		Start:    start,
-		Response: make(chan error),
-	}
-	ch <- req
-	err := <-req.Response
-	if err != nil {
-		body = []byte(err.Error())
-		tipe = ERR_REQUEST
-		return
-	}
-	tipe = SUCCESS
+	c.statusChan <- *status
 	return
 }
 
-func waitIdle(statusCh chan Status) {
+func (w *Waiter) Consume(d amqp.Delivery, ch amqp.Channel) (err error) {
 	idle := false
 	for !idle {
-		statusCh <- Status{}
-		s := <-statusCh
+		w.statusChan <- Status{}
+		s := <-w.statusChan
 		idle = s.Submissions == 0
 		if !idle {
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
-}
-
-func getStatus(statusCh chan Status) (body []byte, tipe string) {
-	statusCh <- Status{}
-	s := <-statusCh
-	body, jerr := json.Marshal(s)
-	if jerr != nil {
-		body = []byte(jerr.Error())
-		tipe = ERR_STATUS
-		return
+	d.Ack(false)
+	pub := amqp.Publishing{
+		CorrelationId: d.CorrelationId,
+		DeliveryMode:  amqp.Persistent,
+		ContentType:   "text/plain",
+		Priority:      0,
 	}
-	tipe = SUCCESS
+	perr := ch.Publish(d.Exchange, w.publishKey, true, false, pub)
+	if err == nil && perr != nil {
+		err = perr
+	}
 	return
 }
 
-func redoSubmission(subCh, fileCh chan *Request, val string) (body []byte, tipe string) {
-	subId, err := util.ReadId(val)
-	if err != nil {
-		body = []byte(fmt.Sprintf("Not a valid Id %s", val))
-		tipe = ERR_ID
-		return
-	}
-	err = _redoSubmission(subCh, fileCh, subId)
+func (sl *Loader) Consume(d amqp.Delivery, ch amqp.Channel) (err error) {
+	sl.statusChan <- Status{}
+	s := <-sl.statusChan
+	body, err := json.Marshal(s)
 	if err != nil {
 		body = []byte(err.Error())
-		tipe = ERR_REQUEST
-		return
 	}
-	tipe = SUCCESS
+	d.Ack(false)
+	pub := amqp.Publishing{
+		CorrelationId: d.CorrelationId,
+		DeliveryMode:  amqp.Persistent,
+		ContentType:   "text/plain",
+		Body:          body,
+		Priority:      0,
+	}
+	perr := ch.Publish(d.Exchange, sl.publishKey, true, false, pub)
+	if err == nil && perr != nil {
+		err = perr
+	}
 	return
 }
 
-func _redoSubmission(subCh, fileCh chan *Request, subId bson.ObjectId) (err error) {
-	req := &Request{
-		Id:       subId,
-		Response: make(chan error),
-		Start:    true,
-	}
-	subCh <- req
-	err = <-req.Response
+func (r *Redoer) Consume(d amqp.Delivery, ch amqp.Channel) (err error) {
+	defer func() {
+		d.Ack(false)
+	}()
+	val := string(d.Body)
+	subId, err := util.ReadId(val)
 	if err != nil {
+		err = fmt.Errorf("Not a valid Id %s", val)
 		return
 	}
 	defer func() {
-		req.Start = false
-		subCh <- req
-		serr := <-req.Response
-		if err == nil && serr != nil {
-			err = serr
+		req := &Request{
+			SubId: subId,
+			Stop:  true,
 		}
+		r.requestChan <- req
 	}()
 	matcher := bson.M{db.SUBID: subId}
 	selector := bson.M{db.DATA: 0}
@@ -171,14 +251,54 @@ func _redoSubmission(subCh, fileCh chan *Request, subId bson.ObjectId) (err erro
 	}
 	for _, f := range files {
 		freq := &Request{
-			Id:       f.Id,
-			Response: make(chan error),
+			FileId: f.Id,
+			SubId:  subId,
 		}
-		fileCh <- freq
-		err = <-freq.Response
-		if err != nil {
-			return
-		}
+		r.requestChan <- freq
 	}
 	return
+}
+
+func NewRedoer(amqpURI string, requestChan chan *Request) (*MessageHandler, error) {
+	redoer := &Redoer{
+		requestChan: requestChan,
+	}
+	return NewHandler(amqpURI, SUB_REDO, DIRECT, "", "", "", redoer)
+}
+
+func NewFileConsumer(amqpURI string, requestChan chan *Request) (*MessageHandler, error) {
+	r := &RequestConsumer{
+		requestChan: requestChan,
+	}
+	return NewHandler(amqpURI, "file_exchange", DIRECT, "file_queue", "file_key", "", r)
+}
+
+func NewEnder(amqpURI string, requestChan chan *Request) (*MessageHandler, error) {
+	r := &RequestConsumer{
+		requestChan: requestChan,
+	}
+	return NewHandler(amqpURI, "end_exchange", FANOUT, "", "end_key", "", r)
+}
+
+func NewWaiter(amqpURI string, statusChan chan Status) (*MessageHandler, error) {
+	waiter := &Waiter{
+		statusChan: statusChan,
+		publishKey: "wait_response_key",
+	}
+	return NewHandler(amqpURI, "wait_exchange", DIRECT, "wait_queue", "wait_request_key", "", waiter)
+}
+
+func NewChanger(amqpURI string, statusChan chan Status) (*MessageHandler, error) {
+	changer := &Changer{
+		statusChan: statusChan,
+	}
+	return NewHandler(amqpURI, "change_exchange", FANOUT, "", "change_key", "", changer)
+}
+
+func NewLoader(amqpURI string, statusChan chan Status) (*MessageHandler, error) {
+	loader := &Loader{
+		statusChan: statusChan,
+		publishKey: "status_response_key",
+	}
+	return NewHandler(amqpURI, "status_exchange", DIRECT, "status_queue", "status_request_key", "", loader)
 }

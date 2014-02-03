@@ -29,7 +29,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/processing"
+	//"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/checkstyle"
@@ -330,7 +330,7 @@ func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
 }
 
 func runTools(submissions []*project.Submission, tool string, runAll bool) {
-	selector := bson.M{db.DATA: 0}
+	/*selector := bson.M{db.DATA: 0}
 	for _, submission := range submissions {
 		matcher := bson.M{db.SUBID: submission.Id}
 		files, err := db.Files(matcher, selector)
@@ -350,7 +350,7 @@ func runTools(submissions []*project.Submission, tool string, runAll bool) {
 		if err != nil {
 			util.Log(err)
 		}
-	}
+	}*/
 }
 
 //removeAll removes all of the specified file's results from the db.

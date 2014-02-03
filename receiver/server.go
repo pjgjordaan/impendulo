@@ -49,6 +49,7 @@ type (
 
 const (
 	LOG_SERVER = "receiver/server.go"
+	PORT       = 8010
 )
 
 //Run is used to listen for new tcp connections and

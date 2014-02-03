@@ -47,12 +47,12 @@ import (
 
 //Flag variables for setting ports to listen on, users file to process, mode to run in, etc.
 var (
-	wFlags, rFlags, pFlags               *flag.FlagSet
-	cfgFile, errLog, infoLog             string
-	backupDB, access                     string
-	dbName, dbAddr, rpcAddr              string
-	mProcs, timeout                      int
-	httpPort, tcpPort, procPort, rpcPort int
+	wFlags, rFlags, pFlags      *flag.FlagSet
+	cfgFile, errLog, infoLog    string
+	backupDB, access            string
+	dbName, dbAddr, mqURI       string
+	mProcs, timeLimit           int
+	httpPort, tcpPort, procPort int
 )
 
 const (
@@ -68,9 +68,9 @@ func init() {
 	flag.StringVar(&backupDB, "b", "", "Specify a backup db (default none).")
 	flag.StringVar(&errLog, "e", "a", "Specify where to log errors to (default console & file).")
 	flag.StringVar(&infoLog, "i", "f", "Specify where to log info to (default file).")
-	flag.StringVar(&cfgFile, "c", defualt, "Specify a configuration file.")
-	flag.StringVar(&dbName, "db", db.DEBUG_DB, "Specify a db to use (default "+db.DEBUG_DB+").")
-	flag.StringVar(&dbAddr, "da", db.ADDRESS, "Specify a db address to use (default "+db.ADDRESS+").")
+	flag.StringVar(&cfgFile, "c", defualt, fmt.Sprintf("Specify a configuration file (default %s).", defualt))
+	flag.StringVar(&dbName, "db", db.DEBUG_DB, fmt.Sprintf("Specify a db to use (default %s).", db.DEBUG_DB))
+	flag.StringVar(&dbAddr, "da", db.ADDRESS, fmt.Sprintf("Specify a db address to use (default %s).", db.ADDRESS))
 	flag.StringVar(
 		&access, "a", "",
 		"Change a user's access permissions."+
@@ -81,18 +81,15 @@ func init() {
 	rFlags = flag.NewFlagSet("receiver", flag.ExitOnError)
 	wFlags = flag.NewFlagSet("web", flag.ExitOnError)
 
-	pFlags.IntVar(&timeout, "t", 20, "Specify the time limit for a tool to run in, in minutes (default 20).")
-	pFlags.IntVar(&mProcs, "mp", 5, "Specify the maximum number of goroutines to run when processing submissions (default 5).")
-	pFlags.IntVar(&procPort, "p", 8045, "Specify the port to use for the processing server (default 8045).")
+	pFlags.IntVar(&timeLimit, "t", int(tool.TIMELIMIT), fmt.Sprintf("Specify the time limit for a tool to run in, in minutes (default %s).", tool.TIMELIMIT))
+	pFlags.IntVar(&mProcs, "mp", processing.MAX_PROCS, fmt.Sprintf("Specify the maximum number of goroutines to run when processing submissions (default %d).", processing.MAX_PROCS))
+	pFlags.StringVar(&mqURI, "mq", processing.AMQP_URI, fmt.Sprintf("Specify the address of the Rabbitmq server (default %s).", processing.AMQP_URI))
 
-	rFlags.IntVar(&tcpPort, "p", 8010, "Specify the port to listen on for files using TCP (default 8010).")
-	rFlags.StringVar(&rpcAddr, "ra", "", "Specify a server rpc address to connect to (default localhost).")
-	rFlags.IntVar(&rpcPort, "rp", 8045, "Specify a server rpc port to connect to (default 8045).")
+	rFlags.IntVar(&tcpPort, "p", receiver.PORT, fmt.Sprintf("Specify the port to listen on for files using TCP (default %d).", receiver.PORT))
+	rFlags.StringVar(&mqURI, "mq", processing.AMQP_URI, fmt.Sprintf("Specify the address of the Rabbitmq server (default %s).", processing.AMQP_URI))
 
-	wFlags.IntVar(&httpPort, "p", 8080, "Specify the port to use for the webserver (default 8080).")
-	wFlags.StringVar(&rpcAddr, "ra", "", "Specify a server rpc address to connect to (default localhost).")
-	wFlags.IntVar(&rpcPort, "rp", 8045, "Specify a server rpc port to connect to (default 8045).")
-
+	wFlags.IntVar(&httpPort, "p", web.PORT, fmt.Sprintf("Specify the port to use for the webserver (default %d).", web.PORT))
+	wFlags.StringVar(&mqURI, "mq", processing.AMQP_URI, fmt.Sprintf("Specify the address of the Rabbitmq server (default %s).", processing.AMQP_URI))
 }
 
 func main() {
@@ -204,6 +201,7 @@ func runFileReceiver() {
 //runFileProcessor runs the file processing server.
 func runFileProcessor() {
 	pFlags.Parse(os.Args[2:])
-	tool.SetTimeout(timeout)
-	processing.Serve(procPort, mProcs)
+	tool.SetTimeLimit(timeLimit)
+	go processing.MonitorStatus(mqURI)
+	processing.Serve(mqURI, mProcs)
 }

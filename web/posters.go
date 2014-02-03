@@ -140,12 +140,6 @@ func SubmitArchive(req *http.Request, ctx *Context) (msg string, err error) {
 		msg = "Could not store archive."
 		return
 	}
-	//Start a submission and send the file to be processed.
-	err = processing.StartSubmission(sub.Id)
-	if err != nil {
-		msg = "Could not start archive submission."
-		return
-	}
 	err = processing.AddFile(file)
 	if err != nil {
 		msg = "Could not start archive submission."

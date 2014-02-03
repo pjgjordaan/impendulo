@@ -58,11 +58,12 @@ const (
 	JAVA Language = "Java"
 	C    Language = "C"
 	//The maximum size in bytes that a ToolResult is allowed to have.
-	MAX_SIZE = 16000000
+	MAX_SIZE  = 16000000
+	TIMELIMIT = 20 * time.Minute
 )
 
 var (
-	timeLimit = 20 * time.Minute
+	timeLimit = TIMELIMIT
 	langs     []Language
 )
 
@@ -83,13 +84,13 @@ func Supported(lang Language) bool {
 	return false
 }
 
-//SetTimeout sets the maximum time for which the RunCommand function can run.
-func SetTimeout(minutes int) {
+//SetTimeLimit sets the maximum time for which the RunCommand function can run.
+func SetTimeLimit(minutes int) {
 	timeLimit = time.Duration(minutes) * time.Minute
 }
 
-//Timeout returns the current timeout setting.
-func Timeout() int {
+//TimeLimit returns the current timeout setting.
+func TimeLimit() int {
 	return int(timeLimit)
 }
 

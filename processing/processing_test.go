@@ -24,6 +24,7 @@
 
 package processing
 
+/*
 import (
 	"bytes"
 	"github.com/godfried/impendulo/db"
@@ -38,6 +39,7 @@ import (
 	"testing"
 	"time"
 )
+
 
 func TestProcessFile(t *testing.T) {
 	db.Setup(db.TEST_CONN)
@@ -168,3 +170,4 @@ public class Triangle {
 	}
 }
 `)
+*/

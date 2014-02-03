@@ -42,6 +42,7 @@ var (
 
 const (
 	LOG_SERVER = "webserver/server.go"
+	PORT       = 8080
 )
 
 func init() {

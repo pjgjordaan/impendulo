@@ -103,10 +103,6 @@ func (this *SubmissionHandler) Handle() (err error) {
 	if err != nil {
 		return
 	}
-	err = processing.StartSubmission(this.submission.Id)
-	if err != nil {
-		return
-	}
 	defer func() { processing.EndSubmission(this.submission.Id) }()
 	done := false
 	for err == nil && !done {
