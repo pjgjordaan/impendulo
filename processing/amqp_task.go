@@ -1,3 +1,27 @@
+//Copyright (c) 2013, The Impendulo Authors
+//All rights reserved.
+//
+//Redistribution and use in source and binary forms, with or without modification,
+//are permitted provided that the following conditions are met:
+//
+//  Redistributions of source code must retain the above copyright notice, this
+//  list of conditions and the following disclaimer.
+//
+//  Redistributions in binary form must reproduce the above copyright notice, this
+//  list of conditions and the following disclaimer in the documentation and/or
+//  other materials provided with the distribution.
+//
+//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+//DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+//ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+//(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+//LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+//ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+//(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+//SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 package processing
 
 import (
@@ -39,7 +63,7 @@ func init() {
 	rps = make(map[string]*ReceiveProducer)
 }
 
-func NewReceiveProducer(name, amqpURI, exchange, exchangeType, queue, publishKey, bindingKey, ctag string) (rp *ReceiveProducer, err error) {
+func NewReceiveProducer(name, amqpURI, exchange, exchangeType, publishKey, bindingKey, ctag string) (rp *ReceiveProducer, err error) {
 	var ok bool
 	if rp, ok = rps[name]; ok {
 		return
@@ -53,10 +77,10 @@ func NewReceiveProducer(name, amqpURI, exchange, exchangeType, queue, publishKey
 		return
 	}
 	q, err := rp.ch.QueueDeclare(
-		queue, // name of the queue
-		true,  // durable
-		false, // delete when usused
-		false, // exclusive
+		"",    // name of the queue
+		false, // durable
+		true,  // delete when usused
+		true,  // exclusive
 		false, // noWait
 		nil,   // arguments
 	)
@@ -219,7 +243,7 @@ func ChangeStatus(change Status) (err error) {
 
 //
 func IdleWaiter(amqpURI string) (*ReceiveProducer, error) {
-	return NewReceiveProducer("idle_waiter", amqpURI, "wait_exchange", DIRECT, "", "wait_request_key", "wait_response_key", "")
+	return NewReceiveProducer("idle_waiter", amqpURI, "wait_exchange", DIRECT, "wait_request_key", "wait_response_key", "")
 }
 
 func WaitIdle() (err error) {
@@ -232,7 +256,7 @@ func WaitIdle() (err error) {
 }
 
 func StatusRetriever(amqpURI string) (*ReceiveProducer, error) {
-	return NewReceiveProducer("status_retriever", amqpURI, "status_exchange", DIRECT, "", "status_request_key", "status_response_key", "")
+	return NewReceiveProducer("status_retriever", amqpURI, "status_exchange", DIRECT, "status_request_key", "status_response_key", "")
 }
 
 func GetStatus() (ret *Status, err error) {
@@ -274,10 +298,13 @@ func AddFile(file *project.File) (err error) {
 	return
 }
 
+//EndProducer creates a new Producer which is used to signal the end of a submission.
 func EndProducer(amqpURI string) (*Producer, error) {
 	return NewProducer("end_producer", amqpURI, "end_exchange", FANOUT, "end_key")
 }
 
+//EndSubmission sends a message on AMQP that this submission has been completed by the user
+//and can thus be closed when processing is done.
 func EndSubmission(id bson.ObjectId) (err error) {
 	endProducer, err := EndProducer(AMQP_URI)
 	if err != nil {
@@ -295,101 +322,3 @@ func EndSubmission(id bson.ObjectId) (err error) {
 	err = endProducer.Produce(marshalled)
 	return
 }
-
-/*
-func SendRcv(mId string, data []byte) (resp []byte, tipe string, err error) {
-	conn, err := amqp.Dial(AMQP_URI)
-	if err != nil {
-		return
-	}
-	defer conn.Close()
-	ch, err := conn.Channel()
-	if err != nil {
-		return
-	}
-	defer ch.Close()
-	q, err := ch.QueueDeclare(
-		TASK_QUEUE,
-		true,  // durable
-		false, // delete when unused
-		false, // exclusive
-		false, // noWait
-		nil,   // arguments
-	)
-	msgs, err := ch.Consume(q.Name, "", false, false, false, false, nil)
-	if err != nil {
-		return
-	}
-	u4, err := uuid.NewV4()
-	if err != nil {
-		return
-	}
-	cId := u4.String()
-	err = ch.Publish(
-		"",           // exchange
-		WORKER_QUEUE, // routing key
-		true,         // mandatory
-		false,
-		amqp.Publishing{
-			MessageId:     mId,
-			CorrelationId: cId,
-			ReplyTo:       q.Name,
-			DeliveryMode:  amqp.Persistent,
-			ContentType:   "text/plain",
-			Body:          data,
-		})
-	if err != nil {
-		return
-	}
-	var d amqp.Delivery
-	for d = range msgs {
-		if d.CorrelationId == cId {
-			break
-		}
-	}
-	d.Ack(false)
-	resp, tipe = d.Body, d.MessageId
-	return
-}
-
-func RedoSubmission(id bson.ObjectId) error {
-	return Send(SUB_REDO, []byte(id.Hex()))
-}
-
-func EndSubmission(id bson.ObjectId) error {
-	req := &Request{
-		SubId: id,
-		Stop:  true,
-	}
-	return sendRequest(req, SUB_END)
-}
-
-func sendRequest(req *Request, tipe string) (err error) {
-	marshalled, err := json.Marshal(req)
-	if err != nil {
-		return
-	}
-	err = Send(tipe, marshalled)
-	return
-}
-
-func GetStatus() (ret *Status, err error) {
-	ret = new(Status)
-	resp, tipe, err := SendRcv(STATUS, nil)
-	if err != nil {
-		return
-	}
-	switch tipe {
-	case SUCCESS:
-		err = json.Unmarshal(resp, &ret)
-	default:
-		err = fmt.Errorf("Encountered error %s of type %s", string(resp), tipe)
-	}
-	return
-}
-
-func WaitIdle() (err error) {
-	_, _, err = Send(IDLE, nil)
-	return
-}
-*/

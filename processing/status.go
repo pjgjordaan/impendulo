@@ -39,6 +39,9 @@ type (
 		Files       int
 		Submissions int
 	}
+
+	//Monitor is used to keep track of and change Impendulo's processing
+	//status.
 	Monitor struct {
 		statusChan              chan Status
 		uri                     string
@@ -56,10 +59,10 @@ func (this *Status) add(toAdd Status) {
 	this.Submissions += toAdd.Submissions
 }
 
-//MonitorStatus keeps track of Impendulo's current processing status.
+//MonitorStatus begins keeping track of Impendulo's current processing status.
 func MonitorStatus(amqpURI string) (err error) {
 	if monitor != nil {
-		err = monitor.Stop()
+		err = monitor.Shutdown()
 		if err != nil {
 			return
 		}
@@ -72,6 +75,7 @@ func MonitorStatus(amqpURI string) (err error) {
 	return
 }
 
+//NewMonitor
 func NewMonitor(amqpURI string) (ret *Monitor, err error) {
 	ret = &Monitor{
 		statusChan: make(chan Status),
@@ -89,6 +93,8 @@ func NewMonitor(amqpURI string) (ret *Monitor, err error) {
 	return
 }
 
+//Monitor begins a new monitoring session for this Monitor.
+//It handles status updates and requests.
 func (this *Monitor) Monitor() {
 	handle := func(mh *MessageHandler) {
 		merr := mh.Handle()
@@ -112,23 +118,25 @@ func (this *Monitor) Monitor() {
 	}
 }
 
-func StopMonitor() (err error) {
+func ShutdownMonitor() (err error) {
 	if monitor == nil {
 		return
 	}
-	err = monitor.Stop()
+	err = monitor.Shutdown()
 	if err == nil {
 		monitor = nil
 	}
 	return
 }
 
-func (this *Monitor) Stop() (err error) {
+//Shutdown stops this Monitor
+func (this *Monitor) Shutdown() (err error) {
 	close(this.statusChan)
 	err = this.shutdownHandlers()
 	return
 }
 
+//shutdownHandlers stops all the MesageHandlers used by this Monitor.
 func (this *Monitor) shutdownHandlers() (err error) {
 	err = this.waiter.Shutdown()
 	if err != nil {

@@ -1,3 +1,27 @@
+//Copyright (c) 2013, The Impendulo Authors
+//All rights reserved.
+//
+//Redistribution and use in source and binary forms, with or without modification,
+//are permitted provided that the following conditions are met:
+//
+//  Redistributions of source code must retain the above copyright notice, this
+//  list of conditions and the following disclaimer.
+//
+//  Redistributions in binary form must reproduce the above copyright notice, this
+//  list of conditions and the following disclaimer in the documentation and/or
+//  other materials provided with the distribution.
+//
+//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+//DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+//ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+//(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+//LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+//ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+//(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+//SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 package processing
 
 import (
@@ -11,26 +35,45 @@ import (
 )
 
 type (
+	//Consumer is an interface for allowing the processing of messages from AMQP.
 	Consumer interface {
 		Consume(amqp.Delivery, amqp.Channel) error
 	}
+
+	//Changer is a Consumer which listens for updates to Impendulo's status
+	//and changes it accordingly.
 	Changer struct {
 		statusChan chan Status
 	}
+
+	//RequestConsumer is a Consumer used to handle both new file and new
+	//submission requests.
 	RequestConsumer struct {
 		requestChan chan *Request
 	}
+
+	//Loader is a Consumer which listens for status requests on AMQP
+	//and responds to them with Impendulo's current status.
 	Loader struct {
 		statusChan chan Status
 		publishKey string
 	}
+
+	//Waiter is a Consumer which listens for requests for when Impendulo is idle
+	//and responds to them when it is.
 	Waiter struct {
 		statusChan chan Status
 		publishKey string
 	}
+
+	//Redoer is a Consumer which listens for requests to reanalyse submissions
+	//and submits them for reanalysis.
 	Redoer struct {
 		requestChan chan *Request
 	}
+
+	//MessageHandler wraps a consumer in a struct in order to provide with other
+	//tools to manage its AMQP connection.
 	MessageHandler struct {
 		conn                 *amqp.Connection
 		ch                   *amqp.Channel
@@ -38,7 +81,9 @@ type (
 		done                 chan error
 		Consumer
 	}
-	NewStatusHandler  func(amqpURI string, statusChan chan Status) (*MessageHandler, error)
+
+	NewStatusHandler func(amqpURI string, statusChan chan Status) (*MessageHandler, error)
+
 	NewRequestHandler func(amqpURI string, statusChan chan *Request) (*MessageHandler, error)
 )
 
@@ -56,6 +101,7 @@ const (
 	FANOUT                          = "fanout"
 )
 
+//NewHandler
 func NewHandler(amqpURI, exchange, exchangeType, queue, key, ctag string, consumer Consumer) (mh *MessageHandler, err error) {
 	defer func() {
 		if err != nil {
@@ -93,13 +139,14 @@ func NewHandler(amqpURI, exchange, exchangeType, queue, key, ctag string, consum
 	if err != nil {
 		return
 	}
+	isUnique := queue == ""
 	q, err := mh.ch.QueueDeclare(
-		queue, // name of the queue
-		true,  // durable
-		false, // delete when usused
-		false, // exclusive
-		false, // noWait
-		nil,   // arguments
+		queue,     // name of the queue
+		!isUnique, // durable
+		isUnique,  // delete when usused
+		false,     // exclusive
+		false,     // noWait
+		nil,       // arguments
 	)
 	if err != nil {
 		return

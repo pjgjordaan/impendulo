@@ -1,3 +1,27 @@
+//Copyright (c) 2013, The Impendulo Authors
+//All rights reserved.
+//
+//Redistribution and use in source and binary forms, with or without modification,
+//are permitted provided that the following conditions are met:
+//
+//  Redistributions of source code must retain the above copyright notice, this
+//  list of conditions and the following disclaimer.
+//
+//  Redistributions in binary form must reproduce the above copyright notice, this
+//  list of conditions and the following disclaimer in the documentation and/or
+//  other materials provided with the distribution.
+//
+//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+//DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+//ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+//(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+//LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+//ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+//(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+//SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 package processing
 
 import (
@@ -6,25 +30,27 @@ import (
 	"github.com/godfried/impendulo/util"
 	"github.com/streadway/amqp"
 	"labix.org/v2/mgo/bson"
+	"strconv"
 	"testing"
 	"time"
 )
 
 type (
 	BasicConsumer struct {
-		id int
+		id   int
+		msgs chan string
 	}
 )
 
 func init() {
 	fmt.Print()
-	time.Sleep(0 * time.Second)
 	util.SetErrorLogging("f")
 	util.SetInfoLogging("f")
 }
 
 func (bc *BasicConsumer) Consume(d amqp.Delivery, ch amqp.Channel) error {
-	fmt.Printf("%d says %s.\n", bc.id, string(d.Body))
+	bc.msgs <- fmt.Sprintf("Consumer %d says %s.\n", bc.id, string(d.Body))
+	d.Ack(false)
 	return nil
 }
 
@@ -334,7 +360,7 @@ func TestMonitorStatus(t *testing.T) {
 			t.Error(err)
 		}
 	}
-	err = StopMonitor()
+	err = ShutdownMonitor()
 	if err != nil {
 		t.Error(err)
 	}
@@ -344,13 +370,13 @@ func TestMonitorStatus(t *testing.T) {
 	}
 }
 
-/*
 func TestAMQPBasic(t *testing.T) {
-	handler, err := NewHandler(AMQP_URI, "test", DIRECT, "", "", "", new(BasicConsumer))
+	msgChan := make(chan string)
+	handler, err := NewHandler(AMQP_URI, "test", DIRECT, "", "", "", &BasicConsumer{id: 1, msgs: msgChan})
 	if err != nil {
 		t.Error(err)
 	}
-	producer, err := NewProducer(AMQP_URI, "test", DIRECT, "")
+	producer, err := NewProducer("test_producer", AMQP_URI, "test", DIRECT, "")
 	if err != nil {
 		t.Error(err)
 	}
@@ -360,30 +386,40 @@ func TestAMQPBasic(t *testing.T) {
 			t.Error(herr)
 		}
 	}()
-	for i := 0; i < 10; i++ {
+	n := 10
+	for i := 0; i < n; i++ {
 		producer.Produce([]byte(fmt.Sprintf("testing %d", i)))
-		time.Sleep(2 * time.Second)
 	}
-	serr := handler.Shutdown()
-	if serr != nil {
-		t.Error(serr)
+	for i := 0; i < n; i++ {
+		fmt.Printf("Message %d %s", i, <-msgChan)
+	}
+	err = handler.Shutdown()
+	if err != nil {
+		t.Error(err)
+	}
+	err = StopProducers()
+	if err != nil {
+		t.Error(err)
 	}
 }
 
-
 func TestAMQPQueue(t *testing.T) {
-	n := 10
-	handlers := make([]*MessageHandler, n)
+	nP, nH, nM := 10, 10, 50
+	msgChan := make(chan string)
+	handlers := make([]*MessageHandler, nH)
 	var err error
-	for i := 0; i < n; i++ {
-		handlers[i], err = NewHandler(AMQP_URI, "test", DIRECT, "test_queue", "test_key", "", &BasicConsumer{i})
+	for i := 0; i < nH; i++ {
+		handlers[i], err = NewHandler(AMQP_URI, "test", DIRECT, "test_queue", "test_key", "", &BasicConsumer{id: i, msgs: msgChan})
 		if err != nil {
 			t.Error(err)
 		}
 	}
-	producer, err := NewProducer(AMQP_URI, "test", DIRECT, "test_key")
-	if err != nil {
-		t.Error(err)
+	producers := make([]*Producer, nP)
+	for i := 0; i < nP; i++ {
+		producers[i], err = NewProducer("test_producer_"+strconv.Itoa(i), AMQP_URI, "test", DIRECT, "test_key")
+		if err != nil {
+			t.Error(err)
+		}
 	}
 	for _, handler := range handlers {
 		go func(h *MessageHandler) {
@@ -393,15 +429,21 @@ func TestAMQPQueue(t *testing.T) {
 			}
 		}(handler)
 	}
-	for i := 0; i < 50; i++ {
-		producer.Produce([]byte(fmt.Sprintf("testing %d", i)))
+	for i := 0; i < nM; i++ {
+		pNum := i % nP
+		producers[pNum].Produce([]byte(fmt.Sprintf("message %d from producer %d", i, pNum)))
 	}
-	time.Sleep(10 * time.Second)
+	for i := 0; i < nM; i++ {
+		fmt.Printf("Received: %s", <-msgChan)
+	}
 	for _, h := range handlers {
 		err = h.Shutdown()
 		if err != nil {
 			t.Error(err)
 		}
 	}
+	err = StopProducers()
+	if err != nil {
+		t.Error(err)
+	}
 }
-*/

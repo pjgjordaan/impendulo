@@ -117,6 +117,7 @@ func main() {
 		return
 	}
 	if flag.NArg() < 1 {
+		err = fmt.Errorf("Too few arguments provided %d", flag.NArg())
 		return
 	}
 	if err = config.LoadConfigs(cfgFile); err != nil {

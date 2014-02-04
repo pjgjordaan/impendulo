@@ -29,9 +29,9 @@ package processing
 import (
 	"container/list"
 	"fmt"
-	//"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+	"runtime"
 )
 
 type (
@@ -54,31 +54,48 @@ type (
 		done      bool
 	}
 
+	//Server is our processing server which receives and processes submissions and files.
 	Server struct {
-		uri                 string
-		maxProcs            int
-		reqChan             chan *Request
-		processedChan       chan E
+		uri           string
+		maxProcs      int
+		reqChan       chan *Request
+		processedChan chan E
+		//ender listens for messages on AMQP which indicate that a submission has ended.
+		//fileConsumer retrieves new files for processing from AMQP.
 		ender, fileConsumer *MessageHandler
 	}
 )
 
 var (
 	defaultServer *Server
+	MAX_PROCS     = max(runtime.NumCPU()-1, 1)
 )
 
 const (
 	LOG_SERVER = "processing/server.go"
-	MAX_PROCS  = 5
 )
 
+//max is a convenience function to find the largest of two integers.
+func max(a, b int) int {
+	if a >= b {
+		return a
+	} else {
+		return b
+	}
+}
+
+//Serve launches the default Server. It listens on the provided AMQP URI and
+//spawns at most maxProcs goroutines in order to process submissions.
 func Serve(amqpURI string, maxProcs int) (err error) {
 	if defaultServer, err = NewServer(amqpURI, maxProcs); err == nil {
-		go defaultServer.Serve()
+		defaultServer.Serve()
 	}
 	return
 }
 
+//Shutdown signals to the default Server that it can shutdown
+//and waits for it to complete all processing. It then shuts down all
+//active producers as well as the status monitor.
 func Shutdown() (err error) {
 	err = defaultServer.Shutdown()
 	if err != nil {
@@ -88,10 +105,12 @@ func Shutdown() (err error) {
 	if err != nil {
 		return
 	}
-	err = StopMonitor()
+	err = ShutdownMonitor()
 	return
 }
 
+//NewServer constructs a new Server instance which will listen on the provided
+//AMQP URI.
 func NewServer(amqpURI string, maxProcs int) (ret *Server, err error) {
 	ret = &Server{
 		uri:           amqpURI,
@@ -145,6 +164,8 @@ func (this *Server) Serve() {
 		case request := <-this.reqChan:
 			helper, ok := helpers[request.SubId]
 			if request.Stop && ok {
+				//If the submission has finished, set the submission's ProcHelper to done
+				//and if it has already started, remove it from the queue.
 				helper.SetDone()
 				if helper.Started() {
 					delete(helpers, request.SubId)
@@ -152,6 +173,7 @@ func (this *Server) Serve() {
 			} else if request.Stop {
 				util.Log(fmt.Errorf("No submission %q found to end.", request.SubId))
 			} else if !ok {
+				//This is a new submission so we initialise it.
 				subQueue.PushBack(request.SubId)
 				helpers[request.SubId] = NewProcHelper(request.SubId)
 				fileQueues[request.SubId] = list.New()
