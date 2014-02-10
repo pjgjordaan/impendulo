@@ -27,6 +27,7 @@
 package processing
 
 import (
+	"fmt"
 	"github.com/godfried/impendulo/util"
 )
 
@@ -113,7 +114,7 @@ func (this *Monitor) Monitor() {
 			this.statusChan <- *status
 		default:
 			status.add(val)
-			util.Log(*status, val)
+			util.Log(fmt.Sprintf("Status updated with %v to %v.", val, *status))
 		}
 	}
 }

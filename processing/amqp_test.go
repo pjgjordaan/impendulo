@@ -43,7 +43,7 @@ type (
 )
 
 func init() {
-	fmt.Print()
+	fmt.Sprint(time.Now(), project.Project{}, strconv.Itoa(1), bson.NewObjectId())
 	util.SetErrorLogging("f")
 	util.SetInfoLogging("f")
 }
@@ -121,101 +121,59 @@ func TestGetStatus(t *testing.T) {
 	}
 }
 
-func TestFileConsume(t *testing.T) {
-	subId := bson.NewObjectId()
-	n := 10
-	files := make([]*project.File, n)
-	for i := 0; i < n; i++ {
-		files[i] = &project.File{
-			Id:    bson.NewObjectId(),
-			SubId: subId,
-			Type:  project.SRC,
-		}
-	}
+func TestSubmitter(t *testing.T) {
+	n := 100
 	requestChan := make(chan *Request)
-	handlers := make([]*MessageHandler, n)
+	handlers := make([]*MessageHandler, 2*n)
 	var err error
 	for i := 0; i < n; i++ {
-		handlers[i], err = NewFileConsumer(AMQP_URI, requestChan)
+		handlers[2*i+1], handlers[2*i], err = NewSubmitter(AMQP_URI, requestChan)
 		if err != nil {
 			t.Error(err)
 		}
 	}
 	for _, h := range handlers {
-		go func(fc *MessageHandler) {
-			err = fc.Handle()
-			if err != nil {
-				t.Error(err)
-			}
-		}(h)
+		go handleFunc(h)
 	}
+	time.Sleep(1 * time.Second)
 	go func() {
-		for _, file := range files {
-			AddFile(file)
-		}
-	}()
-	processed := 0
-	for r := range requestChan {
-		found := false
-		for _, file := range files {
-			if r.FileId == file.Id && r.SubId == file.SubId {
-				found = true
+		processed := 0
+		for r := range requestChan {
+			if r.Type != SUBMISSION_START {
+				t.Error(fmt.Errorf("Invalid request %q.", r))
+			}
+			processed++
+			if processed == n {
 				break
 			}
 		}
-		if !found {
-			t.Error(fmt.Errorf("Invalid request %q.", r))
-		}
-		processed++
-		if processed == n {
-			break
-		}
-	}
-	for _, h := range handlers {
-		err = h.Shutdown()
-		if err != nil {
-			t.Error(err)
-		}
-
-	}
-	err = StopProducers()
-	if err != nil {
-		t.Error(err)
-	}
-}
-
-func TestSubmissionEnder(t *testing.T) {
-	subId := bson.NewObjectId()
-	n := 10
-	requestChan := make(chan *Request)
-	handlers := make([]*MessageHandler, n)
-	var err error
+	}()
+	ids := make([]bson.ObjectId, n)
+	keys := make([]string, n)
 	for i := 0; i < n; i++ {
-		handlers[i], err = NewEnder(AMQP_URI, requestChan)
+		ids[i] = bson.NewObjectId()
+		keys[i], err = StartSubmission(ids[i])
 		if err != nil {
 			t.Error(err)
 		}
 	}
-	for _, h := range handlers {
-		go func(fc *MessageHandler) {
-			err = fc.Handle()
-			if err != nil {
-				t.Error(err)
+	time.Sleep(1 * time.Second)
+	go func() {
+		processed := 0
+		for r := range requestChan {
+			if r.Type != SUBMISSION_STOP {
+				t.Error(fmt.Errorf("Invalid request %q.", r))
 			}
-		}(h)
-	}
-	err = EndSubmission(subId)
-	if err != nil {
-		t.Error(err)
-	}
-	processed := 0
-	for r := range requestChan {
-		if r.SubId != subId || !r.Stop {
-			t.Error(fmt.Errorf("Invalid request %q.", r))
+			processed++
+			if processed == n {
+				break
+			}
 		}
-		processed++
-		if processed == n {
-			break
+	}()
+	for i, id := range ids {
+		err = EndSubmission(id, keys[i])
+		if err != nil {
+			t.Error(err)
 		}
 	}
 	for _, h := range handlers {
@@ -276,77 +234,82 @@ func TestStatusChange(t *testing.T) {
 	}
 }
 
-func TestMonitorStatus(t *testing.T) {
+func TestFull(t *testing.T) {
+	testFull(t, 1, 1, 1)
+	testFull(t, 100, 1, 1)
+	testFull(t, 10, 1, 2)
+	testFull(t, 10, 2, 1)
+	testFull(t, 10, 10, 10)
+	testFull(t, 100, 10, 10)
+}
+
+func testFull(t *testing.T, nFiles, nProducers, nConsumers int) {
 	err := MonitorStatus(AMQP_URI)
 	if err != nil {
 		t.Error(err)
 	}
-	n := 10
-	subId := bson.NewObjectId()
-	files := make([]*project.File, n)
-	for i := 0; i < n; i++ {
-		files[i] = &project.File{
-			Id:    bson.NewObjectId(),
-			SubId: subId,
-			Type:  project.SRC,
-		}
-	}
-	requestChan := make(chan *Request)
-	handlers := make([]*MessageHandler, n)
-	for i := 0; i < n-1; i++ {
-		handlers[i], err = NewFileConsumer(AMQP_URI, requestChan)
+	reqChan := make(chan *Request)
+	actualConsumers := 2 * nConsumers
+	handlers := make([]*MessageHandler, actualConsumers)
+	for i := 0; i < nConsumers; i++ {
+		handlers[2*i+1], handlers[2*i], err = NewSubmitter(AMQP_URI, reqChan)
 		if err != nil {
 			t.Error(err)
 		}
-	}
-	handlers[n-1], err = NewEnder(AMQP_URI, requestChan)
-	if err != nil {
-		t.Error(err)
 	}
 	for _, h := range handlers {
-		go func(mh *MessageHandler) {
-			err = mh.Handle()
-			if err != nil {
-				t.Error(err)
-			}
-		}(h)
+		go handleFunc(h)
 	}
-	go func() {
-		for _, file := range files {
-			err = AddFile(file)
+	time.Sleep(1 * time.Second)
+	for i := 0; i < nProducers; i++ {
+		go func() {
+			subId := bson.NewObjectId()
+			key, err := StartSubmission(subId)
 			if err != nil {
 				t.Error(err)
 			}
-		}
-		err = EndSubmission(subId)
-		if err != nil {
-			t.Error(err)
-		}
-	}()
-	stop := false
-	submap := make(map[bson.ObjectId]struct{})
-	fileCount := 0
-	for r := range requestChan {
-		if r.Stop {
-			stop = true
-		} else {
-			if _, ok := submap[r.SubId]; ok {
-				err = ChangeStatus(Status{1, 0})
-			} else {
-				submap[r.SubId] = struct{}{}
-				err = ChangeStatus(Status{1, 1})
+			for i := 0; i < nFiles; i++ {
+				file := &project.File{
+					Id:    bson.NewObjectId(),
+					SubId: subId,
+					Type:  project.SRC,
+				}
+				err = AddFile(file, key)
+				if err != nil {
+					t.Error(err)
+				}
 			}
+			err = EndSubmission(subId, key)
+			if err != nil {
+				t.Error(err)
+			}
+		}()
+	}
+	stop := false
+	fileCount := 0
+	nTotal := nFiles * nProducers
+	for r := range reqChan {
+		switch r.Type {
+		case SUBMISSION_STOP:
+			stop = true
+		case SUBMISSION_START:
+			err = ChangeStatus(Status{0, 1})
+			if err != nil {
+				t.Error(err)
+			}
+		case FILE_ADD:
+			err = ChangeStatus(Status{1, 0})
 			if err != nil {
 				t.Error(err)
 			}
 			fileCount++
 		}
-		if fileCount == n && stop {
+		if fileCount == nTotal && stop {
 			break
 		}
 	}
 	time.Sleep(1 * time.Second)
-	err = ChangeStatus(Status{-fileCount, -len(submap)})
+	err = ChangeStatus(Status{-nTotal, -nProducers})
 	if err != nil {
 		t.Error(err)
 	}
@@ -368,11 +331,12 @@ func TestMonitorStatus(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	fmt.Printf("Completed for %d files, %d producers and %d consumers.\n", nFiles, nProducers, nConsumers)
 }
 
 func TestAMQPBasic(t *testing.T) {
 	msgChan := make(chan string)
-	handler, err := NewHandler(AMQP_URI, "test", DIRECT, "", "", "", &BasicConsumer{id: 1, msgs: msgChan})
+	handler, err := NewHandler(AMQP_URI, "test", DIRECT, "", "", &BasicConsumer{id: 1, msgs: msgChan}, "")
 	if err != nil {
 		t.Error(err)
 	}
@@ -409,7 +373,7 @@ func TestAMQPQueue(t *testing.T) {
 	handlers := make([]*MessageHandler, nH)
 	var err error
 	for i := 0; i < nH; i++ {
-		handlers[i], err = NewHandler(AMQP_URI, "test", DIRECT, "test_queue", "test_key", "", &BasicConsumer{id: i, msgs: msgChan})
+		handlers[i], err = NewHandler(AMQP_URI, "test", DIRECT, "test_queue", "", &BasicConsumer{id: i, msgs: msgChan}, "test_key")
 		if err != nil {
 			t.Error(err)
 		}

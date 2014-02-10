@@ -48,17 +48,17 @@ type (
 )
 
 const (
-	LOG_SERVER = "receiver/server.go"
-	PORT       = 8010
+	LOG_SERVER      = "receiver/server.go"
+	PORT       uint = 8010
 )
 
 //Run is used to listen for new tcp connections and
 //spawn a new goroutine for each connection.
 //Each goroutine launched will handle its connection and
 //its type is determined by HandlerSpawner.
-func Run(port int, spawner HandlerSpawner) {
+func Run(port uint, spawner HandlerSpawner) {
 	//Start listening for connections
-	netListen, err := net.Listen("tcp", ":"+strconv.Itoa(port))
+	netListen, err := net.Listen("tcp", ":"+strconv.Itoa(int(port)))
 	if err != nil {
 		util.Log(fmt.Errorf(
 			"Encountered error %q when listening on port %d",

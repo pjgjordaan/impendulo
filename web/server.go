@@ -41,8 +41,8 @@ var (
 )
 
 const (
-	LOG_SERVER = "webserver/server.go"
-	PORT       = 8080
+	LOG_SERVER      = "webserver/server.go"
+	PORT       uint = 8080
 )
 
 func init() {
@@ -86,13 +86,13 @@ func getRoute(name string) string {
 }
 
 //Run starts up the webserver if it is not currently running.
-func Run(port int) {
+func Run(port uint) {
 	if Active() {
 		return
 	}
 	setActive(true)
 	defer setActive(false)
-	if err := http.ListenAndServe(":"+strconv.Itoa(port), router); err != nil {
+	if err := http.ListenAndServe(":"+strconv.Itoa(int(port)), router); err != nil {
 		util.Log(err)
 	}
 }

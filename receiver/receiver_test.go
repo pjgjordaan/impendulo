@@ -43,10 +43,11 @@ import (
 
 type (
 	clientSpawner struct {
-		users           map[string]string
-		mode            string
-		numFiles, rport int
-		data            []byte
+		users    map[string]string
+		mode     string
+		numFiles int
+		rport    uint
+		data     []byte
 	}
 	client struct {
 		uname, pword, mode string
@@ -92,7 +93,7 @@ func addData(numUsers int) (users map[string]string, err error) {
 	return
 }
 
-func receive(port int) {
+func receive(port uint) {
 	started := make(chan struct{})
 	go func() {
 		started <- struct{}{}
@@ -101,7 +102,7 @@ func receive(port int) {
 	<-started
 }
 
-func (this *client) login(port int) (projectId bson.ObjectId, err error) {
+func (this *client) login(port uint) (projectId bson.ObjectId, err error) {
 	this.conn, err = net.Dial("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return
@@ -303,7 +304,8 @@ func testReceive(spawner *clientSpawner) (err error) {
 func TestFile(t *testing.T) {
 	go processing.MonitorStatus(processing.AMQP_URI)
 	go processing.Serve(processing.AMQP_URI, processing.MAX_PROCS)
-	nU, nF, rport := 1, 1, 8000
+	nU, nF := 1, 1
+	var rport uint = 8000
 	db.Setup(db.TEST_CONN + "tf")
 	db.DeleteDB(db.TEST_DB + "tf")
 	db.Setup(db.TEST_CONN + "tf")
@@ -333,7 +335,8 @@ func TestFile(t *testing.T) {
 func TestArchive(t *testing.T) {
 	go processing.MonitorStatus(processing.AMQP_URI)
 	go processing.Serve(processing.AMQP_URI, processing.MAX_PROCS)
-	nU, nF, rport := 1, 1, 8010
+	nU, nF := 1, 1
+	var rport uint = 8010
 	db.Setup(db.TEST_CONN + "ta")
 	db.DeleteDB(db.TEST_DB + "ta")
 	db.Setup(db.TEST_CONN + "ta")
@@ -367,7 +370,8 @@ func TestArchive(t *testing.T) {
 func BenchmarkFile(b *testing.B) {
 	go processing.MonitorStatus(processing.AMQP_URI)
 	go processing.Serve(processing.AMQP_URI, processing.MAX_PROCS)
-	nU, nF, rport := 2, 2, 8020
+	nU, nF := 2, 2
+	var rport uint = 8020
 	db.Setup(db.TEST_CONN + "bf")
 	db.DeleteDB(db.TEST_DB + "bf")
 	db.Setup(db.TEST_CONN + "bf")
@@ -398,9 +402,25 @@ func BenchmarkFile(b *testing.B) {
 }
 
 func BenchmarkArchive(b *testing.B) {
-	go processing.MonitorStatus(processing.AMQP_URI)
-	go processing.Serve(processing.AMQP_URI, processing.MAX_PROCS)
-	nU, nF, rport := 2, 2, 8030
+	var err error
+	nU, nF, nS, nM := 2, 2, 5, 5
+	var rport uint = 8030
+	servers := make([]*processing.Server, nS)
+	for i := 0; i < nS; i++ {
+		servers[i], err = processing.NewServer(processing.AMQP_URI, processing.MAX_PROCS)
+		if err != nil {
+			b.Error(err)
+		}
+		go servers[i].Serve()
+	}
+	monitors := make([]*processing.Monitor, nS)
+	for i := 0; i < nM; i++ {
+		monitors[i], err = processing.NewMonitor(processing.AMQP_URI)
+		if err != nil {
+			b.Error(err)
+		}
+		go monitors[i].Monitor()
+	}
 	db.Setup(db.TEST_CONN + "ba")
 	db.DeleteDB(db.TEST_DB + "ba")
 	db.Setup(db.TEST_CONN + "ba")
@@ -428,9 +448,17 @@ func BenchmarkArchive(b *testing.B) {
 			b.Error(err)
 		}
 	}
-	err = processing.Shutdown()
-	if err != nil {
-		b.Error(err)
+	for _, s := range servers {
+		err = s.Shutdown()
+		if err != nil {
+			b.Error(err)
+		}
+	}
+	for _, m := range monitors {
+		err = m.Shutdown()
+		if err != nil {
+			b.Error(err)
+		}
 	}
 }
 

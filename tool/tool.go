@@ -85,13 +85,13 @@ func Supported(lang Language) bool {
 }
 
 //SetTimeLimit sets the maximum time for which the RunCommand function can run.
-func SetTimeLimit(minutes int) {
+func SetTimeLimit(minutes uint) {
 	timeLimit = time.Duration(minutes) * time.Minute
 }
 
 //TimeLimit returns the current timeout setting.
-func TimeLimit() int {
-	return int(timeLimit)
+func TimeLimit() uint {
+	return uint(timeLimit)
 }
 
 //HasStdErr checks whether the ExecResult has standard error output.

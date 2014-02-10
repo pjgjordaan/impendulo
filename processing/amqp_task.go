@@ -79,7 +79,7 @@ func NewReceiveProducer(name, amqpURI, exchange, exchangeType, publishKey, bindi
 	q, err := rp.ch.QueueDeclare(
 		"",    // name of the queue
 		false, // durable
-		true,  // delete when usused
+		false, // delete when usused
 		true,  // exclusive
 		false, // noWait
 		nil,   // arguments
@@ -118,6 +118,7 @@ func (rp *ReceiveProducer) ReceiveProduce(data []byte) (reply []byte, err error)
 		true,          // mandatory
 		false,         // immediate
 		amqp.Publishing{
+			ReplyTo:       rp.bindingKey,
 			CorrelationId: cid,
 			ContentType:   "text/plain",
 			Body:          data,
@@ -241,7 +242,7 @@ func ChangeStatus(change Status) (err error) {
 	return
 }
 
-//
+//IdleWaiter
 func IdleWaiter(amqpURI string) (*ReceiveProducer, error) {
 	return NewReceiveProducer("idle_waiter", amqpURI, "wait_exchange", DIRECT, "wait_request_key", "wait_response_key", "")
 }
@@ -273,12 +274,12 @@ func GetStatus() (ret *Status, err error) {
 	return
 }
 
-func FileProducer(amqpURI string) (*Producer, error) {
-	return NewProducer("file_producer", amqpURI, "file_exchange", DIRECT, "file_key")
+func FileProducer(amqpURI string, fileKey string) (*Producer, error) {
+	return NewProducer("file_producer_"+fileKey, amqpURI, "submission_exchange", DIRECT, fileKey)
 }
 
-func AddFile(file *project.File) (err error) {
-	fileProducer, err := FileProducer(AMQP_URI)
+func AddFile(file *project.File, fileKey string) (err error) {
+	fileProducer, err := FileProducer(AMQP_URI, fileKey)
 	if err != nil {
 		return
 	}
@@ -289,6 +290,7 @@ func AddFile(file *project.File) (err error) {
 	req := &Request{
 		FileId: file.Id,
 		SubId:  file.SubId,
+		Type:   FILE_ADD,
 	}
 	marshalled, err := json.Marshal(req)
 	if err != nil {
@@ -298,22 +300,47 @@ func AddFile(file *project.File) (err error) {
 	return
 }
 
-//EndProducer creates a new Producer which is used to signal the end of a submission.
-func EndProducer(amqpURI string) (*Producer, error) {
-	return NewProducer("end_producer", amqpURI, "end_exchange", FANOUT, "end_key")
+//StartProducer creates a new Producer which is used to signal the start or end of a submission.
+func StartProducer(amqpURI string) (*ReceiveProducer, error) {
+	id := bson.NewObjectId().String()
+	return NewReceiveProducer("submission_producer_"+id, amqpURI, "submission_exchange", DIRECT, "submission_key", id, "")
 }
 
-//EndSubmission sends a message on AMQP that this submission has been completed by the user
-//and can thus be closed when processing is done.
-func EndSubmission(id bson.ObjectId) (err error) {
-	endProducer, err := EndProducer(AMQP_URI)
+func StartSubmission(id bson.ObjectId) (fileKey string, err error) {
+	startProducer, err := StartProducer(AMQP_URI)
 	if err != nil {
 		return
 	}
 	req := &Request{
-		FileId: bson.NewObjectId(),
+		FileId: id,
 		SubId:  id,
-		Stop:   true,
+		Type:   SUBMISSION_START,
+	}
+	marshalled, err := json.Marshal(req)
+	if err != nil {
+		return
+	}
+	data, err := startProducer.ReceiveProduce([]byte{})
+	if err != nil {
+		return
+	}
+	fileKey = string(data)
+	startProducer.publishKey = fileKey
+	err = startProducer.Produce(marshalled)
+	return
+}
+
+//EndSubmission sends a message on AMQP that this submission has been completed by the user
+//and can thus be closed when processing is done.
+func EndSubmission(id bson.ObjectId, fileKey string) (err error) {
+	endProducer, err := FileProducer(AMQP_URI, fileKey)
+	if err != nil {
+		return
+	}
+	req := &Request{
+		FileId: id,
+		SubId:  id,
+		Type:   SUBMISSION_STOP,
 	}
 	marshalled, err := json.Marshal(req)
 	if err != nil {

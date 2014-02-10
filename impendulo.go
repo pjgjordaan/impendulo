@@ -51,8 +51,8 @@ var (
 	cfgFile, errLog, infoLog    string
 	backupDB, access            string
 	dbName, dbAddr, mqURI       string
-	mProcs, timeLimit           int
-	httpPort, tcpPort, procPort int
+	mProcs, timeLimit           uint
+	httpPort, tcpPort, procPort uint
 )
 
 const (
@@ -81,14 +81,14 @@ func init() {
 	rFlags = flag.NewFlagSet("receiver", flag.ExitOnError)
 	wFlags = flag.NewFlagSet("web", flag.ExitOnError)
 
-	pFlags.IntVar(&timeLimit, "t", int(tool.TIMELIMIT), fmt.Sprintf("Specify the time limit for a tool to run in, in minutes (default %s).", tool.TIMELIMIT))
-	pFlags.IntVar(&mProcs, "mp", processing.MAX_PROCS, fmt.Sprintf("Specify the maximum number of goroutines to run when processing submissions (default %d).", processing.MAX_PROCS))
+	pFlags.UintVar(&timeLimit, "t", uint(tool.TIMELIMIT), fmt.Sprintf("Specify the time limit for a tool to run in, in minutes (default %s).", tool.TIMELIMIT))
+	pFlags.UintVar(&mProcs, "mp", processing.MAX_PROCS, fmt.Sprintf("Specify the maximum number of goroutines to run when processing submissions (default %d).", processing.MAX_PROCS))
 	pFlags.StringVar(&mqURI, "mq", processing.AMQP_URI, fmt.Sprintf("Specify the address of the Rabbitmq server (default %s).", processing.AMQP_URI))
 
-	rFlags.IntVar(&tcpPort, "p", receiver.PORT, fmt.Sprintf("Specify the port to listen on for files using TCP (default %d).", receiver.PORT))
+	rFlags.UintVar(&tcpPort, "p", receiver.PORT, fmt.Sprintf("Specify the port to listen on for files using TCP (default %d).", receiver.PORT))
 	rFlags.StringVar(&mqURI, "mq", processing.AMQP_URI, fmt.Sprintf("Specify the address of the Rabbitmq server (default %s).", processing.AMQP_URI))
 
-	wFlags.IntVar(&httpPort, "p", web.PORT, fmt.Sprintf("Specify the port to use for the webserver (default %d).", web.PORT))
+	wFlags.UintVar(&httpPort, "p", web.PORT, fmt.Sprintf("Specify the port to use for the webserver (default %d).", web.PORT))
 	wFlags.StringVar(&mqURI, "mq", processing.AMQP_URI, fmt.Sprintf("Specify the address of the Rabbitmq server (default %s).", processing.AMQP_URI))
 }
 
