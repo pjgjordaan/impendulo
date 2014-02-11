@@ -287,7 +287,7 @@ func displayResult(req *http.Request, ctx *Context) (a Args, t Temps, msg string
 			msg = "Could not load results."
 		}
 	}()
-	err = SetContext(req, ctx.Browse.SetUid, ctx.Browse.SetSid, ctx.Browse.SetResult, ctx.Browse.SetFile)
+	err = SetContext(req, ctx.Browse.SetUid, ctx.Browse.SetSid, ctx.Browse.SetResult, ctx.Browse.SetFile, ctx.Browse.SetDisplayCount)
 	if err != nil {
 		return
 	}

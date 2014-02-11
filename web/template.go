@@ -91,6 +91,7 @@ var (
 		},
 		"users":                 func() ([]*user.User, error) { return db.Users(nil, user.ID) },
 		"displayResult":         dispRes,
+		"displayResultMore":     dispResMore,
 		"displayCodeBug":        displayCodeBug,
 		"getFiles":              func(subId bson.ObjectId) string { return fmt.Sprintf("getfiles?subid=%s", subId.Hex()) },
 		"getUserChart":          func(user string) string { return fmt.Sprintf("getsubmissionschart?userid=%s", user) },
@@ -119,6 +120,11 @@ func compareChart(sid bson.ObjectId, uid, result, file, compare string) string {
 
 func singleChart(sid bson.ObjectId, uid, result, file string) string {
 	return fmt.Sprintf("displaychart?subid=%s&userid=%s&result=%s&file=%s", sid.Hex(), uid, result, file)
+}
+
+func dispResMore(b *Browse) string {
+	return fmt.Sprintf("displayresult?subid=%s&userid=%s&result=%s&file=%s&current=%d&next=%d&displaycount=%d",
+		b.Sid.Hex(), b.Uid, b.Result, b.File, b.Current, b.Next, b.DisplayCount)
 }
 
 func dispRes(sid bson.ObjectId, uid, result, file string, current, next int) string {

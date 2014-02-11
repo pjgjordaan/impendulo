@@ -3,6 +3,7 @@
 {{if $report.Success}}
 <h4 class="text-success">Passed all tests.</h4>
 {{else}}
+{{$displayCount := .state.DisplayCount}}
 {{$resultName := .state.Result}}
 {{$fileName := .state.File}}
 {{$current := .state.Current}}
@@ -27,7 +28,7 @@
     <div id="failures{{$addr}}" class="panel-collapse collapse in">
       <div class="accordion-inner">
 	<div class="panel-group" id="results{{$addr}}">
-	  {{$results := $report.GetResults 10}}
+	  {{$results := $report.GetResults $displayCount}}
 	  {{range $results}}
 	  {{$resultAddress := address .}}
 	  {{if .IsFailure}}
@@ -69,9 +70,6 @@
 	  </div>
 	  {{end}}
 	  {{end}}
-	  <a href="{{displayResult $sid $uid $resultName $fileName $current $next}}">
-	    More
-	  </a>
 	</div>
       </div>
     </div>

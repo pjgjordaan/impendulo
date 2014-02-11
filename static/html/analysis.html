@@ -18,8 +18,8 @@
 <h3 class="text-center">
   <small>tool</small> {{$resultName}}
   {{if (hasChart $resultName)}}
-  <a class="btn btn-primary" href="{{singleChart $sid $uid $resultName $fileName}}">
-    Chart
+  <a class="btn btn-info" href="{{singleChart $sid $uid $resultName $fileName}}">
+    <span class="glyphicon glyphicon-stats"></span>
   </a>
   {{end}}
 </h3>
@@ -106,6 +106,22 @@
     {{end}}
   </div>
 </div>
+{{if (eq .currentResult.Template "junitresult")}}
+<div class="row">
+  <div class="col-md-5">
+  </div>
+  <div class="col-md-2">
+    <a class="btn btn-block btn-info" 
+       href="{{displayResultMore .ctx.Browse}}">
+      <span class="glyphicon glyphicon-chevron-down"></span>
+      More
+      <span class="glyphicon glyphicon-chevron-down"></span> 
+    </a>
+  </div>
+  <div class="col-md-5">
+  </div>
+</div>
+{{end}}
 {{end}}
 {{if (eq $resultName "Code")}}
 <script>

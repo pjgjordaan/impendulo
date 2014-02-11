@@ -43,11 +43,11 @@ type (
 
 	//Browse is used to keep track of the user's browsing.
 	Browse struct {
-		IsUser                  bool
-		Pid, Sid                bson.ObjectId
-		Uid, File, Result, View string
-		Current, Next           int
-		Level                   Level
+		IsUser                      bool
+		Pid, Sid                    bson.ObjectId
+		Uid, File, Result, View     string
+		Current, Next, DisplayCount int
+		Level                       Level
 	}
 	Level  int
 	Setter func(*http.Request) error
@@ -143,6 +143,7 @@ func LoadContext(sess *sessions.Session) *Context {
 		ctx.Browse = val.(*Browse)
 	} else {
 		ctx.Browse = new(Browse)
+		ctx.Browse.DisplayCount = 10
 	}
 	if uname, err := ctx.Username(); err == nil {
 		_, err = db.User(uname)
@@ -151,6 +152,16 @@ func LoadContext(sess *sessions.Session) *Context {
 		}
 	}
 	return ctx
+}
+
+func (b *Browse) SetDisplayCount(req *http.Request) error {
+	count, err := GetInt(req, "displaycount")
+	if err == nil {
+		b.DisplayCount = count + 10
+	} else {
+		b.DisplayCount = 10
+	}
+	return nil
 }
 
 func (b *Browse) SetUid(req *http.Request) (err error) {
