@@ -57,7 +57,6 @@ type (
 
 	//Server is our processing server which receives and processes submissions and files.
 	Server struct {
-		uri           string
 		maxProcs      uint
 		requestChan   chan *Request
 		processedChan chan E
@@ -89,10 +88,10 @@ func max(a, b int) uint {
 	return uint(a)
 }
 
-//Serve launches the default Server. It listens on the provided AMQP URI and
+//Serve launches the default Server. It listens on the configured AMQP URI and
 //spawns at most maxProcs goroutines in order to process submissions.
-func Serve(amqpURI string, maxProcs uint) (err error) {
-	if defaultServer, err = NewServer(amqpURI, maxProcs); err == nil {
+func Serve(maxProcs uint) (err error) {
+	if defaultServer, err = NewServer(maxProcs); err == nil {
 		defaultServer.Serve()
 	}
 	return
@@ -114,16 +113,15 @@ func Shutdown() (err error) {
 	return
 }
 
-//NewServer constructs a new Server instance which will listen on the provided
+//NewServer constructs a new Server instance which will listen on the coinfigured
 //AMQP URI.
-func NewServer(amqpURI string, maxProcs uint) (ret *Server, err error) {
+func NewServer(maxProcs uint) (ret *Server, err error) {
 	ret = &Server{
-		uri:           amqpURI,
 		maxProcs:      maxProcs,
 		requestChan:   make(chan *Request),
 		processedChan: make(chan E),
 	}
-	ret.submitter, ret.starter, err = NewSubmitter(ret.uri, ret.requestChan)
+	ret.submitter, ret.starter, err = NewSubmitter(ret.requestChan)
 	return
 }
 

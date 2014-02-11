@@ -90,7 +90,7 @@ type (
 )
 
 const (
-	AMQP_URI                        = "amqp://guest:guest@localhost:5672/"
+	DEFAULT_AMQP_URI                = "amqp://guest:guest@localhost:5672/"
 	LOG_AMQPWORKER                  = "processing/amqp_worker.go"
 	WORKER_QUEUE                    = "worker_queue"
 	SUB_START, SUB_END, SUB_REDO    = "submission_start", "submission_end", "submission_redo"
@@ -103,11 +103,30 @@ const (
 	FANOUT                          = "fanout"
 )
 
+var (
+	amqpURI = DEFAULT_AMQP_URI
+)
+
+func SetAMQP_URI(uri string) {
+	amqpURI = uri
+}
+
 func handleFunc(mh *MessageHandler) {
 	herr := mh.Handle()
 	if herr != nil {
 		util.Log(herr)
 	}
+}
+
+func Reply(ch amqp.Channel, d amqp.Delivery, body []byte) error {
+	pub := amqp.Publishing{
+		CorrelationId: d.CorrelationId,
+		DeliveryMode:  amqp.Persistent,
+		ContentType:   "text/plain",
+		Body:          body,
+		Priority:      0,
+	}
+	return ch.Publish(d.Exchange, d.ReplyTo, true, false, pub)
 }
 
 //NewHandler
@@ -224,15 +243,7 @@ func (s *Submitter) Consume(d amqp.Delivery, ch amqp.Channel) (err error) {
 
 func (s *Starter) Consume(d amqp.Delivery, ch amqp.Channel) (err error) {
 	d.Ack(false)
-	body := []byte(s.key)
-	pub := amqp.Publishing{
-		CorrelationId: d.CorrelationId,
-		DeliveryMode:  amqp.Persistent,
-		ContentType:   "text/plain",
-		Body:          body,
-		Priority:      0,
-	}
-	err = ch.Publish(d.Exchange, d.ReplyTo, true, false, pub)
+	err = Reply(ch, d, []byte(s.key))
 	return
 }
 
@@ -259,13 +270,7 @@ func (w *Waiter) Consume(d amqp.Delivery, ch amqp.Channel) (err error) {
 		}
 	}
 	d.Ack(false)
-	pub := amqp.Publishing{
-		CorrelationId: d.CorrelationId,
-		DeliveryMode:  amqp.Persistent,
-		ContentType:   "text/plain",
-		Priority:      0,
-	}
-	err = ch.Publish(d.Exchange, d.ReplyTo, true, false, pub)
+	err = Reply(ch, d, []byte{})
 	return
 }
 
@@ -277,14 +282,7 @@ func (sl *Loader) Consume(d amqp.Delivery, ch amqp.Channel) (err error) {
 		body = []byte(err.Error())
 	}
 	d.Ack(false)
-	pub := amqp.Publishing{
-		CorrelationId: d.CorrelationId,
-		DeliveryMode:  amqp.Persistent,
-		ContentType:   "text/plain",
-		Body:          body,
-		Priority:      0,
-	}
-	perr := ch.Publish(d.Exchange, d.ReplyTo, true, false, pub)
+	perr := Reply(ch, d, body)
 	if err == nil && perr != nil {
 		err = perr
 	}
@@ -328,14 +326,14 @@ func (r *Redoer) Consume(d amqp.Delivery, ch amqp.Channel) (err error) {
 	return
 }
 
-func NewRedoer(amqpURI string, requestChan chan *Request) (*MessageHandler, error) {
+func NewRedoer(requestChan chan *Request) (*MessageHandler, error) {
 	redoer := &Redoer{
 		requestChan: requestChan,
 	}
 	return NewHandler(amqpURI, SUB_REDO, DIRECT, "", "", redoer, "")
 }
 
-func NewSubmitter(amqpURI string, requestChan chan *Request) (submitter, starter *MessageHandler, err error) {
+func NewSubmitter(requestChan chan *Request) (submitter, starter *MessageHandler, err error) {
 	key := bson.NewObjectId().String()
 	su := &Submitter{
 		requestChan: requestChan,
@@ -354,21 +352,21 @@ func NewSubmitter(amqpURI string, requestChan chan *Request) (submitter, starter
 	return
 }
 
-func NewWaiter(amqpURI string, statusChan chan Status) (*MessageHandler, error) {
+func NewWaiter(statusChan chan Status) (*MessageHandler, error) {
 	waiter := &Waiter{
 		statusChan: statusChan,
 	}
 	return NewHandler(amqpURI, "wait_exchange", DIRECT, "wait_queue", "", waiter, "wait_request_key")
 }
 
-func NewChanger(amqpURI string, statusChan chan Status) (*MessageHandler, error) {
+func NewChanger(statusChan chan Status) (*MessageHandler, error) {
 	changer := &Changer{
 		statusChan: statusChan,
 	}
 	return NewHandler(amqpURI, "change_exchange", FANOUT, "", "", changer, "change_key")
 }
 
-func NewLoader(amqpURI string, statusChan chan Status) (*MessageHandler, error) {
+func NewLoader(statusChan chan Status) (*MessageHandler, error) {
 	loader := &Loader{
 		statusChan: statusChan,
 	}

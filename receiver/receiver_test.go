@@ -302,8 +302,8 @@ func testReceive(spawner *clientSpawner) (err error) {
 }
 
 func TestFile(t *testing.T) {
-	go processing.MonitorStatus(processing.AMQP_URI)
-	go processing.Serve(processing.AMQP_URI, processing.MAX_PROCS)
+	go processing.MonitorStatus()
+	go processing.Serve(processing.MAX_PROCS)
 	nU, nF := 1, 1
 	var rport uint = 8000
 	db.Setup(db.TEST_CONN + "tf")
@@ -333,8 +333,8 @@ func TestFile(t *testing.T) {
 }
 
 func TestArchive(t *testing.T) {
-	go processing.MonitorStatus(processing.AMQP_URI)
-	go processing.Serve(processing.AMQP_URI, processing.MAX_PROCS)
+	go processing.MonitorStatus()
+	go processing.Serve(processing.MAX_PROCS)
 	nU, nF := 1, 1
 	var rport uint = 8010
 	db.Setup(db.TEST_CONN + "ta")
@@ -368,8 +368,8 @@ func TestArchive(t *testing.T) {
 }
 
 func BenchmarkFile(b *testing.B) {
-	go processing.MonitorStatus(processing.AMQP_URI)
-	go processing.Serve(processing.AMQP_URI, processing.MAX_PROCS)
+	go processing.MonitorStatus()
+	go processing.Serve(processing.MAX_PROCS)
 	nU, nF := 2, 2
 	var rport uint = 8020
 	db.Setup(db.TEST_CONN + "bf")
@@ -407,7 +407,7 @@ func BenchmarkArchive(b *testing.B) {
 	var rport uint = 8030
 	servers := make([]*processing.Server, nS)
 	for i := 0; i < nS; i++ {
-		servers[i], err = processing.NewServer(processing.AMQP_URI, processing.MAX_PROCS)
+		servers[i], err = processing.NewServer(processing.MAX_PROCS)
 		if err != nil {
 			b.Error(err)
 		}
@@ -415,7 +415,7 @@ func BenchmarkArchive(b *testing.B) {
 	}
 	monitors := make([]*processing.Monitor, nS)
 	for i := 0; i < nM; i++ {
-		monitors[i], err = processing.NewMonitor(processing.AMQP_URI)
+		monitors[i], err = processing.NewMonitor()
 		if err != nil {
 			b.Error(err)
 		}

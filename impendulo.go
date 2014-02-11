@@ -77,19 +77,18 @@ func init() {
 			"Available permissions: NONE=0, STUDENT=1, TEACHER=2, ADMIN=3."+
 			"Example: -a=pieter:2.",
 	)
+	flag.StringVar(&mqURI, "mq", processing.DEFAULT_AMQP_URI, fmt.Sprintf("Specify the address of the Rabbitmq server (default %s).", processing.DEFAULT_AMQP_URI))
+
 	pFlags = flag.NewFlagSet("processor", flag.ExitOnError)
 	rFlags = flag.NewFlagSet("receiver", flag.ExitOnError)
 	wFlags = flag.NewFlagSet("web", flag.ExitOnError)
 
 	pFlags.UintVar(&timeLimit, "t", uint(tool.TIMELIMIT), fmt.Sprintf("Specify the time limit for a tool to run in, in minutes (default %s).", tool.TIMELIMIT))
 	pFlags.UintVar(&mProcs, "mp", processing.MAX_PROCS, fmt.Sprintf("Specify the maximum number of goroutines to run when processing submissions (default %d).", processing.MAX_PROCS))
-	pFlags.StringVar(&mqURI, "mq", processing.AMQP_URI, fmt.Sprintf("Specify the address of the Rabbitmq server (default %s).", processing.AMQP_URI))
 
 	rFlags.UintVar(&tcpPort, "p", receiver.PORT, fmt.Sprintf("Specify the port to listen on for files using TCP (default %d).", receiver.PORT))
-	rFlags.StringVar(&mqURI, "mq", processing.AMQP_URI, fmt.Sprintf("Specify the address of the Rabbitmq server (default %s).", processing.AMQP_URI))
 
 	wFlags.UintVar(&httpPort, "p", web.PORT, fmt.Sprintf("Specify the port to use for the webserver (default %d).", web.PORT))
-	wFlags.StringVar(&mqURI, "mq", processing.AMQP_URI, fmt.Sprintf("Specify the address of the Rabbitmq server (default %s).", processing.AMQP_URI))
 }
 
 func main() {
@@ -105,6 +104,7 @@ func main() {
 	flag.Parse()
 	util.SetErrorLogging(errLog)
 	util.SetInfoLogging(infoLog)
+	processing.SetAMQP_URI(mqURI)
 	//Handle setup flags
 	if err = backup(); err != nil {
 		return
@@ -203,6 +203,6 @@ func runFileReceiver() {
 func runFileProcessor() {
 	pFlags.Parse(os.Args[2:])
 	tool.SetTimeLimit(timeLimit)
-	go processing.MonitorStatus(mqURI)
-	processing.Serve(mqURI, mProcs)
+	go processing.MonitorStatus()
+	processing.Serve(mProcs)
 }

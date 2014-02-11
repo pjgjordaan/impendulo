@@ -45,7 +45,6 @@ type (
 	//status.
 	Monitor struct {
 		statusChan              chan Status
-		uri                     string
 		loader, waiter, changer *MessageHandler
 	}
 )
@@ -61,14 +60,14 @@ func (this *Status) add(toAdd Status) {
 }
 
 //MonitorStatus begins keeping track of Impendulo's current processing status.
-func MonitorStatus(amqpURI string) (err error) {
+func MonitorStatus() (err error) {
 	if monitor != nil {
 		err = monitor.Shutdown()
 		if err != nil {
 			return
 		}
 	}
-	monitor, err = NewMonitor(amqpURI)
+	monitor, err = NewMonitor()
 	if err != nil {
 		return
 	}
@@ -77,20 +76,19 @@ func MonitorStatus(amqpURI string) (err error) {
 }
 
 //NewMonitor
-func NewMonitor(amqpURI string) (ret *Monitor, err error) {
+func NewMonitor() (ret *Monitor, err error) {
 	ret = &Monitor{
 		statusChan: make(chan Status),
-		uri:        amqpURI,
 	}
-	ret.changer, err = NewChanger(ret.uri, ret.statusChan)
+	ret.changer, err = NewChanger(ret.statusChan)
 	if err != nil {
 		return
 	}
-	ret.waiter, err = NewWaiter(ret.uri, ret.statusChan)
+	ret.waiter, err = NewWaiter(ret.statusChan)
 	if err != nil {
 		return
 	}
-	ret.loader, err = NewLoader(ret.uri, ret.statusChan)
+	ret.loader, err = NewLoader(ret.statusChan)
 	return
 }
 

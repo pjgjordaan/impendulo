@@ -44,7 +44,7 @@ type (
 
 func init() {
 	fmt.Sprint(time.Now(), project.Project{}, strconv.Itoa(1), bson.NewObjectId())
-	util.SetErrorLogging("f")
+	util.SetErrorLogging("a")
 	util.SetInfoLogging("f")
 }
 
@@ -56,7 +56,7 @@ func (bc *BasicConsumer) Consume(d amqp.Delivery, ch amqp.Channel) error {
 
 func TestWaitIdle(t *testing.T) {
 	statusChan := make(chan Status)
-	w, err := NewWaiter(AMQP_URI, statusChan)
+	w, err := NewWaiter(statusChan)
 	if err != nil {
 		t.Error(err)
 	}
@@ -90,7 +90,7 @@ func TestWaitIdle(t *testing.T) {
 
 func TestGetStatus(t *testing.T) {
 	statusChan := make(chan Status)
-	sl, err := NewLoader(AMQP_URI, statusChan)
+	sl, err := NewLoader(statusChan)
 	if err != nil {
 		t.Error(err)
 	}
@@ -127,7 +127,7 @@ func TestSubmitter(t *testing.T) {
 	handlers := make([]*MessageHandler, 2*n)
 	var err error
 	for i := 0; i < n; i++ {
-		handlers[2*i+1], handlers[2*i], err = NewSubmitter(AMQP_URI, requestChan)
+		handlers[2*i+1], handlers[2*i], err = NewSubmitter(requestChan)
 		if err != nil {
 			t.Error(err)
 		}
@@ -194,7 +194,7 @@ func TestStatusChange(t *testing.T) {
 	handlers := make([]*MessageHandler, n)
 	var err error
 	for i := 0; i < n; i++ {
-		handlers[i], err = NewChanger(AMQP_URI, statusChan)
+		handlers[i], err = NewChanger(statusChan)
 		if err != nil {
 			t.Error(err)
 		}
@@ -244,7 +244,7 @@ func TestFull(t *testing.T) {
 }
 
 func testFull(t *testing.T, nFiles, nProducers, nConsumers int) {
-	err := MonitorStatus(AMQP_URI)
+	err := MonitorStatus()
 	if err != nil {
 		t.Error(err)
 	}
@@ -252,7 +252,7 @@ func testFull(t *testing.T, nFiles, nProducers, nConsumers int) {
 	actualConsumers := 2 * nConsumers
 	handlers := make([]*MessageHandler, actualConsumers)
 	for i := 0; i < nConsumers; i++ {
-		handlers[2*i+1], handlers[2*i], err = NewSubmitter(AMQP_URI, reqChan)
+		handlers[2*i+1], handlers[2*i], err = NewSubmitter(reqChan)
 		if err != nil {
 			t.Error(err)
 		}
@@ -336,11 +336,11 @@ func testFull(t *testing.T, nFiles, nProducers, nConsumers int) {
 
 func TestAMQPBasic(t *testing.T) {
 	msgChan := make(chan string)
-	handler, err := NewHandler(AMQP_URI, "test", DIRECT, "", "", &BasicConsumer{id: 1, msgs: msgChan}, "")
+	handler, err := NewHandler(DEFAULT_AMQP_URI, "test", DIRECT, "", "", &BasicConsumer{id: 1, msgs: msgChan}, "")
 	if err != nil {
 		t.Error(err)
 	}
-	producer, err := NewProducer("test_producer", AMQP_URI, "test", DIRECT, "")
+	producer, err := NewProducer("test_producer", DEFAULT_AMQP_URI, "test", DIRECT, "")
 	if err != nil {
 		t.Error(err)
 	}
@@ -373,14 +373,14 @@ func TestAMQPQueue(t *testing.T) {
 	handlers := make([]*MessageHandler, nH)
 	var err error
 	for i := 0; i < nH; i++ {
-		handlers[i], err = NewHandler(AMQP_URI, "test", DIRECT, "test_queue", "", &BasicConsumer{id: i, msgs: msgChan}, "test_key")
+		handlers[i], err = NewHandler(DEFAULT_AMQP_URI, "test", DIRECT, "test_queue", "", &BasicConsumer{id: i, msgs: msgChan}, "test_key")
 		if err != nil {
 			t.Error(err)
 		}
 	}
 	producers := make([]*Producer, nP)
 	for i := 0; i < nP; i++ {
-		producers[i], err = NewProducer("test_producer_"+strconv.Itoa(i), AMQP_URI, "test", DIRECT, "test_key")
+		producers[i], err = NewProducer("test_producer_"+strconv.Itoa(i), DEFAULT_AMQP_URI, "test", DIRECT, "test_key")
 		if err != nil {
 			t.Error(err)
 		}

@@ -58,7 +58,6 @@ const (
 )
 
 func init() {
-	fmt.Print()
 	producers = make(map[string]*Producer)
 	rps = make(map[string]*ReceiveProducer)
 }
@@ -172,6 +171,7 @@ func NewProducer(name, amqpURI, exchange, exchangeType, publishKey string) (p *P
 	return
 }
 
+//Produce publishes the provided data on the amqp.Channel as configured previously.
 func (p *Producer) Produce(data []byte) error {
 	return p.ch.Publish(
 		p.exchange,   // publish to an exchange
@@ -187,6 +187,7 @@ func (p *Producer) Produce(data []byte) error {
 	)
 }
 
+//Shutdown stops this Producer by closing its channel and connection.
 func (p *Producer) Shutdown() (err error) {
 	defer func() {
 		if err != nil {
@@ -208,6 +209,7 @@ func (p *Producer) Shutdown() (err error) {
 	return
 }
 
+//StopProducers shuts all active producers down.
 func StopProducers() (err error) {
 	for _, p := range producers {
 		if p == nil {
@@ -223,6 +225,7 @@ func StopProducers() (err error) {
 	return
 }
 
+//StatusChanger creates a Producer which can update Impendulo's status.
 func StatusChanger(amqpURI string) (*Producer, error) {
 	return NewProducer("status_changer", amqpURI, "change_exchange", FANOUT, "change_key")
 }
@@ -230,7 +233,7 @@ func StatusChanger(amqpURI string) (*Producer, error) {
 //ChangeStatus is used to update Impendulo's current
 //processing status.
 func ChangeStatus(change Status) (err error) {
-	sc, err := StatusChanger(AMQP_URI)
+	sc, err := StatusChanger(amqpURI)
 	if err != nil {
 		return
 	}
@@ -248,7 +251,7 @@ func IdleWaiter(amqpURI string) (*ReceiveProducer, error) {
 }
 
 func WaitIdle() (err error) {
-	idleWaiter, err := IdleWaiter(AMQP_URI)
+	idleWaiter, err := IdleWaiter(amqpURI)
 	if err != nil {
 		return
 	}
@@ -261,7 +264,7 @@ func StatusRetriever(amqpURI string) (*ReceiveProducer, error) {
 }
 
 func GetStatus() (ret *Status, err error) {
-	statusRetriever, err := StatusRetriever(AMQP_URI)
+	statusRetriever, err := StatusRetriever(amqpURI)
 	if err != nil {
 		return
 	}
@@ -279,7 +282,7 @@ func FileProducer(amqpURI string, fileKey string) (*Producer, error) {
 }
 
 func AddFile(file *project.File, fileKey string) (err error) {
-	fileProducer, err := FileProducer(AMQP_URI, fileKey)
+	fileProducer, err := FileProducer(amqpURI, fileKey)
 	if err != nil {
 		return
 	}
@@ -307,7 +310,7 @@ func StartProducer(amqpURI string) (*ReceiveProducer, error) {
 }
 
 func StartSubmission(id bson.ObjectId) (fileKey string, err error) {
-	startProducer, err := StartProducer(AMQP_URI)
+	startProducer, err := StartProducer(amqpURI)
 	if err != nil {
 		return
 	}
@@ -333,7 +336,7 @@ func StartSubmission(id bson.ObjectId) (fileKey string, err error) {
 //EndSubmission sends a message on AMQP that this submission has been completed by the user
 //and can thus be closed when processing is done.
 func EndSubmission(id bson.ObjectId, fileKey string) (err error) {
-	endProducer, err := FileProducer(AMQP_URI, fileKey)
+	endProducer, err := FileProducer(amqpURI, fileKey)
 	if err != nil {
 		return
 	}
