@@ -67,6 +67,14 @@ func NewReceiveProducer(name, amqpURI, exchange, exchangeType, publishKey, bindi
 	if rp, ok = rps[name]; ok {
 		return
 	}
+	if ctag == "" {
+		var u4 *uuid.UUID
+		u4, err = uuid.NewV4()
+		if err != nil {
+			return
+		}
+		ctag = u4.String()
+	}
 	rp = &ReceiveProducer{
 		tag:        ctag,
 		bindingKey: bindingKey,
@@ -136,6 +144,7 @@ func (rp *ReceiveProducer) ReceiveProduce(data []byte) (reply []byte, err error)
 			break
 		}
 	}
+	err = rp.ch.Cancel(rp.tag, false)
 	return
 }
 
@@ -350,5 +359,18 @@ func EndSubmission(id bson.ObjectId, fileKey string) (err error) {
 		return
 	}
 	err = endProducer.Produce(marshalled)
+	return
+}
+
+func RedoProducer(amqpURI string) (*Producer, error) {
+	return NewProducer("redo_producer", amqpURI, "submission_exchange", DIRECT, "redo_key")
+}
+
+func RedoSubmission(id bson.ObjectId) (err error) {
+	redoProducer, err := RedoProducer(amqpURI)
+	if err != nil {
+		return
+	}
+	err = redoProducer.Produce([]byte(id.Hex()))
 	return
 }

@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/util"
+	uuid "github.com/nu7hatch/gouuid"
 	"github.com/streadway/amqp"
 	"labix.org/v2/mgo/bson"
 	"time"
@@ -107,6 +108,10 @@ var (
 	amqpURI = DEFAULT_AMQP_URI
 )
 
+func init() {
+	fmt.Sprint()
+}
+
 func SetAMQP_URI(uri string) {
 	amqpURI = uri
 }
@@ -141,6 +146,14 @@ func NewHandler(amqpURI, exchange, exchangeType, queue, ctag string, consumer Co
 			}
 		}
 	}()
+	if ctag == "" {
+		var u4 *uuid.UUID
+		u4, err = uuid.NewV4()
+		if err != nil {
+			return
+		}
+		ctag = u4.String()
+	}
 	mh = &MessageHandler{
 		exchange: exchange,
 		tag:      ctag,
@@ -218,7 +231,7 @@ func (mh *MessageHandler) Handle() (err error) {
 }
 
 func (mh *MessageHandler) Shutdown() (err error) {
-	err = mh.ch.Cancel(mh.tag, true)
+	err = mh.ch.Close()
 	if err != nil {
 		return
 	}
@@ -296,7 +309,6 @@ func (r *Redoer) Consume(d amqp.Delivery, ch amqp.Channel) (err error) {
 	val := string(d.Body)
 	subId, err := util.ReadId(val)
 	if err != nil {
-		err = fmt.Errorf("Not a valid Id %s", val)
 		return
 	}
 	matcher := bson.M{db.SUBID: subId}
@@ -330,7 +342,7 @@ func NewRedoer(requestChan chan *Request) (*MessageHandler, error) {
 	redoer := &Redoer{
 		requestChan: requestChan,
 	}
-	return NewHandler(amqpURI, SUB_REDO, DIRECT, "", "", redoer, "")
+	return NewHandler(amqpURI, "submission_exchange", DIRECT, "redo_queue", "", redoer, "redo_key")
 }
 
 func NewSubmitter(requestChan chan *Request) (submitter, starter *MessageHandler, err error) {

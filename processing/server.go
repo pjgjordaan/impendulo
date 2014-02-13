@@ -61,7 +61,7 @@ type (
 		requestChan   chan *Request
 		processedChan chan E
 		//submitter listens for messages on AMQP which indicate that a submission has started.
-		starter, submitter *MessageHandler
+		redoer, starter, submitter *MessageHandler
 	}
 )
 
@@ -122,6 +122,10 @@ func NewServer(maxProcs uint) (ret *Server, err error) {
 		processedChan: make(chan E),
 	}
 	ret.submitter, ret.starter, err = NewSubmitter(ret.requestChan)
+	if err != nil {
+		return
+	}
+	ret.redoer, err = NewRedoer(ret.requestChan)
 	return
 }
 
@@ -130,6 +134,7 @@ func NewServer(maxProcs uint) (ret *Server, err error) {
 func (this *Server) Serve() {
 	go handleFunc(this.starter)
 	go handleFunc(this.submitter)
+	go handleFunc(this.redoer)
 	helpers := make(map[bson.ObjectId]*procHelper)
 	fileQueues := make(map[bson.ObjectId]*list.List)
 	subQueue := list.New()
@@ -193,7 +198,7 @@ func (this *Server) Serve() {
 					ChangeStatus(Status{Files: 1, Submissions: 0})
 				}
 			default:
-				util.Log(fmt.Errorf("Unknown request type %d.", request.Type))
+				util.Log(fmt.Errorf("Unsupported request type %d.", request.Type))
 			}
 		case <-this.processedChan:
 			//A submission has been processed so one less goroutine to worry about.
@@ -210,6 +215,10 @@ func (this *Server) Shutdown() (err error) {
 		return
 	}
 	err = this.starter.Shutdown()
+	if err != nil {
+		return
+	}
+	err = this.redoer.Shutdown()
 	return
 }
 
