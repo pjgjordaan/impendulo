@@ -26,7 +26,6 @@ package tool
 
 import (
 	"fmt"
-	"github.com/godfried/impendulo/project"
 	"labix.org/v2/mgo/bson"
 	"strings"
 )
@@ -42,23 +41,15 @@ const (
 
 type (
 	ChartVal struct {
-		Name string
-		Y    int
-		Show bool
+		Name   string
+		Y      int
+		Show   bool
+		FileId bson.ObjectId
 	}
-	//Chart represents the x and y values used to draw the charts.
-	Chart struct {
-		start int64
-		user  string
-		subId string
-		Data  ChartData
-	}
-
-	ChartData []map[string]interface{}
 
 	//ChartResult is used to display result data in a chart.
 	ChartResult interface {
-		ChartVals() []ChartVal
+		ChartVals() []*ChartVal
 		GetName() string
 	}
 
@@ -164,33 +155,6 @@ const (
 var (
 	COMPILE_SUCCESS = []byte("Compiled successfully")
 )
-
-//Add inserts new coordinates into data used to display a chart.
-func (this *Chart) Add(time int64, vals []ChartVal) {
-	x := float64(time-this.start) / 1000
-	for _, val := range vals {
-		point := map[string]interface{}{
-			"x": x, "y": val.Y, "key": val.Name + " " + this.subId,
-			"name": val.Name, "subId": this.subId, "user": this.user,
-			"created": this.start, "time": time, "show": val.Show,
-		}
-		this.Data = append(this.Data, point)
-	}
-}
-
-//NewChart initialises new chart data.
-func NewChart(submission project.Submission) *Chart {
-	return &Chart{
-		start: submission.Time,
-		user:  submission.User,
-		subId: submission.Id.Hex(),
-		Data:  NewChartData(),
-	}
-}
-
-func NewChartData() ChartData {
-	return make(ChartData, 0, 1000)
-}
 
 //NewErrorResult creates an ErrorResult. There are 3 types:
 //Timeout, No result and error.

@@ -30,8 +30,8 @@ import (
 )
 
 type (
-	//TargetInfo stores information about the target file.
-	TargetInfo struct {
+	//Target stores information about the target file.
+	Target struct {
 		Name    string
 		Package string
 		Ext     string
@@ -41,36 +41,36 @@ type (
 )
 
 //FilePath
-func (ti *TargetInfo) FilePath() string {
-	return filepath.Join(ti.PackagePath(), ti.FullName())
+func (t *Target) FilePath() string {
+	return filepath.Join(t.PackagePath(), t.FullName())
 }
 
 //PackagePath
-func (ti *TargetInfo) PackagePath() string {
-	if ti.Package != "" {
-		vals := strings.Split(ti.Package, ".")
-		return filepath.Join(ti.Dir, filepath.Join(vals...))
+func (t *Target) PackagePath() string {
+	if t.Package != "" {
+		vals := strings.Split(t.Package, ".")
+		return filepath.Join(t.Dir, filepath.Join(vals...))
 	} else {
-		return ti.Dir
+		return t.Dir
 	}
 }
 
 //FullName
-func (ti *TargetInfo) FullName() string {
-	return ti.Name + "." + ti.Ext
+func (t *Target) FullName() string {
+	return t.Name + "." + t.Ext
 }
 
 //Executable retrieves the path to the compiled executable with its package.
-func (ti *TargetInfo) Executable() string {
-	if ti.Package != "" {
-		return ti.Package + "." + ti.Name
+func (t *Target) Executable() string {
+	if t.Package != "" {
+		return t.Package + "." + t.Name
 	} else {
-		return ti.Name
+		return t.Name
 	}
 }
 
 //NewTarget
-func NewTarget(name, pkg, dir string, lang Language) *TargetInfo {
+func NewTarget(name, pkg, dir string, lang Language) *Target {
 	split := strings.Split(name, ".")
 	var ext string
 	if len(split) < 2 {
@@ -79,7 +79,7 @@ func NewTarget(name, pkg, dir string, lang Language) *TargetInfo {
 		name = split[0]
 		ext = split[1]
 	}
-	return &TargetInfo{
+	return &Target{
 		Name:    name,
 		Package: pkg,
 		Ext:     ext,

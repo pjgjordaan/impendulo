@@ -43,11 +43,10 @@ import (
 
 type (
 	clientSpawner struct {
-		users    map[string]string
-		mode     string
-		numFiles int
-		rport    uint
-		data     []byte
+		users           map[string]string
+		mode            string
+		numFiles, rport uint
+		data            []byte
 	}
 	client struct {
 		uname, pword, mode string
@@ -75,14 +74,14 @@ func (this *clientSpawner) spawn() (*client, bool) {
 	return nil, false
 }
 
-func addData(numUsers int) (users map[string]string, err error) {
-	p := project.New("Triangle", "user", "Java", []byte{})
+func addData(numUsers uint) (users map[string]string, err error) {
+	p := project.New("Triangle", "user", "Java")
 	err = db.Add(db.PROJECTS, p)
 	if err != nil {
 		return
 	}
 	users = make(map[string]string, numUsers)
-	for i := 0; i < numUsers; i++ {
+	for i := 0; i < int(numUsers); i++ {
 		uname := "user" + strconv.Itoa(i)
 		users[uname] = "password"
 		err = db.Add(db.USERS, user.New(uname, "password"))
@@ -164,7 +163,7 @@ func (this *client) logout() (err error) {
 	return
 }
 
-func (this *client) send(numFiles int, data []byte) (err error) {
+func (this *client) send(numFiles uint, data []byte) (err error) {
 	switch this.mode {
 	case project.FILE_MODE:
 		err = this.sendFile(numFiles, data)
@@ -200,14 +199,14 @@ func (this *client) sendArchive(data []byte) (err error) {
 	return
 }
 
-func (this *client) sendFile(numFiles int, data []byte) (err error) {
+func (this *client) sendFile(numFiles uint, data []byte) (err error) {
 	req := map[string]interface{}{
 		REQ:          SEND,
 		project.TYPE: project.SRC,
 		db.NAME:      "Triangle.java",
 		db.PKG:       "triangle",
 	}
-	for i := 0; i < numFiles; i++ {
+	for i := 0; i < int(numFiles); i++ {
 		req[db.TIME] = util.CurMilis()
 		err = write(this.conn, req)
 		if err != nil {
@@ -250,10 +249,10 @@ func readOk(conn net.Conn) (err error) {
 	return
 }
 
-func loadZip(fileNum int) ([]byte, error) {
+func loadZip(fileNum uint) ([]byte, error) {
 	data := make(map[string][]byte)
 	start := 1377870393875
-	for i := 0; i < fileNum; i++ {
+	for i := 0; i < int(fileNum); i++ {
 		name := fmt.Sprintf("triangle_Triangle.java_%d_c", start+i)
 		data[name] = fileData
 	}
@@ -301,112 +300,55 @@ func testReceive(spawner *clientSpawner) (err error) {
 	return
 }
 
+func testFile(t *testing.T, nF, nU, port uint, mode string, data []byte) {
+	go processing.MonitorStatus()
+	go processing.Serve(processing.MAX_PROCS)
+	ext := "_" + strconv.Itoa(int(port))
+	db.Setup(db.TEST_CONN + ext)
+	db.DeleteDB(db.TEST_DB + ext)
+	db.Setup(db.TEST_CONN + ext)
+	defer db.DeleteDB(db.TEST_DB + ext)
+	users, err := addData(nU)
+	if err != nil {
+		t.Error(err)
+	}
+	receive(port)
+	spawner := &clientSpawner{
+		mode:     mode,
+		data:     data,
+		users:    users,
+		numFiles: nF,
+		rport:    port,
+	}
+	err = testReceive(spawner)
+	if err != nil {
+		t.Error(err)
+	}
+	err = processing.Shutdown()
+	if err != nil {
+		t.Error(err)
+	}
+}
+
 func TestFile(t *testing.T) {
-	go processing.MonitorStatus()
-	go processing.Serve(processing.MAX_PROCS)
-	nU, nF := 1, 1
-	var rport uint = 8000
-	db.Setup(db.TEST_CONN + "tf")
-	db.DeleteDB(db.TEST_DB + "tf")
-	db.Setup(db.TEST_CONN + "tf")
-	defer db.DeleteDB(db.TEST_DB + "tf")
-	users, err := addData(nU)
+	testFile(t, 1, 1, 8000, project.FILE_MODE, fileData)
+	testFile(t, 2, 3, 8000, project.FILE_MODE, fileData)
+	zipData, err := loadZip(1)
 	if err != nil {
 		t.Error(err)
 	}
-	receive(rport)
-	fspawner := &clientSpawner{
-		mode:     project.FILE_MODE,
-		data:     fileData,
-		users:    users,
-		numFiles: nF,
-		rport:    rport,
-	}
-	err = testReceive(fspawner)
+	testFile(t, 1, 1, 8010, project.ARCHIVE_MODE, zipData)
+	zipData, err = loadZip(5)
 	if err != nil {
 		t.Error(err)
 	}
-	err = processing.Shutdown()
-	if err != nil {
-		t.Error(err)
-	}
+	testFile(t, 3, 2, 8010, project.ARCHIVE_MODE, zipData)
 }
 
-func TestArchive(t *testing.T) {
-	go processing.MonitorStatus()
-	go processing.Serve(processing.MAX_PROCS)
-	nU, nF := 1, 1
-	var rport uint = 8010
-	db.Setup(db.TEST_CONN + "ta")
-	db.DeleteDB(db.TEST_DB + "ta")
-	db.Setup(db.TEST_CONN + "ta")
-	defer db.DeleteDB(db.TEST_DB + "ta")
-	users, err := addData(nU)
-	if err != nil {
-		t.Error(err)
-	}
-	zipData, err := loadZip(nF)
-	if err != nil {
-		t.Error(err)
-	}
-	receive(rport)
-	aspawner := &clientSpawner{
-		mode:     project.ARCHIVE_MODE,
-		data:     zipData,
-		users:    users,
-		numFiles: nF,
-		rport:    rport,
-	}
-	err = testReceive(aspawner)
-	if err != nil {
-		t.Error(err)
-	}
-	err = processing.Shutdown()
-	if err != nil {
-		t.Error(err)
-	}
-}
-
-func BenchmarkFile(b *testing.B) {
-	go processing.MonitorStatus()
-	go processing.Serve(processing.MAX_PROCS)
-	nU, nF := 2, 2
-	var rport uint = 8020
-	db.Setup(db.TEST_CONN + "bf")
-	db.DeleteDB(db.TEST_DB + "bf")
-	db.Setup(db.TEST_CONN + "bf")
-	defer db.DeleteDB(db.TEST_DB + "bf")
-	users, err := addData(nU)
-	if err != nil {
-		b.Error(err)
-	}
-	fspawner := &clientSpawner{
-		mode:     project.FILE_MODE,
-		data:     fileData,
-		users:    users,
-		numFiles: nF,
-		rport:    rport,
-	}
-	receive(rport)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		err = testReceive(fspawner)
-		if err != nil {
-			b.Error(err)
-		}
-	}
-	err = processing.Shutdown()
-	if err != nil {
-		b.Error(err)
-	}
-}
-
-func BenchmarkArchive(b *testing.B) {
-	var err error
-	nU, nF, nS, nM := 2, 2, 5, 5
-	var rport uint = 8030
+func benchmarkFile(b *testing.B, nF, nU, nS, nM, port uint, mode string, data []byte) {
 	servers := make([]*processing.Server, nS)
-	for i := 0; i < nS; i++ {
+	var err error
+	for i := 0; i < int(nS); i++ {
 		servers[i], err = processing.NewServer(processing.MAX_PROCS)
 		if err != nil {
 			b.Error(err)
@@ -414,36 +356,33 @@ func BenchmarkArchive(b *testing.B) {
 		go servers[i].Serve()
 	}
 	monitors := make([]*processing.Monitor, nS)
-	for i := 0; i < nM; i++ {
+	for i := 0; i < int(nM); i++ {
 		monitors[i], err = processing.NewMonitor()
 		if err != nil {
 			b.Error(err)
 		}
 		go monitors[i].Monitor()
 	}
-	db.Setup(db.TEST_CONN + "ba")
-	db.DeleteDB(db.TEST_DB + "ba")
-	db.Setup(db.TEST_CONN + "ba")
-	defer db.DeleteDB(db.TEST_DB + "ba")
+	ext := "_" + strconv.Itoa(int(port))
+	db.Setup(db.TEST_CONN + ext)
+	db.DeleteDB(db.TEST_DB + ext)
+	db.Setup(db.TEST_CONN + ext)
+	defer db.DeleteDB(db.TEST_DB + ext)
 	users, err := addData(nU)
 	if err != nil {
 		b.Error(err)
 	}
-	zipData, err := loadZip(nF)
-	if err != nil {
-		b.Error(err)
-	}
-	aspawner := &clientSpawner{
-		mode:     project.ARCHIVE_MODE,
-		data:     zipData,
+	spawner := &clientSpawner{
+		mode:     mode,
+		data:     data,
 		users:    users,
 		numFiles: nF,
-		rport:    rport,
+		rport:    port,
 	}
-	receive(rport)
+	receive(port)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err = testReceive(aspawner)
+		err = testReceive(spawner)
 		if err != nil {
 			b.Error(err)
 		}
@@ -460,6 +399,15 @@ func BenchmarkArchive(b *testing.B) {
 			b.Error(err)
 		}
 	}
+}
+
+func BenchmarkFile(b *testing.B) {
+	benchmarkFile(b, 2, 2, 5, 5, 8020, project.FILE_MODE, fileData)
+	zipData, err := loadZip(2)
+	if err != nil {
+		b.Error(err)
+	}
+	benchmarkFile(b, 2, 2, 5, 5, 8030, project.ARCHIVE_MODE, zipData)
 }
 
 var fileData = []byte(`

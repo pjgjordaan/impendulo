@@ -47,8 +47,8 @@ import org.apache.tools.ant.taskdefs.optional.junit.JUnitTest;
  */
 public class TestRunner {
 	public static void main(String[] args) {
-		if (args.length != 2) {
-			throw new InvalidParameterException("Expected 2 arguments.");
+		if (args.length != 4) {
+			throw new InvalidParameterException("Expected 4 arguments.");
 		}
 		// Disable output pipes.
 		PrintStream out = System.out;
@@ -65,9 +65,9 @@ public class TestRunner {
 		}));
 		// Setup arguments
 		String testExec = args[0];
-		String[] split = testExec.split("\\.");
-		String testName = split[split.length - 1];
 		String dataLocation = args[1];
+		String outFile = args[2];
+		String outDir = args[3];
 		System.setProperty("data.location", dataLocation);
 		Project project = new Project();
 		JUnitTask task;
@@ -86,8 +86,8 @@ public class TestRunner {
 			formater.setType(type);
 			task.addFormatter(formater);
 			JUnitTest test = new JUnitTest(testExec);
-			test.setOutfile(testName + "_junit");
-			test.setTodir(new File(dataLocation));
+			test.setOutfile(outFile);
+			test.setTodir(new File(outDir));
 			task.addTest(test);
 			task.execute();
 		} catch (Exception e) {

@@ -17,7 +17,8 @@
     <label class="col-lg-offset-3 col-lg-2 control-label" for="tool">Tool</label>
     <div class="col-lg-3">
       <select class="form-control" name="tool" id="tool">
-	{{range tools}}
+	{{$tools := tools}}
+	{{range $tools}}
 	<option value={{.}}>{{.}}</option>
 	{{end}}
 	<option value="all">All</option>

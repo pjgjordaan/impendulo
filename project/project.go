@@ -34,12 +34,11 @@ import (
 type (
 	//Project represents a Impendulo project.
 	Project struct {
-		Id       bson.ObjectId "_id"
-		Name     string        "name"
-		User     string        "user"
-		Lang     string        "lang"
-		Time     int64         "time"
-		Skeleton []byte        "skeleton"
+		Id   bson.ObjectId "_id"
+		Name string        "name"
+		User string        "user"
+		Lang string        "lang"
+		Time int64         "time"
 	}
 )
 
@@ -56,7 +55,7 @@ func (this *Project) String() string {
 }
 
 //New
-func New(name, user, lang string, data []byte) *Project {
+func New(name, user, lang string) *Project {
 	id := bson.NewObjectId()
-	return &Project{id, name, user, lang, util.CurMilis(), data}
+	return &Project{id, name, user, lang, util.CurMilis()}
 }

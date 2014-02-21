@@ -182,6 +182,38 @@ func Projects(matcher, selector interface{}, sort ...string) (ret []*project.Pro
 	return
 }
 
+func Skeleton(matcher, selector interface{}) (ret *project.Skeleton, err error) {
+	session, err := Session()
+	if err != nil {
+		return
+	}
+	defer session.Close()
+	c := session.DB("").C(SKELETONS)
+	err = c.Find(matcher).Select(selector).One(&ret)
+	if err != nil {
+		err = &DBGetError{"skeleton", err, matcher}
+	}
+	return
+}
+
+func Skeletons(matcher, selector interface{}, sort ...string) (ret []*project.Skeleton, err error) {
+	session, err := Session()
+	if err != nil {
+		return
+	}
+	defer session.Close()
+	c := session.DB("").C(SKELETONS)
+	q := c.Find(matcher)
+	if len(sort) > 0 {
+		q = q.Sort(sort...)
+	}
+	err = q.Select(selector).All(&ret)
+	if err != nil {
+		err = &DBGetError{"skeletons", err, matcher}
+	}
+	return
+}
+
 //RemoveFileById removes a file matching the given id from the active database.
 func RemoveFileById(id interface{}) (err error) {
 	file, err := File(bson.M{ID: id}, bson.M{RESULTS: 1})
@@ -230,6 +262,13 @@ func RemoveProjectById(id interface{}) (err error) {
 		if err != nil {
 			return
 		}
+	}
+	skeletons, err := Skeletons(projectMatch, idSelect)
+	if err != nil {
+		return
+	}
+	for _, skeleton := range skeletons {
+		RemoveById(SKELETONS, skeleton.Id)
 	}
 	tests, err := JUnitTests(projectMatch, idSelect)
 	if err != nil {

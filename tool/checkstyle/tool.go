@@ -74,11 +74,11 @@ func (this *Tool) Name() string {
 
 //Run runs checkstyle on the provided Java file. We make use of the configured Checkstyle configuration file.
 //Output is written to an xml file which is then read in and used to create a Checkstyle Result.
-func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
-	outFile := filepath.Join(ti.Dir, "checkstyle.xml")
+func (this *Tool) Run(fileId bson.ObjectId, t *tool.Target) (res tool.ToolResult, err error) {
+	outFile := filepath.Join(t.Dir, "checkstyle.xml")
 	args := []string{this.java, "-jar", this.cmd,
 		"-f", "xml", "-c", this.cfg,
-		"-o", outFile, "-r", ti.Dir}
+		"-o", outFile, "-r", t.Dir}
 	defer os.Remove(outFile)
 	execRes := tool.RunCommand(args, nil)
 	resFile, err := os.Open(outFile)

@@ -61,7 +61,7 @@ func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
 		return
 	}
 	matcher := bson.M{db.ID: sub.ProjectId}
-	proj, err := db.Project(matcher, bson.M{db.SKELETON: 0})
+	proj, err := db.Project(matcher, nil)
 	if err != nil {
 		return
 	}
@@ -86,7 +86,7 @@ func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
 //Process listens for a submission's incoming files and processes them.
 func (this *Processor) Process(fileChan chan bson.ObjectId, doneChan chan E) {
 	util.Log("Processing submission", this.sub, LOG_PROCESSOR)
-	defer os.RemoveAll(this.rootDir)
+	//defer os.RemoveAll(this.rootDir)
 	//Processing loop.
 processing:
 	for {
@@ -199,7 +199,7 @@ func (this *Processor) StoreFile(name string, data []byte) (err error) {
 //there is already a result for it present. This makes it possible to
 //rerun old tools or add new tools and run them on old files without having
 //to rerun all the tools.
-func (this *Processor) RunTools(file *project.File, target *tool.TargetInfo) {
+func (this *Processor) RunTools(file *project.File, target *tool.Target) {
 	//First we compile our file.
 	err := this.Compile(file.Id, target)
 	if err != nil {
@@ -218,11 +218,9 @@ func (this *Processor) RunTools(file *project.File, target *tool.TargetInfo) {
 				fmt.Errorf("Encountered error %q when running tool %s on file %s.",
 					err, t.Name(), file.Id.Hex()), LOG_PROCESSOR)
 			if tool.IsTimeout(err) {
-				err = db.AddFileResult(
-					file.Id, t.Name(), tool.TIMEOUT)
+				err = db.AddFileResult(file.Id, t.Name(), tool.TIMEOUT)
 			} else {
-				err = db.AddFileResult(
-					file.Id, t.Name(), tool.ERROR)
+				err = db.AddFileResult(file.Id, t.Name(), tool.ERROR)
 			}
 		} else if res != nil {
 			err = db.AddResult(res)
@@ -236,7 +234,7 @@ func (this *Processor) RunTools(file *project.File, target *tool.TargetInfo) {
 }
 
 //Compile compiles a file, stores the result and returns any errors which may have occured.
-func (this *Processor) Compile(fileId bson.ObjectId, target *tool.TargetInfo) (err error) {
+func (this *Processor) Compile(fileId bson.ObjectId, target *tool.Target) (err error) {
 	res, err := this.compiler.Run(fileId, target)
 	//We want to store the result if it is a compilation error
 	if err != nil && !tool.IsCompileError(err) {

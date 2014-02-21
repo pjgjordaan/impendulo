@@ -133,6 +133,10 @@ func CreateJUnit(req *http.Request, ctx *Context) (msg string, err error) {
 	if err != nil {
 		return
 	}
+	tipe, msg, err := getTestType(req)
+	if err != nil {
+		return
+	}
 	testName, testBytes, err := ReadFormFile(req, "test")
 	if err != nil {
 		msg = "Could not read JUnit file."
@@ -152,9 +156,7 @@ func CreateJUnit(req *http.Request, ctx *Context) (msg string, err error) {
 	}
 	//Read package name from file.
 	pkg := util.GetPackage(bytes.NewReader(testBytes))
-	test := junit.NewTest(
-		projectId, testName, pkg, testBytes, dataBytes,
-	)
+	test := junit.NewTest(projectId, testName, pkg, tipe, testBytes, dataBytes)
 	err = db.AddJUnitTest(test)
 	return
 }

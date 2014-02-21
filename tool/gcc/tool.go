@@ -38,8 +38,8 @@ func (this *Tool) Name() string {
 	return NAME
 }
 
-func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
-	args := []string{this.cmd, "-Wall", "-Wextra", "-Wno-variadic-macros", "-pedantic", "-O0", "-o", ti.Name, ti.FilePath()}
+func (this *Tool) Run(fileId bson.ObjectId, t *tool.Target) (res tool.ToolResult, err error) {
+	args := []string{this.cmd, "-Wall", "-Wextra", "-Wno-variadic-macros", "-pedantic", "-O0", "-o", t.Name, t.FilePath()}
 	execRes := tool.RunCommand(args, nil)
 	if execRes.Err != nil {
 		if !tool.IsEndError(execRes.Err) {
@@ -48,7 +48,7 @@ func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolR
 			//Unsuccessfull compile.
 			res, err = NewResult(fileId, execRes.StdErr)
 			if err == nil {
-				err = tool.NewCompileError(ti.FullName(), string(execRes.StdErr))
+				err = tool.NewCompileError(t.FullName(), string(execRes.StdErr))
 			}
 		}
 	} else if execRes.HasStdErr() {

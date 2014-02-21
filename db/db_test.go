@@ -59,7 +59,7 @@ func TestCount(t *testing.T) {
 	}
 	for i := 0; i < num; i++ {
 		var s int = i / 10
-		err = Add(PROJECTS, project.New("name"+strconv.Itoa(s), "user", "lang", []byte{}))
+		err = Add(PROJECTS, project.New("name"+strconv.Itoa(s), "user", "lang"))
 		if err != nil {
 			t.Error(err)
 		}

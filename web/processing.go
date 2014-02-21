@@ -30,6 +30,7 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/util"
 	"io/ioutil"
 	"labix.org/v2/mgo/bson"
@@ -121,6 +122,11 @@ func getSubId(req *http.Request) (bson.ObjectId, string, error) {
 	return getId(req, "subid", "submission")
 }
 
+//getSkeletonId
+func getSkeletonId(req *http.Request) (bson.ObjectId, string, error) {
+	return getId(req, "skeletonid", "skeleton")
+}
+
 //getFileId
 func getFileId(req *http.Request) (bson.ObjectId, string, error) {
 	return getId(req, "fileid", "file")
@@ -157,6 +163,22 @@ func getString(req *http.Request, name string) (val, msg string, err error) {
 	val, err = GetString(req, name)
 	if err != nil {
 		msg = fmt.Sprintf("Could not read %s.", name)
+	}
+	return
+}
+
+func getTestType(req *http.Request) (tipe junit.Type, msg string, err error) {
+	val := strings.ToLower(req.FormValue("testtype"))
+	switch val {
+	case "default":
+		tipe = junit.DEFAULT
+	case "admin":
+		tipe = junit.ADMIN
+	case "user":
+		tipe = junit.USER
+	default:
+		err = fmt.Errorf("Unknown test type %s.", val)
+		msg = err.Error()
 	}
 	return
 }
@@ -251,7 +273,11 @@ func getFile(id bson.ObjectId) (file *project.File, err error) {
 }
 
 //projectName retrieves the project name associated with the project identified by id.
-func projectName(id bson.ObjectId) (name string, err error) {
+func projectName(idval interface{}) (name string, err error) {
+	id, err := util.ReadId(idval)
+	if err != nil {
+		return
+	}
 	matcher := bson.M{db.ID: id}
 	selector := bson.M{db.NAME: 1}
 	proj, err := db.Project(matcher, selector)

@@ -59,7 +59,7 @@ func TestRun(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not zip map %q", err)
 	}
-	test := NewTest(bson.NewObjectId(), "AllTests.java", "testing", testBytes, dataBytes)
+	test := NewTest(bson.NewObjectId(), "AllTests.java", "testing", DEFAULT, testBytes, dataBytes)
 	junit, err := New(test, location)
 	if err != nil {
 		t.Errorf("Expected success, got %q", err)

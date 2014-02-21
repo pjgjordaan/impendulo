@@ -79,9 +79,9 @@ var (
 		"hasChart":        func(n string) bool { return n != tool.CODE && n != diff.NAME && n != tool.SUMMARY },
 		"submissions":     projectSubmissions,
 		"files":           submissionFiles,
-		"projects":        func() ([]*project.Project, error) { return db.Projects(nil, bson.M{db.SKELETON: 0}, db.NAME) },
+		"projects":        projects,
 		"langProjects": func(lang string) ([]*project.Project, error) {
-			return db.Projects(bson.M{db.LANG: lang}, bson.M{db.SKELETON: 0}, db.NAME)
+			return db.Projects(bson.M{db.LANG: lang}, nil, db.NAME)
 		},
 		"analysisNames": func(projectId bson.ObjectId) ([]string, error) {
 			return db.AllResultNames(projectId)
@@ -90,6 +90,8 @@ var (
 			return db.ChartResultNames(projectId)
 		},
 		"users":                 func() ([]*user.User, error) { return db.Users(nil, user.ID) },
+		"skeletons":             skeletons,
+		"projectSkeletons":      projectSkeletons,
 		"displayResult":         dispRes,
 		"displayResultMore":     dispResMore,
 		"displayCodeBug":        displayCodeBug,
@@ -113,6 +115,29 @@ var (
 const (
 	PAGER_SIZE = 10
 )
+
+func projectSkeletons() (ret map[string][]*project.Skeleton, err error) {
+	ps, err := projects()
+	if err != nil {
+		return
+	}
+	ret = make(map[string][]*project.Skeleton)
+	for _, p := range ps {
+		ret[p.Id.Hex()], err = skeletons(p.Id)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func projects() ([]*project.Project, error) {
+	return db.Projects(nil, nil, db.NAME)
+}
+
+func skeletons(projectId bson.ObjectId) ([]*project.Skeleton, error) {
+	return db.Skeletons(bson.M{db.PROJECTID: projectId}, bson.M{db.DATA: 0}, db.NAME)
+}
 
 func compareChart(sid bson.ObjectId, uid, result, file, compare string) string {
 	return singleChart(sid, uid, result, file) + fmt.Sprintf("&compare=%s", compare)

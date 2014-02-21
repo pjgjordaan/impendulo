@@ -264,7 +264,7 @@ func displayChart(req *http.Request, ctx *Context) (a Args, t Temps, msg string,
 		if err != nil {
 			return
 		}
-		var compChart tool.ChartData
+		var compChart ChartData
 		compChart, err = LoadChart(ctx.Browse.Result, compFiles)
 		if err != nil {
 			return

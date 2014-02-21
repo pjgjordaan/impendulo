@@ -700,6 +700,8 @@ function showTooltip(d){
 	.style('top', yPos + 'px');	
     tooltip.selectAll('.tooltip-line')
 	.remove();
+    tooltip.selectAll('pre')
+	.remove();
     tooltip
 	.append('h5')
 	.attr('class', 'tooltip-line')
@@ -707,11 +709,16 @@ function showTooltip(d){
     tooltip
 	.append('p')
 	.attr('class', 'tooltip-line')
-	.text(text);
-    tooltip
-	.append('p')
-	.attr('class', 'tooltip-line')
-	.text(xVal);
+	.text(text + ' Time: ' + xVal+ 's');
+    /*if (!isLaunch(d) && 'diff' in d){
+	tooltip
+	    .append('pre')
+	    .attr('class', 'brush: diff')
+	    .text(d.diff);
+	SyntaxHighlighter.defaults['toolbar'] = false;
+	SyntaxHighlighter.all();
+
+    }*/
     tooltip
 	.transition()
         .duration(500)	

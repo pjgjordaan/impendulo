@@ -96,7 +96,7 @@ func (this *Result) GetReport() tool.Report {
 }
 
 //ChartVals
-func (this *Result) ChartVals() []tool.ChartVal {
+func (this *Result) ChartVals() []*tool.ChartVal {
 	var yE, yW int
 	if this.Report.Errors() {
 		yE = this.Report.Count
@@ -104,9 +104,9 @@ func (this *Result) ChartVals() []tool.ChartVal {
 	if this.Report.Warnings() {
 		yW = this.Report.Count
 	}
-	return []tool.ChartVal{
-		{"Errors", yE, true},
-		{"Warnings", yW, false},
+	return []*tool.ChartVal{
+		&tool.ChartVal{"Errors", yE, true, this.FileId},
+		&tool.ChartVal{"Warnings", yW, false, this.FileId},
 	}
 }
 

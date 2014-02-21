@@ -75,10 +75,10 @@ func (this *Tool) Name() string {
 
 //Run runs PMD on a provided Java source file. PMD writes its output to an XML file which we then read
 //and use to create a PMD Result.
-func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
-	outFile := filepath.Join(ti.Dir, "pmd.xml")
+func (this *Tool) Run(fileId bson.ObjectId, t *tool.Target) (res tool.ToolResult, err error) {
+	outFile := filepath.Join(t.Dir, "pmd.xml")
 	args := []string{this.cmd, "pmd", "-f", "xml", "-stress",
-		"-shortnames", "-R", this.rules, "-r", outFile, "-d", ti.Dir}
+		"-shortnames", "-R", this.rules, "-r", outFile, "-d", t.Dir}
 	defer os.Remove(outFile)
 	execRes := tool.RunCommand(args, nil)
 	resFile, err := os.Open(outFile)

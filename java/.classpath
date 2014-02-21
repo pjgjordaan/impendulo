@@ -8,5 +8,6 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/jpf-core"/>
 	<classpathentry kind="lib" path="/usr/share/ant/lib/ant-junit.jar"/>
 	<classpathentry kind="lib" path="/usr/share/ant/lib/ant.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/KSelect"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

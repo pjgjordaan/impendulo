@@ -158,3 +158,20 @@ function highlight(bug){
 	}
     }
 }
+
+function addSkeletons(src, dest, skeletonMap){
+    var srcList = document.getElementById(src);
+    var id = srcList.options[srcList.selectedIndex].value;
+    var skeletons = skeletonMap[id];
+    if(skeletons === null){
+	return;
+    }
+    var destList = document.getElementById(dest);
+    destList.options.length = 0;
+    for(var i = 0; i < skeletons.length; i++) {
+        var option = document.createElement('option');
+        option.text = skeletons[i].Name;
+	option.value = skeletons[i].Id;
+        destList.add(option);
+    }
+}

@@ -96,9 +96,9 @@ func (this *Result) Success() bool {
 }
 
 //ChartVals gets the number of errors found by PMD.
-func (this *Result) ChartVals() []tool.ChartVal {
-	return []tool.ChartVal{
-		{"Errors", this.Report.Errors, true},
+func (this *Result) ChartVals() []*tool.ChartVal {
+	return []*tool.ChartVal{
+		&tool.ChartVal{"Errors", this.Report.Errors, true, this.FileId},
 	}
 }
 

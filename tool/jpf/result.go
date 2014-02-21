@@ -104,10 +104,10 @@ func (this *Result) GetReport() tool.Report {
 }
 
 //ChartVals
-func (this *Result) ChartVals() []tool.ChartVal {
-	return []tool.ChartVal{
-		{"Total Errors", this.Report.Total, true},
-		{"Unique Errors", this.Report.ErrorCount(), false},
+func (this *Result) ChartVals() []*tool.ChartVal {
+	return []*tool.ChartVal{
+		&tool.ChartVal{"Total Errors", this.Report.Total, true, this.FileId},
+		&tool.ChartVal{"Unique Errors", this.Report.ErrorCount(), false, this.FileId},
 	}
 }
 

@@ -111,3 +111,17 @@ func ShortName(exec string) string {
 	}
 	return strings.Join(elements[num-2:], ".")
 }
+
+func Min(a, b int) int {
+	if a > b {
+		a = b
+	}
+	return a
+}
+
+func Max(a, b int) int {
+	if a < b {
+		a = b
+	}
+	return a
+}

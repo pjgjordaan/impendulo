@@ -157,7 +157,7 @@ func (this *SubmissionHandler) Login() (err error) {
 		return
 	}
 	//Send a list of available projects to the user.
-	projects, err := db.Projects(nil, bson.M{db.SKELETON: 0}, db.NAME)
+	projects, err := db.Projects(nil, nil, db.NAME)
 	if err != nil {
 		return
 	}

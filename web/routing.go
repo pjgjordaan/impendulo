@@ -58,7 +58,7 @@ var (
 		"archiveview", "submitarchive", "logout",
 	}
 	teacher = []string{
-		"skeletonview", "changeskeleton", "projectview",
+		"skeletonview", "addskeleton", "projectview",
 		"addproject", "runtoolview", "runtool", "configview",
 	}
 	admin = []string{

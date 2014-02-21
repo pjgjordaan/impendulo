@@ -35,6 +35,7 @@ import (
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
+	"github.com/godfried/impendulo/tool/junit_user"
 	mk "github.com/godfried/impendulo/tool/make"
 	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/util"
@@ -99,6 +100,12 @@ func javaTools(proc *Processor) []tool.Tool {
 	} else if err != nil {
 		util.Log(err, LOG_TOOLS)
 	}
+	userTests, err := UserJUnit(proc)
+	if err == nil && len(userTests) > 0 {
+		tools = append(tools, userTests...)
+	} else if err != nil {
+		util.Log(err, LOG_TOOLS)
+	}
 	return tools
 }
 
@@ -152,7 +159,7 @@ func PMD(proc *Processor) (pmdTool tool.Tool, err error) {
 //JUnit creates a new JUnit tool instances for each available JUnit test for a given project.
 func JUnit(proc *Processor) (ret []tool.Tool, err error) {
 	//First we need the project's JUnit tests.
-	tests, err := db.JUnitTests(bson.M{db.PROJECTID: proc.project.Id}, nil)
+	tests, err := db.JUnitTests(bson.M{db.PROJECTID: proc.project.Id, db.TYPE: bson.M{db.NE: junit.USER}}, nil)
 	if err != nil {
 		return
 	}
@@ -168,6 +175,31 @@ func JUnit(proc *Processor) (ret []tool.Tool, err error) {
 	ret = make([]tool.Tool, 0, len(tests))
 	for _, test := range tests {
 		unitTest, terr := junit.New(test, proc.toolDir)
+		if terr != nil {
+			util.Log(terr, LOG_TOOLS)
+		} else {
+			ret = append(ret, unitTest)
+		}
+	}
+	return
+}
+
+func UserJUnit(proc *Processor) (ret []tool.Tool, err error) {
+	tests, err := db.JUnitTests(bson.M{db.PROJECTID: proc.project.Id, db.TYPE: junit.USER}, nil)
+	if err != nil {
+		return
+	}
+	testDir, err := config.JUNIT_TESTING.Path()
+	if err != nil {
+		return
+	}
+	err = util.Copy(proc.toolDir, testDir)
+	if err != nil {
+		return
+	}
+	ret = make([]tool.Tool, 0, len(tests))
+	for _, test := range tests {
+		unitTest, terr := junit_user.New(test, proc.toolDir)
 		if terr != nil {
 			util.Log(terr, LOG_TOOLS)
 		} else {

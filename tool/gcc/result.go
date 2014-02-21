@@ -45,10 +45,10 @@ func (this *Result) SetReport(report tool.Report) {
 }
 
 //ChartVals
-func (this *Result) ChartVals() []tool.ChartVal {
-	return []tool.ChartVal{
-		{"Errors", this.Report.Errors, true},
-		{"Warnings", this.Report.Warnings, false},
+func (this *Result) ChartVals() []*tool.ChartVal {
+	return []*tool.ChartVal{
+		&tool.ChartVal{"Errors", this.Report.Errors, true, this.FileId},
+		&tool.ChartVal{"Warnings", this.Report.Warnings, false, this.FileId},
 	}
 }
 

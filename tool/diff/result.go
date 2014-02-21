@@ -29,7 +29,6 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
-	//"html/template"
 	"strings"
 )
 

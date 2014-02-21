@@ -22,16 +22,22 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package tool
+package project
 
 import (
-	"github.com/godfried/impendulo/project"
 	"labix.org/v2/mgo/bson"
-	"testing"
 )
 
-func TestChartAdd(t *testing.T) {
-	chart := NewChart(*project.NewSubmission(bson.NewObjectId(), "user", project.FILE_MODE, 100000))
-	chart.Add(0, nil)
-	chart.Add(0, []ChartVal{{}})
+type (
+	Skeleton struct {
+		Id        bson.ObjectId "_id"
+		ProjectId bson.ObjectId "projectid"
+		Name      string        "name"
+		Data      []byte        "data"
+	}
+)
+
+//NewSkeleton
+func NewSkeleton(projectId bson.ObjectId, name string, data []byte) *Skeleton {
+	return &Skeleton{Id: bson.NewObjectId(), ProjectId: projectId, Name: name, Data: data}
 }

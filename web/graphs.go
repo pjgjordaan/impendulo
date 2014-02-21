@@ -30,32 +30,52 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/diff"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 )
 
-func LoadChart(resultName string, files []*project.File) (tool.ChartData, error) {
+type (
+	//Chart represents the x and y values used to draw the charts.
+	Chart struct {
+		start int64
+		user  string
+		subId string
+		Data  ChartData
+	}
+
+	ChartData []map[string]interface{}
+)
+
+func LoadChart(resultName string, files []*project.File) (ChartData, error) {
 	if len(files) == 0 {
 		return nil, errors.New("No files to load chart for.")
 	}
-	selector := bson.M{db.TIME: 1, db.RESULTS: 1}
 	sub, err := db.Submission(bson.M{db.ID: files[0].SubId}, nil)
 	if err != nil {
 		return nil, err
 	}
-	chart := tool.NewChart(*sub)
+	chart := NewChart(sub)
+	prev, err := db.File(bson.M{db.ID: files[0].Id}, nil)
+	if err != nil {
+		return nil, err
+	}
 	for _, f := range files {
 		matcher := bson.M{db.ID: f.Id}
-		file, err := db.File(matcher, selector)
+		cur, err := db.File(matcher, nil)
 		if err != nil {
 			continue
 		}
 		switch resultName {
 		case tool.SUMMARY:
-			addAll(chart, *file)
+			err = addAll(chart, cur, prev)
 		default:
-			addSingle(chart, *file, resultName)
+			err = addSingle(chart, cur, prev, resultName)
 		}
+		if err != nil {
+			return nil, err
+		}
+		prev = cur
 	}
 	file, err := db.File(bson.M{db.ID: files[0].Id}, bson.M{db.SUBID: 1})
 	if err != nil {
@@ -68,34 +88,41 @@ func LoadChart(resultName string, files []*project.File) (tool.ChartData, error)
 		util.Log(err)
 		return chart.Data, nil
 	}
-	for _, launch := range launches {
-		val := []tool.ChartVal{{"Launches", 0.0, false}}
-		chart.Add(launch.Time, val)
+	for i, launch := range launches {
+		prev := launches[util.Max(i-1, 0)]
+		val := []*tool.ChartVal{&tool.ChartVal{"Launches", 0.0, false, launch.Id}}
+		err = chart.Add(launch, prev, val)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return chart.Data, nil
 }
 
-func addAll(chart *tool.Chart, file project.File) {
-	ftime := file.Time
-	for name, id := range file.Results {
+func addAll(chart *Chart, cur, prev *project.File) error {
+	for name, id := range cur.Results {
 		result, err := db.ChartResult(name, bson.M{db.ID: id}, nil)
 		if err != nil {
 			continue
 		}
-		chart.Add(ftime, result.ChartVals()[:1])
+		err = chart.Add(cur, prev, result.ChartVals()[:1])
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func addSingle(chart *tool.Chart, file project.File, resultName string) {
-	result, err := db.ChartResult(resultName, bson.M{db.ID: file.Results[resultName]}, nil)
+func addSingle(chart *Chart, cur, prev *project.File, resultName string) error {
+	result, err := db.ChartResult(resultName, bson.M{db.ID: cur.Results[resultName]}, nil)
 	if err != nil {
-		return
+		return nil
 	}
-	chart.Add(file.Time, result.ChartVals())
+	return chart.Add(cur, prev, result.ChartVals())
 }
 
-func SubmissionChart(subs []*project.Submission) (ret tool.ChartData) {
-	ret = tool.NewChartData()
+func SubmissionChart(subs []*project.Submission) (ret ChartData) {
+	ret = NewChartData()
 	for _, sub := range subs {
 		snapshots, err := fileCount(sub.Id, project.SRC)
 		if err != nil {
@@ -126,7 +153,7 @@ func SubmissionChart(subs []*project.Submission) (ret tool.ChartData) {
 	return
 }
 
-func overviewChart(tipe string) (ret tool.ChartData, err error) {
+func overviewChart(tipe string) (ret ChartData, err error) {
 	switch tipe {
 	case "user":
 		ret, err = UserChart()
@@ -139,8 +166,8 @@ func overviewChart(tipe string) (ret tool.ChartData, err error) {
 
 }
 
-func UserChart() (ret tool.ChartData, err error) {
-	ret = tool.NewChartData()
+func UserChart() (ret ChartData, err error) {
+	ret = NewChartData()
 	users, err := db.Users(bson.M{})
 	if err != nil {
 		return
@@ -156,8 +183,8 @@ func UserChart() (ret tool.ChartData, err error) {
 	return
 }
 
-func ProjectChart() (ret tool.ChartData, err error) {
-	ret = tool.NewChartData()
+func ProjectChart() (ret ChartData, err error) {
+	ret = NewChartData()
 	projects, err := db.Projects(bson.M{}, nil)
 	if err != nil {
 		return
@@ -202,4 +229,48 @@ func TypeCounts(id interface{}) (counts []int) {
 		}
 	}
 	return
+}
+
+//Add inserts new coordinates into data used to display a chart.
+func (this *Chart) Add(curFile, prevFile *project.File, vals []*tool.ChartVal) (err error) {
+	if len(vals) == 0 {
+		return
+	}
+	x := float64(curFile.Time-this.start) / 1000
+	var d string
+	hasDiff := curFile.Id != prevFile.Id && curFile.Type == project.SRC
+	if hasDiff {
+		cur := diff.NewResult(curFile)
+		prev := diff.NewResult(prevFile)
+		d, err = prev.Create(cur)
+		if err != nil {
+			return
+		}
+	}
+	for _, curVal := range vals {
+		point := map[string]interface{}{
+			"x": x, "y": curVal.Y, "key": curVal.Name + " " + this.subId,
+			"name": curVal.Name, "subId": this.subId, "user": this.user,
+			"created": this.start, "time": curFile.Time, "show": curVal.Show,
+		}
+		if hasDiff {
+			point["diff"] = d
+		}
+		this.Data = append(this.Data, point)
+	}
+	return
+}
+
+//NewChart initialises new chart data.
+func NewChart(submission *project.Submission) *Chart {
+	return &Chart{
+		start: submission.Time,
+		user:  submission.User,
+		subId: submission.Id.Hex(),
+		Data:  NewChartData(),
+	}
+}
+
+func NewChartData() ChartData {
+	return make(ChartData, 0, 1000)
 }

@@ -37,11 +37,20 @@ type (
 		Name      string        "name"
 		Package   string        "pkg"
 		Time      int64         "time"
+		Type      Type          "type"
 		//The test file
 		Test []byte "test"
 		//The data files needed for the test stored in a zip archive
 		Data []byte "data"
 	}
+
+	Type int
+)
+
+const (
+	DEFAULT Type = iota
+	ADMIN
+	USER
 )
 
 //String
@@ -53,7 +62,15 @@ func (this *Test) String() string {
 }
 
 //NewTest
-func NewTest(projectId bson.ObjectId, name, pkg string, test, data []byte) *Test {
-	id := bson.NewObjectId()
-	return &Test{id, projectId, name, pkg, util.CurMilis(), test, data}
+func NewTest(projectId bson.ObjectId, name, pkg string, tipe Type, test, data []byte) *Test {
+	return &Test{
+		Id:        bson.NewObjectId(),
+		ProjectId: projectId,
+		Name:      name,
+		Package:   pkg,
+		Time:      util.CurMilis(),
+		Type:      tipe,
+		Test:      test,
+		Data:      data,
+	}
 }

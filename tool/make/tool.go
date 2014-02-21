@@ -46,8 +46,8 @@ func (this *Tool) Name() string {
 	return NAME
 }
 
-func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
-	args := []string{this.cmd, "-C", ti.Dir, "-f", this.path}
+func (this *Tool) Run(fileId bson.ObjectId, t *tool.Target) (res tool.ToolResult, err error) {
+	args := []string{this.cmd, "-C", t.Dir, "-f", this.path}
 	execRes := tool.RunCommand(args, nil)
 	if execRes.Err != nil {
 		if !tool.IsEndError(execRes.Err) {
@@ -56,7 +56,7 @@ func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolR
 			//Unsuccessfull compile.
 			res, err = gcc.NewResult(fileId, execRes.StdErr)
 			if err == nil {
-				err = tool.NewCompileError(ti.FullName(), string(execRes.StdErr))
+				err = tool.NewCompileError(t.FullName(), string(execRes.StdErr))
 			}
 		}
 	} else if execRes.HasStdErr() {

@@ -64,7 +64,7 @@ func Posters() map[string]Poster {
 //defaultPosters loads the default posters.
 func defaultPosters() map[string]Poster {
 	return map[string]Poster{
-		"addproject": AddProject, "changeskeleton": ChangeSkeleton,
+		"addproject": AddProject, "addskeleton": AddSkeleton,
 		"submitarchive": SubmitArchive, "runtool": RunTool,
 		"deleteproject": DeleteProject, "deleteuser": DeleteUser,
 		"deleteresults": DeleteResults, "importdata": ImportData,
@@ -159,29 +159,6 @@ func SubmitArchive(req *http.Request, ctx *Context) (msg string, err error) {
 	return
 }
 
-//ChangeSkeleton replaces a project's skeleton file.
-func ChangeSkeleton(req *http.Request, ctx *Context) (msg string, err error) {
-	projectId, msg, err := getProjectId(req)
-	if err != nil {
-		return
-	}
-	_, data, err := ReadFormFile(req, "skeleton")
-	if err != nil {
-		msg = "Could not read skeleton file."
-		return
-	}
-	err = db.Update(
-		db.PROJECTS, bson.M{db.ID: projectId},
-		bson.M{db.SET: bson.M{db.SKELETON: data}},
-	)
-	if err != nil {
-		msg = "Could not update skeleton file."
-	} else {
-		msg = "Successfully updated skeleton file."
-	}
-	return
-}
-
 //AddProject creates a new Impendulo Project.
 func AddProject(req *http.Request, ctx *Context) (msg string, err error) {
 	name, err := GetString(req, "projectname")
@@ -198,17 +175,37 @@ func AddProject(req *http.Request, ctx *Context) (msg string, err error) {
 	if err != nil {
 		return
 	}
-	_, skeletonBytes, err := ReadFormFile(req, "skeleton")
-	if err != nil {
-		msg = "Could not read skeleton file."
-		return
-	}
-	p := project.New(name, username, lang, skeletonBytes)
+	p := project.New(name, username, lang)
 	err = db.Add(db.PROJECTS, p)
 	if err != nil {
 		msg = "Could not add project."
 	} else {
 		msg = "Successfully added project."
+	}
+	return
+}
+
+func AddSkeleton(req *http.Request, ctx *Context) (msg string, err error) {
+	projectId, msg, err := getProjectId(req)
+	if err != nil {
+		return
+	}
+	name, err := GetString(req, "skeletonname")
+	if err != nil {
+		msg = "Could not read skeleton name."
+		return
+	}
+	_, skeletonBytes, err := ReadFormFile(req, "skeleton")
+	if err != nil {
+		msg = "Could not read skeleton file."
+		return
+	}
+	s := project.NewSkeleton(projectId, name, skeletonBytes)
+	err = db.Add(db.SKELETONS, s)
+	if err != nil {
+		msg = "Could not add skeleton."
+	} else {
+		msg = "Successfully added skeleton."
 	}
 	return
 }

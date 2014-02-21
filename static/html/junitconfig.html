@@ -2,7 +2,9 @@
 <h3 class="heading">Create JUnit Test</h3>
 <form class="form-horizontal" action="createjunit" method="post" enctype="multipart/form-data">
   <div class="form-group">
-    <label class="col-lg-offset-3 col-lg-2 control-label" for="projectid">Project</label>
+    <label class="col-lg-offset-3 col-lg-2 control-label" for="projectid">
+      Project
+    </label>
     <div class="col-lg-3">
       <select class="form-control" name="projectid" id="projectid">
 	{{$projects := langProjects "Java"}}
@@ -13,7 +15,21 @@
     </div>
   </div>
   <div class="form-group">
-    <label class="col-lg-offset-3 col-lg-2 control-label" for="test">Test File</label>
+    <label class="col-lg-offset-3 col-lg-2 control-label" for="testtype">
+      Test Type
+    </label>
+    <div class="col-lg-3">
+      <select class="form-control" name="testtype" id="testtype">
+	<option value="default">Default</option>
+	<option value="admin">Admin</option>
+	<option value="user">User</option>
+      </select>
+    </div>
+  </div>
+<div class="form-group">
+    <label class="col-lg-offset-3 col-lg-2 control-label" for="test">
+      Test File
+    </label>
     <div class="col-lg-3">
       <input class="form-control" name="test" type="file" id="test">
     </div>
@@ -25,12 +41,15 @@
 	  <input type="checkbox" value="true"
 		 onclick="unhide('data-files-group', this)"
 		 id="data-check" name="data-check">
-	  Data files required</label>
+	  Data files required
+	</label>
       </div>
     </div>
   </div>
   <div class="form-group" id="data-files-group" style="display:none">
-    <label class="col-lg-offset-3 col-lg-2 control-label" for="data">Data Files</label>
+    <label class="col-lg-offset-3 col-lg-2 control-label" for="data">
+      Data Files
+    </label>
     <div class="col-lg-3">
       <input class="form-control" name="data" type="file" id="data">
     </div>

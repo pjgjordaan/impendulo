@@ -65,15 +65,15 @@ func (this *FindBugs) Name() string {
 //Findbugs is run with the following flags: -effort:max, -experimental, -relaxed.
 //The result is written to an XML file which is then read and used to create a
 //Findbugs Result.
-func (this *FindBugs) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
+func (this *FindBugs) Run(fileId bson.ObjectId, t *tool.Target) (res tool.ToolResult, err error) {
 	//Setup arguments
 	java, err := config.JAVA.Path()
 	if err != nil {
 		return
 	}
-	outFile := filepath.Join(ti.Dir, "findbugs.xml")
+	outFile := filepath.Join(t.Dir, "findbugs.xml")
 	args := []string{java, "-jar", this.cmd, "-textui", "-effort:max", "-experimental",
-		"-xml:withMessages", "-relaxed", "-output", outFile, ti.PackagePath()}
+		"-xml:withMessages", "-relaxed", "-output", outFile, t.PackagePath()}
 	defer os.Remove(outFile)
 	//Run Findbugs and load result.
 	execRes := tool.RunCommand(args, nil)

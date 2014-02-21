@@ -117,15 +117,15 @@ func (this *Tool) Name() string {
 //Run runs JPF on a specified Java source file. It uses the Java class runner.JPFRunner to
 //actually run JPF on the source file. If the command was successful, the
 //results are read in from a xml file.
-func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
+func (this *Tool) Run(fileId bson.ObjectId, t *tool.Target) (res tool.ToolResult, err error) {
 	//Load arguments
 	java, err := config.JAVA.Path()
 	if err != nil {
 		return
 	}
-	outFile := filepath.Join(ti.Dir, "jpf")
-	args := []string{java, "-cp", ti.Dir + ":" + this.cp, this.exec,
-		this.jpfPath, ti.Executable(), ti.Dir, outFile}
+	outFile := filepath.Join(t.Dir, "jpf")
+	args := []string{java, "-cp", t.Dir + ":" + this.cp, this.exec,
+		this.jpfPath, t.Executable(), t.Dir, outFile}
 	outFile = outFile + ".xml"
 	defer os.Remove(outFile)
 	//Run JPF and load result

@@ -39,7 +39,7 @@ func TestJUnitTest(t *testing.T) {
 		t.Error(err)
 	}
 	defer s.Close()
-	test := junit.NewTest(bson.NewObjectId(), "name", "pkg", junitData, junitData)
+	test := junit.NewTest(bson.NewObjectId(), "name", "pkg", junit.DEFAULT, junitData, junitData)
 	err = AddJUnitTest(test)
 	if err != nil {
 		t.Error(err)

@@ -59,17 +59,17 @@ func (this *Tool) Name() string {
 	return NAME
 }
 
-//Run compiles the Java source file specified by ti. We compile with maximum warnings and compile
+//Run compiles the Java source file specified by t. We compile with maximum warnings and compile
 //classes implicitly loaded by the source code. All compilation results will be stored (success,
 //errors and warnings).
-func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
+func (this *Tool) Run(fileId bson.ObjectId, t *tool.Target) (res tool.ToolResult, err error) {
 	cp := this.cp
 	if cp != "" {
 		cp += ":"
 	}
-	cp += ti.Dir
-	args := []string{this.cmd, "-cp", cp + ":" + ti.Dir,
-		"-implicit:class", "-Xlint", ti.FilePath()}
+	cp += t.Dir
+	args := []string{this.cmd, "-cp", cp + ":" + t.Dir,
+		"-implicit:class", "-Xlint", t.FilePath()}
 	//Compile the file.
 	execRes := tool.RunCommand(args, nil)
 	if execRes.Err != nil {
@@ -78,7 +78,7 @@ func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolR
 		} else {
 			//Unsuccessfull compile.
 			res = NewResult(fileId, execRes.StdErr)
-			err = tool.NewCompileError(ti.FullName(), string(execRes.StdErr))
+			err = tool.NewCompileError(t.FullName(), string(execRes.StdErr))
 		}
 	} else if execRes.HasStdErr() {
 		//Compiler warnings.

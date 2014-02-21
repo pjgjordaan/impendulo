@@ -94,10 +94,6 @@ func TestSaveFile(t *testing.T) {
 		}
 
 	}
-	err := SaveFile(filepath.Join(os.TempDir(), "real"), nil)
-	if err != nil {
-		t.Error(err)
-	}
 }
 
 func tsave(name string, valid bool) error {
@@ -112,21 +108,22 @@ func tsave(name string, valid bool) error {
 }
 
 func TestReadBytes(t *testing.T) {
-	orig := []byte("bytes")
-	buff := bytes.NewBuffer(orig)
-	ret := ReadBytes(buff)
-	if !bytes.Equal(orig, ret) {
-		t.Error(errors.New("Bytes not equal"))
+	tests := [][]byte{[]byte("bytes"), nil, []byte{}, []byte(file1)}
+	for _, test := range tests {
+		err := testReadBytes(test)
+		if err != nil {
+			t.Error(err)
+		}
 	}
+}
 
-	ret = ReadBytes(nil)
-	if !bytes.Equal(ret, []byte{}) {
-		t.Error("Expected empty []byte.")
+func testReadBytes(data []byte) (err error) {
+	buff := bytes.NewBuffer(data)
+	ret := ReadBytes(buff)
+	if !bytes.Equal(data, ret) {
+		err = errors.New("Bytes not equal")
 	}
-	ret = ReadBytes(new(ErrorReader))
-	if !bytes.Equal(ret, []byte{}) {
-		t.Error("Expected empty []byte.")
-	}
+	return
 }
 
 type ErrorReader struct{}
@@ -166,38 +163,61 @@ func TestGetPackage(t *testing.T) {
 	}
 }
 
+type copyData struct {
+	src, dest           string
+	validSrc, validDest bool
+	data                []byte
+}
+
 func TestCopyFile(t *testing.T) {
 	validSrc := filepath.Join(os.TempDir(), "src", "from")
 	invalidSrc := filepath.Join(os.TempDir(), "src", "nofile")
 	validDest := filepath.Join(os.TempDir(), "dest", "to")
 	invalidDest := "/root/file"
+	tests := []*copyData{{validSrc, validDest, true, true, []byte(file1)}, {invalidSrc, invalidDest, false, false, nil},
+		{validSrc, invalidDest, true, false, []byte(file1)}, {invalidSrc, validDest, false, true, nil}}
+
+	for _, test := range tests {
+		err := testCopyFile(test)
+		if err != nil {
+			t.Error(err)
+		}
+	}
+}
+
+func testCopyFile(data *copyData) (err error) {
 	defer func() {
-		os.Remove(validSrc)
-		os.Remove(validDest)
+		os.Remove(data.src)
+		os.Remove(data.dest)
 	}()
-	err := SaveFile(validSrc, []byte(file1))
-	if err != nil {
-		t.Error(err)
+	if data.validSrc {
+		err = SaveFile(data.src, []byte(file1))
+		if err != nil {
+			return
+		}
 	}
-	err = CopyFile(validDest, validSrc)
-	if err != nil {
-		t.Error(err)
+	isValid := data.validSrc && data.validDest
+	err = CopyFile(data.dest, data.src)
+	if err != nil && isValid {
+		return
+	} else if err == nil && !isValid {
+		err = fmt.Errorf("Expected error copying from %s to %s.", data.src, data.dest)
+		return
+	} else {
+		err = nil
 	}
-	data, err := ioutil.ReadFile(validDest)
-	if err != nil {
-		t.Error(err)
+	if isValid {
+		var read []byte
+		read, err = ioutil.ReadFile(data.dest)
+		if err != nil {
+			return
+		}
+		if !bytes.Equal(data.data, read) {
+			err = errors.New("Bytes not equal")
+			return
+		}
 	}
-	if !bytes.Equal([]byte(file1), data) {
-		t.Error("Bytes not equal")
-	}
-	err = CopyFile(invalidDest, validSrc)
-	if err == nil {
-		t.Error(fmt.Errorf("Expected error copying to %s.", invalidDest))
-	}
-	err = CopyFile(validDest, invalidSrc)
-	if err == nil {
-		t.Error(fmt.Errorf("Expected error copying from %s.", invalidSrc))
-	}
+	return
 }
 
 var file1 = `//

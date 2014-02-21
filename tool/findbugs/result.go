@@ -98,12 +98,12 @@ func (this *Result) GetReport() tool.Report {
 }
 
 //ChartVals
-func (this *Result) ChartVals() []tool.ChartVal {
-	return []tool.ChartVal{
-		{"All", this.Report.Summary.BugCount, true},
-		{"Priority 1", this.Report.Summary.Priority1, false},
-		{"Priority 2", this.Report.Summary.Priority2, false},
-		{"Priority 3", this.Report.Summary.Priority3, false},
+func (this *Result) ChartVals() []*tool.ChartVal {
+	return []*tool.ChartVal{
+		&tool.ChartVal{"All", this.Report.Summary.BugCount, true, this.FileId},
+		&tool.ChartVal{"Priority 1", this.Report.Summary.Priority1, false, this.FileId},
+		&tool.ChartVal{"Priority 2", this.Report.Summary.Priority2, false, this.FileId},
+		&tool.ChartVal{"Priority 3", this.Report.Summary.Priority3, false, this.FileId},
 	}
 }
 

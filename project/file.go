@@ -54,6 +54,7 @@ const (
 	SRC     Type = "src"
 	LAUNCH  Type = "launch"
 	ARCHIVE Type = "archive"
+	TEST    Type = "test"
 )
 
 //String

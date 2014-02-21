@@ -31,11 +31,18 @@ import (
 )
 
 //ReadId tries to read a bson.ObjectId from a string.
-func ReadId(idStr string) (id bson.ObjectId, err error) {
-	if !bson.IsObjectIdHex(idStr) {
-		err = &CastError{"bson.ObjectId", idStr}
-	} else {
-		id = bson.ObjectIdHex(idStr)
+func ReadId(ival interface{}) (id bson.ObjectId, err error) {
+	switch v := ival.(type) {
+	case bson.ObjectId:
+		id = v
+	case string:
+		if !bson.IsObjectIdHex(v) {
+			err = &CastError{"bson.ObjectId", v}
+		} else {
+			id = bson.ObjectIdHex(v)
+		}
+	default:
+		err = &CastError{"id", v}
 	}
 	return
 }
@@ -107,14 +114,7 @@ func GetId(jobj map[string]interface{}, key string) (id bson.ObjectId, err error
 		err = &MissingError{key}
 		return
 	}
-	switch v := ival.(type) {
-	case bson.ObjectId:
-		id = v
-	case string:
-		id, err = ReadId(v)
-	default:
-		err = &CastError{"id", v}
-	}
+	id, err = ReadId(ival)
 	return
 }
 

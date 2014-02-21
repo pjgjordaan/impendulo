@@ -79,26 +79,25 @@ func (this Downloader) CreateDownload() Handler {
 
 //LoadSkeleton makes a project skeleton available for download.
 func LoadSkeleton(req *http.Request) (path string, err error) {
-	projectId, _, err := getProjectId(req)
+	id, _, err := getSkeletonId(req)
 	if err != nil {
 		return
 	}
-	name := bson.NewObjectId().Hex()
 	base, err := util.BaseDir()
 	if err != nil {
 		return
 	}
-	path = filepath.Join(base, "skeletons", name+".zip")
+	path = filepath.Join(base, "skeletons", id.String()+".zip")
 	//If the skeleton is saved for downloading we don't need to store it again.
 	if util.Exists(path) {
 		return
 	}
-	p, err := db.Project(bson.M{db.ID: projectId}, nil)
+	s, err := db.Skeleton(bson.M{db.ID: id}, nil)
 	if err != nil {
 		return
 	}
 	//Save file to filesystem and return path to it.
-	err = util.SaveFile(path, p.Skeleton)
+	err = util.SaveFile(path, s.Data)
 	return
 }
 
