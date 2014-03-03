@@ -22,49 +22,53 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package junit
+package result
 
 import (
 	"fmt"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/junit"
 	"labix.org/v2/mgo/bson"
 )
 
 const (
-	NAME = "JUnit"
+	NAME = "JUnit_User"
 )
 
 type (
 	//Result is an implementation of ToolResult, DisplayResult
-	//and ChartResult for JUnit test results.
+	//and ChartResult for JUnit user test results.
 	Result struct {
-		Id       bson.ObjectId "_id"
-		FileId   bson.ObjectId "fileid"
-		TestName string        "name"
-		Report   *Report       "report"
-		GridFS   bool          "gridfs"
-		Type     string        "type"
+		Id         bson.ObjectId "_id"
+		FileId     bson.ObjectId "fileid"
+		TestFileId bson.ObjectId "testfileid"
+		TestName   string        "name"
+		Report     *junit.Report "report"
+		GridFS     bool          "gridfs"
+		Type       string        "type"
+	}
+	Report struct {
+		TestFileId bson.ObjectId
+		*junit.Report
 	}
 )
+
+func (this *Report) GetTestFileId() bson.ObjectId {
+	return this.TestFileId
+}
 
 //SetReport
 func (this *Result) SetReport(report tool.Report) {
 	if report == nil {
 		this.Report = nil
 	} else {
-		this.Report = report.(*Report)
+		this.Report = report.(*junit.Report)
 	}
 }
 
 //OnGridFS
 func (this *Result) OnGridFS() bool {
 	return this.GridFS
-}
-
-//String
-func (this *Result) String() string {
-	return fmt.Sprintf("Id: %q; FileId: %q; TestName: %s; \n Report: %s",
-		this.Id, this.FileId, this.TestName, this.Report)
 }
 
 //GetName
@@ -94,7 +98,7 @@ func (this *Result) Summary() *tool.Summary {
 
 //GetReport
 func (this *Result) GetReport() tool.Report {
-	return this.Report
+	return &Report{this.TestFileId, this.Report}
 }
 
 //Success
@@ -111,19 +115,19 @@ func (this *Result) ChartVals() []*tool.ChartVal {
 }
 
 func (this *Result) Template() string {
-	return "junitresult"
+	return "junituserresult"
 }
 
-//NewResult creates a new junit.Result from provided XML data.
-func NewResult(fileId bson.ObjectId, name string, data []byte) (res *Result, err error) {
-	gridFS := len(data) > tool.MAX_SIZE
+func New(testFileId bson.ObjectId, junitRes tool.ToolResult) (res *Result, err error) {
 	res = &Result{
-		Id:       bson.NewObjectId(),
-		FileId:   fileId,
-		TestName: name,
-		GridFS:   gridFS,
-		Type:     NAME,
+		Id:         bson.NewObjectId(),
+		FileId:     junitRes.GetFileId(),
+		TestFileId: testFileId,
+		TestName:   junitRes.GetName(),
+		GridFS:     junitRes.OnGridFS(),
+		Report:     junitRes.GetReport().(*junit.Report),
+		Type:       NAME,
 	}
-	res.Report, err = NewReport(res.Id, data)
+	res.Report.Id = res.Id
 	return
 }

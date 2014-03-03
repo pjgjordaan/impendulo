@@ -83,7 +83,7 @@ func init() {
 	rFlags = flag.NewFlagSet("receiver", flag.ExitOnError)
 	wFlags = flag.NewFlagSet("web", flag.ExitOnError)
 
-	pFlags.UintVar(&timeLimit, "t", uint(tool.TIMELIMIT), fmt.Sprintf("Specify the time limit for a tool to run in, in minutes (default %s).", tool.TIMELIMIT))
+	pFlags.UintVar(&timeLimit, "t", uint(tool.TIMELIMIT.Seconds()), fmt.Sprintf("Specify the time limit for a tool to run in, in seconds (default %s).", tool.TIMELIMIT))
 	pFlags.UintVar(&mProcs, "mp", processing.MAX_PROCS, fmt.Sprintf("Specify the maximum number of goroutines to run when processing submissions (default %d).", processing.MAX_PROCS))
 
 	rFlags.UintVar(&tcpPort, "p", receiver.PORT, fmt.Sprintf("Specify the port to listen on for files using TCP (default %d).", receiver.PORT))

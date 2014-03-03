@@ -141,6 +141,10 @@ path {
     float: right;
 }
 
+.pagination-centre{
+    display: inline-block;
+}
+
 .accordion-inner{
     overflow:auto;
 }
@@ -178,4 +182,13 @@ dl dd{
 
 .tooltip-inner {
     white-space:pre-wrap;
+}
+
+.code-popover{
+    width: 700px;
+    max-width: 1350px;
+}
+
+.code-popover-content {
+    font-size: 13px;
 }

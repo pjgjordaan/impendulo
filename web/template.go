@@ -25,6 +25,7 @@
 package web
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/godfried/impendulo/db"
@@ -32,6 +33,7 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/diff"
+	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/user"
@@ -59,6 +61,7 @@ var (
 		"shortName":       util.ShortName,
 		"sum":             sum,
 		"langs":           tool.Langs,
+		"submissionLang":  submissionLang,
 		"submissionCount": submissionCount,
 		"getBusy":         processing.GetStatus,
 		"slice":           slice,
@@ -67,12 +70,13 @@ var (
 		"searches":        jpf.Searches,
 		"rules":           pmd.RuleSet,
 		"tools":           tools,
+		"configtools":     configTools,
 		"unescape":        html.UnescapeString,
 		"escape":          url.QueryEscape,
 		"snapshots":       func(id bson.ObjectId) (int, error) { return fileCount(id, project.SRC) },
 		"launches":        func(id bson.ObjectId) (int, error) { return fileCount(id, project.LAUNCH) },
 		"html":            func(s string) template.HTML { return template.HTML(s) },
-		"string":          func(b []byte) string { return string(b) },
+		"string":          func(b []byte) string { return string(bytes.TrimSpace(b)) },
 		"args":            args,
 		"insert":          insert,
 		"isError":         isError,
@@ -83,16 +87,16 @@ var (
 		"langProjects": func(lang string) ([]*project.Project, error) {
 			return db.Projects(bson.M{db.LANG: lang}, nil, db.NAME)
 		},
-		"analysisNames": func(projectId bson.ObjectId) ([]string, error) {
-			return db.AllResultNames(projectId)
+		"analysisNames": func(projectId bson.ObjectId, tipe project.Type) ([]string, error) {
+			return resultNames(projectId, tipe, true)
 		},
-		"chartNames": func(projectId bson.ObjectId) ([]string, error) {
-			return db.ChartResultNames(projectId)
+		"chartNames": func(projectId bson.ObjectId, tipe project.Type) ([]string, error) {
+			return resultNames(projectId, tipe, false)
 		},
 		"users":                 func() ([]*user.User, error) { return db.Users(nil, user.ID) },
 		"skeletons":             skeletons,
-		"projectSkeletons":      projectSkeletons,
 		"displayResult":         dispRes,
+		"displayTestResult":     dispTestRes,
 		"displayResultMore":     dispResMore,
 		"displayCodeBug":        displayCodeBug,
 		"getFiles":              func(subId bson.ObjectId) string { return fmt.Sprintf("getfiles?subid=%s", subId.Hex()) },
@@ -107,6 +111,7 @@ var (
 		"typeCounts":            TypeCounts,
 		"editables":             func() []string { return []string{"Project", "User", "Submission", "File"} },
 		"permissions":           user.Permissions,
+		"file":                  func(id bson.ObjectId) (*project.File, error) { return db.File(bson.M{db.ID: id}, nil) },
 	}
 	templateDir   string
 	baseTemplates []string
@@ -116,18 +121,34 @@ const (
 	PAGER_SIZE = 10
 )
 
-func projectSkeletons() (ret map[string][]*project.Skeleton, err error) {
-	ps, err := projects()
+func resultNames(projectId bson.ObjectId, fileType project.Type, analysis bool) (names []string, err error) {
+	switch fileType {
+	case project.TEST:
+		if analysis {
+			names = []string{javac.NAME, tool.CODE, diff.NAME}
+		}
+	case project.SRC:
+		if analysis {
+			names, err = db.AllResultNames(projectId)
+		} else {
+			names, err = db.ChartResultNames(projectId)
+		}
+	default:
+		err = fmt.Errorf("Unsupported file type %s", fileType)
+	}
+	return
+}
+
+func submissionLang(subId bson.ObjectId) (lang string, err error) {
+	sub, err := db.Submission(bson.M{db.ID: subId}, nil)
 	if err != nil {
 		return
 	}
-	ret = make(map[string][]*project.Skeleton)
-	for _, p := range ps {
-		ret[p.Id.Hex()], err = skeletons(p.Id)
-		if err != nil {
-			return
-		}
+	project, err := db.Project(bson.M{db.ID: sub.ProjectId}, nil)
+	if err != nil {
+		return
 	}
+	lang = strings.ToLower(project.Lang)
 	return
 }
 
@@ -155,6 +176,10 @@ func dispResMore(b *Browse) string {
 func dispRes(sid bson.ObjectId, uid, result, file string, current, next int) string {
 	return fmt.Sprintf("displayresult?subid=%s&userid=%s&result=%s&file=%s&current=%d&next=%d",
 		sid.Hex(), uid, result, file, current, next)
+}
+
+func dispTestRes(current int) string {
+	return fmt.Sprintf("displaytestresult?currentchild=%d", current)
 }
 
 func displayCodeBug(sid bson.ObjectId, uid, result, file string, current, next int, resultId, bugId string, index int) string {

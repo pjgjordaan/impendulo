@@ -29,6 +29,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/project"
 	"labix.org/v2/mgo/bson"
 	"net/http"
 	"strings"
@@ -37,8 +38,9 @@ import (
 type (
 	//Context is used to keep track of the current user's session.
 	Context struct {
-		Session *sessions.Session
-		Browse  *Browse
+		Session    *sessions.Session
+		Browse     *Browse
+		Additional *Browse
 	}
 
 	//Browse is used to keep track of the user's browsing.
@@ -48,6 +50,7 @@ type (
 		Uid, File, Result, View     string
 		Current, Next, DisplayCount int
 		Level                       Level
+		Type                        project.Type
 	}
 	Level  int
 	Setter func(*http.Request) error
@@ -145,6 +148,12 @@ func LoadContext(sess *sessions.Session) *Context {
 		ctx.Browse = new(Browse)
 		ctx.Browse.DisplayCount = 10
 	}
+	if val, ok := ctx.Session.Values["additional"]; ok {
+		ctx.Additional = val.(*Browse)
+	} else {
+		ctx.Additional = new(Browse)
+		ctx.Additional.DisplayCount = 10
+	}
 	if uname, err := ctx.Username(); err == nil {
 		_, err = db.User(uname)
 		if err != nil {
@@ -200,6 +209,10 @@ func (b *Browse) SetFile(req *http.Request) (err error) {
 	f, err := GetString(req, "file")
 	if err == nil {
 		b.File = f
+		f, err := db.File(bson.M{db.SUBID: b.Sid, db.NAME: f}, bson.M{db.TYPE: 1})
+		if err == nil {
+			b.Type = f.Type
+		}
 	}
 	return
 }

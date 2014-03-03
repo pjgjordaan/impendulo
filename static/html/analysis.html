@@ -15,14 +15,6 @@
   <small>project</small> {{$project}}
   <small>file</small> {{$fileName}}   
 </h4>
-<h3 class="text-center">
-  <small>tool</small> {{$resultName}}
-  {{if (hasChart $resultName)}}
-  <a class="btn btn-info" href="{{singleChart $sid $uid $resultName $fileName}}">
-    <span class="glyphicon glyphicon-stats"></span>
-  </a>
-  {{end}}
-</h3>
 <div class="row">
   <div class="col-md-8">
     {{template "pager" .}}
@@ -83,6 +75,15 @@
     </dl>
   </div>
 </div>
+{{template "additional" .}}
+<h4 class="text-center">
+  <small>tool</small> {{$resultName}}
+  {{if (hasChart $resultName)}}
+  <a class="btn btn-info" href="{{singleChart $sid $uid $resultName $fileName}}">
+    <span class="glyphicon glyphicon-stats"></span>
+  </a>
+  {{end}}
+</h4>
 {{if (eq $resultName "Diff")}}
 {{$data := .currentResult.Create .nextResult}}
 {{template "result"  $data}}

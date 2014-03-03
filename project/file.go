@@ -82,7 +82,7 @@ func (this *File) Same(that *File) bool {
 
 //CanProcess returns whether a file is meant to be processed.
 func (this *File) CanProcess() bool {
-	return this.Type == SRC || this.Type == ARCHIVE
+	return this.Type == SRC || this.Type == ARCHIVE || this.Type == TEST
 }
 
 //NewFile

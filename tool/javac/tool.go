@@ -59,6 +59,13 @@ func (this *Tool) Name() string {
 	return NAME
 }
 
+func (this *Tool) AddCP(add string) {
+	if this.cp != "" {
+		this.cp += ":"
+	}
+	this.cp += add
+}
+
 //Run compiles the Java source file specified by t. We compile with maximum warnings and compile
 //classes implicitly loaded by the source code. All compilation results will be stored (success,
 //errors and warnings).

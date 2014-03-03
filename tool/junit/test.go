@@ -53,14 +53,6 @@ const (
 	USER
 )
 
-//String
-func (this *Test) String() string {
-	return "Type: junit.Test; Id: " + this.Id.Hex() +
-		"; ProjectId: " + this.ProjectId.Hex() +
-		"; Name: " + this.Name + "; Package: " + this.Package +
-		"; Time: " + util.Date(this.Time)
-}
-
 //NewTest
 func NewTest(projectId bson.ObjectId, name, pkg string, tipe Type, test, data []byte) *Test {
 	return &Test{

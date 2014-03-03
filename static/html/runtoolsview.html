@@ -1,27 +1,29 @@
 {{define "view"}}
-<h3 class="heading">Run Tool</h3>
-<form class="form-horizontal" role="form" action="runtool" method="post" enctype="multipart/form-data">
+<h3 class="heading">Run Tools</h3>
+<form class="form-horizontal" role="form" action="runtools" method="post" enctype="multipart/form-data">
   <div class="form-group">
     <label class="col-lg-offset-3 col-lg-2 control-label" for="projectid">Project</label>
     <div class="col-lg-3">
-      <select class="form-control" name="projectid" id="projectid">
+      <select class="form-control" name="projectid" id="projectid"
+	      onchange="populate('projectid', 'tools', 'users')">
 	{{$projects := projects}}
 	{{range $projects}}
 	<option value={{.Id.Hex}}>{{.Name}}</option>
 	{{end}}
-	<option value="all">All</option>
       </select>
     </div>
   </div>
   <div class="form-group">
-    <label class="col-lg-offset-3 col-lg-2 control-label" for="tool">Tool</label>
+    <label class="col-lg-offset-3 col-lg-2 control-label" for="tools">Tools</label>
     <div class="col-lg-3">
-      <select class="form-control" name="tool" id="tool">
-	{{$tools := tools}}
-	{{range $tools}}
-	<option value={{.}}>{{.}}</option>
-	{{end}}
-	<option value="all">All</option>
+      <select class="form-control" name="tools" id="tools" multiple>
+      </select>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="col-lg-offset-3 col-lg-2 control-label" for="users">Users</label>
+    <div class="col-lg-3">
+      <select class="form-control" name="users" id="users" multiple>
       </select>
     </div>
   </div>
@@ -43,4 +45,10 @@
     </div>
   </div>
 </form>
+<script type="text/javascript" language="javascript">
+  window.onload = function()
+  {
+  populate('projectid', 'tools', 'users');
+  ;}
+</script>
 {{end}}

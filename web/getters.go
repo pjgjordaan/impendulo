@@ -60,7 +60,7 @@ func defaultGetters() map[string]Getter {
 		"configview": configView, "editdbview": editDBView,
 		"loadproject": loadProject, "loadsubmission": loadSubmission,
 		"loadfile": loadFile, "loaduser": loadUser, "displaychart": displayChart,
-		"displayresult": displayResult, "getfiles": getFiles,
+		"displayresult": displayResult, "getfiles": getFiles, "displaytestresult": displayTestResult,
 		"getsubmissionschart": getSubmissionsChart, "getsubmissions": getSubmissions,
 	}
 }
@@ -127,7 +127,7 @@ func getFiles(req *http.Request, ctx *Context) (a Args, t Temps, msg string, err
 	if err != nil {
 		return
 	}
-	matcher := bson.M{db.SUBID: sid, db.TYPE: project.SRC}
+	matcher := bson.M{db.SUBID: sid, db.OR: [2]bson.M{bson.M{db.TYPE: project.SRC}, bson.M{db.TYPE: project.TEST}}}
 	fileInfo, err := db.FileInfos(matcher)
 	if err != nil {
 		msg = "Could not retrieve files."
@@ -244,7 +244,7 @@ func displayChart(req *http.Request, ctx *Context) (a Args, t Temps, msg string,
 	if err != nil {
 		return
 	}
-	files, err := Snapshots(ctx.Browse.Sid, ctx.Browse.File)
+	files, err := Snapshots(ctx.Browse.Sid, ctx.Browse.File, ctx.Browse.Type)
 	if err != nil {
 		return
 	}
@@ -260,7 +260,7 @@ func displayChart(req *http.Request, ctx *Context) (a Args, t Temps, msg string,
 	compId, cerr := util.ReadId(req.FormValue("compare"))
 	if cerr == nil {
 		var compFiles []*project.File
-		compFiles, err = Snapshots(compId, ctx.Browse.File)
+		compFiles, err = Snapshots(compId, ctx.Browse.File, ctx.Browse.Type)
 		if err != nil {
 			return
 		}
@@ -291,7 +291,10 @@ func displayResult(req *http.Request, ctx *Context) (a Args, t Temps, msg string
 	if err != nil {
 		return
 	}
-	files, err := Snapshots(ctx.Browse.Sid, ctx.Browse.File)
+	if ctx.Browse.Type == project.TEST {
+		return displayTestResult(req, ctx)
+	}
+	files, err := Snapshots(ctx.Browse.Sid, ctx.Browse.File, ctx.Browse.Type)
 	if err != nil {
 		return
 	}
@@ -361,7 +364,83 @@ func displayResult(req *http.Request, ctx *Context) (a Args, t Temps, msg string
 		"currentResult": currentResult, "results": results,
 		"nextFile": nextFile, "nextResult": nextResult,
 	}
-	t = Temps{"analysis", "pager", ""}
+	t = Temps{"analysis", "pager", "", "noadditional"}
+	if !isError(currentResult) || isError(nextResult) {
+		t[2] = currentResult.Template()
+	} else {
+		t[2] = nextResult.Template()
+	}
+	return
+}
+
+func displayTestResult(req *http.Request, ctx *Context) (a Args, t Temps, msg string, err error) {
+	defer func() {
+		if err != nil {
+			msg = "Could not load results."
+		}
+	}()
+	parentFiles, err := Snapshots(ctx.Browse.Sid, ctx.Browse.File, ctx.Browse.Type)
+	if err != nil {
+		return
+	}
+	if cur, cerr := getCurrent(req, len(parentFiles)-1); cerr == nil {
+		ctx.Browse.Current = cur
+	}
+	if next, nerr := getNext(req, len(parentFiles)-1); nerr == nil {
+		ctx.Browse.Next = next
+	}
+	currentFile, err := getFile(parentFiles[ctx.Browse.Current].Id)
+	if err != nil {
+		return
+	}
+	results, err := resultNames(ctx.Browse.Pid, project.TEST, true)
+	if err != nil {
+		return
+	}
+	currentResult, err := GetResult(ctx.Browse.Result, currentFile.Id)
+	if err != nil {
+		return
+	}
+	nextFile, err := getFile(parentFiles[ctx.Browse.Next].Id)
+	if err != nil {
+		return
+	}
+	nextResult, err := GetResult(ctx.Browse.Result, nextFile.Id)
+	if err != nil {
+		return
+	}
+	if ctx.Additional.File == "" {
+		ctx.Additional.File, err = testedFileName(ctx.Browse.Sid)
+		if err != nil {
+			return
+		}
+	}
+	childFiles, err := Snapshots(ctx.Browse.Sid, ctx.Additional.File, ctx.Additional.Type)
+	if err != nil {
+		return
+	}
+	if cur, cerr := getIndex(req, "currentchild", len(childFiles)-1); cerr == nil {
+		ctx.Additional.Current = cur
+	}
+	currentChild, err := db.File(bson.M{db.ID: childFiles[ctx.Additional.Current].Id}, nil)
+	if err != nil {
+		return
+	}
+	currentChildResult, err := GetResult(currentChild.Id.Hex(), currentFile.Id)
+	if err != nil {
+		return
+	}
+	nextChildResult, err := GetResult(currentChild.Id.Hex(), nextFile.Id)
+	if err != nil {
+		return
+	}
+	a = Args{
+		"files": parentFiles, "childFiles": childFiles, "currentFile": currentFile,
+		"currentResult": currentResult, "nextFile": nextFile, "nextResult": nextResult,
+		"results": results, "childFile": currentChild, "currentChildResult": currentChildResult,
+		"nextChildResult": nextChildResult,
+	}
+	t = Temps{"analysis", "pager", "", "additionalanalysis", "junitadditional"}
 	if !isError(currentResult) || isError(nextResult) {
 		t[2] = currentResult.Template()
 	} else {

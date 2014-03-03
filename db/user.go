@@ -64,6 +64,20 @@ func Users(matcher interface{}, sort ...string) (ret []*user.User, err error) {
 	return
 }
 
+func UserNames(matcher interface{}) (ret []string, err error) {
+	session, err := Session()
+	if err != nil {
+		return
+	}
+	defer session.Close()
+	c := session.DB("").C(USERS)
+	err = c.Find(matcher).Sort(NAME).Distinct(NAME, &ret)
+	if err != nil {
+		err = &DBGetError{"users", err, matcher}
+	}
+	return
+}
+
 //AddUsers adds new users to the active database.
 func AddUsers(users ...*user.User) (err error) {
 	session, err := Session()

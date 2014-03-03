@@ -26,6 +26,7 @@ package web
 
 import (
 	"code.google.com/p/gorilla/pat"
+	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/tool/mongo"
 	"github.com/godfried/impendulo/util"
@@ -48,6 +49,7 @@ func Downloaders() map[string]Downloader {
 	if downloaders == nil {
 		downloaders = map[string]Downloader{
 			"skeleton.zip": LoadSkeleton,
+			"intlola.zip":  LoadIntlola,
 			"exportdb.zip": ExportData,
 		}
 	}
@@ -118,5 +120,10 @@ func ExportData(req *http.Request) (path string, err error) {
 	}
 	path = filepath.Join(base, "exports", name+".zip")
 	err = mongo.ExportData(path, dbName, collections)
+	return
+}
+
+func LoadIntlola(req *http.Request) (path string, err error) {
+	path, err = config.INTLOLA.Path()
 	return
 }

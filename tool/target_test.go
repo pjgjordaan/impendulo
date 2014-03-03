@@ -53,7 +53,7 @@ func TestExecutable(t *testing.T) {
 		t.Errorf("Invalid executable %s", targ.Executable())
 	}
 	targ = NewTarget("hello.c.d.a", "", "", JAVA)
-	if targ.Executable() != "hello" {
+	if targ.Executable() != "hello.c.d" {
 		t.Errorf("Invalid executable %s", targ.Executable())
 	}
 	targ = NewTarget("", "", "", JAVA)

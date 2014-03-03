@@ -237,9 +237,8 @@ func getCredentials(req *http.Request) (uname, pword, msg string, err error) {
 }
 
 //Snapshots retrieves snapshots of a given file in a submission.
-func Snapshots(subId bson.ObjectId, fileName string) (ret []*project.File, err error) {
-	matcher := bson.M{db.SUBID: subId,
-		db.TYPE: project.SRC, db.NAME: fileName}
+func Snapshots(subId bson.ObjectId, fileName string, tipe project.Type) (ret []*project.File, err error) {
+	matcher := bson.M{db.SUBID: subId, db.NAME: fileName, db.TYPE: tipe}
 	selector := bson.M{db.TIME: 1, db.SUBID: 1}
 	ret, err = db.Files(matcher, selector, db.TIME)
 	if err == nil && len(ret) == 0 {
@@ -285,5 +284,45 @@ func projectName(idval interface{}) (name string, err error) {
 		return
 	}
 	name = proj.Name
+	return
+}
+
+func testedFileName(subId bson.ObjectId) (name string, err error) {
+	tests, err := db.Files(bson.M{db.SUBID: subId, db.TYPE: project.TEST}, bson.M{db.DATA: 0})
+	if err != nil {
+		return
+	}
+	for _, test := range tests {
+		for idstr, _ := range test.Results {
+			id, ierr := util.ReadId(idstr)
+			if ierr != nil {
+				continue
+			}
+			f, derr := db.File(bson.M{db.ID: id}, bson.M{db.NAME: 1})
+			if derr != nil {
+				continue
+			}
+			name = f.Name
+			return
+		}
+	}
+	err = fmt.Errorf("No file name found for submission %s", subId.Hex())
+	return
+}
+
+func users(projectId bson.ObjectId) (names []string, err error) {
+	submissions, err := db.Submissions(bson.M{db.PROJECTID: projectId}, nil)
+	if err != nil {
+		return
+	}
+	names = make([]string, 0, len(submissions))
+	added := make(map[string]bool)
+	for _, s := range submissions {
+		if added[s.User] {
+			continue
+		}
+		names = append(names, s.User)
+		added[s.User] = true
+	}
 	return
 }

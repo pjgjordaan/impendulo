@@ -53,7 +53,7 @@ func TestResult(t *testing.T) {
 		t.Error(err)
 	}
 	res := javac.NewResult(file.Id, fileData)
-	err = AddResult(res)
+	err = AddResult(res, res.GetName())
 	if err != nil {
 		t.Error(err)
 	}

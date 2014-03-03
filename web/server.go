@@ -28,10 +28,12 @@ package web
 
 import (
 	"code.google.com/p/gorilla/pat"
+	"fmt"
 	"github.com/godfried/impendulo/util"
 	"net/http"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 var (
@@ -56,11 +58,70 @@ func init() {
 	GenerateGets(router, Getters(), Views())
 	GeneratePosts(router, Posters(), IndexPosters())
 	GenerateViews(router, Views())
+	router.Add("GET", "/tools", getTools())
+	router.Add("GET", "/users", getUsers())
+	router.Add("GET", "/skeletons", getSkeletons())
 	router.Add("GET", "/static/", FileHandler(StaticDir()))
 	router.Add("GET", "/static", RedirectHandler("/static/"))
 	router.Add("GET", "/logs/", FileHandler(logs))
 	router.Add("GET", "/logs", RedirectHandler("/logs/"))
 	router.Add("GET", "/", Handler(LoadView("homeview", "home"))).Name("index")
+}
+
+func getUsers() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		projectId, msg, err := getProjectId(req)
+		if err != nil {
+			fmt.Fprint(w, msg)
+			return
+		}
+		u, err := users(projectId)
+		if err != nil {
+			fmt.Fprint(w, err.Error())
+			return
+		}
+		fmt.Fprint(w, strings.Join(u, ","))
+	})
+}
+
+func getTools() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		projectId, msg, err := getProjectId(req)
+		if err != nil {
+			fmt.Fprint(w, msg)
+			return
+		}
+		t, err := tools(projectId)
+		if err != nil {
+			fmt.Fprint(w, err.Error())
+			return
+		}
+		fmt.Fprint(w, strings.Join(t, ","))
+	})
+}
+
+func getSkeletons() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		projectId, msg, err := getProjectId(req)
+		if err != nil {
+			fmt.Fprint(w, msg)
+			return
+		}
+		vals, err := skeletons(projectId)
+		if err != nil {
+			fmt.Fprint(w, err.Error())
+			return
+		}
+		var skelstr string
+		for _, s := range vals {
+			if len(skelstr) > 0 {
+				skelstr = skelstr + "," + s.Id.Hex() + "_" + s.Name
+			} else {
+				skelstr = s.Id.Hex() + "_" + s.Name
+			}
+		}
+		fmt.Fprint(w, skelstr)
+	})
 }
 
 //StaticDir retrieves the directory containing all the static files for the web server.

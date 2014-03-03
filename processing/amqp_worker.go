@@ -328,6 +328,9 @@ func (r *Redoer) Consume(d amqp.Delivery, ch amqp.Channel) (err error) {
 		r.requestChan <- sreq
 	}()
 	for _, f := range files {
+		if !f.CanProcess() {
+			continue
+		}
 		freq := &Request{
 			FileId: f.Id,
 			SubId:  subId,

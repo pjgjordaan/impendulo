@@ -59,7 +59,7 @@ const (
 	C    Language = "C"
 	//The maximum size in bytes that a ToolResult is allowed to have.
 	MAX_SIZE  = 16000000
-	TIMELIMIT = 20 * time.Minute
+	TIMELIMIT = 10 * time.Second
 )
 
 var (
@@ -85,8 +85,8 @@ func Supported(lang Language) bool {
 }
 
 //SetTimeLimit sets the maximum time for which the RunCommand function can run.
-func SetTimeLimit(minutes uint) {
-	timeLimit = time.Duration(minutes) * time.Minute
+func SetTimeLimit(seconds uint) {
+	timeLimit = time.Duration(seconds) * time.Second
 }
 
 //TimeLimit returns the current timeout setting.
@@ -127,14 +127,14 @@ func RunCommand(args []string, stdin io.Reader) (res *ExecResult) {
 		doneChan <- cmd.Wait()
 	}()
 	select {
+	case <-time.After(timeLimit):
+		cmd.Process.Kill()
+		res.Err = &TimeoutError{args}
 	case err := <-doneChan:
 		if err != nil {
 			res.Err = &EndError{args, err, string(stderr.Bytes())}
 		}
 		res.StdOut, res.StdErr = stdout.Bytes(), stderr.Bytes()
-	case <-time.After(timeLimit):
-		cmd.Process.Kill()
-		res.Err = &TimeoutError{args}
 	}
 	return
 }

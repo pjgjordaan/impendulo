@@ -25,6 +25,7 @@
 package tool
 
 import (
+	"github.com/godfried/impendulo/util"
 	"path/filepath"
 	"strings"
 )
@@ -71,14 +72,7 @@ func (t *Target) Executable() string {
 
 //NewTarget
 func NewTarget(name, pkg, dir string, lang Language) *Target {
-	split := strings.Split(name, ".")
-	var ext string
-	if len(split) < 2 {
-		ext = ""
-	} else {
-		name = split[0]
-		ext = split[1]
-	}
+	name, ext := util.Extension(name)
 	return &Target{
 		Name:    name,
 		Package: pkg,

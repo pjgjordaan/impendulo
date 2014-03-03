@@ -55,7 +55,7 @@ func TestResultGridFS(t *testing.T) {
 		javacResult(file.Id, true),
 	}
 	for _, res := range results {
-		err = AddResult(res)
+		err = AddResult(res, res.GetName())
 		if err != nil {
 			t.Error(err)
 		}

@@ -26,17 +26,16 @@ package processing
 
 import (
 	"fmt"
+	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/javac"
+	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"os"
 	"path/filepath"
-)
-
-const (
-	LOG_PROCESSOR = "processing/processor.go"
 )
 
 type (
@@ -51,6 +50,19 @@ type (
 		compiler tool.Tool
 		tools    []tool.Tool
 	}
+	TestProcessor struct {
+		id       bson.ObjectId
+		results  bson.M
+		rootDir  string
+		srcDir   string
+		toolDir  string
+		compiler tool.Tool
+		test     tool.Tool
+	}
+)
+
+const (
+	LOG_PROCESSOR = "processing/processor.go"
 )
 
 //NewProcessor creates a Processor and sets up the environment and
@@ -86,21 +98,15 @@ func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
 //Process listens for a submission's incoming files and processes them.
 func (this *Processor) Process(fileChan chan bson.ObjectId, doneChan chan E) {
 	util.Log("Processing submission", this.sub, LOG_PROCESSOR)
-	//defer os.RemoveAll(this.rootDir)
+	defer os.RemoveAll(this.rootDir)
 	//Processing loop.
 processing:
 	for {
 		select {
 		case fId := <-fileChan:
-			//Retrieve file and process it.
-			file, err := db.File(bson.M{db.ID: fId}, nil)
+			err := this.ProcessFile(fId)
 			if err != nil {
 				util.Log(err, LOG_PROCESSOR)
-			} else {
-				err = this.ProcessFile(file)
-				if err != nil {
-					util.Log(err, LOG_PROCESSOR)
-				}
 			}
 			//Indicate that we are finished with the file.
 			fileChan <- fId
@@ -121,32 +127,78 @@ processing:
 	doneChan <- E{}
 }
 
+func (this *Processor) ProcessFile(fileId bson.ObjectId) (err error) {
+	//Retrieve file and process it.
+	file, err := db.File(bson.M{db.ID: fileId}, nil)
+	if err != nil {
+		return
+	}
+	switch file.Type {
+	case project.TEST:
+		err = this.ProcessTest(file)
+	case project.ARCHIVE:
+		err = this.ProcessArchive(file)
+	case project.SRC:
+		err = this.ProcessSource(file)
+	default:
+		err = fmt.Errorf("Cannot process file type %s.", file.Type)
+	}
+	return
+}
+
 //ProcessFile extracts archives and runs tools on source files.
-func (this *Processor) ProcessFile(file *project.File) (err error) {
+func (this *Processor) ProcessSource(file *project.File) (err error) {
 	util.Log("Processing file:", file, LOG_PROCESSOR)
 	defer util.Log("Processed file:", file, err, LOG_PROCESSOR)
-	switch file.Type {
-	case project.ARCHIVE:
-		err = this.Extract(file)
-	case project.SRC:
-		//Create a target for the tools to run on and save the file.
-		target := tool.NewTarget(file.Name, file.Package, this.srcDir, tool.Language(this.project.Lang))
-		err = util.SaveFile(target.FilePath(), file.Data)
-		if err == nil {
-			this.RunTools(file, target)
+	//Create a target for the tools to run on and save the file.
+	target := tool.NewTarget(file.Name, file.Package, this.srcDir, tool.Language(this.project.Lang))
+	err = util.SaveFile(target.FilePath(), file.Data)
+	if err == nil {
+		this.RunTools(file, target)
+	}
+	return
+}
+
+func (this *Processor) ProcessTest(test *project.File) (err error) {
+	target := tool.NewTarget(test.Name, test.Package, this.srcDir, tool.Language(this.project.Lang))
+	err = util.SaveFile(target.FilePath(), test.Data)
+	if err != nil {
+		return
+	}
+	junitJar, err := config.JUNIT.Path()
+	if err != nil {
+		return
+	}
+	this.compiler.(*javac.Tool).AddCP(junitJar)
+	err = this.Compile(test.Id, target)
+	if err != nil {
+		return
+	}
+	testProc, err := NewTestProcessor(test, this)
+	if err != nil {
+		return
+	}
+	files, err := db.Files(bson.M{db.SUBID: test.SubId, db.TYPE: project.SRC}, bson.M{db.ID: 1})
+	if err != nil {
+		return
+	}
+	for _, f := range files {
+		perr := testProc.Process(f.Id)
+		if err != nil {
+			util.Log(perr)
 		}
 	}
 	return
 }
 
 //Extract extracts files from an archive, stores and processes them.
-func (this *Processor) Extract(archive *project.File) error {
+func (this *Processor) ProcessArchive(archive *project.File) error {
 	//Extract and store the files.
-	files, err := util.UnzipToMap(archive.Data)
+	extracted, err := util.UnzipToMap(archive.Data)
 	if err != nil {
 		return err
 	}
-	for name, data := range files {
+	for name, data := range extracted {
 		err = this.StoreFile(name, data)
 		if err != nil {
 			util.Log(err, LOG_PROCESSOR)
@@ -157,24 +209,18 @@ func (this *Processor) Extract(archive *project.File) error {
 	if err != nil {
 		util.Log(err, LOG_PROCESSOR)
 	}
-	fIds, err := db.Files(bson.M{db.SUBID: this.sub.Id},
-		bson.M{db.TIME: 1, db.ID: 1}, db.TIME)
+	files, err := db.Files(bson.M{db.SUBID: this.sub.Id}, bson.M{db.TIME: 1, db.ID: 1}, db.TIME)
 	if err != nil {
 		return err
 	}
-	ChangeStatus(Status{len(fIds), 0})
+	ChangeStatus(Status{len(files), 0})
 	//Process archive files.
-	for _, fId := range fIds {
-		file, err := db.File(bson.M{db.ID: fId.Id}, nil)
+	for _, file := range files {
+		err = this.ProcessFile(file.Id)
 		if err != nil {
 			util.Log(err, LOG_PROCESSOR)
-		} else {
-			err = this.ProcessFile(file)
-			if err != nil {
-				util.Log(err, LOG_PROCESSOR)
-			}
 		}
-		//fileProcessed()
+		ChangeStatus(Status{-1, 0})
 	}
 	return nil
 }
@@ -223,7 +269,7 @@ func (this *Processor) RunTools(file *project.File, target *tool.Target) {
 				err = db.AddFileResult(file.Id, t.Name(), tool.ERROR)
 			}
 		} else if res != nil {
-			err = db.AddResult(res)
+			err = db.AddResult(res, t.Name())
 		} else {
 			err = db.AddFileResult(file.Id, t.Name(), tool.NORESULT)
 		}
@@ -240,6 +286,81 @@ func (this *Processor) Compile(fileId bson.ObjectId, target *tool.Target) (err e
 	if err != nil && !tool.IsCompileError(err) {
 		return
 	}
-	db.AddResult(res)
+	db.AddResult(res, this.compiler.Name())
+	return
+}
+
+func NewTestProcessor(testFile *project.File, parent *Processor) (proc *TestProcessor, err error) {
+	dir := filepath.Join(parent.rootDir, testFile.Id.Hex())
+	toolDir := filepath.Join(dir, "tools")
+	proc = &TestProcessor{
+		id:      testFile.Id,
+		results: testFile.Results,
+		rootDir: dir,
+		srcDir:  filepath.Join(dir, "src"),
+		toolDir: toolDir,
+	}
+	//Can't proceed without our compiler
+	proc.compiler, err = javac.New("")
+	if err != nil {
+		return
+	}
+	testDir, err := config.JUNIT_TESTING.Path()
+	if err != nil {
+		return
+	}
+	err = util.Copy(proc.toolDir, testDir)
+	if err != nil {
+		return
+	}
+	test := &junit.Test{
+		Id:      testFile.Id,
+		Name:    testFile.Name,
+		Package: testFile.Package,
+		Test:    testFile.Data,
+	}
+	proc.test, err = junit.New(test, proc.toolDir)
+	return
+}
+
+func (this *TestProcessor) Process(fileId bson.ObjectId) (err error) {
+	file, err := db.File(bson.M{db.ID: fileId}, nil)
+	if err != nil {
+		return
+	}
+	target := tool.NewTarget(file.Name, file.Package, this.srcDir, tool.JAVA)
+	err = util.SaveFile(target.FilePath(), file.Data)
+	if err != nil {
+		return
+	}
+	err = this.Test(file, target)
+	return
+}
+
+func (this *TestProcessor) Test(file *project.File, target *tool.Target) (err error) {
+	name := file.Id.Hex()
+	if _, ok := this.results[name]; ok {
+		return
+	}
+	_, err = this.compiler.Run(file.Id, target)
+	//We want to store the result if it is a compilation error
+	if err != nil {
+		return
+	}
+	res, rerr := this.test.Run(file.Id, target)
+	if rerr != nil {
+		util.Log(rerr, LOG_PROCESSOR)
+		//Report any errors and store timeouts.
+		if tool.IsTimeout(rerr) {
+			err = db.AddFileResult(this.id, name, tool.TIMEOUT)
+		} else {
+			err = db.AddFileResult(file.Id, name, tool.ERROR)
+		}
+	} else if res != nil {
+		res.(*junit.Result).FileId = this.id
+		err = db.AddResult(res, name)
+	} else {
+		err = db.AddFileResult(this.id, name, tool.NORESULT)
+	}
 	return
 }

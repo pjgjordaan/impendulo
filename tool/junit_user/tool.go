@@ -30,6 +30,7 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/junit"
+	"github.com/godfried/impendulo/tool/junit_user/result"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"os"
@@ -47,6 +48,10 @@ type (
 	TestFile struct {
 		id, testId bson.ObjectId
 		*tool.Target
+	}
+
+	Result struct {
+		*junit.Result
 	}
 )
 
@@ -99,6 +104,10 @@ func (this *Tool) Run(fileId bson.ObjectId, t *tool.Target) (res tool.ToolResult
 		}
 	}
 	res, err = this.runner.Run(fileId, t)
+	if err != nil {
+		return
+	}
+	res, err = result.New(this.current.id, res)
 	return
 }
 

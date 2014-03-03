@@ -35,6 +35,7 @@ import (
 	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/diff"
 	"github.com/godfried/impendulo/tool/findbugs"
+	"github.com/godfried/impendulo/tool/gcc"
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
@@ -89,12 +90,36 @@ func toolPosters() map[string]Poster {
 	}
 }
 
+func configTools() []string {
+	return []string{junit.NAME, jpf.NAME, pmd.NAME, findbugs.NAME, checkstyle.NAME, mk.NAME}
+}
+
 //tools
-func tools() []string {
-	return []string{
-		jpf.NAME, junit.NAME, pmd.NAME, mk.NAME,
-		findbugs.NAME, checkstyle.NAME, javac.NAME,
+func tools(projectId bson.ObjectId) (ret []string, err error) {
+	project, err := db.Project(bson.M{db.ID: projectId}, nil)
+	if err != nil {
+		return
 	}
+	switch tool.Language(project.Lang) {
+	case tool.JAVA:
+		ret = []string{pmd.NAME, findbugs.NAME, checkstyle.NAME, javac.NAME}
+		_, jerr := db.JPFConfig(bson.M{db.PROJECTID: projectId}, bson.M{db.ID: 1})
+		if jerr == nil {
+			ret = append(ret, jpf.NAME)
+		}
+		tests, terr := db.JUnitTests(bson.M{db.PROJECTID: projectId}, bson.M{db.NAME: 1})
+		if terr == nil {
+			for _, test := range tests {
+				name, _ := util.Extension(test.Name)
+				ret = append(ret, name)
+			}
+		}
+	case tool.C:
+		ret = []string{mk.NAME, gcc.NAME}
+	default:
+		err = fmt.Errorf("Unknown language %s.", project.Lang)
+	}
+	return
 }
 
 //CreateCheckstyle
@@ -295,26 +320,25 @@ func CreatePMD(req *http.Request, ctx *Context) (msg string, err error) {
 	return
 }
 
-//RunTool runs a tool on submissions in a given project.
+//RunTools runs a tool on submissions in a given project.
 //Previous results are deleted if the user has specified that the tool
 //should be rerun on all fi
-func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
+func RunTools(req *http.Request, ctx *Context) (msg string, err error) {
 	projectId, msg, err := getProjectId(req)
-	all := req.FormValue("projectid") == "all"
-	if err != nil && !all {
+	if err != nil {
 		return
 	}
-	tool, err := GetString(req, "tool")
+	tools, err := GetStrings(req, "tools")
 	if err != nil {
 		msg = "Could not read tool."
 		return
 	}
-	var matcher bson.M
-	if all {
-		matcher = bson.M{}
-	} else {
-		matcher = bson.M{db.PROJECTID: projectId}
+	users, err := GetStrings(req, "users")
+	if err != nil {
+		msg = "Could not read tool."
+		return
 	}
+	matcher := bson.M{db.PROJECTID: projectId, db.USER: bson.M{db.IN: users}}
 	submissions, err := db.Submissions(matcher, bson.M{db.ID: 1})
 	if err != nil {
 		msg = "Could not retrieve submissions."
@@ -326,14 +350,32 @@ func RunTool(req *http.Request, ctx *Context) (msg string, err error) {
 	} else {
 		runAll = true
 	}
-	runTools(submissions, tool, runAll)
-	msg = fmt.Sprintf("Successfully started running %s on project.", tool)
+	hasUserTest := false
+	for _, t := range tools {
+		if isUserTest(t, projectId) {
+			hasUserTest = true
+		}
+	}
+	redoSubmissions(submissions, tools, runAll, hasUserTest)
+	msg = "Successfully started running tools on submissions."
 	return
 }
 
-func runTools(submissions []*project.Submission, tool string, runAll bool) {
+func isUserTest(name string, projectId bson.ObjectId) bool {
+	return db.Contains(db.TESTS, bson.M{db.PROJECTID: projectId, db.NAME: name})
+}
+
+func redoSubmissions(submissions []*project.Submission, tools []string, runAll, userTest bool) {
 	selector := bson.M{db.DATA: 0}
 	for _, submission := range submissions {
+		var srcs []*project.File
+		var err error
+		if userTest {
+			srcs, err = db.Files(bson.M{db.SUBID: submission.Id, db.TYPE: project.SRC}, bson.M{db.ID: 1})
+			if err != nil {
+				util.Log(err)
+			}
+		}
 		matcher := bson.M{db.SUBID: submission.Id}
 		files, err := db.Files(matcher, selector)
 		if err != nil {
@@ -341,12 +383,10 @@ func runTools(submissions []*project.Submission, tool string, runAll bool) {
 			continue
 		}
 		for _, file := range files {
-			if tool == "all" {
-				removeAll(file, runAll)
-			} else {
-				removeOne(file, tool, runAll)
+			runTools(file, tools, runAll)
+			if file.Type == project.TEST && userTest {
+				runUserTests(file, srcs, runAll)
 			}
-
 		}
 		err = processing.RedoSubmission(submission.Id)
 		if err != nil {
@@ -355,49 +395,55 @@ func runTools(submissions []*project.Submission, tool string, runAll bool) {
 	}
 }
 
-//removeAll removes all of the specified file's results from the db.
-func removeAll(file *project.File, runAll bool) {
-	for name, resVal := range file.Results {
-		resId, isId := resVal.(bson.ObjectId)
+func runTools(file *project.File, tools []string, runAll bool) (err error) {
+	for _, t := range tools {
+		resultVal, ok := file.Results[t]
+		if !ok {
+			continue
+		}
+		resultId, isId := resultVal.(bson.ObjectId)
 		if !runAll && isId {
 			continue
 		}
-		delete(file.Results, name)
+		delete(file.Results, t)
 		if !isId {
 			continue
 		}
-		err := db.RemoveById(db.RESULTS, resId)
+		err = db.RemoveById(db.RESULTS, resultId)
 		if err != nil {
 			util.Log(err)
 		}
 	}
 	change := bson.M{db.SET: bson.M{db.RESULTS: file.Results}}
-	err := db.Update(db.FILES, bson.M{db.ID: file.Id}, change)
+	err = db.Update(db.FILES, bson.M{db.ID: file.Id}, change)
 	if err != nil {
 		util.Log(err)
 	}
+	return
 }
 
-//removeOne removes the specified file result from the db.
-func removeOne(file *project.File, name string, runAll bool) {
-	resultVal, ok := file.Results[name]
-	if !ok {
-		return
+func runUserTests(test *project.File, srcs []*project.File, runAll bool) (err error) {
+	for _, s := range srcs {
+		key := s.Id.Hex()
+		resultVal, ok := test.Results[key]
+		if !ok {
+			continue
+		}
+		resultId, isId := resultVal.(bson.ObjectId)
+		if !runAll && isId {
+			continue
+		}
+		delete(test.Results, key)
+		if !isId {
+			continue
+		}
+		err = db.RemoveById(db.RESULTS, resultId)
+		if err != nil {
+			util.Log(err)
+		}
 	}
-	resultId, isId := resultVal.(bson.ObjectId)
-	if !runAll && isId {
-		return
-	}
-	delete(file.Results, name)
-	change := bson.M{db.SET: bson.M{db.RESULTS: file.Results}}
-	err := db.Update(db.FILES, bson.M{db.ID: file.Id}, change)
-	if err != nil {
-		util.Log(err)
-	}
-	if !isId {
-		return
-	}
-	err = db.RemoveById(db.RESULTS, resultId)
+	change := bson.M{db.SET: bson.M{db.RESULTS: test.Results}}
+	err = db.Update(db.FILES, bson.M{db.ID: test.Id}, change)
 	if err != nil {
 		util.Log(err)
 	}
@@ -412,15 +458,14 @@ func GetResult(resultName string, fileId bson.ObjectId) (res tool.DisplayResult,
 	if err != nil {
 		return
 	}
+	sub, err := db.Submission(bson.M{db.ID: file.SubId}, nil)
+	if err != nil {
+		return
+	}
 	switch resultName {
 	case tool.CODE:
-		var sub *project.Submission
-		sub, err = db.Submission(bson.M{db.ID: file.SubId}, bson.M{db.PROJECTID: 1})
-		if err != nil {
-			return
-		}
 		var p *project.Project
-		p, err = db.Project(bson.M{db.ID: sub.ProjectId}, bson.M{db.LANG: 1})
+		p, err = db.Project(bson.M{db.ID: sub.ProjectId}, nil)
 		if err != nil {
 			return
 		}
@@ -432,11 +477,7 @@ func GetResult(resultName string, fileId bson.ObjectId) (res tool.DisplayResult,
 		//Load summary for each available result.
 		for name, resid := range file.Results {
 			var currentRes tool.ToolResult
-			currentRes, err = db.ToolResult(
-				name, bson.M{
-					db.ID: resid,
-				}, nil,
-			)
+			currentRes, err = db.ToolResult(name, bson.M{db.ID: resid}, nil)
 			if err != nil {
 				return
 			}
@@ -445,6 +486,9 @@ func GetResult(resultName string, fileId bson.ObjectId) (res tool.DisplayResult,
 	default:
 		ival, ok := file.Results[resultName]
 		if !ok {
+			if bson.IsObjectIdHex(resultName) {
+				resultName = "unit tests."
+			}
 			res = tool.NewErrorResult(tool.NORESULT, resultName)
 			return
 		}

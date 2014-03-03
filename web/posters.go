@@ -65,9 +65,10 @@ func Posters() map[string]Poster {
 func defaultPosters() map[string]Poster {
 	return map[string]Poster{
 		"addproject": AddProject, "addskeleton": AddSkeleton,
-		"submitarchive": SubmitArchive, "runtool": RunTool,
+		"submitarchive": SubmitArchive, "runtools": RunTools,
 		"deleteproject": DeleteProject, "deleteuser": DeleteUser,
-		"deleteresults": DeleteResults, "importdata": ImportData,
+		"deleteresults": DeleteResults, "deleteskeletons": DeleteSkeletons,
+		"importdata":          ImportData,
 		"evaluatesubmissions": EvaluateSubmissions,
 		"login":               Login, "register": Register,
 		"logout": Logout, "editproject": EditProject,
@@ -222,6 +223,28 @@ func DeleteProject(req *http.Request, ctx *Context) (msg string, err error) {
 	} else {
 		msg = "Successfully deleted project."
 	}
+	return
+}
+
+func DeleteSkeletons(req *http.Request, ctx *Context) (msg string, err error) {
+	projectId, msg, err := getProjectId(req)
+	if err != nil {
+		return
+	}
+	matcher := bson.M{db.PROJECTID: projectId}
+	skeletons, err := db.Skeletons(matcher, bson.M{db.ID: 1})
+	if err != nil {
+		msg = "Could not retrieve skeletons."
+		return
+	}
+	for _, skeleton := range skeletons {
+		err = db.RemoveById(db.SKELETONS, skeleton.Id)
+		if err != nil {
+			msg = "Could not delete skeletons."
+			return
+		}
+	}
+	msg = "Successfully deleted skeletons."
 	return
 }
 

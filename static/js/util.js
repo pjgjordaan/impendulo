@@ -160,18 +160,79 @@ function highlight(bug){
 }
 
 function addSkeletons(src, dest, skeletonMap){
+    var xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange=function()
+    {
+	if (xmlhttp.readyState==4 && xmlhttp.status==200)
+	{
+	    var destList = document.getElementById(dest);
+	    destList.options.length = 0;
+	    var skeletons = xmlhttp.responseText.split(",");
+	    if (skeletons.length === 1 && skeletons[0].split('_').length === 1){
+		return;
+	    }
+	    for(var i = 0; i < skeletons.length; i++) {
+		var option = document.createElement('option');
+		var vals = skeletons[i].split('_');
+		option.value = vals[0];
+		option.text = vals[1];
+		destList.add(option);
+	    }
+	}
+    }
     var srcList = document.getElementById(src);
     var id = srcList.options[srcList.selectedIndex].value;
-    var skeletons = skeletonMap[id];
-    if(skeletons === null){
-	return;
+    xmlhttp.open('GET','skeletons?projectid='+id,true);
+    xmlhttp.send();
+}
+
+function populate(src, toolDest, userDest){
+    addTools(src, toolDest);
+    addUsers(src, userDest);
+}
+
+function ajaxSelect(src, dest, url){
+   var xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange=function()
+    {
+	if (xmlhttp.readyState==4 && xmlhttp.status==200)
+	{
+	    $("#"+dest).multiselect();
+	    $("#"+dest).multiselect("destroy");
+	    var destList = document.getElementById(dest);
+	    destList.options.length = 0;
+	    var items = xmlhttp.responseText.split(",");
+	    for(var i = 0; i < items.length; i++) {
+		var option = document.createElement('option');
+		option.value = option.text = items[i];
+		destList.add(option);
+	    }
+	    $("#"+dest).multiselect();
+	    $("#"+dest).multiselected = true;
+	}
     }
-    var destList = document.getElementById(dest);
-    destList.options.length = 0;
-    for(var i = 0; i < skeletons.length; i++) {
-        var option = document.createElement('option');
-        option.text = skeletons[i].Name;
-	option.value = skeletons[i].Id;
-        destList.add(option);
-    }
+    var srcList = document.getElementById(src);
+    var val = srcList.options[srcList.selectedIndex].value;
+    xmlhttp.open('GET',url+val,true);
+    xmlhttp.send();
+}
+
+function addTools(src, dest){
+    ajaxSelect(src, dest, 'tools?projectid=');
+}
+ 
+function addUsers(src, dest){
+   ajaxSelect(src, dest, 'users?projectid=');
+}
+
+
+function addPopover(dest, src){
+    window.onload = function() {
+	$("[rel=codepopover]").popover({
+	    template: '<div class="popover code-popover"><div class="arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content code-popover-content"><p></p></div></div></div>',
+	    placement : 'bottom', 
+	    html: 'true',
+	    content :  $('#'+src).html()
+	});
+    };
 }

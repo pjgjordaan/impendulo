@@ -139,7 +139,7 @@ func AddJUnitTest(t *junit.Test) (err error) {
 	col.RemoveAll(matcher)
 	err = col.Insert(t)
 	if err != nil {
-		err = &DBAddError{t.String(), err}
+		err = &DBAddError{t.Name, err}
 	}
 	return
 }

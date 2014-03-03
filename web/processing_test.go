@@ -16,34 +16,38 @@ func TestSnapshots(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	src, launch, other := 5, 3, 7
-	for i := 0; i < src; i++ {
-		tsrc := createFile(s.Id, project.SRC, "Triangle.java")
-		err = db.Add(db.FILES, tsrc)
+	specs := []spec{{"Triangle.java", project.SRC, s.Id, 5},
+		{"Triangle.java", project.LAUNCH, s.Id, 3},
+		{"Helper.java", project.SRC, s.Id, 4},
+		{"UserTests.java", project.TEST, s.Id, 2},
+		{"intlola.zip", project.ARCHIVE, s.Id, 1},
+	}
+	for _, s := range specs {
+		testSnapshots(s, t)
+	}
+}
+
+type spec struct {
+	name string
+	tipe project.Type
+	id   bson.ObjectId
+	num  int
+}
+
+func testSnapshots(s spec, t *testing.T) {
+	for i := 0; i < s.num; i++ {
+		f := createFile(s.id, s.tipe, s.name)
+		err := db.Add(db.FILES, f)
 		if err != nil {
 			t.Error(err)
 		}
 	}
-	for i := 0; i < launch; i++ {
-		tlaunch := createFile(s.Id, project.LAUNCH, "Triangle.java")
-		err = db.Add(db.FILES, tlaunch)
-		if err != nil {
-			t.Error(err)
-		}
-	}
-	for i := 0; i < other; i++ {
-		othersrc := createFile(s.Id, project.SRC, "Helper.java")
-		err = db.Add(db.FILES, othersrc)
-		if err != nil {
-			t.Error(err)
-		}
-	}
-	snaps, err := Snapshots(s.Id, "Triangle.java")
+	files, err := Snapshots(s.id, s.name, s.tipe)
 	if err != nil {
 		t.Error(err)
 	}
-	if len(snaps) != src {
-		t.Error(fmt.Errorf("Expected %d got %d snapshots.", src, len(snaps)))
+	if len(files) != s.num {
+		t.Error(fmt.Errorf("Expected %d got %d snapshots.", s.num, len(files)))
 	}
 }
 

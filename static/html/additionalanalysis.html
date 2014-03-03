@@ -1,0 +1,80 @@
+{{define "additional"}}
+{{$currentFile := .childFile}}
+{{$currentResult := .currentChildResult}}
+{{$nextResult := .nextChildResult}}
+{{$fileName := .ctx.Additional.File}}
+{{$current := .ctx.Additional.Current}}
+{{$files := .childFiles}}
+{{$sid := .ctx.Browse.Sid}}
+{{$lang := submissionLang $sid}} 
+<h4 class="text-center code-popover-h" >
+  <small>tool</small> Testing 
+  <a href="#code_wrapper" rel="codepopover">
+    {{$fileName}}
+  </a>
+  @ {{date $currentFile.Time}}
+</h4>
+<div id="code_wrapper" style="display: none" class="popover-code">
+  <pre class="brush: {{$lang}}; class-name: 'popover-code'">
+    {{string $currentFile.Data}}+ 
+  </pre>
+</div>
+<script type="text/javascript">
+  highlight(undefined);
+  addPopover('codepopover', 'code_wrapper');
+</script>
+{{$sliced := slice $files $current}}
+{{$adjustment := adjustment $files $current}}
+<div id="wrapper" style="text-align: center">    
+  <ul id="filepager" class="pagination pagination-centre">
+    <li>
+      <a href="{{displayTestResult (sum $current -1)}}">
+	&laquo;
+      </a>
+    </li>
+    {{range $index, $file := $sliced}}
+    {{$actual := sum $index $adjustment}}
+    {{$actualNext := sum $actual 1}}
+    {{if eq $actual $current}} 
+    <li class="active">
+      <a id="file{{$actual}}"
+	 href="{{displayTestResult $actual}}">
+	{{$actualNext}}
+      </a>
+    </li>
+    {{else}}
+    <li>
+      <a id="file{{$actual}}"
+	 href="{{displayTestResult $actual}}">
+	{{$actualNext}}
+      </a>
+    </li>
+    {{end}}
+    {{end}}
+    <li>
+      <a href="{{displayTestResult (sum $current 1)}}">
+	&raquo;
+      </a>
+    </li>
+  </ul>
+</div>
+<div class="row">
+  {{$args := args "state" .ctx.Additional}}
+  <div class="col-md-6">
+    {{if isError $currentResult}}
+    <p class="text-danger">{{$currentResult.GetReport}}</p>
+    {{else}}
+    {{$args := insert $args "Report" $currentResult.GetReport}}
+    {{template "additionalresult"  $args}}
+    {{end}}
+  </div>
+  <div class="col-md-6">
+    {{if isError $nextResult}}
+    <p class="text-danger">{{$nextResult.GetReport}}</p>
+    {{else}}
+    {{$args := insert $args "Report" $nextResult.GetReport}}
+    {{template "additionalresult"  $args}}
+    {{end}}
+  </div>
+</div>
+{{end}}

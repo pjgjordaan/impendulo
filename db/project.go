@@ -36,6 +36,7 @@ type (
 	FileInfo struct {
 		Name  string
 		Count int
+		Type  project.Type
 	}
 )
 
@@ -81,12 +82,21 @@ func FileInfos(matcher bson.M) (ret []*FileInfo, err error) {
 	}
 	ret = make([]*FileInfo, len(names))
 	for i, name := range names {
-		ret[i] = new(FileInfo)
-		ret[i].Name = name
 		matcher[NAME] = name
-		ret[i].Count, err = Count(FILES, matcher)
+		var c int
+		c, err = Count(FILES, matcher)
 		if err != nil {
 			return
+		}
+		var f *project.File
+		f, err = File(matcher, bson.M{TYPE: 1})
+		if err != nil {
+			return
+		}
+		ret[i] = &FileInfo{
+			Name:  name,
+			Count: c,
+			Type:  f.Type,
 		}
 	}
 	return

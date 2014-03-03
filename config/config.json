@@ -24,5 +24,8 @@
     },
     "dir": {
 	"jpf_home": "/home/godfried/dev/java/jpf/jpf-core"
+    },
+    "archive":{
+	"intlola":"/home/godfried/.impendulo/intlola.zip"
     }
 }		

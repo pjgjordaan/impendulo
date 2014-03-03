@@ -214,3 +214,15 @@ func CopyFile(dest, src string) (err error) {
 	_, err = io.Copy(w, r)
 	return
 }
+
+func Extension(fullName string) (name, ext string) {
+	split := strings.Split(fullName, ".")
+	switch len(split) {
+	case 0, 1:
+		ext = ""
+	default:
+		name = strings.Join(split[0:len(split)-1], ".")
+		ext = split[len(split)-1]
+	}
+	return
+}

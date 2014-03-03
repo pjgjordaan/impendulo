@@ -49,21 +49,23 @@ var (
 	}
 	none = []string{
 		"index", "", "homeview", "projectresult",
-		"userresult", "displaychart", "displayresult", "getfiles",
-		"favicon.ico", "getsubmissions", "getsubmissionschart",
+		"userresult", "displaychart", "displayresult", "displaytestresult",
+		"getfiles", "favicon.ico", "getsubmissions", "getsubmissionschart",
 		"static", "userchart", "projectchart",
 	}
 	student = []string{
 		"projectdownloadview", "skeleton.zip",
+		"intloladownloadview", "intlola.zip",
 		"archiveview", "submitarchive", "logout",
 	}
 	teacher = []string{
 		"skeletonview", "addskeleton", "projectview",
-		"addproject", "runtoolview", "runtool", "configview",
+		"addproject", "runtoolsview", "runtools", "configview",
 	}
 	admin = []string{
 		"projectdeleteview", "deleteproject", "userdeleteview",
 		"deleteuser", "resultsdeleteview", "deleteresults",
+		"deleteskeletons", "skeletondeleteview",
 		"importdataview", "exportdataview",
 		"importdata", "exportdb.zip", "statusview",
 		"evaluatesubmissionsview", "evaluatesubmissions", "logs",
@@ -76,17 +78,17 @@ var (
 		"homeview", "userresult", "projectresult",
 		"userchart", "projectchart", "displaychart",
 		"displayresult", "getfiles", "getsubmissionschart",
-		"getsubmissions",
+		"getsubmissions", "displaytestresult",
 	}
 	submitViews = []string{
 		"skeletonview", "archiveview", "projectview",
 		"configview",
 	}
 	registerViews = []string{"registerview"}
-	downloadViews = []string{"projectdownloadview"}
-	deleteViews   = []string{"projectdeleteview", "userdeleteview", "resultsdeleteview"}
+	downloadViews = []string{"projectdownloadview", "intloladownloadview"}
+	deleteViews   = []string{"projectdeleteview", "userdeleteview", "resultsdeleteview", "skeletondeleteview"}
 	statusViews   = []string{"statusview"}
-	toolViews     = []string{"runtoolview", "evaluatesubmissionsview"}
+	toolViews     = []string{"runtoolsview", "evaluatesubmissionsview"}
 	dataViews     = []string{
 		"importdataview", "exportdataview", "editdbview",
 		"loadproject", "loadsubmission", "loadfile", "loaduser",

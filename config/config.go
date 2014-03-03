@@ -49,18 +49,20 @@ type (
 
 	//Configuration is used to store Impendulo's Json configuration.
 	Configuration struct {
-		Bin map[Bin]string
-		Cfg map[Cfg]string
-		Dir map[Dir]string
-		Jar map[Jar]string
-		Sh  map[Sh]string
+		Bin     map[Bin]string
+		Cfg     map[Cfg]string
+		Dir     map[Dir]string
+		Jar     map[Jar]string
+		Sh      map[Sh]string
+		Archive map[Archive]string
 	}
 	//Bin is a string type for paths to binary files.
 	Bin string
 	//Cfg is a string type for paths to configuration files.
 	Cfg string
 	//Dir is a string type for paths to directories.
-	Dir string
+	Dir     string
+	Archive string
 	//Jar is a string type for paths to jar files.
 	Jar string
 	//Sh is a string type for paths to scripts.
@@ -89,6 +91,9 @@ const (
 	JPF_HOME      Dir = "jpf_home"
 	JPF_RUNNER    Dir = "jpf_runner"
 	JUNIT_TESTING Dir = "junit_testing"
+
+	//Archives
+	INTLOLA Archive = "intlola"
 
 	//Jars
 	ANT        Jar = "ant"
@@ -220,6 +225,11 @@ func LoadConfigs(fname string) (err error) {
 			return
 		}
 	}
+	for a, path := range config.Archive {
+		if err = a.Valid(path); err != nil {
+			return
+		}
+	}
 	return
 }
 
@@ -283,6 +293,18 @@ func (bin Bin) Path() (string, error) {
 	return path(bin)
 }
 
+func (a Archive) Valid(path string) error {
+	return valid(a, path, util.IsFile)
+}
+
+func (a Archive) Description() string {
+	return "archive"
+}
+
+func (a Archive) Path() (string, error) {
+	return path(a)
+}
+
 //valid determines whether the provided path is valid for corresponding file.
 func valid(file File, path string, validator Validator) (err error) {
 	if !validator(path) {
@@ -305,6 +327,8 @@ func path(file File) (ret string, err error) {
 		ret, ok = config.Jar[t]
 	case Sh:
 		ret, ok = config.Sh[t]
+	case Archive:
+		ret, ok = config.Archive[t]
 	default:
 		ok = true
 		err = &ConfigError{

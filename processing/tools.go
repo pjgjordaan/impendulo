@@ -123,8 +123,7 @@ func Compiler(proc *Processor) (compiler tool.Tool, err error) {
 			compiler, err = mk.New(makeFile, proc.toolDir)
 		}
 	default:
-		err = fmt.Errorf("No compiler found for %s language.",
-			l)
+		err = fmt.Errorf("No compiler found for %s language.", l)
 	}
 	return
 }

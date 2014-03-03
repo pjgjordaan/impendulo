@@ -1,14 +1,15 @@
 {{define "view"}}
-{{$projectSkeletons := projectSkeletons}}
+{{$projects := projects}}
 <h3 class="heading">Download Project Skeleton</h3>
-<form class="form-horizontal" action="skeleton.zip" method="get">
+<form class="form-horizontal" action="skeleton.zip" method="get" >
   <div class="form-group">
     <label class="col-lg-offset-3 col-lg-2 control-label" for="projectid">Project</label>
     <div class="col-lg-3">
-      <select class="form-control" name="projectid" id="projectid" onchange="addSkeletons('projectid', 'skeletonid', {{$projectSkeletons}})">
-	{{range $p, $s := $projectSkeletons}}
-	<option value={{$p}}>
-	  {{projectName $p}}
+      <select class="form-control" name="projectid" id="projectid"
+	      onchange="addSkeletons('projectid', 'skeletonid')">
+	{{range $projects}}
+	<option value={{.Id.Hex}}>
+	  {{.Name}}
 	</option>
 	{{end}}
       </select>
@@ -17,7 +18,7 @@
   <div class="form-group">
     <label class="col-lg-offset-3 col-lg-2 control-label" for="skeletonid">Skeleton</label>
     <div class="col-lg-3">
-      <select class="form-control" name="skeletonid" id="skeletonid">
+      <select class="form-control" name="skeletonid" id="skeletonid">    
       </select>
     </div>
 </div>
@@ -29,4 +30,10 @@
     </div>
   </div>
 </form>
+<script type="text/javascript" language="javascript">
+  window.onload = function()
+  {
+  addSkeletons('projectid', 'skeletonid');
+  ;}
+</script>
 {{end}}

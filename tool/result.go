@@ -30,15 +30,6 @@ import (
 	"strings"
 )
 
-const (
-	//Some result names.
-	NORESULT = "NoResult"
-	TIMEOUT  = "Timeout"
-	SUMMARY  = "Summary"
-	ERROR    = "Error"
-	CODE     = "Code"
-)
-
 type (
 	ChartVal struct {
 		Name   string
@@ -146,6 +137,12 @@ type (
 )
 
 const (
+	//Some result names.
+	NORESULT = "NoResult"
+	TIMEOUT  = "Timeout"
+	SUMMARY  = "Summary"
+	ERROR    = "Error"
+	CODE     = "Code"
 	//The different types of compilation that we can have.
 	SUCCESS CompileType = iota
 	WARNINGS
@@ -167,7 +164,7 @@ func NewErrorResult(tipe, resultName string) *ErrorResult {
 		err = fmt.Errorf("No result available for %s.", resultName)
 	default:
 		tipe = ERROR
-		err = fmt.Errorf("Error %s: could not retrieve result for %s.", tipe, resultName)
+		err = fmt.Errorf("%s: could not retrieve result for %s.", tipe, resultName)
 	}
 	return &ErrorResult{
 		err:  err,

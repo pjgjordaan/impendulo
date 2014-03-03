@@ -46,13 +46,19 @@ type (
 		users           map[string]string
 		mode            string
 		numFiles, rport uint
-		data            []byte
+		files           []file
 	}
 	client struct {
 		uname, pword, mode string
 		projectId          bson.ObjectId
 		submission         *project.Submission
 		conn               net.Conn
+	}
+	file struct {
+		name string
+		pkg  string
+		tipe project.Type
+		data []byte
 	}
 )
 
@@ -163,21 +169,24 @@ func (this *client) logout() (err error) {
 	return
 }
 
-func (this *client) send(numFiles uint, data []byte) (err error) {
+func (this *client) send(numFiles uint, files []file) (err error) {
 	switch this.mode {
 	case project.FILE_MODE:
-		err = this.sendFile(numFiles, data)
+		err = this.sendFile(numFiles, files)
 	case project.ARCHIVE_MODE:
-		err = this.sendArchive(data)
+		err = this.sendArchive(files[0])
 	default:
 		err = fmt.Errorf("Unsupported mode %s.", this.mode)
 	}
 	return
 }
 
-func (this *client) sendArchive(data []byte) (err error) {
+func (this *client) sendArchive(f file) (err error) {
 	req := map[string]interface{}{
-		REQ: SEND,
+		REQ:          SEND,
+		project.TYPE: f.tipe,
+		db.NAME:      f.name,
+		db.PKG:       f.pkg,
 	}
 	err = write(this.conn, req)
 	if err != nil {
@@ -187,7 +196,7 @@ func (this *client) sendArchive(data []byte) (err error) {
 	if err != nil {
 		return
 	}
-	_, err = this.conn.Write(data)
+	_, err = this.conn.Write(f.data)
 	if err != nil {
 		return
 	}
@@ -199,34 +208,41 @@ func (this *client) sendArchive(data []byte) (err error) {
 	return
 }
 
-func (this *client) sendFile(numFiles uint, data []byte) (err error) {
-	req := map[string]interface{}{
-		REQ:          SEND,
-		project.TYPE: project.SRC,
-		db.NAME:      "Triangle.java",
-		db.PKG:       "triangle",
-	}
-	for i := 0; i < int(numFiles); i++ {
-		req[db.TIME] = util.CurMilis()
-		err = write(this.conn, req)
-		if err != nil {
-			return
-		}
-		err = readOk(this.conn)
-		if err != nil {
-			return
-		}
-		_, err = this.conn.Write(data)
-		if err != nil {
-			return
-		}
-		_, err = this.conn.Write([]byte(util.EOT))
-		if err != nil {
-			return
-		}
-		err = readOk(this.conn)
-		if err != nil {
-			return
+func (this *client) sendFile(numFiles uint, files []file) (err error) {
+	var i uint = 0
+	for {
+		for _, f := range files {
+			if i == numFiles {
+				return
+			}
+			req := map[string]interface{}{
+				REQ:          SEND,
+				project.TYPE: f.tipe,
+				db.NAME:      f.name,
+				db.PKG:       f.pkg,
+				db.TIME:      util.CurMilis(),
+			}
+			err = write(this.conn, req)
+			if err != nil {
+				return
+			}
+			err = readOk(this.conn)
+			if err != nil {
+				return
+			}
+			_, err = this.conn.Write(f.data)
+			if err != nil {
+				return
+			}
+			_, err = this.conn.Write([]byte(util.EOT))
+			if err != nil {
+				return
+			}
+			err = readOk(this.conn)
+			if err != nil {
+				return
+			}
+			i++
 		}
 	}
 	return
@@ -278,7 +294,7 @@ func testReceive(spawner *clientSpawner) (err error) {
 			if err != nil {
 				return
 			}
-			err = c.send(spawner.numFiles, spawner.data)
+			err = c.send(spawner.numFiles, spawner.files)
 			if err != nil {
 				return
 			}
@@ -300,7 +316,7 @@ func testReceive(spawner *clientSpawner) (err error) {
 	return
 }
 
-func testFile(t *testing.T, nF, nU, port uint, mode string, data []byte) {
+func testFiles(t *testing.T, nF, nU, port uint, mode string, files []file) {
 	go processing.MonitorStatus()
 	go processing.Serve(processing.MAX_PROCS)
 	ext := "_" + strconv.Itoa(int(port))
@@ -315,7 +331,7 @@ func testFile(t *testing.T, nF, nU, port uint, mode string, data []byte) {
 	receive(port)
 	spawner := &clientSpawner{
 		mode:     mode,
-		data:     data,
+		files:    files,
 		users:    users,
 		numFiles: nF,
 		rport:    port,
@@ -331,21 +347,26 @@ func testFile(t *testing.T, nF, nU, port uint, mode string, data []byte) {
 }
 
 func TestFile(t *testing.T) {
-	testFile(t, 1, 1, 8000, project.FILE_MODE, fileData)
-	testFile(t, 2, 3, 8000, project.FILE_MODE, fileData)
+	files := []file{{"Triangle.java", "triangle", project.SRC, fileData}}
+	testFiles(t, 1, 1, 8000, project.FILE_MODE, files)
+	testFiles(t, 2, 3, 8000, project.FILE_MODE, files)
+	files = append(files, file{"UserTests.java", "testing", project.TEST, userTestData})
+	testFiles(t, 2, 1, 8000, project.FILE_MODE, files)
+	testFiles(t, 4, 3, 8000, project.FILE_MODE, files)
 	zipData, err := loadZip(1)
 	if err != nil {
 		t.Error(err)
 	}
-	testFile(t, 1, 1, 8010, project.ARCHIVE_MODE, zipData)
+	zips := []file{{"Triangle.java", "triangle", project.ARCHIVE, zipData}}
+	testFiles(t, 1, 1, 8010, project.ARCHIVE_MODE, zips)
 	zipData, err = loadZip(5)
 	if err != nil {
 		t.Error(err)
 	}
-	testFile(t, 3, 2, 8010, project.ARCHIVE_MODE, zipData)
+	testFiles(t, 3, 2, 8010, project.ARCHIVE_MODE, zips)
 }
 
-func benchmarkFile(b *testing.B, nF, nU, nS, nM, port uint, mode string, data []byte) {
+func benchmarkFiles(b *testing.B, nF, nU, nS, nM, port uint, mode string, files []file) {
 	servers := make([]*processing.Server, nS)
 	var err error
 	for i := 0; i < int(nS); i++ {
@@ -374,7 +395,7 @@ func benchmarkFile(b *testing.B, nF, nU, nS, nM, port uint, mode string, data []
 	}
 	spawner := &clientSpawner{
 		mode:     mode,
-		data:     data,
+		files:    files,
 		users:    users,
 		numFiles: nF,
 		rport:    port,
@@ -402,12 +423,16 @@ func benchmarkFile(b *testing.B, nF, nU, nS, nM, port uint, mode string, data []
 }
 
 func BenchmarkFile(b *testing.B) {
-	benchmarkFile(b, 2, 2, 5, 5, 8020, project.FILE_MODE, fileData)
+	files := []file{{"Triangle.java", "triangle", project.SRC, fileData}}
+	benchmarkFiles(b, 2, 2, 5, 5, 8020, project.FILE_MODE, files)
+	files = append(files, file{"UserTests.java", "testing", project.TEST, userTestData})
+	benchmarkFiles(b, 4, 2, 5, 5, 8020, project.FILE_MODE, files)
 	zipData, err := loadZip(2)
 	if err != nil {
 		b.Error(err)
 	}
-	benchmarkFile(b, 2, 2, 5, 5, 8030, project.ARCHIVE_MODE, zipData)
+	zips := []file{{"Triangle.java", "triangle", project.ARCHIVE, zipData}}
+	benchmarkFiles(b, 2, 2, 5, 5, 8030, project.ARCHIVE_MODE, zips)
 }
 
 var fileData = []byte(`
@@ -422,6 +447,22 @@ public class Triangle {
 			}
 		}
 		return triangle[0][0];
+	}
+}
+`)
+
+var userTestData = []byte(`
+package testing;
+
+import junit.framework.TestCase;
+import triangle.Triangle;
+
+public class UserTests extends TestCase {
+
+	public void testKselect() {
+		Triangle t = new Triangle();
+		int[][] values = { {6}, {6, 3}, {2, 9, 3}};
+		assertEquals("Expected 21.", 21, t.maxpath(values));
 	}
 }
 `)

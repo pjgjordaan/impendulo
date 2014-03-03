@@ -34,6 +34,7 @@ import (
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
+	junit_user "github.com/godfried/impendulo/tool/junit_user/result"
 	"github.com/godfried/impendulo/tool/pmd"
 	"labix.org/v2/mgo/bson"
 	"sort"
@@ -125,6 +126,24 @@ func JUnitResult(matcher, selector bson.M) (ret *junit.Result, err error) {
 	}
 	defer session.Close()
 	c := session.DB("").C(RESULTS)
+	matcher[TYPE] = junit.NAME
+	err = c.Find(matcher).Select(selector).One(&ret)
+	if err != nil {
+		err = &DBGetError{"result", err, matcher}
+	} else if HasGridFile(ret, selector) {
+		err = GridFile(ret.GetId(), &ret.Report)
+	}
+	return
+}
+
+func JUnitUserResult(matcher, selector bson.M) (ret *junit_user.Result, err error) {
+	session, err := Session()
+	if err != nil {
+		return
+	}
+	defer session.Close()
+	c := session.DB("").C(RESULTS)
+	matcher[TYPE] = junit_user.NAME
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
 		err = &DBGetError{"result", err, matcher}
@@ -189,7 +208,7 @@ func ToolResult(name string, matcher, selector bson.M) (ret tool.ToolResult, err
 	default:
 		ret, err = JUnitResult(matcher, selector)
 		if err != nil {
-			err = fmt.Errorf("Unknown result %q.", name)
+			ret, err = JUnitUserResult(matcher, selector)
 		}
 	}
 	return
@@ -214,7 +233,7 @@ func DisplayResult(name string, matcher, selector bson.M) (ret tool.DisplayResul
 	default:
 		ret, err = JUnitResult(matcher, selector)
 		if err != nil {
-			err = fmt.Errorf("Unknown result %q.", name)
+			ret, err = JUnitUserResult(matcher, selector)
 		}
 	}
 	return
@@ -239,7 +258,7 @@ func ChartResult(name string, matcher, selector bson.M) (ret tool.ChartResult, e
 	default:
 		ret, err = JUnitResult(matcher, selector)
 		if err != nil {
-			err = fmt.Errorf("Unknown result %q.", name)
+			ret, err = JUnitUserResult(matcher, selector)
 		}
 	}
 	return
@@ -285,12 +304,12 @@ func ResultName(matcher bson.M) (name string, err error) {
 }
 
 //AddResult adds a new result to the active database.
-func AddResult(res tool.ToolResult) (err error) {
+func AddResult(res tool.ToolResult, name string) (err error) {
 	if res == nil {
 		err = fmt.Errorf("Result is nil. In db/result.go.")
 		return
 	}
-	err = AddFileResult(res.GetFileId(), res.GetName(), res.GetId())
+	err = AddFileResult(res.GetFileId(), name, res.GetId())
 	if err != nil {
 		return
 	}
@@ -324,7 +343,7 @@ func AddFileResult(fileId bson.ObjectId, name string, value interface{}) error {
 //ChartResults retrieves all tool.DisplayResults matching
 //the given file Id from the active database.
 func ChartResults(fileId bson.ObjectId) (ret []tool.ChartResult, err error) {
-	file, err := File(bson.M{ID: fileId}, bson.M{RESULTS: 1})
+	file, err := File(bson.M{ID: fileId}, bson.M{DATA: 0})
 	if err != nil {
 		return
 	}
