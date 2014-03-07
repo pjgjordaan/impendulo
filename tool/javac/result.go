@@ -43,6 +43,7 @@ type (
 		Name   string        "name"
 		Report *Report       "report"
 		GridFS bool          "gridfs"
+		Type   string        "type"
 	}
 )
 
@@ -114,6 +115,10 @@ func (this *Result) Template() string {
 	return "javacresult"
 }
 
+func (this *Result) GetType() string {
+	return this.Type
+}
+
 //NewResult
 func NewResult(fileId bson.ObjectId, data []byte) *Result {
 	gridFS := len(data) > tool.MAX_SIZE
@@ -124,5 +129,6 @@ func NewResult(fileId bson.ObjectId, data []byte) *Result {
 		Name:   NAME,
 		GridFS: gridFS,
 		Report: NewReport(id, data),
+		Type:   NAME,
 	}
 }

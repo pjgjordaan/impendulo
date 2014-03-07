@@ -64,47 +64,105 @@ func GetString(jobj map[string]interface{}, key string) (val string, err error) 
 }
 
 //GetInt converts a value in a map to an int.
-func GetInt(jobj map[string]interface{}, key string) (val int, err error) {
-	ival, ok := jobj[key]
+func GetInt(m map[string]interface{}, key string) (int, error) {
+	i, ok := m[key]
 	if !ok {
-		err = &MissingError{key}
-		return
+		return 0, &MissingError{key}
 	}
-	switch v := ival.(type) {
-	case int64:
-		val = int(v)
-	case int:
-		val = v
-	case float64:
-		val = int(v)
-	case string:
-		val, err = strconv.Atoi(v)
-	default:
-		err = &CastError{"int", v}
-	}
-	return
+	return Int(i)
 }
 
 //GetInt64 converts a value in a map to an int64.
-func GetInt64(jobj map[string]interface{}, key string) (val int64, err error) {
-	ival, ok := jobj[key]
+func GetInt64(m map[string]interface{}, key string) (int64, error) {
+	i, ok := m[key]
 	if !ok {
-		err = &MissingError{key}
-		return
+		return 0, &MissingError{key}
 	}
-	switch v := ival.(type) {
-	case int64:
-		val = v
+	return Int64(i)
+}
+
+func Int(i interface{}) (int, error) {
+	switch v := i.(type) {
 	case int:
-		val = int64(v)
+		return v, nil
+	case int32:
+		return int(v), nil
+	case int64:
+		return int(v), nil
+	case float32:
+		return int(v), nil
 	case float64:
-		val = int64(v)
+		return int(v), nil
+	case uint:
+		return int(v), nil
+	case uint8:
+		return int(v), nil
+	case uint16:
+		return int(v), nil
+	case uint32:
+		return int(v), nil
+	case uint64:
+		return int(v), nil
 	case string:
-		val, err = strconv.ParseInt(v, 10, 64)
-	default:
-		err = &CastError{"int", v}
+		return strconv.Atoi(v)
 	}
-	return
+	return 0, &CastError{"int", i}
+}
+
+func Int64(i interface{}) (int64, error) {
+	switch v := i.(type) {
+	case int64:
+		return v, nil
+	case int:
+		return int64(v), nil
+	case int32:
+		return int64(v), nil
+	case float32:
+		return int64(v), nil
+	case float64:
+		return int64(v), nil
+	case uint:
+		return int64(v), nil
+	case uint8:
+		return int64(v), nil
+	case uint16:
+		return int64(v), nil
+	case uint32:
+		return int64(v), nil
+	case uint64:
+		return int64(v), nil
+	case string:
+		return strconv.ParseInt(v, 10, 64)
+	}
+	return 0, &CastError{"int64", i}
+}
+
+func Float64(i interface{}) (float64, error) {
+	switch v := i.(type) {
+	case float64:
+		return v, nil
+	case int:
+		return float64(v), nil
+	case int32:
+		return float64(v), nil
+	case int64:
+		return float64(v), nil
+	case float32:
+		return float64(v), nil
+	case uint:
+		return float64(v), nil
+	case uint8:
+		return float64(v), nil
+	case uint16:
+		return float64(v), nil
+	case uint32:
+		return float64(v), nil
+	case uint64:
+		return float64(v), nil
+	case string:
+		return strconv.ParseFloat(v, 64)
+	}
+	return 0.0, &CastError{"float64", i}
 }
 
 //GetId converts a value in a map to a bson.ObjectId.

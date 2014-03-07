@@ -64,7 +64,10 @@ func (this *Result) Create(next *Result) (ret string, err error) {
 	}
 	ret = SetHeader(ret, this.header, next.header)
 	return
+}
 
+func (this *Result) GetType() string {
+	return NAME
 }
 
 //GetName

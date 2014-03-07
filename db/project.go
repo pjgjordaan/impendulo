@@ -40,6 +40,10 @@ type (
 	}
 )
 
+func (f *FileInfo) HasCharts() bool {
+	return f.Type == project.SRC
+}
+
 //File retrieves a file matching the given interface from the active database.
 func File(matcher, selector interface{}) (ret *project.File, err error) {
 	session, err := Session()

@@ -31,6 +31,7 @@ import (
 	"github.com/godfried/impendulo/tool/diff"
 	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/tool/gcc"
+	"github.com/godfried/impendulo/tool/jacoco"
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
@@ -39,6 +40,12 @@ import (
 	"labix.org/v2/mgo/bson"
 	"sort"
 	"strings"
+)
+
+type (
+	TypeHolder struct {
+		Type string "type"
+	}
 )
 
 //CheckstyleResult retrieves a Result matching
@@ -136,6 +143,23 @@ func JUnitResult(matcher, selector bson.M) (ret *junit.Result, err error) {
 	return
 }
 
+func JacocoResult(matcher, selector bson.M) (ret *jacoco.Result, err error) {
+	session, err := Session()
+	if err != nil {
+		return
+	}
+	defer session.Close()
+	c := session.DB("").C(RESULTS)
+	matcher[TYPE] = jacoco.NAME
+	err = c.Find(matcher).Select(selector).One(&ret)
+	if err != nil {
+		err = &DBGetError{"result", err, matcher}
+	} else if HasGridFile(ret, selector) {
+		err = GridFile(ret.GetId(), &ret.Report)
+	}
+	return
+}
+
 func JUnitUserResult(matcher, selector bson.M) (ret *junit_user.Result, err error) {
 	session, err := Session()
 	if err != nil {
@@ -189,10 +213,30 @@ func GCCResult(matcher, selector bson.M) (ret *gcc.Result, err error) {
 	return
 }
 
+func resultType(matcher bson.M) (tipe string, err error) {
+	session, err := Session()
+	if err != nil {
+		return
+	}
+	defer session.Close()
+	c := session.DB("").C(RESULTS)
+	var holder *TypeHolder
+	err = c.Find(matcher).One(&holder)
+	if err != nil {
+		err = &DBGetError{"result type", err, matcher}
+	}
+	tipe = holder.Type
+	return
+}
+
 //ToolResult retrieves a tool.ToolResult matching
 //the given interface and name from the active database.
-func ToolResult(name string, matcher, selector bson.M) (ret tool.ToolResult, err error) {
-	switch name {
+func ToolResult(matcher, selector bson.M) (ret tool.ToolResult, err error) {
+	tipe, err := resultType(matcher)
+	if err != nil {
+		return
+	}
+	switch tipe {
 	case javac.NAME:
 		ret, err = JavacResult(matcher, selector)
 	case jpf.NAME:
@@ -205,19 +249,26 @@ func ToolResult(name string, matcher, selector bson.M) (ret tool.ToolResult, err
 		ret, err = CheckstyleResult(matcher, selector)
 	case gcc.NAME:
 		ret, err = GCCResult(matcher, selector)
-	default:
+	case jacoco.NAME:
+		ret, err = JacocoResult(matcher, selector)
+	case junit.NAME:
 		ret, err = JUnitResult(matcher, selector)
-		if err != nil {
-			ret, err = JUnitUserResult(matcher, selector)
-		}
+	case junit_user.NAME:
+		ret, err = JUnitUserResult(matcher, selector)
+	default:
+		err = fmt.Errorf("Unsupported result type %s.", tipe)
 	}
 	return
 }
 
 //DisplayResult retrieves a tool.DisplayResult matching
 //the given interface and name from the active database.
-func DisplayResult(name string, matcher, selector bson.M) (ret tool.DisplayResult, err error) {
-	switch name {
+func DisplayResult(matcher, selector bson.M) (ret tool.DisplayResult, err error) {
+	tipe, err := resultType(matcher)
+	if err != nil {
+		return
+	}
+	switch tipe {
 	case javac.NAME:
 		ret, err = JavacResult(matcher, selector)
 	case jpf.NAME:
@@ -230,19 +281,40 @@ func DisplayResult(name string, matcher, selector bson.M) (ret tool.DisplayResul
 		ret, err = CheckstyleResult(matcher, selector)
 	case gcc.NAME:
 		ret, err = GCCResult(matcher, selector)
-	default:
+	case jacoco.NAME:
+		ret, err = JacocoResult(matcher, selector)
+	case junit.NAME:
 		ret, err = JUnitResult(matcher, selector)
-		if err != nil {
-			ret, err = JUnitUserResult(matcher, selector)
-		}
+	case junit_user.NAME:
+		ret, err = JUnitUserResult(matcher, selector)
+	default:
+		err = fmt.Errorf("Unsupported result type %s.", tipe)
 	}
 	return
 }
 
-//DisplayResult retrieves a tool.DisplayResult matching
-//the given interface and name from the active database.
-func ChartResult(name string, matcher, selector bson.M) (ret tool.ChartResult, err error) {
-	switch name {
+func AdditionalResult(matcher, selector bson.M) (r tool.AdditionalResult, err error) {
+	tipe, err := resultType(matcher)
+	if err != nil {
+		return
+	}
+	switch tipe {
+	case jacoco.NAME:
+		r, err = JacocoResult(matcher, selector)
+	case junit.NAME:
+		r, err = JUnitResult(matcher, selector)
+	default:
+		err = fmt.Errorf("Unsupported result type %s.", tipe)
+	}
+	return
+}
+
+func ChartResult(matcher, selector bson.M) (ret tool.ChartResult, err error) {
+	tipe, err := resultType(matcher)
+	if err != nil {
+		return
+	}
+	switch tipe {
 	case javac.NAME:
 		ret, err = JavacResult(matcher, selector)
 	case jpf.NAME:
@@ -255,11 +327,12 @@ func ChartResult(name string, matcher, selector bson.M) (ret tool.ChartResult, e
 		ret, err = CheckstyleResult(matcher, selector)
 	case gcc.NAME:
 		ret, err = GCCResult(matcher, selector)
-	default:
+	case junit.NAME:
 		ret, err = JUnitResult(matcher, selector)
-		if err != nil {
-			ret, err = JUnitUserResult(matcher, selector)
-		}
+	case junit_user.NAME:
+		ret, err = JUnitUserResult(matcher, selector)
+	default:
+		err = fmt.Errorf("Unsupported result type %s.", tipe)
 	}
 	return
 }
@@ -348,11 +421,11 @@ func ChartResults(fileId bson.ObjectId) (ret []tool.ChartResult, err error) {
 		return
 	}
 	ret = make([]tool.ChartResult, 0, len(file.Results))
-	for name, id := range file.Results {
+	for _, id := range file.Results {
 		if _, ok := id.(bson.ObjectId); !ok {
 			continue
 		}
-		res, err := ChartResult(name, bson.M{ID: id}, nil)
+		res, err := ChartResult(bson.M{ID: id}, nil)
 		if err != nil {
 			err = nil
 			continue

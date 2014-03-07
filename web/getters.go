@@ -33,7 +33,6 @@ import (
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -239,8 +238,7 @@ func displayChart(req *http.Request, ctx *Context) (a Args, t Temps, msg string,
 			msg = "Could not load chart."
 		}
 	}()
-	err = SetContext(req, ctx.Browse.SetUid, ctx.Browse.SetSid,
-		ctx.Browse.SetResult, ctx.Browse.SetFile)
+	err = ctx.Browse.Update(req)
 	if err != nil {
 		return
 	}
@@ -248,7 +246,7 @@ func displayChart(req *http.Request, ctx *Context) (a Args, t Temps, msg string,
 	if err != nil {
 		return
 	}
-	results, err := db.ChartResultNames(ctx.Browse.Pid)
+	results, err := resultNames(ctx.Browse.Pid, chartView)
 	if err != nil {
 		return
 	}
@@ -287,7 +285,7 @@ func displayResult(req *http.Request, ctx *Context) (a Args, t Temps, msg string
 			msg = "Could not load results."
 		}
 	}()
-	err = SetContext(req, ctx.Browse.SetUid, ctx.Browse.SetSid, ctx.Browse.SetResult, ctx.Browse.SetFile, ctx.Browse.SetDisplayCount)
+	err = ctx.Browse.Update(req)
 	if err != nil {
 		return
 	}
@@ -298,35 +296,11 @@ func displayResult(req *http.Request, ctx *Context) (a Args, t Temps, msg string
 	if err != nil {
 		return
 	}
-	ctx.Browse.Current, err = getCurrent(req, len(files)-1)
-	if err != nil {
-		time, terr := strconv.ParseInt(req.FormValue("time"), 10, 64)
-		if terr != nil {
-			return
-		}
-		found := false
-		for index, file := range files {
-			if file.Time == time {
-				ctx.Browse.Current = index
-				ctx.Browse.Next = (index + 1) % len(files)
-				found = true
-				break
-			}
-		}
-		if !found {
-			return
-		}
-	} else {
-		ctx.Browse.Next, err = getNext(req, len(files)-1)
-		if err != nil {
-			return
-		}
-	}
 	currentFile, err := getFile(files[ctx.Browse.Current].Id)
 	if err != nil {
 		return
 	}
-	results, err := db.AllResultNames(ctx.Browse.Pid)
+	results, err := resultNames(ctx.Browse.Pid, analysisView)
 	if err != nil {
 		return
 	}
@@ -364,7 +338,7 @@ func displayResult(req *http.Request, ctx *Context) (a Args, t Temps, msg string
 		"currentResult": currentResult, "results": results,
 		"nextFile": nextFile, "nextResult": nextResult,
 	}
-	t = Temps{"analysis", "pager", "", "noadditional"}
+	t = Temps{"analysis", "pager", "", "emptyadditional"}
 	if !isError(currentResult) || isError(nextResult) {
 		t[2] = currentResult.Template()
 	} else {
@@ -379,6 +353,10 @@ func displayTestResult(req *http.Request, ctx *Context) (a Args, t Temps, msg st
 			msg = "Could not load results."
 		}
 	}()
+	err = ctx.Browse.Update(req)
+	if err != nil {
+		return
+	}
 	parentFiles, err := Snapshots(ctx.Browse.Sid, ctx.Browse.File, ctx.Browse.Type)
 	if err != nil {
 		return
@@ -393,7 +371,7 @@ func displayTestResult(req *http.Request, ctx *Context) (a Args, t Temps, msg st
 	if err != nil {
 		return
 	}
-	results, err := resultNames(ctx.Browse.Pid, project.TEST, true)
+	results, err := resultNames(ctx.Browse.Pid, testView)
 	if err != nil {
 		return
 	}
@@ -409,28 +387,23 @@ func displayTestResult(req *http.Request, ctx *Context) (a Args, t Temps, msg st
 	if err != nil {
 		return
 	}
-	if ctx.Additional.File == "" {
-		ctx.Additional.File, err = testedFileName(ctx.Browse.Sid)
-		if err != nil {
-			return
-		}
-	}
-	childFiles, err := Snapshots(ctx.Browse.Sid, ctx.Additional.File, ctx.Additional.Type)
+	childFiles, err := Snapshots(ctx.Browse.Sid, ctx.Browse.ChildFile, ctx.Browse.ChildType)
 	if err != nil {
 		return
 	}
-	if cur, cerr := getIndex(req, "currentchild", len(childFiles)-1); cerr == nil {
-		ctx.Additional.Current = cur
-	}
-	currentChild, err := db.File(bson.M{db.ID: childFiles[ctx.Additional.Current].Id}, nil)
+	currentChild, err := db.File(bson.M{db.ID: childFiles[ctx.Browse.CurrentChild].Id}, nil)
 	if err != nil {
 		return
 	}
-	currentChildResult, err := GetResult(currentChild.Id.Hex(), currentFile.Id)
+	childResults, err := resultNames(ctx.Browse.Pid, childView)
 	if err != nil {
 		return
 	}
-	nextChildResult, err := GetResult(currentChild.Id.Hex(), nextFile.Id)
+	currentChildResult, err := GetAdditonalResult(ctx.Browse.ChildResult, currentChild.Id.Hex(), currentFile.Id)
+	if err != nil {
+		return
+	}
+	nextChildResult, err := GetAdditonalResult(ctx.Browse.ChildResult, currentChild.Id.Hex(), nextFile.Id)
 	if err != nil {
 		return
 	}
@@ -438,13 +411,18 @@ func displayTestResult(req *http.Request, ctx *Context) (a Args, t Temps, msg st
 		"files": parentFiles, "childFiles": childFiles, "currentFile": currentFile,
 		"currentResult": currentResult, "nextFile": nextFile, "nextResult": nextResult,
 		"results": results, "childFile": currentChild, "currentChildResult": currentChildResult,
-		"nextChildResult": nextChildResult,
+		"nextChildResult": nextChildResult, "childResults": childResults,
 	}
-	t = Temps{"analysis", "pager", "", "additionalanalysis", "junitadditional"}
+	t = Temps{"analysis", "pager", "", "additionalanalysis", ""}
 	if !isError(currentResult) || isError(nextResult) {
 		t[2] = currentResult.Template()
 	} else {
 		t[2] = nextResult.Template()
+	}
+	if !isError(currentChildResult) || isError(nextChildResult) {
+		t[4] = currentChildResult.AdditionalTemplate()
+	} else {
+		t[4] = nextChildResult.AdditionalTemplate()
 	}
 	return
 }

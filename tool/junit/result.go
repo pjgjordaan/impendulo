@@ -114,16 +114,29 @@ func (this *Result) Template() string {
 	return "junitresult"
 }
 
+func (this *Result) AdditionalTemplate() string {
+	return "junitadditional"
+}
+
+func (this *Result) GetType() string {
+	return this.Type
+}
+
 //NewResult creates a new junit.Result from provided XML data.
 func NewResult(fileId bson.ObjectId, name string, data []byte) (res *Result, err error) {
+	id := bson.NewObjectId()
+	report, err := NewReport(id, data)
+	if err != nil {
+		return
+	}
 	gridFS := len(data) > tool.MAX_SIZE
 	res = &Result{
-		Id:       bson.NewObjectId(),
+		Id:       id,
 		FileId:   fileId,
 		TestName: name,
 		GridFS:   gridFS,
 		Type:     NAME,
+		Report:   report,
 	}
-	res.Report, err = NewReport(res.Id, data)
 	return
 }

@@ -30,6 +30,7 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/jacoco"
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/util"
@@ -57,7 +58,7 @@ type (
 		srcDir   string
 		toolDir  string
 		compiler tool.Tool
-		test     tool.Tool
+		tools    []tool.Tool
 	}
 )
 
@@ -293,23 +294,15 @@ func (this *Processor) Compile(fileId bson.ObjectId, target *tool.Target) (err e
 func NewTestProcessor(testFile *project.File, parent *Processor) (proc *TestProcessor, err error) {
 	dir := filepath.Join(parent.rootDir, testFile.Id.Hex())
 	toolDir := filepath.Join(dir, "tools")
-	proc = &TestProcessor{
-		id:      testFile.Id,
-		results: testFile.Results,
-		rootDir: dir,
-		srcDir:  filepath.Join(dir, "src"),
-		toolDir: toolDir,
-	}
-	//Can't proceed without our compiler
-	proc.compiler, err = javac.New("")
+	compiler, err := javac.New("")
 	if err != nil {
 		return
 	}
-	testDir, err := config.JUNIT_TESTING.Path()
+	runnerDir, err := config.JUNIT_TESTING.Path()
 	if err != nil {
 		return
 	}
-	err = util.Copy(proc.toolDir, testDir)
+	err = util.Copy(toolDir, runnerDir)
 	if err != nil {
 		return
 	}
@@ -319,7 +312,30 @@ func NewTestProcessor(testFile *project.File, parent *Processor) (proc *TestProc
 		Package: testFile.Package,
 		Test:    testFile.Data,
 	}
-	proc.test, err = junit.New(test, proc.toolDir)
+	testTool, err := junit.New(test, toolDir)
+	if err != nil {
+		return
+	}
+	testDir := filepath.Join(toolDir, test.Id.Hex())
+	srcDir := filepath.Join(dir, "src")
+	err = os.MkdirAll(srcDir, util.DPERM)
+	if err != nil {
+		return
+	}
+	testTarget := tool.NewTarget(test.Name, test.Package, testDir, tool.JAVA)
+	cov, err := jacoco.New(dir, srcDir, testTarget)
+	if err != nil {
+		return
+	}
+	proc = &TestProcessor{
+		id:       test.Id,
+		results:  testFile.Results,
+		rootDir:  dir,
+		srcDir:   srcDir,
+		toolDir:  toolDir,
+		compiler: compiler,
+		tools:    []tool.Tool{testTool, cov},
+	}
 	return
 }
 
@@ -333,21 +349,25 @@ func (this *TestProcessor) Process(fileId bson.ObjectId) (err error) {
 	if err != nil {
 		return
 	}
-	err = this.Test(file, target)
-	return
-}
-
-func (this *TestProcessor) Test(file *project.File, target *tool.Target) (err error) {
-	name := file.Id.Hex()
-	if _, ok := this.results[name]; ok {
-		return
-	}
 	_, err = this.compiler.Run(file.Id, target)
-	//We want to store the result if it is a compilation error
 	if err != nil {
 		return
 	}
-	res, rerr := this.test.Run(file.Id, target)
+	for _, t := range this.tools {
+		rerr := this.Run(t, file, target)
+		if err != nil {
+			util.Log(rerr, LOG_PROCESSOR)
+		}
+	}
+	return
+}
+
+func (this *TestProcessor) Run(t tool.Tool, file *project.File, target *tool.Target) (err error) {
+	name := t.Name() + "-" + file.Id.Hex()
+	if _, ok := this.results[name]; ok {
+		return
+	}
+	res, rerr := t.Run(this.id, target)
 	if rerr != nil {
 		util.Log(rerr, LOG_PROCESSOR)
 		//Report any errors and store timeouts.
@@ -357,7 +377,6 @@ func (this *TestProcessor) Test(file *project.File, target *tool.Target) (err er
 			err = db.AddFileResult(file.Id, name, tool.ERROR)
 		}
 	} else if res != nil {
-		res.(*junit.Result).FileId = this.id
 		err = db.AddResult(res, name)
 	} else {
 		err = db.AddFileResult(this.id, name, tool.NORESULT)

@@ -28,13 +28,12 @@
 	  {{end}}
 	</ul>
       </li>
+      {{if .HasCharts}}
       {{$charts := chartNames $pid .Type}}
-      {{if gt (len $charts) 0}}
       <li class="dropdown">
 	<a class="dropdown-toggle" data-toggle="dropdown" href="#">
 	  Charts <span class="caret"></span>
 	</a>
-	{{$charts := chartNames $pid .Type}}
 	<ul class="dropdown-menu" role="menu">
 	  {{range $charts}}  
 	  <li>

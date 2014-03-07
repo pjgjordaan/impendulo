@@ -46,6 +46,7 @@ type (
 
 	//ToolResult is used to store tool result data.
 	ToolResult interface {
+		GetType() string
 		//Retrieves the result's db id.
 		GetId() bson.ObjectId
 		//Retrieves the file associated with the result's db id.
@@ -64,6 +65,7 @@ type (
 
 	//DisplayResult is used to display result reports.
 	DisplayResult interface {
+		GetType() string
 		//GetName
 		GetName() string
 		//GetReport
@@ -91,6 +93,9 @@ type (
 		Template() string
 	}
 
+	AdditionalResult interface {
+		AdditionalTemplate() string
+	}
 	BugResult interface {
 		Bug(id string, index int) (*Bug, error)
 	}
@@ -133,7 +138,7 @@ type (
 		Body string
 	}
 	//CompileType tells us what type of result compilation gave us.
-	CompileType int
+	CompileType uint
 )
 
 const (
@@ -177,9 +182,17 @@ func (this *ErrorResult) GetName() string {
 	return this.name
 }
 
+func (this *ErrorResult) GetType() string {
+	return ERROR
+}
+
 //GetReport
 func (this *ErrorResult) GetReport() Report {
 	return this.err.Error()
+}
+
+func (this *ErrorResult) AdditionalTemplate() string {
+	return "emptyadditionalresult"
 }
 
 //Template
@@ -189,15 +202,20 @@ func (this *ErrorResult) Template() string {
 
 //NewCodeResult
 func NewCodeResult(lang string, data []byte) *CodeResult {
+	fmt.Println(strings.TrimSpace(string(data)))
 	return &CodeResult{
 		Lang: strings.ToLower(lang),
 		Data: strings.TrimSpace(string(data)),
 	}
 }
 
+func (this *CodeResult) GetType() string {
+	return CODE
+}
+
 //GetName
 func (this *CodeResult) GetName() string {
-	return CODE
+	return this.GetType()
 }
 
 //GetReport
@@ -214,6 +232,10 @@ func NewSummaryResult() *SummaryResult {
 	return &SummaryResult{
 		summary: make([]*Summary, 0),
 	}
+}
+
+func (this *SummaryResult) GetType() string {
+	return SUMMARY
 }
 
 //GetName

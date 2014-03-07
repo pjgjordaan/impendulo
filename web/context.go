@@ -32,6 +32,7 @@ import (
 	"github.com/godfried/impendulo/project"
 	"labix.org/v2/mgo/bson"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -45,12 +46,14 @@ type (
 
 	//Browse is used to keep track of the user's browsing.
 	Browse struct {
-		IsUser                      bool
-		Pid, Sid                    bson.ObjectId
-		Uid, File, Result, View     string
-		Current, Next, DisplayCount int
-		Level                       Level
-		Type                        project.Type
+		IsUser                     bool
+		Pid, Sid                   bson.ObjectId
+		Uid, File, Result, View    string
+		ChildFile, ChildResult     string
+		Current, Next              int
+		CurrentChild, DisplayCount int
+		Level                      Level
+		Type, ChildType            project.Type
 	}
 	Level  int
 	Setter func(*http.Request) error
@@ -73,153 +76,211 @@ func init() {
 }
 
 //Close closes a session.
-func (ctx *Context) Close() {
-	ctx.save()
+func (c *Context) Close() {
+	c.save()
 }
 
 //save
-func (ctx *Context) save() {
-	ctx.Session.Values["browse"] = ctx.Browse
+func (c *Context) save() {
+	c.Session.Values["browse"] = c.Browse
 }
 
 //Save stores the current session.
-func (ctx *Context) Save(req *http.Request, buff *HttpBuffer) error {
-	ctx.save()
-	return ctx.Session.Save(req, buff)
+func (c *Context) Save(req *http.Request, buff *HttpBuffer) error {
+	c.save()
+	return c.Session.Save(req, buff)
 }
 
 //IsView checks whether the given view matches the user's current view.
-func (ctx *Context) IsView(view string) bool {
-	return ctx.Browse.View == view
+func (c *Context) IsView(v string) bool {
+	return c.Browse.View == v
 }
 
 //LoggedIn checks whether a user is signed in.
-func (ctx *Context) LoggedIn() bool {
-	_, err := ctx.Username()
+func (c *Context) LoggedIn() bool {
+	_, err := c.Username()
 	return err == nil
 }
 
 //Username retrieves the current user's username.
-func (ctx *Context) Username() (string, error) {
-	username, ok := ctx.Session.Values["user"].(string)
+func (c *Context) Username() (string, error) {
+	u, ok := c.Session.Values["user"].(string)
 	if !ok {
 		return "", fmt.Errorf("Could not retrieve user.")
 	}
-	return username, nil
+	return u, nil
 }
 
 //AddUser sets the currently signed in user.
-func (ctx *Context) AddUser(user string) {
-	ctx.Session.Values["user"] = user
+func (c *Context) AddUser(u string) {
+	c.Session.Values["user"] = u
 }
 
 //AddUser sets the currently signed in user.
-func (ctx *Context) RemoveUser() {
-	delete(ctx.Session.Values, "user")
+func (c *Context) RemoveUser() {
+	delete(c.Session.Values, "user")
 }
 
 //AddMessage adds a message to be displayed to the user.
-func (ctx *Context) AddMessage(msg string, isErr bool) {
-	var tipe string
+func (c *Context) AddMessage(m string, isErr bool) {
+	var t string
 	if isErr {
-		tipe = "error"
+		t = "error"
 	} else {
-		tipe = "success"
+		t = "success"
 	}
-	ctx.Session.AddFlash(msg, tipe)
+	c.Session.AddFlash(m, t)
 }
 
 //Errors retrieves all error messages.
-func (ctx *Context) Errors() []interface{} {
-	return ctx.Session.Flashes("error")
+func (c *Context) Errors() []interface{} {
+	return c.Session.Flashes("error")
 }
 
 //Successes retrieves all success messages.
-func (ctx *Context) Successes() []interface{} {
-	return ctx.Session.Flashes("success")
+func (c *Context) Successes() []interface{} {
+	return c.Session.Flashes("success")
 }
 
 //LoadContext loads a context from the session.
 func LoadContext(sess *sessions.Session) *Context {
-	ctx := &Context{Session: sess}
-	if val, ok := ctx.Session.Values["browse"]; ok {
-		ctx.Browse = val.(*Browse)
+	c := &Context{Session: sess}
+	if v, ok := c.Session.Values["browse"]; ok {
+		c.Browse = v.(*Browse)
 	} else {
-		ctx.Browse = new(Browse)
-		ctx.Browse.DisplayCount = 10
+		c.Browse = new(Browse)
+		c.Browse.DisplayCount = 10
+		c.Browse.Current = 0
+		c.Browse.Next = 0
+		c.Browse.CurrentChild = 0
 	}
-	if val, ok := ctx.Session.Values["additional"]; ok {
-		ctx.Additional = val.(*Browse)
-	} else {
-		ctx.Additional = new(Browse)
-		ctx.Additional.DisplayCount = 10
+	u, err := c.Username()
+	if err != nil {
+		return c
 	}
-	if uname, err := ctx.Username(); err == nil {
-		_, err = db.User(uname)
-		if err != nil {
-			ctx.RemoveUser()
-		}
+	_, err = db.User(u)
+	if err != nil {
+		c.RemoveUser()
 	}
-	return ctx
+	return c
 }
 
 func (b *Browse) SetDisplayCount(req *http.Request) error {
-	count, err := GetInt(req, "displaycount")
+	i, err := GetInt(req, "displaycount")
 	if err == nil {
-		b.DisplayCount = count + 10
+		b.DisplayCount = i + 10
 	} else {
 		b.DisplayCount = 10
 	}
 	return nil
 }
 
-func (b *Browse) SetUid(req *http.Request) (err error) {
-	uid, _, err := getUserId(req)
-	if err == nil {
-		b.Uid = uid
+func (b *Browse) SetUid(req *http.Request) error {
+	id, _, err := getUserId(req)
+	if err != nil {
+		return nil
 	}
-	return
+	b.Uid = id
+	return nil
 }
 
-func (b *Browse) SetSid(req *http.Request) (err error) {
-	sid, _, err := getSubId(req)
-	if err == nil {
-		b.Sid = sid
+func (b *Browse) SetSid(req *http.Request) error {
+	id, _, err := getSubId(req)
+	if err != nil {
+		return nil
 	}
-	return
+	b.Sid = id
+	return nil
 }
 
-func (b *Browse) SetPid(req *http.Request) (err error) {
+func (b *Browse) SetPid(req *http.Request) error {
 	pid, _, err := getProjectId(req)
-	if err == nil {
-		b.Pid = pid
+	if err != nil {
+		return nil
 	}
-	return
+	b.Pid = pid
+	return nil
 }
 
-func (b *Browse) SetResult(req *http.Request) (err error) {
-	res, err := GetString(req, "result")
-	if err == nil {
-		b.Result = res
+func (b *Browse) SetResult(req *http.Request) error {
+	r, err := GetString(req, "result")
+	if err != nil {
+		return nil
 	}
-	return
+	b.Result = r
+	return nil
 }
 
-func (b *Browse) SetFile(req *http.Request) (err error) {
-	f, err := GetString(req, "file")
+func (b *Browse) SetFile(req *http.Request) error {
+	n, err := GetString(req, "file")
+	if err != nil {
+		return nil
+	}
+	b.File = n
+	f, err := db.File(bson.M{db.SUBID: b.Sid, db.NAME: n}, bson.M{db.TYPE: 1})
+	if err != nil {
+		return err
+	}
+	b.Type = f.Type
+	return nil
+}
+
+func (b *Browse) SetFileIndices(req *http.Request) error {
+	files, err := Snapshots(b.Sid, b.File, b.Type)
+	if err != nil {
+		return err
+	}
+	b.Current, err = getCurrent(req, len(files)-1)
 	if err == nil {
-		b.File = f
-		f, err := db.File(bson.M{db.SUBID: b.Sid, db.NAME: f}, bson.M{db.TYPE: 1})
-		if err == nil {
-			b.Type = f.Type
+		b.Next, err = getNext(req, len(files)-1)
+		return err
+	}
+	t, err := strconv.ParseInt(req.FormValue("time"), 10, 64)
+	if err != nil {
+		return nil
+	}
+	for i, f := range files {
+		if f.Time == t {
+			b.Current = i
+			b.Next = (i + 1) % len(files)
+			return nil
 		}
 	}
-	return
+	return fmt.Errorf("no file found at time %d", t)
 }
 
-func SetContext(req *http.Request, setters ...Setter) error {
-	for _, setter := range setters {
-		if err := setter(req); err != nil {
+func (b *Browse) SetChild(req *http.Request) error {
+	r, err := GetString(req, "childresult")
+	if err == nil {
+		b.ChildResult = r
+	}
+	if b.ChildResult == "" {
+		rs, err := resultNames(b.Pid, childView)
+		if err == nil && len(rs) > 0 {
+			b.ChildResult = rs[0]
+		}
+	}
+	if b.ChildFile == "" {
+		b.ChildFile, err = testedFileName(b.Sid)
+		if err != nil {
+			return err
+		}
+		b.ChildType = project.SRC
+	}
+	files, err := Snapshots(b.Sid, b.ChildFile, b.ChildType)
+	if err != nil {
+		return err
+	}
+	if i, err := getIndex(req, "currentchild", len(files)-1); err == nil {
+		b.CurrentChild = i
+	}
+	return nil
+}
+
+func (b *Browse) Update(req *http.Request) error {
+	setters := []Setter{b.SetPid, b.SetUid, b.SetSid, b.SetResult, b.SetFile, b.SetDisplayCount, b.SetChild}
+	for _, s := range setters {
+		if err := s(req); err != nil {
 			return err
 		}
 	}

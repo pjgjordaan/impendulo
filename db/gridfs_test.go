@@ -60,7 +60,7 @@ func TestResultGridFS(t *testing.T) {
 			t.Error(err)
 		}
 		matcher := bson.M{"_id": res.GetId()}
-		dbRes, err := ToolResult(res.GetName(), matcher, nil)
+		dbRes, err := ToolResult(matcher, nil)
 		if err != nil {
 			t.Error(err)
 		}

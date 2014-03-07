@@ -12,6 +12,7 @@ type (
 		Name   string        "name"
 		Report *Report       "report"
 		GridFS bool          "gridfs"
+		Type   string        "type"
 	}
 )
 
@@ -56,6 +57,10 @@ func (this *Result) Template() string {
 	return "gccresult"
 }
 
+func (this *Result) GetType() string {
+	return this.Type
+}
+
 func NewResult(fileId bson.ObjectId, data []byte) (ret tool.ToolResult, err error) {
 	gridFS := len(data) > tool.MAX_SIZE
 	id := bson.NewObjectId()
@@ -69,6 +74,7 @@ func NewResult(fileId bson.ObjectId, data []byte) (ret tool.ToolResult, err erro
 		Name:   NAME,
 		Report: report,
 		GridFS: gridFS,
+		Type:   NAME,
 	}
 	return
 }

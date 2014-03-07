@@ -43,6 +43,7 @@ type (
 		Name   string        "name"
 		Report *Report       "report"
 		GridFS bool          "gridfs"
+		Type   string        "type"
 	}
 )
 
@@ -54,6 +55,10 @@ func (this *Result) SetReport(report tool.Report) {
 	} else {
 		this.Report = report.(*Report)
 	}
+}
+
+func (this *Result) GetType() string {
+	return this.Type
 }
 
 //OnGridFS
@@ -146,6 +151,7 @@ func NewResult(fileId bson.ObjectId, data []byte) (res *Result, err error) {
 		FileId: fileId,
 		Name:   NAME,
 		GridFS: gridFS,
+		Type:   NAME,
 	}
 	res.Report, err = NewReport(res.Id, data)
 	return

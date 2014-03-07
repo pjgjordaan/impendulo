@@ -118,6 +118,10 @@ func (this *Result) Template() string {
 	return "junituserresult"
 }
 
+func (this *Result) GetType() string {
+	return this.Type
+}
+
 func New(testFileId bson.ObjectId, junitRes tool.ToolResult) (res *Result, err error) {
 	res = &Result{
 		Id:         bson.NewObjectId(),

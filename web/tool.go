@@ -36,6 +36,7 @@ import (
 	"github.com/godfried/impendulo/tool/diff"
 	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/tool/gcc"
+	"github.com/godfried/impendulo/tool/jacoco"
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
@@ -113,6 +114,9 @@ func tools(projectId bson.ObjectId) (ret []string, err error) {
 				name, _ := util.Extension(test.Name)
 				ret = append(ret, name)
 			}
+		}
+		if db.Contains(db.TESTS, bson.M{db.PROJECTID: projectId, db.TYPE: junit.USER}) {
+			ret = append(ret, jacoco.NAME)
 		}
 	case tool.C:
 		ret = []string{mk.NAME, gcc.NAME}
@@ -350,27 +354,30 @@ func RunTools(req *http.Request, ctx *Context) (msg string, err error) {
 	} else {
 		runAll = true
 	}
-	hasUserTest := false
+	childTools := make([]string, 0, len(tools))
+	baseTools := make([]string, 0, len(tools))
 	for _, t := range tools {
-		if isUserTest(t, projectId) {
-			hasUserTest = true
+		if isChildTool(t, projectId) {
+			childTools = append(childTools, t)
+		} else {
+			baseTools = append(baseTools, t)
 		}
 	}
-	redoSubmissions(submissions, tools, runAll, hasUserTest)
+	redoSubmissions(submissions, baseTools, childTools, runAll)
 	msg = "Successfully started running tools on submissions."
 	return
 }
 
-func isUserTest(name string, projectId bson.ObjectId) bool {
-	return db.Contains(db.TESTS, bson.M{db.PROJECTID: projectId, db.NAME: name})
+func isChildTool(name string, projectId bson.ObjectId) bool {
+	return name == jacoco.NAME || db.Contains(db.TESTS, bson.M{db.PROJECTID: projectId, db.NAME: name})
 }
 
-func redoSubmissions(submissions []*project.Submission, tools []string, runAll, userTest bool) {
+func redoSubmissions(submissions []*project.Submission, tools, childTools []string, runAll bool) {
 	selector := bson.M{db.DATA: 0}
 	for _, submission := range submissions {
 		var srcs []*project.File
 		var err error
-		if userTest {
+		if len(childTools) > 0 {
 			srcs, err = db.Files(bson.M{db.SUBID: submission.Id, db.TYPE: project.SRC}, bson.M{db.ID: 1})
 			if err != nil {
 				util.Log(err)
@@ -384,8 +391,8 @@ func redoSubmissions(submissions []*project.Submission, tools []string, runAll, 
 		}
 		for _, file := range files {
 			runTools(file, tools, runAll)
-			if file.Type == project.TEST && userTest {
-				runUserTests(file, srcs, runAll)
+			if file.Type == project.TEST && len(childTools) > 0 {
+				runChildTools(file, srcs, childTools, runAll)
 			}
 		}
 		err = processing.RedoSubmission(submission.Id)
@@ -422,24 +429,26 @@ func runTools(file *project.File, tools []string, runAll bool) (err error) {
 	return
 }
 
-func runUserTests(test *project.File, srcs []*project.File, runAll bool) (err error) {
+func runChildTools(test *project.File, srcs []*project.File, childTools []string, runAll bool) (err error) {
 	for _, s := range srcs {
-		key := s.Id.Hex()
-		resultVal, ok := test.Results[key]
-		if !ok {
-			continue
-		}
-		resultId, isId := resultVal.(bson.ObjectId)
-		if !runAll && isId {
-			continue
-		}
-		delete(test.Results, key)
-		if !isId {
-			continue
-		}
-		err = db.RemoveById(db.RESULTS, resultId)
-		if err != nil {
-			util.Log(err)
+		for _, t := range childTools {
+			key := t + "-" + s.Id.Hex()
+			resultVal, ok := test.Results[key]
+			if !ok {
+				continue
+			}
+			resultId, isId := resultVal.(bson.ObjectId)
+			if !runAll && isId {
+				continue
+			}
+			delete(test.Results, key)
+			if !isId {
+				continue
+			}
+			err = db.RemoveById(db.RESULTS, resultId)
+			if err != nil {
+				util.Log(err)
+			}
 		}
 	}
 	change := bson.M{db.SET: bson.M{db.RESULTS: test.Results}}
@@ -451,58 +460,89 @@ func runUserTests(test *project.File, srcs []*project.File, runAll bool) (err er
 }
 
 //GetResult retrieves a DisplayResult for a given file and result name.
-func GetResult(resultName string, fileId bson.ObjectId) (res tool.DisplayResult, err error) {
-	var file *project.File
-	matcher := bson.M{db.ID: fileId}
-	file, err = db.File(matcher, nil)
+func GetResult(name string, fileId bson.ObjectId) (tool.DisplayResult, error) {
+	m := bson.M{db.ID: fileId}
+	f, err := db.File(m, nil)
 	if err != nil {
-		return
+		return nil, err
 	}
-	sub, err := db.Submission(bson.M{db.ID: file.SubId}, nil)
+	s, err := db.Submission(bson.M{db.ID: f.SubId}, nil)
 	if err != nil {
-		return
+		return nil, err
 	}
-	switch resultName {
+	switch name {
 	case tool.CODE:
-		var p *project.Project
-		p, err = db.Project(bson.M{db.ID: sub.ProjectId}, nil)
+		p, err := db.Project(bson.M{db.ID: s.ProjectId}, nil)
 		if err != nil {
-			return
+			return nil, err
 		}
-		res = tool.NewCodeResult(p.Lang, file.Data)
+		return tool.NewCodeResult(p.Lang, f.Data), nil
 	case diff.NAME:
-		res = diff.NewResult(file)
+		return diff.NewResult(f), nil
 	case tool.SUMMARY:
-		res = tool.NewSummaryResult()
+		r := tool.NewSummaryResult()
 		//Load summary for each available result.
-		for name, resid := range file.Results {
-			var currentRes tool.ToolResult
-			currentRes, err = db.ToolResult(name, bson.M{db.ID: resid}, nil)
+		for _, id := range f.Results {
+			cur, err := db.ToolResult(bson.M{db.ID: id}, nil)
 			if err != nil {
-				return
+				return nil, err
 			}
-			res.(*tool.SummaryResult).AddSummary(currentRes)
+			r.AddSummary(cur)
 		}
+		return r, nil
 	default:
-		ival, ok := file.Results[resultName]
+		ival, ok := f.Results[name]
 		if !ok {
-			if bson.IsObjectIdHex(resultName) {
-				resultName = "unit tests."
+			if strings.HasPrefix(junit.NAME, name) {
+				name = "unit tests"
+			} else if strings.HasPrefix(jacoco.NAME, name) {
+				name = "jacoco test coverage"
 			}
-			res = tool.NewErrorResult(tool.NORESULT, resultName)
-			return
+			return tool.NewErrorResult(tool.NORESULT, name), nil
 		}
-		switch val := ival.(type) {
+		switch v := ival.(type) {
 		case bson.ObjectId:
 			//Retrieve result from the db.
-			matcher = bson.M{db.ID: val}
-			res, err = db.DisplayResult(resultName, matcher, nil)
+			return db.DisplayResult(bson.M{db.ID: v}, nil)
 		case string:
 			//Error, so create new error result.
-			res = tool.NewErrorResult(val, resultName)
-		default:
-			res = tool.NewErrorResult(tool.NORESULT, resultName)
+			return tool.NewErrorResult(v, name), nil
 		}
 	}
-	return
+	return tool.NewErrorResult(tool.NORESULT, name), nil
+}
+
+func GetAdditonalResult(toolName, suffix string, fileId bson.ObjectId) (tool.AdditionalResult, error) {
+	var name string
+	switch toolName {
+	case junit.NAME:
+		f, err := db.File(bson.M{db.ID: fileId}, nil)
+		if err != nil {
+			return nil, err
+		}
+		name, _ = util.Extension(f.Name)
+	case jacoco.NAME:
+		name = jacoco.NAME
+	default:
+		return nil, fmt.Errorf("unsupported tool %s", toolName)
+	}
+	name += "-" + suffix
+	matcher := bson.M{db.ID: fileId}
+	f, err := db.File(matcher, nil)
+	if err != nil {
+		return nil, err
+	}
+	ival, ok := f.Results[name]
+	if !ok {
+		return tool.NewErrorResult(tool.NORESULT, toolName), err
+	}
+	switch v := ival.(type) {
+	case bson.ObjectId:
+		//Retrieve result from the db.
+		return db.AdditionalResult(bson.M{db.ID: v}, nil)
+	case string:
+		//Error, so create new error result.
+		return tool.NewErrorResult(v, toolName), nil
+	}
+	return tool.NewErrorResult(tool.NORESULT, toolName), nil
 }

@@ -33,8 +33,10 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/diff"
+	"github.com/godfried/impendulo/tool/jacoco"
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/jpf"
+	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
@@ -49,6 +51,7 @@ import (
 type (
 	//Args represents arguments passed to html templates or to template.Execute.
 	Args map[string]interface{}
+	view uint
 )
 
 var (
@@ -60,6 +63,8 @@ var (
 		"base":            filepath.Base,
 		"shortName":       util.ShortName,
 		"sum":             sum,
+		"percent":         percent,
+		"round":           round,
 		"langs":           tool.Langs,
 		"submissionLang":  submissionLang,
 		"submissionCount": submissionCount,
@@ -87,12 +92,8 @@ var (
 		"langProjects": func(lang string) ([]*project.Project, error) {
 			return db.Projects(bson.M{db.LANG: lang}, nil, db.NAME)
 		},
-		"analysisNames": func(projectId bson.ObjectId, tipe project.Type) ([]string, error) {
-			return resultNames(projectId, tipe, true)
-		},
-		"chartNames": func(projectId bson.ObjectId, tipe project.Type) ([]string, error) {
-			return resultNames(projectId, tipe, false)
-		},
+		"analysisNames":         analysisNames,
+		"chartNames":            chartNames,
 		"users":                 func() ([]*user.User, error) { return db.Users(nil, user.ID) },
 		"skeletons":             skeletons,
 		"displayResult":         dispRes,
@@ -112,29 +113,50 @@ var (
 		"editables":             func() []string { return []string{"Project", "User", "Submission", "File"} },
 		"permissions":           user.Permissions,
 		"file":                  func(id bson.ObjectId) (*project.File, error) { return db.File(bson.M{db.ID: id}, nil) },
+		"toTitle":               util.Title,
 	}
 	templateDir   string
 	baseTemplates []string
 )
 
 const (
-	PAGER_SIZE = 10
+	PAGER_SIZE      = 10
+	testView   view = iota
+	analysisView
+	chartView
+	childView
 )
 
-func resultNames(projectId bson.ObjectId, fileType project.Type, analysis bool) (names []string, err error) {
-	switch fileType {
+func analysisNames(projectId bson.ObjectId, t project.Type) ([]string, error) {
+	switch t {
 	case project.TEST:
-		if analysis {
-			names = []string{javac.NAME, tool.CODE, diff.NAME}
-		}
+		return resultNames(projectId, testView)
 	case project.SRC:
-		if analysis {
-			names, err = db.AllResultNames(projectId)
-		} else {
-			names, err = db.ChartResultNames(projectId)
-		}
+		return resultNames(projectId, analysisView)
+	}
+	return nil, fmt.Errorf("unsupported file type %s", t)
+}
+
+func chartNames(projectId bson.ObjectId, t project.Type) ([]string, error) {
+	switch t {
+	case project.SRC:
+		return resultNames(projectId, chartView)
+	}
+	return nil, fmt.Errorf("unsupported file type %s", t)
+}
+
+func resultNames(projectId bson.ObjectId, v view) (names []string, err error) {
+	switch v {
+	case testView:
+		names = []string{javac.NAME, tool.CODE, diff.NAME}
+	case analysisView:
+		names, err = db.AllResultNames(projectId)
+	case chartView:
+		names, err = db.ChartResultNames(projectId)
+	case childView:
+		names = []string{junit.NAME, jacoco.NAME}
 	default:
-		err = fmt.Errorf("Unsupported file type %s", fileType)
+		err = fmt.Errorf("Unsupported view type %d", v)
 	}
 	return
 }
@@ -200,8 +222,8 @@ func submissionFiles(id bson.ObjectId) (files []*project.File, err error) {
 }
 
 //isError checks whether a result is an ErrorResult.
-func isError(result tool.DisplayResult) bool {
-	_, ok := result.(*tool.ErrorResult)
+func isError(i interface{}) bool {
+	_, ok := i.(*tool.ErrorResult)
 	return ok
 }
 
@@ -283,11 +305,40 @@ func submissionCount(id interface{}) (int, error) {
 }
 
 //sum calculates the sum of vals.
-func sum(vals ...int) (ret int) {
-	for _, val := range vals {
-		ret += val
+func sum(vals ...interface{}) (int, error) {
+	s := 0
+	for _, i := range vals {
+		v, err := util.Int(i)
+		if err != nil {
+			return 0, err
+		}
+		s += v
 	}
-	return
+	return s, nil
+}
+
+func percent(a, b interface{}) (float64, error) {
+	c, err := util.Float64(a)
+	if err != nil {
+		return 0.0, err
+	}
+	d, err := util.Float64(b)
+	if err != nil {
+		return 0.0, err
+	}
+	return d / c * 100.0, nil
+}
+
+func round(i, p interface{}) (float64, error) {
+	x, err := util.Float64(i)
+	if err != nil {
+		return 0.0, err
+	}
+	prec, err := util.Int(p)
+	if err != nil {
+		return 0.0, err
+	}
+	return util.Round(x, prec), nil
 }
 
 //setBreaks replaces newlines with HTML break tags.

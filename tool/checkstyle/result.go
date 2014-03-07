@@ -44,8 +44,13 @@ type (
 		Name   string        "name"
 		Report *Report       "report"
 		GridFS bool          "gridfs"
+		Type   string        "type"
 	}
 )
+
+func (this *Result) GetType() string {
+	return this.Type
+}
 
 //SetReport is used to change this result's report. This comes in handy
 //when putting data into/getting data out of GridFS
@@ -139,13 +144,19 @@ func (this *Result) Bug(id string, index int) (bug *tool.Bug, err error) {
 //Any errors returned will be XML errors due to extracting a Report from
 //data.
 func NewResult(fileId bson.ObjectId, data []byte) (res *Result, err error) {
+	id := bson.NewObjectId()
+	report, err := NewReport(id, data)
+	if err != nil {
+		return
+	}
 	gridFS := len(data) > tool.MAX_SIZE
 	res = &Result{
-		Id:     bson.NewObjectId(),
+		Id:     id,
 		FileId: fileId,
 		Name:   NAME,
 		GridFS: gridFS,
+		Type:   NAME,
+		Report: report,
 	}
-	res.Report, err = NewReport(res.Id, data)
 	return
 }

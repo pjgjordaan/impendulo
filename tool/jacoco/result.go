@@ -22,34 +22,27 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package findbugs
+package jacoco
 
 import (
-	"fmt"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
-	"strconv"
-)
-
-const (
-	NAME = "Findbugs"
 )
 
 type (
-	//Result is a tool.ToolResult and a tool.DisplayResult.
-	//It is used to store the output of running Findbugs.
+	//Result is an implementation of ToolResult, DisplayResult
+	//and ChartResult for Jacoco coverage results.
 	Result struct {
-		Id     bson.ObjectId "_id"
-		FileId bson.ObjectId "fileid"
-		Name   string        "name"
-		Report *Report       "report"
-		GridFS bool          "gridfs"
-		Type   string        "type"
+		Id       bson.ObjectId "_id"
+		FileId   bson.ObjectId "fileid"
+		TestName string        "name"
+		Report   *Report       "report"
+		GridFS   bool          "gridfs"
+		Type     string        "type"
 	}
 )
 
-//SetReport is used to change this result's report. This comes in handy
-//when putting data into/getting data out of GridFS
+//SetReport
 func (this *Result) SetReport(report tool.Report) {
 	if report == nil {
 		this.Report = nil
@@ -63,15 +56,9 @@ func (this *Result) OnGridFS() bool {
 	return this.GridFS
 }
 
-//String
-func (this *Result) String() string {
-	return fmt.Sprintf("Id: %q; FileId: %q; TestName: %s; \n Report: %s",
-		this.Id, this.FileId, this.Name, this.Report)
-}
-
 //GetName
 func (this *Result) GetName() string {
-	return this.Name
+	return NAME
 }
 
 //GetId
@@ -86,10 +73,8 @@ func (this *Result) GetFileId() bson.ObjectId {
 
 //Summary
 func (this *Result) Summary() *tool.Summary {
-	body := fmt.Sprintf("Bugs: %d", this.Report.Summary.BugCount)
 	return &tool.Summary{
 		Name: this.GetName(),
-		Body: body,
 	}
 }
 
@@ -98,59 +83,36 @@ func (this *Result) GetReport() tool.Report {
 	return this.Report
 }
 
-//ChartVals
-func (this *Result) ChartVals() []*tool.ChartVal {
-	return []*tool.ChartVal{
-		&tool.ChartVal{"All", this.Report.Summary.BugCount, true, this.FileId},
-		&tool.ChartVal{"Priority 1", this.Report.Summary.Priority1, false, this.FileId},
-		&tool.ChartVal{"Priority 2", this.Report.Summary.Priority2, false, this.FileId},
-		&tool.ChartVal{"Priority 3", this.Report.Summary.Priority3, false, this.FileId},
-	}
+func (this *Result) Success() bool {
+	return this.Report != nil
 }
 
 func (this *Result) Template() string {
-	return "findbugsresult"
+	return "jacocoresult"
 }
 
-func (this *Result) Bug(id string, index int) (bug *tool.Bug, err error) {
-	if index < 0 || index > len(this.Report.Instances) {
-		err = fmt.Errorf("Index %d out of bounds for Findbugs Bugs array.", index)
-		return
-	}
-	instance := this.Report.Instances[index]
-	if bId := instance.Id.Hex(); bId != id {
-		err = fmt.Errorf("Provided id %s does not Findbugs bug id %s.", id, bId)
-		return
-	}
-	content := []interface{}{
-		this.Report.CategoryMap[instance.Category].Description,
-		this.Report.PatternMap[instance.Type].Description,
-		"Priority: " + strconv.Itoa(instance.Priority) + ", " +
-			"Rank: " + strconv.Itoa(instance.Rank),
-	}
-	bug = tool.NewBug(this, id, content, instance.Line.Start, instance.Line.End)
-	return
+func (this *Result) AdditionalTemplate() string {
+	return "jacocoresult"
 }
 
 func (this *Result) GetType() string {
 	return this.Type
 }
 
-//NewResult
-func NewResult(fileId bson.ObjectId, data []byte) (res *Result, err error) {
+func NewResult(fileId bson.ObjectId, name string, xml, html []byte) (res *Result, err error) {
 	id := bson.NewObjectId()
-	report, err := NewReport(id, data)
+	report, err := NewReport(id, xml, html)
 	if err != nil {
 		return
 	}
-	gridFS := len(data) > tool.MAX_SIZE
+	gridFS := len(xml)+len(html) > tool.MAX_SIZE
 	res = &Result{
-		Id:     id,
-		FileId: fileId,
-		Name:   NAME,
-		GridFS: gridFS,
-		Type:   NAME,
-		Report: report,
+		Id:       id,
+		FileId:   fileId,
+		TestName: name,
+		GridFS:   gridFS,
+		Report:   report,
+		Type:     NAME,
 	}
 	return
 }

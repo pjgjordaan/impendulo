@@ -58,7 +58,7 @@ func TestResult(t *testing.T) {
 		t.Error(err)
 	}
 	matcher := bson.M{"_id": res.GetId()}
-	dbRes, err := ToolResult(res.GetName(), matcher, nil)
+	dbRes, err := ToolResult(matcher, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -75,6 +75,7 @@ func javacResult(fileId bson.ObjectId, gridFS bool) *javac.Result {
 		Name:   javac.NAME,
 		Report: javacReport(id),
 		GridFS: gridFS,
+		Type:   javac.NAME,
 	}
 }
 
@@ -86,6 +87,7 @@ func checkstyleResult(fileId bson.ObjectId, gridFS bool) *checkstyle.Result {
 		Name:   checkstyle.NAME,
 		Report: checkstyleReport(id),
 		GridFS: gridFS,
+		Type:   checkstyle.NAME,
 	}
 }
 
@@ -97,6 +99,7 @@ func findbugsResult(fileId bson.ObjectId, gridFS bool) *findbugs.Result {
 		Name:   findbugs.NAME,
 		Report: findbugsReport(id),
 		GridFS: gridFS,
+		Type:   findbugs.NAME,
 	}
 }
 

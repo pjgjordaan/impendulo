@@ -1,0 +1,43 @@
+{{define "additionalresult"}}
+{{$class := .Report.Class .state.ChildFile}}
+{{$addr := address $class}}
+<div class="panel-group" id="jacocoaccordion{{$addr}}">
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <a class="accordion-toggle" data-toggle="collapse"
+	 data-parent="#jacocoaccordion{{$addr}}" href="#summary{{$addr}}">
+	<h4>Coverage Summary<h4>
+      </a>
+    </div>
+    <div id="summary{{$addr}}" class="panel-collapse collapse in">
+      <div class="accordion-inner">
+	<dl class="dl-horizontal meter-dl">
+	  {{range $class.Counters}}
+	  {{$total := sum .Covered .Missed}}
+	  {{$p := percent $total .Covered}}
+	  <dt class="meter-dt">{{toTitle .Type}}</dt><dd class="meter-dd">{{.Covered}}/{{$total}}</dd> 
+	  <div class="meter green nostripes">
+	    <span style="width: {{$p}}%">
+	      <strong style="margin-left:10px;">{{round $p 2}}%</strong>
+	    </span>
+	  </div>
+	  {{end}}
+	</dl>
+      </div>
+    </div>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <a class="accordion-toggle" data-toggle="collapse"
+	 data-parent="#jacocoaccordion{{$addr}}" href="#code{{$addr}}">
+	<h4>Code Coverage<h4>
+      </a>
+    </div>
+    <div id="code{{$addr}}" class="panel-collapse collapse in">
+      <div class="accordion-inner">
+	{{html (string .Report.HTML)}}
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

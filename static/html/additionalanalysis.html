@@ -2,13 +2,27 @@
 {{$currentFile := .childFile}}
 {{$currentResult := .currentChildResult}}
 {{$nextResult := .nextChildResult}}
-{{$fileName := .ctx.Additional.File}}
-{{$current := .ctx.Additional.Current}}
+{{$fileName := .ctx.Browse.ChildFile}}
+{{$current := .ctx.Browse.CurrentChild}}
 {{$files := .childFiles}}
 {{$sid := .ctx.Browse.Sid}}
 {{$lang := submissionLang $sid}} 
+{{$testResults := .childResults}}
 <h4 class="text-center code-popover-h" >
-  <small>tool</small> Testing 
+  <small class="dropdown">
+    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+      tool <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu" role="menu">
+      {{range $testResults}}  
+      <li>
+	<a href="displaytestresult?childresult={{.}}">
+	  {{.}}
+	</a>
+      </li>
+      {{end}}
+    </ul>
+</small> {{.ctx.Browse.ChildResult}}
   <a href="#code_wrapper" rel="codepopover">
     {{$fileName}}
   </a>
@@ -59,7 +73,7 @@
   </ul>
 </div>
 <div class="row">
-  {{$args := args "state" .ctx.Additional}}
+  {{$args := args "state" .ctx.Browse}}
   <div class="col-md-6">
     {{if isError $currentResult}}
     <p class="text-danger">{{$currentResult.GetReport}}</p>

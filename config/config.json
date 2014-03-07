@@ -23,7 +23,8 @@
 	"pmd_cfg": "/home/godfried/dev/go/src/github.com/godfried/impendulo/config/pmd_config.json"
     },
     "dir": {
-	"jpf_home": "/home/godfried/dev/java/jpf/jpf-core"
+	"jpf_home": "/home/godfried/dev/java/jpf/jpf-core",
+	"jacoco_home": "/home/godfried/applications/jacoco"
     },
     "archive":{
 	"intlola":"/home/godfried/.impendulo/intlola.zip"

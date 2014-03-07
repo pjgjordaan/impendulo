@@ -91,6 +91,7 @@ const (
 	JPF_HOME      Dir = "jpf_home"
 	JPF_RUNNER    Dir = "jpf_runner"
 	JUNIT_TESTING Dir = "junit_testing"
+	JACOCO_HOME   Dir = "jacoco_home"
 
 	//Archives
 	INTLOLA Archive = "intlola"

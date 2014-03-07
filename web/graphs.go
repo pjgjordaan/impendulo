@@ -100,8 +100,8 @@ func LoadChart(resultName string, files []*project.File) (ChartData, error) {
 }
 
 func addAll(chart *Chart, cur, prev *project.File) error {
-	for name, id := range cur.Results {
-		result, err := db.ChartResult(name, bson.M{db.ID: id}, nil)
+	for _, id := range cur.Results {
+		result, err := db.ChartResult(bson.M{db.ID: id}, nil)
 		if err != nil {
 			continue
 		}
@@ -114,7 +114,7 @@ func addAll(chart *Chart, cur, prev *project.File) error {
 }
 
 func addSingle(chart *Chart, cur, prev *project.File, resultName string) error {
-	result, err := db.ChartResult(resultName, bson.M{db.ID: cur.Results[resultName]}, nil)
+	result, err := db.ChartResult(bson.M{db.ID: cur.Results[resultName]}, nil)
 	if err != nil {
 		return nil
 	}
