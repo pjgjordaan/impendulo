@@ -28,7 +28,6 @@ import (
 	"fmt"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
-	"strconv"
 )
 
 const (
@@ -101,10 +100,10 @@ func (this *Result) GetReport() tool.Report {
 //ChartVals
 func (this *Result) ChartVals() []*tool.ChartVal {
 	return []*tool.ChartVal{
-		&tool.ChartVal{"All", this.Report.Summary.BugCount, true, this.FileId},
-		&tool.ChartVal{"Priority 1", this.Report.Summary.Priority1, false, this.FileId},
-		&tool.ChartVal{"Priority 2", this.Report.Summary.Priority2, false, this.FileId},
-		&tool.ChartVal{"Priority 3", this.Report.Summary.Priority3, false, this.FileId},
+		&tool.ChartVal{"All", float64(this.Report.Summary.BugCount), true, this.FileId},
+		&tool.ChartVal{"Priority 1", float64(this.Report.Summary.Priority1), false, this.FileId},
+		&tool.ChartVal{"Priority 2", float64(this.Report.Summary.Priority2), false, this.FileId},
+		&tool.ChartVal{"Priority 3", float64(this.Report.Summary.Priority3), false, this.FileId},
 	}
 }
 
@@ -112,6 +111,7 @@ func (this *Result) Template() string {
 	return "findbugsresult"
 }
 
+/*
 func (this *Result) Bug(id string, index int) (bug *tool.Bug, err error) {
 	if index < 0 || index > len(this.Report.Instances) {
 		err = fmt.Errorf("Index %d out of bounds for Findbugs Bugs array.", index)
@@ -131,6 +131,7 @@ func (this *Result) Bug(id string, index int) (bug *tool.Bug, err error) {
 	bug = tool.NewBug(this, id, content, instance.Line.Start, instance.Line.End)
 	return
 }
+*/
 
 func (this *Result) GetType() string {
 	return this.Type

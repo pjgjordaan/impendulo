@@ -1,48 +1,43 @@
-{{define "additional"}}
+{{define "analysis"}}
 {{$currentFile := .childFile}}
 {{$currentResult := .currentChildResult}}
 {{$nextResult := .nextChildResult}}
 {{$fileName := .ctx.Browse.ChildFile}}
 {{$current := .ctx.Browse.CurrentChild}}
-{{$files := .childFiles}}
+{{$childFiles := .childFiles}}
 {{$sid := .ctx.Browse.Sid}}
 {{$lang := submissionLang $sid}} 
 {{$testResults := .childResults}}
 <h4 class="text-center code-popover-h" >
-  <small class="dropdown">
-    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-      tool <span class="caret"></span>
-    </a>
-    <ul class="dropdown-menu" role="menu">
-      {{range $testResults}}  
-      <li>
-	<a href="displaytestresult?childresult={{.}}">
-	  {{.}}
-	</a>
-      </li>
-      {{end}}
-    </ul>
-</small> {{.ctx.Browse.ChildResult}}
-  <a href="#code_wrapper" rel="codepopover">
+  <small>tool</small> {{.ctx.Browse.Result}}
+  <a href="#code_wrapper" id="codepopoverlink">
     {{$fileName}}
   </a>
   @ {{date $currentFile.Time}}
 </h4>
-<div id="code_wrapper" style="display: none" class="popover-code">
+<div id="code_wrapper" class="popover-code hidden">
   <pre class="brush: {{$lang}}; class-name: 'popover-code'">
-    {{string $currentFile.Data}}+ 
+    {{string $currentFile.Data}}
   </pre>
 </div>
 <script type="text/javascript">
   highlight(undefined);
-  addPopover('codepopover', 'code_wrapper');
+  addPopover('codepopoverlink', 'code_wrapper');
 </script>
-{{$sliced := slice $files $current}}
-{{$adjustment := adjustment $files $current}}
+<div id="chart" class="chart" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <div id="chart-tooltip" class="tooltip"></div>
+</div>
+<script>
+  {{$tc := chartTime (index .files .ctx.Browse.Current)}}
+  {{$tn := chartTime (index .files .ctx.Browse.Next)}}
+  ajaxChart({{.ctx.Browse.Sid.Hex}},{{.ctx.Browse.File}},{{.ctx.Browse.Result}},{{$tc}},{{$tn}},{{$currentFile.Id.Hex}});
+</script>
+{{$sliced := slice $childFiles $current}}
+{{$adjustment := adjustment $childFiles $current}}
 <div id="wrapper" style="text-align: center">    
   <ul id="filepager" class="pagination pagination-centre">
     <li>
-      <a href="{{displayTestResult (sum $current -1)}}">
+      <a href="displaychildresult?currentchild={{(sum $current -1)}}">
 	&laquo;
       </a>
     </li>
@@ -52,21 +47,21 @@
     {{if eq $actual $current}} 
     <li class="active">
       <a id="file{{$actual}}"
-	 href="{{displayTestResult $actual}}">
+	 href="displaychildresult?currentchild={{$actual}}">
 	{{$actualNext}}
       </a>
     </li>
     {{else}}
     <li>
       <a id="file{{$actual}}"
-	 href="{{displayTestResult $actual}}">
+	 href="displaychildresult?currentchild={{$actual}}">
 	{{$actualNext}}
       </a>
     </li>
     {{end}}
     {{end}}
     <li>
-      <a href="{{displayTestResult (sum $current 1)}}">
+      <a href="displaychildresult?currentchild=(sum $current 1)}}">
 	&raquo;
       </a>
     </li>
@@ -79,7 +74,7 @@
     <p class="text-danger">{{$currentResult.GetReport}}</p>
     {{else}}
     {{$args := insert $args "Report" $currentResult.GetReport}}
-    {{template "additionalresult"  $args}}
+    {{template "result"  $args}}
     {{end}}
   </div>
   <div class="col-md-6">
@@ -87,8 +82,9 @@
     <p class="text-danger">{{$nextResult.GetReport}}</p>
     {{else}}
     {{$args := insert $args "Report" $nextResult.GetReport}}
-    {{template "additionalresult"  $args}}
+    {{template "result"  $args}}
     {{end}}
   </div>
 </div>
 {{end}}
+

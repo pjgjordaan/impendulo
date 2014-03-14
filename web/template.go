@@ -96,16 +96,11 @@ var (
 		"chartNames":            chartNames,
 		"users":                 func() ([]*user.User, error) { return db.Users(nil, user.ID) },
 		"skeletons":             skeletons,
-		"displayResult":         dispRes,
-		"displayTestResult":     dispTestRes,
-		"displayResultMore":     dispResMore,
-		"displayCodeBug":        displayCodeBug,
 		"getFiles":              func(subId bson.ObjectId) string { return fmt.Sprintf("getfiles?subid=%s", subId.Hex()) },
 		"getUserChart":          func(user string) string { return fmt.Sprintf("getsubmissionschart?userid=%s", user) },
 		"getProjectChart":       func(id bson.ObjectId) string { return fmt.Sprintf("getsubmissionschart?projectid=%s", id.Hex()) },
 		"getUserSubmissions":    func(user string) string { return fmt.Sprintf("getsubmissions?userid=%s", user) },
 		"getProjectSubmissions": func(id bson.ObjectId) string { return fmt.Sprintf("getsubmissions?projectid=%s", id.Hex()) },
-		"singleChart":           singleChart,
 		"compareChart":          compareChart,
 		"collections":           db.Collections,
 		"overviewChart":         overviewChart,
@@ -114,6 +109,8 @@ var (
 		"permissions":           user.Permissions,
 		"file":                  func(id bson.ObjectId) (*project.File, error) { return db.File(bson.M{db.ID: id}, nil) },
 		"toTitle":               util.Title,
+		"addSpaces":             func(s string) string { return strings.Join(util.SplitTitles(s), " ") },
+		"chartTime":             chartTime,
 	}
 	templateDir   string
 	baseTemplates []string
@@ -124,8 +121,15 @@ const (
 	testView   view = iota
 	analysisView
 	chartView
-	childView
 )
+
+func chartTime(f *project.File) (float64, error) {
+	s, err := db.Submission(bson.M{db.ID: f.SubId}, nil)
+	if err != nil {
+		return -1.0, err
+	}
+	return util.Round(float64(f.Time-s.Time)/1000.0, 2), nil
+}
 
 func analysisNames(projectId bson.ObjectId, t project.Type) ([]string, error) {
 	switch t {
@@ -148,13 +152,11 @@ func chartNames(projectId bson.ObjectId, t project.Type) ([]string, error) {
 func resultNames(projectId bson.ObjectId, v view) (names []string, err error) {
 	switch v {
 	case testView:
-		names = []string{javac.NAME, tool.CODE, diff.NAME}
+		names = []string{javac.NAME, tool.CODE, diff.NAME, junit.NAME, jacoco.NAME}
 	case analysisView:
 		names, err = db.AllResultNames(projectId)
 	case chartView:
 		names, err = db.ChartResultNames(projectId)
-	case childView:
-		names = []string{junit.NAME, jacoco.NAME}
 	default:
 		err = fmt.Errorf("Unsupported view type %d", v)
 	}
@@ -188,25 +190,6 @@ func compareChart(sid bson.ObjectId, uid, result, file, compare string) string {
 
 func singleChart(sid bson.ObjectId, uid, result, file string) string {
 	return fmt.Sprintf("displaychart?subid=%s&userid=%s&result=%s&file=%s", sid.Hex(), uid, result, file)
-}
-
-func dispResMore(b *Browse) string {
-	return fmt.Sprintf("displayresult?subid=%s&userid=%s&result=%s&file=%s&current=%d&next=%d&displaycount=%d",
-		b.Sid.Hex(), b.Uid, b.Result, b.File, b.Current, b.Next, b.DisplayCount)
-}
-
-func dispRes(sid bson.ObjectId, uid, result, file string, current, next int) string {
-	return fmt.Sprintf("displayresult?subid=%s&userid=%s&result=%s&file=%s&current=%d&next=%d",
-		sid.Hex(), uid, result, file, current, next)
-}
-
-func dispTestRes(current int) string {
-	return fmt.Sprintf("displaytestresult?currentchild=%d", current)
-}
-
-func displayCodeBug(sid bson.ObjectId, uid, result, file string, current, next int, resultId, bugId string, index int) string {
-	return dispRes(sid, uid, result, file, current, next) +
-		fmt.Sprintf("&rid=%s&bid=%s&bindex=%d", resultId, bugId, index)
 }
 
 func projectSubmissions(id bson.ObjectId) (subs []*project.Submission, err error) {

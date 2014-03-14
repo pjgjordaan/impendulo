@@ -49,7 +49,7 @@ var (
 	}
 	none = []string{
 		"index", "", "homeview", "projectresult",
-		"userresult", "displaychart", "displayresult", "displaytestresult",
+		"userresult", "displayresult", "displaychildresult",
 		"getfiles", "favicon.ico", "getsubmissions", "getsubmissionschart",
 		"static", "userchart", "projectchart",
 	}
@@ -76,9 +76,9 @@ var (
 
 	homeViews = []string{
 		"homeview", "userresult", "projectresult",
-		"userchart", "projectchart", "displaychart",
+		"userchart", "projectchart",
 		"displayresult", "getfiles", "getsubmissionschart",
-		"getsubmissions", "displaytestresult",
+		"getsubmissions", "displaychildresult",
 	}
 	submitViews = []string{
 		"skeletonview", "archiveview", "projectview",

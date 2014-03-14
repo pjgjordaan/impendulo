@@ -27,7 +27,6 @@ package jpf
 import (
 	"fmt"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -111,35 +110,13 @@ func (this *Result) GetReport() tool.Report {
 //ChartVals
 func (this *Result) ChartVals() []*tool.ChartVal {
 	return []*tool.ChartVal{
-		&tool.ChartVal{"Total Errors", this.Report.Total, true, this.FileId},
-		&tool.ChartVal{"Unique Errors", this.Report.ErrorCount(), false, this.FileId},
+		&tool.ChartVal{"Total Errors", float64(this.Report.Total), true, this.FileId},
+		&tool.ChartVal{"Unique Errors", float64(this.Report.ErrorCount()), false, this.FileId},
 	}
 }
 
 func (this *Result) Template() string {
 	return "jpfresult"
-}
-
-func (this *Result) Bug(id string, index int) (bug *tool.Bug, err error) {
-	if index < 0 || index > len(this.Report.Errors) {
-		err = fmt.Errorf("Index %d out of bounds for JPF Errors array.", index)
-		return
-	}
-	content := []interface{}{
-		util.ShortName(this.Report.Errors[index].Property),
-		this.Report.Errors[index].Details,
-	}
-	threads := this.Report.Errors[index].Threads
-	for _, thread := range threads {
-		for _, frame := range thread.Frames {
-			if frame.Id == id {
-				bug = tool.NewBug(this, id, content, frame.Line, frame.Line)
-				return
-			}
-		}
-	}
-	err = fmt.Errorf("Could not find bug matching id %s and index %d.", id, index)
-	return
 }
 
 //NewResult creates a new JPF result. The data []byte is in XML format and

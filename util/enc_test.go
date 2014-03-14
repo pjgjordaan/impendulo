@@ -41,7 +41,7 @@ func (w *ErrorWriter) Write(p []byte) (int, error) {
 	return -1, errors.New("ERROR")
 }
 
-func TestReadJson(t *testing.T) {
+func TestReadJSON(t *testing.T) {
 	//This only
 	jmap := map[string]interface{}{"A": "2 3", "B": " Hallo ", "C": "", "D": "''"}
 	marshalled, err := json.Marshal(jmap)
@@ -49,7 +49,7 @@ func TestReadJson(t *testing.T) {
 		t.Error(err)
 	}
 	reader := bytes.NewBuffer(marshalled)
-	res, err := ReadJson(reader)
+	res, err := ReadJSON(reader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -86,14 +86,14 @@ func TestMapStorage(t *testing.T) {
 	}
 }
 
-func TestWriteJson(t *testing.T) {
+func TestWriteJSON(t *testing.T) {
 	data := map[string]interface{}{"A": "2 3", "B": " Hallo ", "C": "", "D": "''"}
 	writer := new(bytes.Buffer)
-	err := WriteJson(writer, data)
+	err := WriteJSON(writer, data)
 	if err != nil {
 		t.Error(err)
 	}
-	read, err := ReadJson(writer)
+	read, err := ReadJSON(writer)
 	if err != nil {
 		t.Error(err)
 	}
@@ -107,11 +107,11 @@ func TestWriteJson(t *testing.T) {
 		"A": make(chan bool),
 	}
 	writer.Reset()
-	err = WriteJson(writer, badData)
+	err = WriteJSON(writer, badData)
 	if err == nil {
 		t.Error(errors.New("Expected error for bad Json data."))
 	}
-	err = WriteJson(new(ErrorWriter), data)
+	err = WriteJSON(new(ErrorWriter), data)
 	if err == nil {
 		t.Error(errors.New("Expected error for error writer."))
 	}

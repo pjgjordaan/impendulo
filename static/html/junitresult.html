@@ -1,7 +1,7 @@
 {{define "result"}}
 {{$report := .Report}}
 {{if $report.Success}}
-<h4 class="text-success">Passed all tests.</h4>
+<h4 class="text-success">Passed all {{$report.Tests}} tests.</h4>
 {{else}}
 {{$displayCount := .state.DisplayCount}}
 <dl class="dl-horizontal">

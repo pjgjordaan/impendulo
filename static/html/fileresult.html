@@ -21,30 +21,13 @@
 	<ul class="dropdown-menu" role="menu">
 	  {{range $tools}}  
 	  <li>
-	    <a href="{{displayResult $sid $uid . $fileName 0 1}}">
+	    <a href="displayresult?result={{.}}&file={{$fileName}}">
 	      {{.}}
 	    </a>
 	  </li>
 	  {{end}}
 	</ul>
       </li>
-      {{if .HasCharts}}
-      {{$charts := chartNames $pid .Type}}
-      <li class="dropdown">
-	<a class="dropdown-toggle" data-toggle="dropdown" href="#">
-	  Charts <span class="caret"></span>
-	</a>
-	<ul class="dropdown-menu" role="menu">
-	  {{range $charts}}  
-	  <li>
-	    <a href="{{singleChart $sid $uid . $fileName}}">
-	      {{.}}
-	    </a>
-	  </li>
-	  {{end}}
-	</ul>
-      </li>
-      {{end}}
     </ul>
   </li>
   {{end}}

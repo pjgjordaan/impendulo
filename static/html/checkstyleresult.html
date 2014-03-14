@@ -3,7 +3,6 @@
 {{if $report.Success}}
 <h4 class="text-success">No problems detected.</h4>
 {{else}}
-{{$code := "Code"}}
 {{$uid := .state.Uid}}
 {{$sid := .state.Sid}}
 {{$fileName := .state.File}}
@@ -16,12 +15,14 @@
 <div class="panel-group" id="checkstyleaccordion{{$addr}}">
   {{range $file.Errors}}
   {{$errorAddress := address .}}
+  {{$errorMsg := .Message}}
+  {{$errorName := shortName .Source}}
   <div class="panel panel-default">
     <div class="panel-heading">
       <a class="accordion-toggle" data-toggle="collapse"
 	 data-parent="#checkstyleaccordion{{$addr}}"
 	 href="#error{{$errorAddress}}">
-	<h5 class="text-center">{{shortName .Source}}</h5>
+	<h5 class="text-center">{{$errorName}}</h5>
       </a>
     </div>
     <div id="error{{$errorAddress}}" class="panel-collapse collapse">
@@ -31,9 +32,17 @@
 	  <dd>
 	    {{$id := .Id.Hex}}
 	    {{range $i, $line := .Lines}}
-	    <a href="{{displayCodeBug $sid $uid $code $fileName $current $next $rid $id $i}}">
+	    {{$laddress := address .}}
+	    <a class="nolink" id="line{{$laddress}}">
 	      Line {{$line}};
 	    </a>
+	    <script>      
+	      var id = 'line{{$laddress}}';
+	      var info = {};
+	      info.title = {{$errorName}};
+	      info.content = {{$errorMsg}};
+	      addCodeModal(id, {{$rid}}, info, {{$line}}, {{$line}});
+	    </script>
 	    {{end}}
 	  </dd>	
 	  <dt>Severity</dt><dd>{{.Severity}}</dd>

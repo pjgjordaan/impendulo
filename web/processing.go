@@ -25,11 +25,9 @@
 package web
 
 import (
-	"errors"
 	"fmt"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/util"
 	"io/ioutil"
@@ -199,33 +197,6 @@ func ServePath(u *url.URL, src string) (servePath string, err error) {
 	return
 }
 
-//codeBug loads a bug to display in the code.
-func codeBug(req *http.Request) (bug *tool.Bug, err error) {
-	resId, rerr := util.ReadId(req.FormValue("rid"))
-	if rerr != nil {
-		return
-	}
-	bugId, err := GetString(req, "bid")
-	if err != nil {
-		return
-	}
-	index, err := GetInt(req, "bindex")
-	if err != nil {
-		return
-	}
-	matcher := bson.M{db.ID: resId}
-	name, err := db.ResultName(matcher)
-	if err != nil {
-		return
-	}
-	result, err := db.BugResult(name, matcher, nil)
-	if err != nil {
-		return
-	}
-	bug, err = result.Bug(bugId, index)
-	return
-}
-
 //getCredentials
 func getCredentials(req *http.Request) (uname, pword, msg string, err error) {
 	uname, msg, err = getString(req, "username")
@@ -239,29 +210,12 @@ func getCredentials(req *http.Request) (uname, pword, msg string, err error) {
 //Snapshots retrieves snapshots of a given file in a submission.
 func Snapshots(subId bson.ObjectId, fileName string, tipe project.Type) (ret []*project.File, err error) {
 	matcher := bson.M{db.SUBID: subId, db.NAME: fileName, db.TYPE: tipe}
-	selector := bson.M{db.TIME: 1, db.SUBID: 1}
+	selector := bson.M{db.DATA: 0}
 	ret, err = db.Files(matcher, selector, db.TIME)
 	if err == nil && len(ret) == 0 {
 		err = fmt.Errorf("No files found with name %q.", fileName)
 	}
 	return
-}
-
-//RetrieveSubmissions fetches all submissions in a project or by a user.
-func RetrieveSubmissions(req *http.Request, ctx *Context) ([]*project.Submission, error) {
-	perr := ctx.Browse.SetPid(req)
-	if perr == nil {
-		ctx.Browse.IsUser = false
-		matcher := bson.M{db.PROJECTID: ctx.Browse.Pid}
-		return db.Submissions(matcher, nil, "-"+db.TIME)
-	}
-	uerr := ctx.Browse.SetUid(req)
-	if uerr == nil {
-		ctx.Browse.IsUser = true
-		matcher := bson.M{db.USER: ctx.Browse.Uid}
-		return db.Submissions(matcher, nil, "-"+db.TIME)
-	}
-	return nil, errors.New("No id found.")
 }
 
 //getFile

@@ -213,20 +213,19 @@ func GCCResult(matcher, selector bson.M) (ret *gcc.Result, err error) {
 	return
 }
 
-func resultType(matcher bson.M) (tipe string, err error) {
+func resultType(matcher bson.M) (string, error) {
 	session, err := Session()
 	if err != nil {
-		return
+		return "", err
 	}
 	defer session.Close()
 	c := session.DB("").C(RESULTS)
 	var holder *TypeHolder
 	err = c.Find(matcher).One(&holder)
 	if err != nil {
-		err = &DBGetError{"result type", err, matcher}
+		return "", &DBGetError{"result type", err, matcher}
 	}
-	tipe = holder.Type
-	return
+	return holder.Type, nil
 }
 
 //ToolResult retrieves a tool.ToolResult matching
@@ -293,22 +292,6 @@ func DisplayResult(matcher, selector bson.M) (ret tool.DisplayResult, err error)
 	return
 }
 
-func AdditionalResult(matcher, selector bson.M) (r tool.AdditionalResult, err error) {
-	tipe, err := resultType(matcher)
-	if err != nil {
-		return
-	}
-	switch tipe {
-	case jacoco.NAME:
-		r, err = JacocoResult(matcher, selector)
-	case junit.NAME:
-		r, err = JUnitResult(matcher, selector)
-	default:
-		err = fmt.Errorf("Unsupported result type %s.", tipe)
-	}
-	return
-}
-
 func ChartResult(matcher, selector bson.M) (ret tool.ChartResult, err error) {
 	tipe, err := resultType(matcher)
 	if err != nil {
@@ -329,28 +312,12 @@ func ChartResult(matcher, selector bson.M) (ret tool.ChartResult, err error) {
 		ret, err = GCCResult(matcher, selector)
 	case junit.NAME:
 		ret, err = JUnitResult(matcher, selector)
+	case jacoco.NAME:
+		ret, err = JacocoResult(matcher, selector)
 	case junit_user.NAME:
 		ret, err = JUnitUserResult(matcher, selector)
 	default:
 		err = fmt.Errorf("Unsupported result type %s.", tipe)
-	}
-	return
-}
-
-//BugResult retrieves a tool.BugResult matching
-//the given interface and name from the active database.
-func BugResult(name string, matcher, selector bson.M) (ret tool.BugResult, err error) {
-	switch name {
-	case jpf.NAME:
-		ret, err = JPFResult(matcher, selector)
-	case findbugs.NAME:
-		ret, err = FindbugsResult(matcher, selector)
-	case pmd.NAME:
-		ret, err = PMDResult(matcher, selector)
-	case checkstyle.NAME:
-		ret, err = CheckstyleResult(matcher, selector)
-	default:
-		err = fmt.Errorf("Unsupported result %q.", name)
 	}
 	return
 }

@@ -105,17 +105,13 @@ func (this *Result) Success() bool {
 //ChartVals
 func (this *Result) ChartVals() []*tool.ChartVal {
 	return []*tool.ChartVal{
-		&tool.ChartVal{"Errors", this.Report.Errors, true, this.FileId},
-		&tool.ChartVal{"Failures", this.Report.Failures, true, this.FileId},
+		&tool.ChartVal{"Errors", float64(this.Report.Errors), true, this.FileId},
+		&tool.ChartVal{"Failures", float64(this.Report.Failures), true, this.FileId},
 	}
 }
 
 func (this *Result) Template() string {
 	return "junitresult"
-}
-
-func (this *Result) AdditionalTemplate() string {
-	return "junitadditional"
 }
 
 func (this *Result) GetType() string {

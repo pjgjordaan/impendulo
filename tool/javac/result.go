@@ -98,12 +98,12 @@ func (this *Result) GetReport() tool.Report {
 
 //ChartVals
 func (this *Result) ChartVals() []*tool.ChartVal {
-	var yE, yW int
+	var yE, yW float64
 	if this.Report.Errors() {
-		yE = this.Report.Count
+		yE = float64(this.Report.Count)
 	}
 	if this.Report.Warnings() {
-		yW = this.Report.Count
+		yW = float64(this.Report.Count)
 	}
 	return []*tool.ChartVal{
 		&tool.ChartVal{"Errors", yE, true, this.FileId},

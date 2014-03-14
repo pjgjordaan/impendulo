@@ -26,6 +26,7 @@ package jacoco
 
 import (
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -91,12 +92,18 @@ func (this *Result) Template() string {
 	return "jacocoresult"
 }
 
-func (this *Result) AdditionalTemplate() string {
-	return "jacocoresult"
-}
-
 func (this *Result) GetType() string {
 	return this.Type
+}
+
+//ChartVals
+func (r *Result) ChartVals() []*tool.ChartVal {
+	v := make([]*tool.ChartVal, len(r.Report.Counters))
+	for i, c := range r.Report.Counters {
+		p := util.Round(float64(c.Covered)/float64(c.Covered+c.Missed)*100.0, 2)
+		v[i] = &tool.ChartVal{util.Title(c.Type), p, true, r.FileId}
+	}
+	return v
 }
 
 func NewResult(fileId bson.ObjectId, name string, xml, html []byte) (res *Result, err error) {

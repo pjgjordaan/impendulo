@@ -96,7 +96,7 @@ path {
     cursor: pointer;
 }
 
-#tooltip {
+#chart-tooltip {
     position: absolute;
     width: auto;
     height: auto;
@@ -112,7 +112,7 @@ path {
     opacity: 0;
 }
 
-.tooltip-line{
+.chart-tooltip-line{
     margin-bottom: 0px;
     margin-top: 0px;
 }
@@ -120,7 +120,7 @@ path {
 #chart{
     position: relative;
     width:100%;
-    height:400px;
+    height:200px;
     margin-bottom: 100px;
 }
 
@@ -182,6 +182,7 @@ dl dd{
 
 .tooltip-inner {
     white-space:pre-wrap;
+    background-color:#ff7777 !important;
 }
 
 .code-popover{
@@ -191,6 +192,10 @@ dl dd{
 
 .code-popover-content {
     font-size: 13px;
+}
+
+.hidden {
+    display: none;
 }
 
 /*Jacoco code coverage styles*/
@@ -228,7 +233,7 @@ pre.source span.pc {
 }
 
 pre.source span.bfc {
-  background-image: url(../img/branchfc.gif);
+  background-image: url(../images/branchfc.gif);
   background-repeat: no-repeat;
   background-position: 2px center;
 }
@@ -238,7 +243,7 @@ pre.source span.bfc:hover {
 }
 
 pre.source span.bnc {
-  background-image: url(../img/branchnc.gif);
+  background-image: url(../images/branchnc.gif);
   background-repeat: no-repeat;
   background-position: 2px center;
 }
@@ -248,7 +253,7 @@ pre.source span.bnc:hover {
 }
 
 pre.source span.bpc {
-  background-image: url(../img/branchpc.gif);
+  background-image: url(../images/branchpc.gif);
   background-repeat: no-repeat;
   background-position: 2px center;
 }
@@ -270,3 +275,10 @@ pre.source span.bpc:hover {
 .atn { color: #606; }
 .atv { color: #080; }
 .dec { color: #606; }
+
+a.nolink { 
+    cursor: pointer; color: blue; 
+}
+a:hover,a.hover { 
+    text-decoration: underline; 
+}

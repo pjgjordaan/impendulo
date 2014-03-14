@@ -103,7 +103,7 @@ func (this *Result) Success() bool {
 //ChartVals gets the number of errors found by PMD.
 func (this *Result) ChartVals() []*tool.ChartVal {
 	return []*tool.ChartVal{
-		&tool.ChartVal{"Errors", this.Report.Errors, true, this.FileId},
+		&tool.ChartVal{"Errors", float64(this.Report.Errors), true, this.FileId},
 	}
 }
 
@@ -118,27 +118,6 @@ func (this *Result) String() (ret string) {
 
 func (this *Result) Template() string {
 	return "pmdresult"
-}
-
-func (this *Result) Bug(id string, index int) (bug *tool.Bug, err error) {
-	for _, file := range this.Report.Files {
-		for _, violation := range file.Violations {
-			if violation.Id.Hex() == id {
-				if index < 0 || index > len(violation.Starts) {
-					err = fmt.Errorf("Index %d out of bounds for PMD Violation lines array.", index)
-					return
-				}
-				content := []interface{}{
-					violation.Rule,
-					violation.Description,
-				}
-				bug = tool.NewBug(this, id, content, violation.Starts[index], violation.Ends[index])
-				return
-			}
-		}
-	}
-	err = fmt.Errorf("Could not find bug matching id %s and index %d.", id, index)
-	return
 }
 
 //NewResult creates a new PMD Result.

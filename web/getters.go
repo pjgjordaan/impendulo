@@ -29,8 +29,6 @@ import (
 	"fmt"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 	"net/http"
 	"strings"
@@ -58,8 +56,8 @@ func defaultGetters() map[string]Getter {
 	return map[string]Getter{
 		"configview": configView, "editdbview": editDBView,
 		"loadproject": loadProject, "loadsubmission": loadSubmission,
-		"loadfile": loadFile, "loaduser": loadUser, "displaychart": displayChart,
-		"displayresult": displayResult, "getfiles": getFiles, "displaytestresult": displayTestResult,
+		"loadfile": loadFile, "loaduser": loadUser,
+		"displayresult": displayResult, "getfiles": getFiles, "displaychildresult": displayChildResult,
 		"getsubmissionschart": getSubmissionsChart, "getsubmissions": getSubmissions,
 	}
 }
@@ -105,9 +103,18 @@ func configView(req *http.Request, ctx *Context) (Args, Temps, string, error) {
 
 //getSubmissions displays a list of submissions.
 func getSubmissions(req *http.Request, ctx *Context) (a Args, t Temps, msg string, err error) {
-	subs, err := RetrieveSubmissions(req, ctx)
+	err = ctx.Browse.Update(req)
 	if err != nil {
-		msg = "Could not retrieve submissions."
+		return
+	}
+	var matcher bson.M
+	if !ctx.Browse.IsUser {
+		matcher = bson.M{db.PROJECTID: ctx.Browse.Pid}
+	} else {
+		matcher = bson.M{db.USER: ctx.Browse.Uid}
+	}
+	subs, err := db.Submissions(matcher, nil, "-"+db.TIME)
+	if err != nil {
 		return
 	}
 	t = make(Temps, 1)
@@ -122,27 +129,16 @@ func getSubmissions(req *http.Request, ctx *Context) (a Args, t Temps, msg strin
 
 //getFiles diplays information about files.
 func getFiles(req *http.Request, ctx *Context) (a Args, t Temps, msg string, err error) {
-	sid, msg, err := getSubId(req)
+	err = ctx.Browse.Update(req)
 	if err != nil {
 		return
 	}
-	matcher := bson.M{db.SUBID: sid, db.OR: [2]bson.M{bson.M{db.TYPE: project.SRC}, bson.M{db.TYPE: project.TEST}}}
+	matcher := bson.M{db.SUBID: ctx.Browse.Sid, db.OR: [2]bson.M{bson.M{db.TYPE: project.SRC}, bson.M{db.TYPE: project.TEST}}}
 	fileInfo, err := db.FileInfos(matcher)
 	if err != nil {
 		msg = "Could not retrieve files."
 		return
 	}
-	sub, err := db.Submission(
-		bson.M{db.ID: sid},
-		bson.M{db.PROJECTID: 1, db.USER: 1},
-	)
-	if err != nil {
-		msg = "Could not retrieve submission."
-		return
-	}
-	ctx.Browse.Pid = sub.ProjectId
-	ctx.Browse.Uid = sub.User
-	ctx.Browse.Sid = sid
 	a = Args{"fileInfo": fileInfo}
 	t = Temps{"fileresult"}
 	return
@@ -232,52 +228,6 @@ func loadFile(req *http.Request, ctx *Context) (a Args, t Temps, msg string, err
 	return
 }
 
-func displayChart(req *http.Request, ctx *Context) (a Args, t Temps, msg string, err error) {
-	defer func() {
-		if err != nil {
-			msg = "Could not load chart."
-		}
-	}()
-	err = ctx.Browse.Update(req)
-	if err != nil {
-		return
-	}
-	files, err := Snapshots(ctx.Browse.Sid, ctx.Browse.File, ctx.Browse.Type)
-	if err != nil {
-		return
-	}
-	results, err := resultNames(ctx.Browse.Pid, chartView)
-	if err != nil {
-		return
-	}
-	chart, err := LoadChart(ctx.Browse.Result, files)
-	if err != nil {
-		return
-	}
-	compStr := ""
-	compId, cerr := util.ReadId(req.FormValue("compare"))
-	if cerr == nil {
-		var compFiles []*project.File
-		compFiles, err = Snapshots(compId, ctx.Browse.File, ctx.Browse.Type)
-		if err != nil {
-			return
-		}
-		var compChart ChartData
-		compChart, err = LoadChart(ctx.Browse.Result, compFiles)
-		if err != nil {
-			return
-		}
-		chart = append(chart, compChart...)
-		compStr = compId.Hex()
-	}
-	a = Args{
-		"files": files, "results": results,
-		"chart": chart, "compare": compStr,
-	}
-	t = Temps{"charts"}
-	return
-}
-
 //displayResult displays a tool's result.
 func displayResult(req *http.Request, ctx *Context) (a Args, t Temps, msg string, err error) {
 	defer func() {
@@ -289,8 +239,8 @@ func displayResult(req *http.Request, ctx *Context) (a Args, t Temps, msg string
 	if err != nil {
 		return
 	}
-	if ctx.Browse.Type == project.TEST {
-		return displayTestResult(req, ctx)
+	if ctx.Browse.childResult() {
+		return displayChildResult(req, ctx)
 	}
 	files, err := Snapshots(ctx.Browse.Sid, ctx.Browse.File, ctx.Browse.Type)
 	if err != nil {
@@ -300,7 +250,7 @@ func displayResult(req *http.Request, ctx *Context) (a Args, t Temps, msg string
 	if err != nil {
 		return
 	}
-	results, err := resultNames(ctx.Browse.Pid, analysisView)
+	results, err := analysisNames(ctx.Browse.Pid, ctx.Browse.Type)
 	if err != nil {
 		return
 	}
@@ -316,38 +266,21 @@ func displayResult(req *http.Request, ctx *Context) (a Args, t Temps, msg string
 	if err != nil {
 		return
 	}
-	if ctx.Browse.Result == tool.CODE {
-		var bug *tool.Bug
-		bug, err = codeBug(req)
-		if err != nil {
-			return
-		} else if bug != nil {
-			switch bug.FileId {
-			case currentFile.Id:
-				currentResult.(*tool.CodeResult).Bug = bug
-			case nextFile.Id:
-				nextResult.(*tool.CodeResult).Bug = bug
-			default:
-				err = fmt.Errorf("Result %s does not match any files.", bug.FileId.Hex())
-				return
-			}
-		}
-	}
 	a = Args{
 		"files": files, "currentFile": currentFile,
 		"currentResult": currentResult, "results": results,
 		"nextFile": nextFile, "nextResult": nextResult,
 	}
-	t = Temps{"analysis", "pager", "", "emptyadditional"}
+	t = Temps{"analysisview", "pager", "srcanalysis", ""}
 	if !isError(currentResult) || isError(nextResult) {
-		t[2] = currentResult.Template()
+		t[3] = currentResult.Template()
 	} else {
-		t[2] = nextResult.Template()
+		t[3] = nextResult.Template()
 	}
 	return
 }
 
-func displayTestResult(req *http.Request, ctx *Context) (a Args, t Temps, msg string, err error) {
+func displayChildResult(req *http.Request, ctx *Context) (a Args, t Temps, msg string, err error) {
 	defer func() {
 		if err != nil {
 			msg = "Could not load results."
@@ -375,15 +308,7 @@ func displayTestResult(req *http.Request, ctx *Context) (a Args, t Temps, msg st
 	if err != nil {
 		return
 	}
-	currentResult, err := GetResult(ctx.Browse.Result, currentFile.Id)
-	if err != nil {
-		return
-	}
 	nextFile, err := getFile(parentFiles[ctx.Browse.Next].Id)
-	if err != nil {
-		return
-	}
-	nextResult, err := GetResult(ctx.Browse.Result, nextFile.Id)
 	if err != nil {
 		return
 	}
@@ -395,43 +320,42 @@ func displayTestResult(req *http.Request, ctx *Context) (a Args, t Temps, msg st
 	if err != nil {
 		return
 	}
-	childResults, err := resultNames(ctx.Browse.Pid, childView)
+	currentChildResult, err := GetTestResult(ctx.Browse.Result, currentChild.Id.Hex(), currentFile.Id)
 	if err != nil {
 		return
 	}
-	currentChildResult, err := GetAdditonalResult(ctx.Browse.ChildResult, currentChild.Id.Hex(), currentFile.Id)
-	if err != nil {
-		return
-	}
-	nextChildResult, err := GetAdditonalResult(ctx.Browse.ChildResult, currentChild.Id.Hex(), nextFile.Id)
+	nextChildResult, err := GetTestResult(ctx.Browse.Result, currentChild.Id.Hex(), nextFile.Id)
 	if err != nil {
 		return
 	}
 	a = Args{
-		"files": parentFiles, "childFiles": childFiles, "currentFile": currentFile,
-		"currentResult": currentResult, "nextFile": nextFile, "nextResult": nextResult,
+		"files": parentFiles, "childFiles": childFiles, "currentFile": currentFile, "nextFile": nextFile,
 		"results": results, "childFile": currentChild, "currentChildResult": currentChildResult,
-		"nextChildResult": nextChildResult, "childResults": childResults,
+		"nextChildResult": nextChildResult,
 	}
-	t = Temps{"analysis", "pager", "", "additionalanalysis", ""}
-	if !isError(currentResult) || isError(nextResult) {
-		t[2] = currentResult.Template()
-	} else {
-		t[2] = nextResult.Template()
-	}
+	t = Temps{"analysisview", "pager", "testanalysis", ""}
 	if !isError(currentChildResult) || isError(nextChildResult) {
-		t[4] = currentChildResult.AdditionalTemplate()
+		t[3] = currentChildResult.Template()
 	} else {
-		t[4] = nextChildResult.AdditionalTemplate()
+		t[3] = nextChildResult.Template()
 	}
 	return
 }
 
 //getSubmissionsChart displays a chart of submissions.
 func getSubmissionsChart(req *http.Request, ctx *Context) (a Args, t Temps, msg string, err error) {
-	subs, err := RetrieveSubmissions(req, ctx)
+	err = ctx.Browse.Update(req)
 	if err != nil {
-		msg = "Could not retrieve submissions."
+		return
+	}
+	var matcher bson.M
+	if !ctx.Browse.IsUser {
+		matcher = bson.M{db.PROJECTID: ctx.Browse.Pid}
+	} else {
+		matcher = bson.M{db.USER: ctx.Browse.Uid}
+	}
+	subs, err := db.Submissions(matcher, nil, "-"+db.TIME)
+	if err != nil {
 		return
 	}
 	chartData := SubmissionChart(subs)

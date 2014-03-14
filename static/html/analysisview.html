@@ -1,0 +1,70 @@
+{{define "view"}}
+{{$currentFile := .currentFile}}
+{{$nextFile := .nextFile}}
+{{$current := .ctx.Browse.Current}}
+{{$next := .ctx.Browse.Next}}
+{{$project := projectName .ctx.Browse.Pid}}
+{{template "breadcrumb" .}}
+<h4 class="text-center">
+  <small>user</small> {{.ctx.Browse.Uid}} 
+  <small>project</small> {{$project}}
+  <small>file</small> {{.ctx.Browse.File}}   
+</h4>
+<div class="row">
+  <div class="col-md-8">
+    {{template "pager" .}}
+  </div>
+  <div class="col-md-4">
+    <form role="form" class="form-padded form-inline" action="displayresult" method="get">
+      <div class="form-group">
+	<label class="sr-only" for="current">First File</label>
+	<select class="form-control" name="current" id="current">
+	  {{range $index, $file := .files}} 
+	  {{$dispIndex := sum $index 1}}
+	  {{if $currentFile.Same $file}}
+	  <option selected value="{{$index}}">{{$dispIndex}}</option>
+	  {{else}}
+	  <option value="{{$index}}">{{$dispIndex}}</option>
+	  {{end}}
+	  {{end}}
+	</select>
+      </div>
+      <div class="form-group">
+	<label class="sr-only" for="next">Second File</label>
+	<select class="form-control" name="next" id="next">
+	  {{range $index, $file := .files}} 
+	  {{$dispIndex := sum $index 1}}
+	  {{if eq $next $index}}
+	  <option selected value="{{$index}}">{{$dispIndex}}</option>
+	  {{else}}
+	  <option value="{{$index}}">{{$dispIndex}}</option>
+	  {{end}}
+	  {{end}}
+	</select>
+      </div>
+      <button type="submit" class="btn btn-default">
+	<span class="glyphicon glyphicon-arrow-right"></span>
+      </button>
+    </form>
+  </div>
+</div>
+<div class="row">
+  <div class="col-md-6">
+    <dl class="dl-horizontal text-info">
+      <dt>File Number</dt>
+      <dd>{{sum $current 1}}</dd>
+      <dt>Date</dt>
+      <dd>{{date $currentFile.Time}}</dd>
+    </dl>
+  </div>
+  <div class="col-md-6">
+    <dl class="dl-horizontal text-info">
+      <dt>File Number</dt>
+      <dd>{{sum $next 1}}</dd>
+      <dt>Date</dt>
+      <dd>{{date $nextFile.Time}}</dd>
+    </dl>
+  </div>
+</div>
+{{template "analysis" .}}
+{{end}}

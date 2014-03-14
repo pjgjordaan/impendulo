@@ -31,6 +31,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"strings"
+	"unicode"
 )
 
 var (
@@ -143,4 +144,16 @@ func Round(x float64, prec int) float64 {
 		r += 0.5
 	}
 	return float64(int64(r)) / p
+}
+func SplitTitles(titles string) []string {
+	var a []string
+	i := 0
+	for s := titles; s != ""; s = s[i:] {
+		i = strings.IndexFunc(s[1:], unicode.IsUpper) + 1
+		if i <= 0 {
+			i = len(s)
+		}
+		a = append(a, s[:i])
+	}
+	return a
 }

@@ -1,0 +1,62 @@
+{{define "analysis"}}
+{{$resultName := .ctx.Browse.Result}}
+{{$fileName := .ctx.Browse.File}}
+<h4 class="text-center">
+  <small>tool</small> {{$resultName}}
+</h4>
+{{if hasChart $resultName}}
+<div id="chart" class="chart" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <div id="chart-tooltip" class="tooltip"></div>
+</div>
+<script>
+  {{$tc := chartTime (index .files .ctx.Browse.Current)}}
+  {{$tn := chartTime (index .files .ctx.Browse.Next)}}
+  ajaxChart({{.ctx.Browse.Sid.Hex}},{{.ctx.Browse.File}},{{.ctx.Browse.Result}},{{$tc}},{{$tn}});
+</script>
+{{end}}
+{{if (eq $resultName "Diff")}}
+{{$data := .currentResult.Create .nextResult}}
+{{template "result"  $data}}
+{{else}}
+<div class="row">
+  {{$args := args "state" .ctx.Browse}}
+  <div class="col-md-6">
+    {{if isError .currentResult}}
+    <p class="text-danger">{{.currentResult.GetReport}}</p>
+    {{else}}
+    {{$args := insert $args "Report" .currentResult.GetReport}}
+    {{template "result"  $args}}
+    {{end}}
+  </div>
+  <div class="col-md-6">
+    {{if isError .nextResult}}
+    <p class="text-danger">{{.nextResult.GetReport}}</p>
+    {{else}}
+    {{$args := insert $args "Report" .nextResult.GetReport}}
+    {{template "result"  $args}}
+    {{end}}
+  </div>
+</div>
+{{if (eq .currentResult.Template "junitresult")}}
+<div class="row">
+  <div class="col-md-5">
+  </div>
+  <div class="col-md-2">
+    <a class="btn btn-block btn-info" 
+       href="displayresult?displaycount={{.ctx.Browse.DisplayCount}}">
+      <span class="glyphicon glyphicon-chevron-down"></span>
+      More
+      <span class="glyphicon glyphicon-chevron-down"></span> 
+    </a>
+  </div>
+  <div class="col-md-5">
+  </div>
+</div>
+{{end}}
+{{end}}
+{{if (eq $resultName "Code")}}
+<script>
+  highlight();
+</script>
+{{end}}
+{{end}}

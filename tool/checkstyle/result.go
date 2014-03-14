@@ -27,7 +27,6 @@ package checkstyle
 import (
 	"fmt"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -111,33 +110,12 @@ func (this *Result) Success() bool {
 //ChartVals
 func (this *Result) ChartVals() []*tool.ChartVal {
 	return []*tool.ChartVal{
-		&tool.ChartVal{"Errors", this.Report.Errors, true, this.FileId},
+		&tool.ChartVal{"Errors", float64(this.Report.Errors), true, this.FileId},
 	}
 }
 
 func (this *Result) Template() string {
 	return "checkstyleresult"
-}
-
-func (this *Result) Bug(id string, index int) (bug *tool.Bug, err error) {
-	for _, file := range this.Report.Files {
-		for _, error := range file.Errors {
-			if error.Id.Hex() == id {
-				if index < 0 || index > len(error.Lines) {
-					err = fmt.Errorf("Index %d out of bounds for Checkstyle Error lines array.", index)
-					return
-				}
-				content := []interface{}{
-					util.ShortName(error.Source),
-					error.Message,
-				}
-				bug = tool.NewBug(this, id, content, error.Lines[index], error.Lines[index])
-				return
-			}
-		}
-	}
-	err = fmt.Errorf("Could not find bug matching id %s and index %d.", id, index)
-	return
 }
 
 //NewResult creates a new Checkstyle Result.

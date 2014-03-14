@@ -249,7 +249,7 @@ func (this *client) sendFile(numFiles uint, files []file) (err error) {
 }
 
 func write(conn net.Conn, data interface{}) (err error) {
-	err = util.WriteJson(conn, data)
+	err = util.WriteJSON(conn, data)
 	if err != nil {
 		return
 	}

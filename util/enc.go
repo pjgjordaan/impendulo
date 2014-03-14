@@ -25,6 +25,7 @@
 package util
 
 import (
+	"bytes"
 	"encoding/gob"
 	"encoding/json"
 	"io"
@@ -32,23 +33,22 @@ import (
 	"os"
 )
 
-//ReadJson reads all Json data from a reader.
-func ReadJson(r io.Reader) (jmap map[string]interface{}, err error) {
+//ReadJSON reads all JSON data from a reader.
+func ReadJSON(r io.Reader) (map[string]interface{}, error) {
 	read, err := ReadData(r)
 	if err != nil {
-		return
+		return nil, err
 	}
 	var holder interface{}
 	err = json.Unmarshal(read, &holder)
 	if err != nil {
-		err = &UtilError{read, "unmarshalling data from", err}
-		return
+		return nil, &UtilError{read, "unmarshalling data from", err}
 	}
-	jmap, ok := holder.(map[string]interface{})
+	j, ok := holder.(map[string]interface{})
 	if !ok {
-		err = &UtilError{holder, "casting to json", nil}
+		return nil, &UtilError{holder, "casting to JSON", nil}
 	}
-	return
+	return j, nil
 }
 
 //LoadMap loads a map stored in a file.
@@ -81,16 +81,24 @@ func SaveMap(mp map[bson.ObjectId]bool, fname string) (err error) {
 	return
 }
 
-//WriteJson writes json marshalled data to to the writer.
-func WriteJson(w io.Writer, data interface{}) (err error) {
+//WriteJSON writes JSON marshalled data to to the writer.
+func WriteJSON(w io.Writer, data interface{}) error {
 	marshalled, err := json.Marshal(data)
 	if err != nil {
-		err = &UtilError{data, "marshalling json", err}
-		return
+		return &UtilError{data, "marshalling json", err}
 	}
 	_, err = w.Write(marshalled)
 	if err != nil {
-		err = &UtilError{marshalled, "writing json", err}
+		return &UtilError{marshalled, "writing json", err}
 	}
-	return
+	return nil
+}
+
+func JSON(data interface{}) ([]byte, error) {
+	b := new(bytes.Buffer)
+	err := WriteJSON(b, data)
+	if err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
 }

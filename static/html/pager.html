@@ -10,7 +10,7 @@
 <ul id="filepager" class="pagination pagination-right">
   {{$prev := sum $current -1}}
   <li>
-    <a href="{{displayResult $sid $uid $resultName $fileName $prev $current}}">
+    <a href="displayresult?current={{$prev}}&next={{$current}}">
       &laquo;
     </a>
   </li>
@@ -20,14 +20,14 @@
   {{if eq $actual $current}} 
   <li class="active">
     <a id="file{{$actual}}"
-       href="{{displayResult $sid $uid $resultName $fileName $actual $actualNext}}">
+       href="displayresult?current={{$actual}}&next={{$actualNext}}">
       {{$actualNext}}
     </a>
   </li>
   {{else}}
   <li>
     <a id="file{{$actual}}"
-       href="{{displayResult $sid $uid $resultName $fileName $actual $actualNext}}">
+       href="displayresult?current={{$actual}}&next={{$actualNext}}">
       {{$actualNext}}
     </a>
   </li>
@@ -35,7 +35,7 @@
   {{end}}
   {{$nextnext := sum $next 1}}
   <li>
-    <a href="{{displayResult $sid $uid $resultName $fileName $next $nextnext}}">
+    <a href="displayresult?current={{$next}}&next={{$nextnext}}">
       &raquo;
     </a>
   </li>

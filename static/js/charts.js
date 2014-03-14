@@ -26,30 +26,43 @@ var DOT_RADIUS = 4;
 var FOCUS_COLOUR = 'black';
 var COLOURS = ['#1f77b4', '#ff7f0e', '#2ca02c',  '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
 var LAUNCH = 'Launches';
-
-function showChart(fileName, resultName, chartData, compare){
+var CURRENT_TIME = -1, NEXT_TIME = -1;
+var ACTIVE_SHADE = -0.3;
+var ACTIVE_WIDTH = 3;
+function showChart(fileName, resultName, chartData, compare, currentTime, nextTime){
     if (resultName === 'Summary'){
-	summaryTimeChart(fileName, resultName, chartData, compare);
+	summaryTimeChart(fileName, resultName, chartData, compare, currentTime, nextTime);
     } else{
-	timeChart(fileName, resultName, chartData, compare);
+	timeChart(fileName, resultName, chartData, compare, currentTime, nextTime);
     }
-}
-      
-function timeChart(fileName, resultName, chartData, compare) {
+}    
+
+function timeChart(fileName, resultName, chartData, compare, currentTime, nextTime) {
     if (chartData === null){
 	return;
     }
-    var tools = chartData.filter(function(d){
+    CURRENT_TIME = currentTime;
+    NEXT_TIME = nextTime;
+    var inactiveTools = chartData.filter(function(d){
+	return !active(d) && !isLaunch(d);
+    });
+    var activeTools = chartData.filter(function(d){
+	return active(d) && !isLaunch(d);
+    });
+    var allTools = chartData.filter(function(d){
 	return !isLaunch(d);
     });
     var launches = chartData.filter(isLaunch);
     var lineData = d3.nest()
 	.key(getKey)
-	.entries(tools);  
-    var m = [10, 150, 100, 100];
+	.entries(allTools);  
+    var activeLineData = d3.nest()
+	.key(getKey)
+	.entries(activeTools);  
+    var m = [10, 150, 50, 100];
     var w = 1100 - m[1] - m[3];
-    var h = 500 - m[0] - m[2];
-    var mid = (d3.max(tools, getY)-d3.min(tools, getY))/2;
+    var h = 300 - m[0] - m[2];
+    var mid = (d3.max(allTools, getY)-d3.min(allTools, getY))/2;
     var unique = getUnique(chartData);
     var names = unique
 	.map(function(d){
@@ -61,6 +74,9 @@ function timeChart(fileName, resultName, chartData, compare) {
     var chartColour = function(d) { 
 	return getColour(getKey(d)); 
     };    
+    var activeColour = function(d){
+	return shadeColor(chartColour(d), ACTIVE_SHADE);
+    }
     var y = d3.scale.linear()
 	.domain(d3.extent(chartData, getY))
 	.range([h, 0]);  
@@ -70,11 +86,7 @@ function timeChart(fileName, resultName, chartData, compare) {
 	.range([0, w]);  
 
     var loadLink = function(d) {
-	var href = 'displayresult?time='+d.time+
-	    '&result='+resultName+
-	    '&file='+fileName+
-	    '&subid='+d.subId+
-	    '&userid='+d.user;
+	var href = 'displayresult?time='+d.time;
 	href = compare ? href + compare : href;
 	return href;
     };
@@ -91,13 +103,19 @@ function timeChart(fileName, resultName, chartData, compare) {
 	var selected = d3.select(this);
 	var attr = 'r';
 	var val = DOT_RADIUS;
-	if(isLaunch(d)){
+	if(isLaunch(d) || active(d)){
 	    var xPos = parseFloat(d3.select(this).attr('cx'));
 	    var yPos = parseFloat(d3.select(this).attr('cy'));
 	    attr = 'points';
-	    val = function(d){
-		return star(xPos, yPos);
-	    };
+	    if(active(d)){
+		val = function(d){
+		    return star(xPos, yPos, 2);
+		}
+	    }else{
+		val = function(d){
+		    return star(xPos, yPos);
+		};
+	    }
 	}
 	selected
 	    .transition()
@@ -105,7 +123,7 @@ function timeChart(fileName, resultName, chartData, compare) {
             .ease('linear')
 	    .attr('fill', chartColour)
 	    .attr(attr, val);
-	d3.select('#tooltip')
+	d3.select('#chart-tooltip')
 	    .transition()
             .duration(500)
             .ease('linear')
@@ -153,6 +171,13 @@ function timeChart(fileName, resultName, chartData, compare) {
 		.attr('d', function(d) { 
 		    return line(d.values); 
 		});
+	    chart.selectAll('.line-active')
+		.transition()
+		.duration(duration)
+	    	.ease(ease)
+		.attr('d', function(d) { 
+		    return line(d.values); 
+		});
 	    chartBody.selectAll('.dot')
 		.transition()
 		.duration(duration)
@@ -160,6 +185,15 @@ function timeChart(fileName, resultName, chartData, compare) {
 		.attr('cx', loadX)
 		.attr('cy', loadY)
 		.attr('r', DOT_RADIUS);
+	    chartBody.selectAll('.dot-active')
+		.transition()
+		.duration(duration)
+		.ease(ease)
+		.attr('cx', loadX)
+		.attr('cy', loadY)
+		.attr('points', function(d){
+		    return star(loadX(d), loadY(d), 2);
+		});
 	    chartBody.selectAll('.launch')
 		.transition()
 		.duration(duration)
@@ -225,8 +259,23 @@ function timeChart(fileName, resultName, chartData, compare) {
 	    return d.values[0].show ? 1.0 : 0.0;
 	});
 
+    chartBody.selectAll('.line-active')
+	.data(activeLineData, getKey)
+	.enter()
+	.append('path')
+	.attr('class', 'line-active')
+	.attr('key', chartKey)
+	.style('stroke', activeColour)
+	.style("stroke-width", ACTIVE_WIDTH)
+	.attr('d', function(d) { 
+	    return line(d.values); 
+	})
+	.style('opacity', function(d){
+	    return d.values[0].show ? 1.0 : 0.0;
+	});
+
     chartBody.selectAll('.link')
-	.data(tools)
+	.data(inactiveTools)
 	.enter()
 	.append('svg:a')
 	.attr('xlink:href', loadLink)
@@ -243,7 +292,23 @@ function timeChart(fileName, resultName, chartData, compare) {
 	.attr('r', DOT_RADIUS)
 	.on('mouseover', showTooltip)
 	.on('mouseout', hideTooltip);
-
+    
+    chartBody.selectAll('.dot-active')
+	.data(activeTools)
+	.enter()
+	.append('svg:polygon')
+	.attr('class', 'dot-active')
+	.style('opacity', function(d){
+	    return d.show ? 1.0 : 0.0;
+	})
+	.attr('fill', activeColour)
+    	.attr('cx', loadX)
+	.attr('cy', loadY)
+	.attr('points', function(d){
+	    return star(loadX(d), loadY(d), 2);
+	})
+    	.on('mouseover', showTooltip)
+	.on('mouseout', hideTooltip);
 
     chartBody.selectAll('.launch')
 	.data(launches)
@@ -347,21 +412,33 @@ function timeChart(fileName, resultName, chartData, compare) {
 	.text(getName);
 }
 
-function summaryTimeChart(fileName, resultName, chartData, compare) {
+function summaryTimeChart(fileName, resultName, chartData, compare, currentTime, nextTime) {
     if (chartData === null){
 	return;
     }
-    var tools = chartData.filter(function(d){
+    CURRENT_TIME = currentTime;
+    NEXT_TIME = nextTime;
+    var inactiveTools = chartData.filter(function(d){
+	return !active(d) && !isLaunch(d);
+    });
+    var activeTools = chartData.filter(function(d){
+	return active(d) && !isLaunch(d);
+    });
+    var allTools = chartData.filter(function(d){
 	return !isLaunch(d);
     });
+
     var launches = chartData.filter(isLaunch);
     var lineData = d3.nest()
 	.key(getKey)
-	.entries(tools);  
-    var m = [10, 150, 100, 100];
+	.entries(allTools);  
+    var activeLineData = d3.nest()
+	.key(getKey)
+	.entries(activeTools);  
+    var m = [10, 150, 10, 100];
     var w = 1100 - m[1] - m[3];
-    var h = 500 - m[0] - m[2];
-    var mid = (d3.max(tools, getY)-d3.min(tools, getY))/2;
+    var h = 200 - m[0] - m[2];
+    var mid = (d3.max(allTools, getY)-d3.min(allTools, getY))/2;
     var unique = getUnique(chartData);
     var names = unique
 	.map(function(d){
@@ -372,7 +449,10 @@ function summaryTimeChart(fileName, resultName, chartData, compare) {
         .domain(names);  
     var chartColour = function(d) { 
 	return getColour(getKey(d)); 
-    };    
+    };
+    var activeColour = function(d){
+	return shadeColor(chartColour(d), ACTIVE_SHADE);
+    }
     var scales = d3.map();
     for(var i = 0; i < names.length; i ++){
 	var vals = chartData.filter(function(d){
@@ -387,11 +467,7 @@ function summaryTimeChart(fileName, resultName, chartData, compare) {
 	.range([0, w]);  
 
     var loadLink = function(d) {
-	var href = 'displayresult?time='+d.time+
-	    '&result='+resultName+
-	    '&file='+fileName+
-	    '&subid='+d.subId+
-	    '&userid='+d.user;
+	var href = 'displayresult?time='+d.time;
 	href = compare ? href + compare : href;
 	return href;
     };
@@ -408,13 +484,19 @@ function summaryTimeChart(fileName, resultName, chartData, compare) {
 	var selected = d3.select(this);
 	var attr = 'r';
 	var val = DOT_RADIUS;
-	if(isLaunch(d)){
+	if(isLaunch(d) || active(d)){
 	    var xPos = parseFloat(d3.select(this).attr('cx'));
 	    var yPos = parseFloat(d3.select(this).attr('cy'));
 	    attr = 'points';
-	    val = function(d){
-		return star(xPos, yPos);
-	    };
+	    if(active(d)){
+		val = function(d){
+		    return star(xPos, yPos, 2);
+		}
+	    }else{
+		val = function(d){
+		    return star(xPos, yPos);
+		};
+	    }
 	}
 	selected
 	    .transition()
@@ -422,7 +504,7 @@ function summaryTimeChart(fileName, resultName, chartData, compare) {
             .ease('linear')
 	    .attr('fill', chartColour)
 	    .attr(attr, val);
-	d3.select('#tooltip')
+	d3.select('#chart-tooltip')
 	    .transition()
             .duration(500)
             .ease('linear')
@@ -458,6 +540,13 @@ function summaryTimeChart(fileName, resultName, chartData, compare) {
 		.attr('d', function(d) { 
 		    return line(d.values); 
 		});
+	    chart.selectAll('.line-active')
+		.transition()
+		.duration(duration)
+	    	.ease(ease)
+		.attr('d', function(d) { 
+		    return line(d.values); 
+		});
 	    chartBody.selectAll('.dot')
 		.transition()
 		.duration(duration)
@@ -465,6 +554,15 @@ function summaryTimeChart(fileName, resultName, chartData, compare) {
 		.attr('cx', loadX)
 		.attr('cy', loadY)
 		.attr('r', DOT_RADIUS);
+	    chartBody.selectAll('.dot-active')
+		.transition()
+		.duration(duration)
+		.ease(ease)
+		.attr('cx', loadX)
+		.attr('cy', loadY)
+		.attr('points', function(d){
+		    return star(loadX(d), loadY(d), 2);
+		});
 	    chartBody.selectAll('.launch')
 		.transition()
 		.duration(duration)
@@ -527,8 +625,23 @@ function summaryTimeChart(fileName, resultName, chartData, compare) {
 	    return d.values[0].show ? 1.0 : 0.0;
 	});
 
+    chartBody.selectAll('.line-active')
+	.data(activeLineData, getKey)
+	.enter()
+	.append('path')
+	.attr('class', 'line-active')
+	.attr('key', chartKey)
+	.style('stroke', activeColour)
+	.style("stroke-width", ACTIVE_WIDTH)
+	.attr('d', function(d) { 
+	    return line(d.values); 
+	})
+	.style('opacity', function(d){
+	    return d.values[0].show ? 1.0 : 0.0;
+	});
+
     chartBody.selectAll('.link')
-	.data(tools)
+	.data(inactiveTools)
 	.enter()
 	.append('svg:a')
 	.attr('xlink:href', loadLink)
@@ -546,6 +659,24 @@ function summaryTimeChart(fileName, resultName, chartData, compare) {
 	.on('mouseover', showTooltip)
 	.on('mouseout', hideTooltip);
 
+    chartBody.selectAll('.dot-active')
+	.data(activeTools)
+	.enter()
+	.append('svg:polygon')
+	.attr('class', 'dot-active')
+	.style('opacity', function(d){
+	    return d.show ? 1.0 : 0.0;
+	})
+	.attr('fill', function(d){
+	    return shadeColor(chartColour(d), ACTIVE_SHADE);
+	})
+    	.attr('cx', loadX)
+	.attr('cy', loadY)
+	.attr('points', function(d){
+	    return star(loadX(d), loadY(d), 2);
+	})
+    	.on('mouseover', showTooltip)
+	.on('mouseout', hideTooltip);
 
     chartBody.selectAll('.launch')
 	.data(launches)
@@ -681,9 +812,15 @@ function showTooltip(d){
     var selected = d3.select(this)
     var attr = 'r';
     var val = 8;
-    if(isLaunch(d)){
-	text = d.name;
+    if(active(d)){
 	attr = 'points';
+	val = function(d){
+	    return star(xPos, yPos, 3);
+	}
+    }
+    if(isLaunch(d)){
+	attr = 'points';
+	text = d.name;
 	val = function(d){
 	    return star(xPos, yPos, 2);
 	};
@@ -695,30 +832,21 @@ function showTooltip(d){
 	.attr('fill', FOCUS_COLOUR)
 	.attr(attr, val);
     
-    var tooltip = d3.select('#tooltip')
+    var tooltip = d3.select('#chart-tooltip')
 	.style('left', xPos + 'px')
-	.style('top', yPos + 'px');	
-    tooltip.selectAll('.tooltip-line')
+	.style('top', (yPos+30) + 'px');	
+    tooltip.selectAll('.chart-tooltip-line')
 	.remove();
     tooltip.selectAll('pre')
 	.remove();
     tooltip
 	.append('h5')
-	.attr('class', 'tooltip-line')
+	.attr('class', 'chart-tooltip-line')
 	.text(d.user);
     tooltip
 	.append('p')
-	.attr('class', 'tooltip-line')
+	.attr('class', 'chart-tooltip-line')
 	.text(text + ' Time: ' + xVal+ 's');
-    /*if (!isLaunch(d) && 'diff' in d){
-	tooltip
-	    .append('pre')
-	    .attr('class', 'brush: diff')
-	    .text(d.diff);
-	SyntaxHighlighter.defaults['toolbar'] = false;
-	SyntaxHighlighter.all();
-
-    }*/
     tooltip
 	.transition()
         .duration(500)	
@@ -726,7 +854,7 @@ function showTooltip(d){
 	.style('opacity', 1);
 }
 
-function star(x, y, scale)
+    function star(x, y, scale)
 {
     scale = scale || 1;
     var innerRadius = 2 * scale;
@@ -800,7 +928,43 @@ function trimKey(d) {
 function replaceAll(str, find, replace) {
   return str.replace(new RegExp(find, 'g'), replace);
 }
-
+    
 function endsWith(str, suffix) {
     return str.indexOf(suffix, str.length - suffix.length) !== -1;
 };
+    
+function invert(hex) {
+    if (hex.length != 7 || hex.indexOf('#') != 0) {
+	return null;
+    }
+    return "#" + pad((255 - parseInt(hex.substring(1, 3), 16)).toString(16)) + pad((255 - parseInt(hex.substring(3, 5), 16)).toString(16)) + pad((255 - parseInt(hex.substring(5, 7), 16)).toString(16));
+}
+    
+function pad(num) {
+    if (num.length < 2) {
+	return "0" + num;
+    } else {
+	return num;
+    }
+}
+
+function shape(d){
+    if(active(d)){
+	return 'svg:polygon';
+    }else{
+	return 'svg:circle';
+    }
+}
+
+function active(d){
+    if (CURRENT_TIME === -1 || NEXT_TIME === -1){
+	return getX(d) === CURRENT_TIME || getX(d) === NEXT_TIME;
+    } else{
+	return getX(d) >= CURRENT_TIME && getX(d) <= NEXT_TIME;
+    }
+}
+
+function shadeColor(color, percent) {   
+    var f=parseInt(color.slice(1),16),t=percent<0?0:255,p=percent<0?percent*-1:percent,R=f>>16,G=f>>8&0x00FF,B=f&0x0000FF;
+    return "#"+(0x1000000+(Math.round((t-R)*p)+R)*0x10000+(Math.round((t-G)*p)+G)*0x100+(Math.round((t-B)*p)+B)).toString(16).slice(1);
+}

@@ -236,7 +236,7 @@ func (this *Chart) Add(curFile, prevFile *project.File, vals []*tool.ChartVal) (
 	if len(vals) == 0 {
 		return
 	}
-	x := float64(curFile.Time-this.start) / 1000
+	x := util.Round(float64(curFile.Time-this.start)/1000.0, 2)
 	var d string
 	hasDiff := curFile.Id != prevFile.Id && curFile.Type == project.SRC
 	if hasDiff {

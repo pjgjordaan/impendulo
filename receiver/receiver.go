@@ -119,7 +119,7 @@ func (this *SubmissionHandler) Handle() (err error) {
 //Login authenticates a Submission.
 //It validates the user's credentials and permissions.
 func (this *SubmissionHandler) Login() (err error) {
-	loginInfo, err := util.ReadJson(this.conn)
+	loginInfo, err := util.ReadJSON(this.conn)
 	if err != nil {
 		return
 	}
@@ -170,7 +170,7 @@ func (this *SubmissionHandler) Login() (err error) {
 		projectInfos[i] = &ProjectInfo{p, subs}
 		i++
 	}
-	err = this.writeJson(projectInfos)
+	err = this.writeJSON(projectInfos)
 	return
 }
 
@@ -178,7 +178,7 @@ func (this *SubmissionHandler) Login() (err error) {
 //A new submission is then created or an existing one resumed
 //depending on the request.
 func (this *SubmissionHandler) LoadInfo() (err error) {
-	reqInfo, err := util.ReadJson(this.conn)
+	reqInfo, err := util.ReadJSON(this.conn)
 	if err != nil {
 		return
 	}
@@ -214,7 +214,7 @@ func (this *SubmissionHandler) createSubmission(subInfo map[string]interface{}) 
 	this.submission.Status = project.BUSY
 	err = db.Add(db.SUBMISSIONS, this.submission)
 	if err == nil {
-		err = this.writeJson(this.submission)
+		err = this.writeJSON(this.submission)
 	}
 	return
 }
@@ -246,7 +246,7 @@ func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{}
 //Read reads Files from the connection and sends them for processing.
 func (this *SubmissionHandler) Read() (done bool, err error) {
 	//Receive file metadata and request info
-	requestInfo, err := util.ReadJson(this.conn)
+	requestInfo, err := util.ReadJSON(this.conn)
 	if err != nil {
 		return
 	}
@@ -299,9 +299,9 @@ func (this *SubmissionHandler) Read() (done bool, err error) {
 	return
 }
 
-//writeJson writes an json data to this SubmissionHandler's connection.
-func (this *SubmissionHandler) writeJson(data interface{}) (err error) {
-	err = util.WriteJson(this.conn, data)
+//writeJSON writes an JSON data to this SubmissionHandler's connection.
+func (this *SubmissionHandler) writeJSON(data interface{}) (err error) {
+	err = util.WriteJSON(this.conn, data)
 	if err == nil {
 		_, err = this.conn.Write([]byte(util.EOT))
 	}

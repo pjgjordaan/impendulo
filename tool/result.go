@@ -33,7 +33,7 @@ import (
 type (
 	ChartVal struct {
 		Name   string
-		Y      int
+		Y      float64
 		Show   bool
 		FileId bson.ObjectId
 	}
@@ -93,21 +93,6 @@ type (
 		Template() string
 	}
 
-	AdditionalResult interface {
-		AdditionalTemplate() string
-	}
-	BugResult interface {
-		Bug(id string, index int) (*Bug, error)
-	}
-
-	Bug struct {
-		Id               string
-		ResultId, FileId bson.ObjectId
-		Title            string
-		Content          []interface{}
-		Lines            []int
-	}
-
 	//Report is an interface which represents a tool report on a snapshot.
 	Report interface{}
 
@@ -122,7 +107,6 @@ type (
 	CodeResult struct {
 		Lang string
 		Data string
-		Bug  *Bug
 	}
 
 	//SummaryResult is a DisplayResult used to provide a summary of all results.
@@ -191,10 +175,6 @@ func (this *ErrorResult) GetReport() Report {
 	return this.err.Error()
 }
 
-func (this *ErrorResult) AdditionalTemplate() string {
-	return "emptyadditionalresult"
-}
-
 //Template
 func (this *ErrorResult) Template() string {
 	return "emptyresult"
@@ -202,7 +182,6 @@ func (this *ErrorResult) Template() string {
 
 //NewCodeResult
 func NewCodeResult(lang string, data []byte) *CodeResult {
-	fmt.Println(strings.TrimSpace(string(data)))
 	return &CodeResult{
 		Lang: strings.ToLower(lang),
 		Data: strings.TrimSpace(string(data)),
@@ -257,19 +236,4 @@ func (this *SummaryResult) Template() string {
 //list of summaries.
 func (this *SummaryResult) AddSummary(result ToolResult) {
 	this.summary = append(this.summary, result.Summary())
-}
-
-func NewBug(result ToolResult, id string, content []interface{}, start, end int) *Bug {
-	lines := make([]int, end-start+1)
-	for i := start; i <= end; i++ {
-		lines[i-start] = i
-	}
-	return &Bug{
-		Id:       id,
-		ResultId: result.GetId(),
-		FileId:   result.GetFileId(),
-		Title:    result.GetName() + " Violation",
-		Content:  content,
-		Lines:    lines,
-	}
 }

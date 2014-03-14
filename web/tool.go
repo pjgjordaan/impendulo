@@ -512,7 +512,7 @@ func GetResult(name string, fileId bson.ObjectId) (tool.DisplayResult, error) {
 	return tool.NewErrorResult(tool.NORESULT, name), nil
 }
 
-func GetAdditonalResult(toolName, suffix string, fileId bson.ObjectId) (tool.AdditionalResult, error) {
+func GetTestResult(toolName, suffix string, fileId bson.ObjectId) (tool.DisplayResult, error) {
 	var name string
 	switch toolName {
 	case junit.NAME:
@@ -539,7 +539,7 @@ func GetAdditonalResult(toolName, suffix string, fileId bson.ObjectId) (tool.Add
 	switch v := ival.(type) {
 	case bson.ObjectId:
 		//Retrieve result from the db.
-		return db.AdditionalResult(bson.M{db.ID: v}, nil)
+		return db.DisplayResult(bson.M{db.ID: v}, nil)
 	case string:
 		//Error, so create new error result.
 		return tool.NewErrorResult(v, toolName), nil

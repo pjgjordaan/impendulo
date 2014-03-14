@@ -48,8 +48,8 @@ func (this *Result) SetReport(report tool.Report) {
 //ChartVals
 func (this *Result) ChartVals() []*tool.ChartVal {
 	return []*tool.ChartVal{
-		&tool.ChartVal{"Errors", this.Report.Errors, true, this.FileId},
-		&tool.ChartVal{"Warnings", this.Report.Warnings, false, this.FileId},
+		&tool.ChartVal{"Errors", float64(this.Report.Errors), true, this.FileId},
+		&tool.ChartVal{"Warnings", float64(this.Report.Warnings), false, this.FileId},
 	}
 }
 

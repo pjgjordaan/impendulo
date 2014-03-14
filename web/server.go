@@ -29,11 +29,14 @@ package web
 import (
 	"code.google.com/p/gorilla/pat"
 	"fmt"
+	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/tool/jacoco"
+	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/util"
+	"labix.org/v2/mgo/bson"
 	"net/http"
 	"path/filepath"
 	"strconv"
-	"strings"
 )
 
 var (
@@ -48,9 +51,9 @@ const (
 )
 
 func init() {
-	logs, err := util.LogDir()
-	if err != nil {
-		panic(err)
+	logs, e := util.LogDir()
+	if e != nil {
+		panic(e)
 	}
 	//Setup the router.
 	router = pat.New()
@@ -58,9 +61,11 @@ func init() {
 	GenerateGets(router, Getters(), Views())
 	GeneratePosts(router, Posters(), IndexPosters())
 	GenerateViews(router, Views())
+	router.Add("GET", "/chart", getChart())
 	router.Add("GET", "/tools", getTools())
 	router.Add("GET", "/users", getUsers())
 	router.Add("GET", "/skeletons", getSkeletons())
+	router.Add("GET", "/code", getCode())
 	router.Add("GET", "/static/", FileHandler(StaticDir()))
 	router.Add("GET", "/static", RedirectHandler("/static/"))
 	router.Add("GET", "/logs/", FileHandler(logs))
@@ -70,57 +75,136 @@ func init() {
 
 func getUsers() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		projectId, msg, err := getProjectId(req)
-		if err != nil {
+		projectId, msg, e := getProjectId(req)
+		if e != nil {
 			fmt.Fprint(w, msg)
 			return
 		}
-		u, err := users(projectId)
-		if err != nil {
-			fmt.Fprint(w, err.Error())
+		u, e := users(projectId)
+		if e != nil {
+			fmt.Fprint(w, e.Error())
 			return
 		}
-		fmt.Fprint(w, strings.Join(u, ","))
+		b, e := util.JSON(map[string]interface{}{"users": u})
+		if e != nil {
+			fmt.Fprint(w, e.Error())
+			return
+		}
+		fmt.Fprint(w, string(b))
 	})
 }
 
 func getTools() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		projectId, msg, err := getProjectId(req)
-		if err != nil {
+		projectId, msg, e := getProjectId(req)
+		if e != nil {
 			fmt.Fprint(w, msg)
 			return
 		}
-		t, err := tools(projectId)
-		if err != nil {
-			fmt.Fprint(w, err.Error())
+		t, e := tools(projectId)
+		if e != nil {
+			fmt.Fprint(w, e.Error())
 			return
 		}
-		fmt.Fprint(w, strings.Join(t, ","))
+		b, e := util.JSON(map[string]interface{}{"tools": t})
+		if e != nil {
+			fmt.Fprint(w, e.Error())
+			return
+		}
+		fmt.Fprint(w, string(b))
+	})
+}
+
+func getCode() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		resultId, msg, e := getId(req, "resultid", "result")
+		if e != nil {
+			fmt.Fprint(w, msg)
+			return
+		}
+		r, e := db.ToolResult(bson.M{db.ID: resultId}, bson.M{db.FILEID: 1})
+		if e != nil {
+			fmt.Fprint(w, e.Error())
+			return
+		}
+		f, e := db.File(bson.M{db.ID: r.GetFileId()}, nil)
+		if e != nil {
+			fmt.Fprint(w, e.Error())
+			return
+		}
+		b, e := util.JSON(map[string]interface{}{"code": string(f.Data)})
+		if e != nil {
+			fmt.Fprint(w, e.Error())
+			return
+		}
+		fmt.Fprint(w, string(b))
 	})
 }
 
 func getSkeletons() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		projectId, msg, err := getProjectId(req)
-		if err != nil {
+		projectId, msg, e := getProjectId(req)
+		if e != nil {
 			fmt.Fprint(w, msg)
 			return
 		}
-		vals, err := skeletons(projectId)
-		if err != nil {
-			fmt.Fprint(w, err.Error())
+		vals, e := skeletons(projectId)
+		if e != nil {
+			fmt.Fprint(w, e.Error())
 			return
 		}
-		var skelstr string
-		for _, s := range vals {
-			if len(skelstr) > 0 {
-				skelstr = skelstr + "," + s.Id.Hex() + "_" + s.Name
-			} else {
-				skelstr = s.Id.Hex() + "_" + s.Name
+		b, e := util.JSON(map[string]interface{}{"skeletons": vals})
+		if e != nil {
+			fmt.Fprint(w, e.Error())
+			return
+		}
+		fmt.Fprint(w, string(b))
+	})
+}
+
+func getChart() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		subId, msg, e := getSubId(req)
+		if e != nil {
+			fmt.Fprint(w, msg)
+			return
+		}
+		n, e := GetString(req, "file")
+		if e != nil {
+			fmt.Fprint(w, e.Error())
+			return
+		}
+		r, e := GetString(req, "result")
+		if e != nil {
+			fmt.Fprint(w, e.Error())
+			return
+		}
+		switch r {
+		case jacoco.NAME:
+			cId, e := util.ReadId(req.FormValue("childfileid"))
+			if e != nil {
+				fmt.Fprint(w, e.Error())
+				return
+			}
+			r += "-" + cId.Hex()
+		case junit.NAME:
+			r, _ = util.Extension(n)
+			if cId, e := util.ReadId(req.FormValue("childfileid")); e == nil {
+				r += "-" + cId.Hex()
 			}
 		}
-		fmt.Fprint(w, skelstr)
+		files, e := db.Files(bson.M{db.SUBID: subId, db.NAME: n}, bson.M{db.DATA: 0})
+		c, e := LoadChart(r, files)
+		if e != nil {
+			fmt.Fprint(w, e.Error())
+			return
+		}
+		b, e := util.JSON(c)
+		if e != nil {
+			fmt.Fprint(w, e.Error())
+			return
+		}
+		fmt.Fprint(w, string(b))
 	})
 }
 
@@ -129,8 +213,8 @@ func StaticDir() string {
 	if staticDir != "" {
 		return staticDir
 	}
-	iPath, err := util.InstallPath()
-	if err != nil {
+	iPath, e := util.InstallPath()
+	if e != nil {
 		return ""
 	}
 	staticDir = filepath.Join(iPath, "static")
@@ -139,8 +223,8 @@ func StaticDir() string {
 
 //getRoute retrieves a route for a given name.
 func getRoute(name string) string {
-	u, err := router.GetRoute(name).URL()
-	if err != nil {
+	u, e := router.GetRoute(name).URL()
+	if e != nil {
 		return "/"
 	}
 	return u.Path
@@ -153,8 +237,8 @@ func Run(port uint) {
 	}
 	setActive(true)
 	defer setActive(false)
-	if err := http.ListenAndServe(":"+strconv.Itoa(int(port)), router); err != nil {
-		util.Log(err)
+	if e := http.ListenAndServe(":"+strconv.Itoa(int(port)), router); e != nil {
+		util.Log(e)
 	}
 }
 

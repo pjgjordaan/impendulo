@@ -15,7 +15,6 @@
 {{$addr := address $report}}
 <div class="panel-group" id="jpfaccordion{{$addr}}">
   {{if not $report.Success}}
-  {{$code := "Code"}}
   {{$uid := .state.Uid}}
   {{$sid := .state.Sid}}
   {{$fileName := .state.File}}
@@ -55,11 +54,19 @@
 		  {{if eq .Line -1}}
 		  {{.Details}}
 		  {{else}}
+		  {{$faddress := address .}}
 		  {{$id := .Id}}
-		  <a href="{{displayCodeBug $sid $uid $code $fileName $current $next $rid $id $i}}">
-		    {{.Details}}
-		  </a>
-		  {{end}}
+		  <a class="nolink" id="frame{{$faddress}}">
+		    {{.Details}} 
+		  </a>  
+		  <script>      
+		    var id = 'frame{{$faddress}}';
+		    var info = {};
+		    info.title = {{shortName .Property}};
+		    info.content = {{.Details}};
+		    addCodeModal(id, {{$rid}}, info, {{.Line}}, {{.Line}});
+		  </script>
+	    	  {{end}}
 		  <br>
 		  {{end}}
 		</dl>

@@ -71,7 +71,7 @@
     <ul class="dropdown-menu" role="menu">
       {{range $results}}  
       <li>
-	<a href="{{displayResult $sid $uid . $fileName $current $next}}">
+	<a href="displayresult?result={{.}}">
 	  {{.}}
 	</a>
       </li>

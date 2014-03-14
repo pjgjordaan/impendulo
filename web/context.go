@@ -30,6 +30,8 @@ import (
 	"fmt"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/tool/jacoco"
+	"github.com/godfried/impendulo/tool/junit"
 	"labix.org/v2/mgo/bson"
 	"net/http"
 	"strconv"
@@ -49,7 +51,7 @@ type (
 		IsUser                     bool
 		Pid, Sid                   bson.ObjectId
 		Uid, File, Result, View    string
-		ChildFile, ChildResult     string
+		ChildFile                  string
 		Current, Next              int
 		CurrentChild, DisplayCount int
 		Level                      Level
@@ -165,6 +167,18 @@ func LoadContext(sess *sessions.Session) *Context {
 	return c
 }
 
+func (b *Browse) ClearSubmission() {
+	b.File = ""
+	b.ChildFile = ""
+	b.Result = ""
+	b.Current = 0
+	b.Next = 0
+	b.CurrentChild = 0
+	b.DisplayCount = 10
+	b.Type = project.SRC
+	b.ChildType = project.SRC
+}
+
 func (b *Browse) SetDisplayCount(req *http.Request) error {
 	i, err := GetInt(req, "displaycount")
 	if err == nil {
@@ -180,6 +194,7 @@ func (b *Browse) SetUid(req *http.Request) error {
 	if err != nil {
 		return nil
 	}
+	b.IsUser = true
 	b.Uid = id
 	return nil
 }
@@ -189,7 +204,14 @@ func (b *Browse) SetSid(req *http.Request) error {
 	if err != nil {
 		return nil
 	}
+	sub, err := db.Submission(bson.M{db.ID: id}, bson.M{db.PROJECTID: 1, db.USER: 1})
+	if err != nil {
+		return err
+	}
+	b.ClearSubmission()
 	b.Sid = id
+	b.Pid = sub.ProjectId
+	b.Uid = sub.User
 	return nil
 }
 
@@ -198,6 +220,7 @@ func (b *Browse) SetPid(req *http.Request) error {
 	if err != nil {
 		return nil
 	}
+	b.IsUser = false
 	b.Pid = pid
 	return nil
 }
@@ -222,19 +245,31 @@ func (b *Browse) SetFile(req *http.Request) error {
 		return err
 	}
 	b.Type = f.Type
+	b.Current = 0
+	b.Next = 0
 	return nil
 }
 
-func (b *Browse) SetFileIndices(req *http.Request) error {
-	files, err := Snapshots(b.Sid, b.File, b.Type)
+func (b *Browse) setIndices(req *http.Request, files []*project.File) error {
+	defer func() {
+		if b.Current == b.Next {
+			b.Next = (b.Current + 1) % len(files)
+		}
+	}()
+	c, err := getCurrent(req, len(files)-1)
 	if err != nil {
 		return err
 	}
-	b.Current, err = getCurrent(req, len(files)-1)
-	if err == nil {
-		b.Next, err = getNext(req, len(files)-1)
+	n, err := getNext(req, len(files)-1)
+	if err != nil {
 		return err
 	}
+	b.Current = c
+	b.Next = n
+	return nil
+}
+
+func (b *Browse) setTimeIndices(req *http.Request, files []*project.File) error {
 	t, err := strconv.ParseInt(req.FormValue("time"), 10, 64)
 	if err != nil {
 		return nil
@@ -249,23 +284,30 @@ func (b *Browse) SetFileIndices(req *http.Request) error {
 	return fmt.Errorf("no file found at time %d", t)
 }
 
+func (b *Browse) SetFileIndices(req *http.Request) error {
+	if b.File == "" {
+		return nil
+	}
+	files, err := Snapshots(b.Sid, b.File, b.Type)
+	if err != nil {
+		return err
+	}
+
+	if err = b.setIndices(req, files); err != nil {
+		return b.setTimeIndices(req, files)
+	}
+	return nil
+}
+
 func (b *Browse) SetChild(req *http.Request) error {
-	r, err := GetString(req, "childresult")
-	if err == nil {
-		b.ChildResult = r
-	}
-	if b.ChildResult == "" {
-		rs, err := resultNames(b.Pid, childView)
-		if err == nil && len(rs) > 0 {
-			b.ChildResult = rs[0]
-		}
-	}
 	if b.ChildFile == "" {
-		b.ChildFile, err = testedFileName(b.Sid)
+		f, err := testedFileName(b.Sid)
 		if err != nil {
-			return err
+			return nil
 		}
+		b.ChildFile = f
 		b.ChildType = project.SRC
+		b.CurrentChild = 0
 	}
 	files, err := Snapshots(b.Sid, b.ChildFile, b.ChildType)
 	if err != nil {
@@ -278,13 +320,17 @@ func (b *Browse) SetChild(req *http.Request) error {
 }
 
 func (b *Browse) Update(req *http.Request) error {
-	setters := []Setter{b.SetPid, b.SetUid, b.SetSid, b.SetResult, b.SetFile, b.SetDisplayCount, b.SetChild}
+	setters := []Setter{b.SetPid, b.SetUid, b.SetSid, b.SetResult, b.SetFile, b.SetFileIndices, b.SetDisplayCount, b.SetChild}
 	for _, s := range setters {
 		if err := s(req); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (b *Browse) childResult() bool {
+	return b.Type == project.TEST && (b.Result == junit.NAME || b.Result == jacoco.NAME)
 }
 
 func (b *Browse) SetLevel(route string) {
