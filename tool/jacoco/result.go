@@ -101,25 +101,23 @@ func (r *Result) ChartVals() []*tool.ChartVal {
 	v := make([]*tool.ChartVal, len(r.Report.Counters))
 	for i, c := range r.Report.Counters {
 		p := util.Round(float64(c.Covered)/float64(c.Covered+c.Missed)*100.0, 2)
-		v[i] = &tool.ChartVal{util.Title(c.Type), p, true, r.FileId}
+		v[i] = &tool.ChartVal{util.Title(c.Type) + " Coverage", p, i == 0, r.FileId}
 	}
 	return v
 }
 
-func NewResult(fileId bson.ObjectId, name string, xml, html []byte) (res *Result, err error) {
+func NewResult(fileId bson.ObjectId, name string, xml, html []byte) (*Result, error) {
 	id := bson.NewObjectId()
-	report, err := NewReport(id, xml, html)
-	if err != nil {
-		return
+	r, e := NewReport(id, xml, html)
+	if e != nil {
+		return nil, e
 	}
-	gridFS := len(xml)+len(html) > tool.MAX_SIZE
-	res = &Result{
+	return &Result{
 		Id:       id,
 		FileId:   fileId,
 		TestName: name,
-		GridFS:   gridFS,
-		Report:   report,
+		GridFS:   len(xml)+len(html) > tool.MAX_SIZE,
+		Report:   r,
 		Type:     NAME,
-	}
-	return
+	}, nil
 }

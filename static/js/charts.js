@@ -298,6 +298,7 @@ function timeChart(fileName, resultName, chartData, compare, currentTime, nextTi
 	.enter()
 	.append('svg:polygon')
 	.attr('class', 'dot-active')
+	.attr('key', chartKey)
 	.style('opacity', function(d){
 	    return d.show ? 1.0 : 0.0;
 	})
@@ -664,6 +665,7 @@ function summaryTimeChart(fileName, resultName, chartData, compare, currentTime,
 	.enter()
 	.append('svg:polygon')
 	.attr('class', 'dot-active')
+	.attr('key', chartKey)
 	.style('opacity', function(d){
 	    return d.show ? 1.0 : 0.0;
 	})
@@ -854,7 +856,7 @@ function showTooltip(d){
 	.style('opacity', 1);
 }
 
-    function star(x, y, scale)
+function star(x, y, scale)
 {
     scale = scale || 1;
     var innerRadius = 2 * scale;

@@ -26,9 +26,11 @@ package web
 
 import (
 	"code.google.com/p/gorilla/sessions"
+
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
+
 	"net/http"
 )
 
@@ -56,76 +58,76 @@ func init() {
 
 //ServeHTTP loads a the current session, handles  the request and
 //then stores the session.
-func (h Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	sess, err := store.Get(req, "impendulo")
-	if err != nil {
-		util.Log(err, LOG_HANDLERS)
+func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s, e := store.Get(r, "impendulo")
+	if e != nil {
+		util.Log(e, LOG_HANDLERS)
 	}
 	//Load our context from session
-	ctx := LoadContext(sess)
-	buf := new(HttpBuffer)
-	err = CheckAccess(req.URL.Path, ctx, Permissions())
-	if err != nil {
-		ctx.AddMessage(err.Error(), true)
-		http.Redirect(buf, req, getRoute("index"), http.StatusSeeOther)
+	c := LoadContext(s)
+	b := new(HttpBuffer)
+	e = CheckAccess(r.URL.Path, c, Permissions())
+	if e != nil {
+		c.AddMessage(e.Error(), true)
+		http.Redirect(b, r, getRoute("index"), http.StatusSeeOther)
 	} else {
-		err = h(buf, req, ctx)
+		e = h(b, r, c)
 	}
-	if err != nil {
-		util.Log(err, LOG_HANDLERS)
+	if e != nil {
+		util.Log(e, LOG_HANDLERS)
 	}
-	if err = ctx.Save(req, buf); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if e = c.Save(r, b); e != nil {
+		http.Error(w, e.Error(), http.StatusInternalServerError)
 		return
 	}
-	buf.Apply(w)
+	b.Apply(w)
 }
 
 func RedirectHandler(dest string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		http.Redirect(w, req, dest, http.StatusSeeOther)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, dest, http.StatusSeeOther)
 	})
 }
 
 func FileHandler(origin string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		sess, err := store.Get(req, "impendulo")
-		if err != nil {
-			util.Log(err, LOG_HANDLERS)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s, e := store.Get(r, "impendulo")
+		if e != nil {
+			util.Log(e, LOG_HANDLERS)
 		}
 		//Load our context from session
-		ctx := LoadContext(sess)
-		buf := new(HttpBuffer)
-		err = CheckAccess(req.URL.Path, ctx, Permissions())
-		var servePath string
-		if err == nil {
-			servePath, err = ServePath(req.URL, origin)
+		c := LoadContext(s)
+		b := new(HttpBuffer)
+		e = CheckAccess(r.URL.Path, c, Permissions())
+		var p string
+		if e == nil {
+			p, e = ServePath(r.URL, origin)
 		}
-		if err != nil {
-			ctx.AddMessage(err.Error(), true)
-			http.Redirect(buf, req, getRoute("index"), http.StatusSeeOther)
+		if e != nil {
+			c.AddMessage(e.Error(), true)
+			http.Redirect(b, r, getRoute("index"), http.StatusSeeOther)
 		} else {
-			http.ServeFile(buf, req, servePath)
+			http.ServeFile(b, r, p)
 		}
-		if err != nil {
-			util.Log(err, LOG_HANDLERS)
+		if e != nil {
+			util.Log(e, LOG_HANDLERS)
 		}
-		if err = ctx.Save(req, buf); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		if e = c.Save(r, b); e != nil {
+			http.Error(w, e.Error(), http.StatusInternalServerError)
 			return
 		}
-		buf.Apply(w)
+		b.Apply(w)
 	})
 }
 
 //getNav retrieves the navbar to display.
-func getNav(ctx *Context) string {
-	uname, err := ctx.Username()
-	if err != nil {
+func getNav(c *Context) string {
+	n, e := c.Username()
+	if e != nil {
 		return "outnavbar"
 	}
-	u, err := db.User(uname)
-	if err != nil {
+	u, e := db.User(n)
+	if e != nil {
 		return "outnavbar"
 	}
 	switch u.Access {
@@ -137,16 +139,4 @@ func getNav(ctx *Context) string {
 		return "adminnavbar"
 	}
 	return "outNavbar"
-}
-
-//downloadProject makes a project skeleton available for download.
-func downloadProject(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-	path, err := LoadSkeleton(req)
-	if err != nil {
-		ctx.AddMessage("Could not load project skeleton.", true)
-		http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
-	} else {
-		http.ServeFile(w, req, path)
-	}
-	return err
 }

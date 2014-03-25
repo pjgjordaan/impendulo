@@ -27,6 +27,7 @@ package web
 import (
 	"errors"
 	"fmt"
+
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
@@ -153,52 +154,49 @@ func SubmissionChart(subs []*project.Submission) (ret ChartData) {
 	return
 }
 
-func overviewChart(tipe string) (ret ChartData, err error) {
-	switch tipe {
+func overviewChart(c string) (ChartData, error) {
+	switch c {
 	case "user":
-		ret, err = UserChart()
+		return UserChart()
 	case "project":
-		ret, err = ProjectChart()
-	default:
-		return nil, fmt.Errorf("Unknown type %s.", tipe)
+		return ProjectChart()
 	}
-	return
-
+	return nil, fmt.Errorf("Unknown type %s.", c)
 }
 
-func UserChart() (ret ChartData, err error) {
-	ret = NewChartData()
-	users, err := db.Users(bson.M{})
-	if err != nil {
-		return
+func UserChart() (ChartData, error) {
+	users, e := db.Users(bson.M{})
+	if e != nil {
+		return nil, e
 	}
+	d := NewChartData()
 	for _, u := range users {
-		counts := TypeCounts(u.Name)
-		point := map[string]interface{}{
-			"key": u.Name, "submissions": counts[0],
-			"snapshots": counts[1], "launches": counts[2],
+		c := TypeCounts(u.Name)
+		p := map[string]interface{}{
+			"key": u.Name, "submissions": c[0],
+			"snapshots": c[1], "launches": c[2],
 		}
-		ret = append(ret, point)
+		d = append(d, p)
 	}
-	return
+	return d, nil
 }
 
-func ProjectChart() (ret ChartData, err error) {
-	ret = NewChartData()
-	projects, err := db.Projects(bson.M{}, nil)
-	if err != nil {
-		return
+func ProjectChart() (ChartData, error) {
+	projects, e := db.Projects(bson.M{}, nil)
+	if e != nil {
+		return nil, e
 	}
+	d := NewChartData()
 	for _, p := range projects {
-		counts := TypeCounts(p.Id)
-		point := map[string]interface{}{
-			"key": p.Name, "submissions": counts[0],
-			"snapshots": counts[1], "launches": counts[2],
+		c := TypeCounts(p.Id)
+		v := map[string]interface{}{
+			"key": p.Name, "submissions": c[0],
+			"snapshots": c[1], "launches": c[2],
 			"id": p.Id,
 		}
-		ret = append(ret, point)
+		d = append(d, v)
 	}
-	return
+	return d, nil
 }
 
 func TypeCounts(id interface{}) (counts []int) {

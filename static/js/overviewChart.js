@@ -26,7 +26,7 @@ function overviewChart(chartData, tipe){
     if (chartData === null){
 	return;
     }
-    var m = [10, 150, 100, 100];
+    var m = [10, 150, 50, 100];
     var w = 1100 - m[1] - m[3];
     var h = 500 - m[0] - m[2];
     var size = w / chartData.length;
@@ -266,7 +266,7 @@ function overviewChart(chartData, tipe){
 	.orient('bottom')
 	.tickSubdivide(true);
 
-    var chart = d3.select('#chart')
+    var chart = d3.select('#overview-chart')
 	.append('svg:svg')
 	.attr('width', w + m[1] + m[3])
 	.attr('height', h + m[0] + m[2])

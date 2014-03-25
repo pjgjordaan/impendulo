@@ -26,7 +26,9 @@ package web
 
 import (
 	"code.google.com/p/gorilla/pat"
+
 	"fmt"
+
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
@@ -35,6 +37,7 @@ import (
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
 	"net/http"
 	"strings"
 )
@@ -90,24 +93,24 @@ func IndexPosters() map[string]bool {
 
 //GeneratePosts loads post request handlers and adds them to the router.
 func GeneratePosts(router *pat.Router, posts map[string]Poster, indexPosts map[string]bool) {
-	for name, fn := range posts {
-		handleFunc := fn.CreatePost(indexPosts[name])
-		pattern := "/" + name
-		router.Add("POST", pattern, Handler(handleFunc)).Name(name)
+	for n, f := range posts {
+		h := f.CreatePost(indexPosts[n])
+		p := "/" + n
+		router.Add("POST", p, Handler(h)).Name(n)
 	}
 }
 
 //CreatePost loads a post request handler.
-func (this Poster) CreatePost(indexDest bool) Handler {
-	return func(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-		msg, err := this(req, ctx)
-		ctx.AddMessage(msg, err != nil)
-		if err == nil && indexDest {
-			http.Redirect(w, req, getRoute("index"), http.StatusSeeOther)
+func (this Poster) CreatePost(index bool) Handler {
+	return func(w http.ResponseWriter, r *http.Request, c *Context) error {
+		m, e := this(r, c)
+		c.AddMessage(m, e != nil)
+		if e == nil && index {
+			http.Redirect(w, r, getRoute("index"), http.StatusSeeOther)
 		} else {
-			http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+			http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 		}
-		return err
+		return e
 	}
 }
 

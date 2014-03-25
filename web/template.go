@@ -28,6 +28,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
@@ -40,17 +41,18 @@ import (
 	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
+
 	"html"
 	"html/template"
+
 	"labix.org/v2/mgo/bson"
+
 	"net/url"
 	"path/filepath"
 	"strings"
 )
 
 type (
-	//Args represents arguments passed to html templates or to template.Execute.
-	Args map[string]interface{}
 	view uint
 )
 

@@ -28,12 +28,7 @@ package web
 
 import (
 	"code.google.com/p/gorilla/pat"
-	"fmt"
-	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/tool/jacoco"
-	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/util"
-	"labix.org/v2/mgo/bson"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -61,151 +56,12 @@ func init() {
 	GenerateGets(router, Getters(), Views())
 	GeneratePosts(router, Posters(), IndexPosters())
 	GenerateViews(router, Views())
-	router.Add("GET", "/chart", getChart())
-	router.Add("GET", "/tools", getTools())
-	router.Add("GET", "/users", getUsers())
-	router.Add("GET", "/skeletons", getSkeletons())
-	router.Add("GET", "/code", getCode())
+	GenerateAJAX(router)
 	router.Add("GET", "/static/", FileHandler(StaticDir()))
 	router.Add("GET", "/static", RedirectHandler("/static/"))
 	router.Add("GET", "/logs/", FileHandler(logs))
 	router.Add("GET", "/logs", RedirectHandler("/logs/"))
 	router.Add("GET", "/", Handler(LoadView("homeview", "home"))).Name("index")
-}
-
-func getUsers() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		projectId, msg, e := getProjectId(req)
-		if e != nil {
-			fmt.Fprint(w, msg)
-			return
-		}
-		u, e := users(projectId)
-		if e != nil {
-			fmt.Fprint(w, e.Error())
-			return
-		}
-		b, e := util.JSON(map[string]interface{}{"users": u})
-		if e != nil {
-			fmt.Fprint(w, e.Error())
-			return
-		}
-		fmt.Fprint(w, string(b))
-	})
-}
-
-func getTools() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		projectId, msg, e := getProjectId(req)
-		if e != nil {
-			fmt.Fprint(w, msg)
-			return
-		}
-		t, e := tools(projectId)
-		if e != nil {
-			fmt.Fprint(w, e.Error())
-			return
-		}
-		b, e := util.JSON(map[string]interface{}{"tools": t})
-		if e != nil {
-			fmt.Fprint(w, e.Error())
-			return
-		}
-		fmt.Fprint(w, string(b))
-	})
-}
-
-func getCode() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		resultId, msg, e := getId(req, "resultid", "result")
-		if e != nil {
-			fmt.Fprint(w, msg)
-			return
-		}
-		r, e := db.ToolResult(bson.M{db.ID: resultId}, bson.M{db.FILEID: 1})
-		if e != nil {
-			fmt.Fprint(w, e.Error())
-			return
-		}
-		f, e := db.File(bson.M{db.ID: r.GetFileId()}, nil)
-		if e != nil {
-			fmt.Fprint(w, e.Error())
-			return
-		}
-		b, e := util.JSON(map[string]interface{}{"code": string(f.Data)})
-		if e != nil {
-			fmt.Fprint(w, e.Error())
-			return
-		}
-		fmt.Fprint(w, string(b))
-	})
-}
-
-func getSkeletons() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		projectId, msg, e := getProjectId(req)
-		if e != nil {
-			fmt.Fprint(w, msg)
-			return
-		}
-		vals, e := skeletons(projectId)
-		if e != nil {
-			fmt.Fprint(w, e.Error())
-			return
-		}
-		b, e := util.JSON(map[string]interface{}{"skeletons": vals})
-		if e != nil {
-			fmt.Fprint(w, e.Error())
-			return
-		}
-		fmt.Fprint(w, string(b))
-	})
-}
-
-func getChart() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		subId, msg, e := getSubId(req)
-		if e != nil {
-			fmt.Fprint(w, msg)
-			return
-		}
-		n, e := GetString(req, "file")
-		if e != nil {
-			fmt.Fprint(w, e.Error())
-			return
-		}
-		r, e := GetString(req, "result")
-		if e != nil {
-			fmt.Fprint(w, e.Error())
-			return
-		}
-		switch r {
-		case jacoco.NAME:
-			cId, e := util.ReadId(req.FormValue("childfileid"))
-			if e != nil {
-				fmt.Fprint(w, e.Error())
-				return
-			}
-			r += "-" + cId.Hex()
-		case junit.NAME:
-			r, _ = util.Extension(n)
-			if cId, e := util.ReadId(req.FormValue("childfileid")); e == nil {
-				r += "-" + cId.Hex()
-			}
-		}
-		files, e := db.Files(bson.M{db.SUBID: subId, db.NAME: n}, bson.M{db.DATA: 0})
-		c, e := LoadChart(r, files)
-		if e != nil {
-			fmt.Fprint(w, e.Error())
-			return
-		}
-		b, e := util.JSON(c)
-		if e != nil {
-			fmt.Fprint(w, e.Error())
-			return
-		}
-		fmt.Fprint(w, string(b))
-	})
 }
 
 //StaticDir retrieves the directory containing all the static files for the web server.
