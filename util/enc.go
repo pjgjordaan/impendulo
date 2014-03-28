@@ -29,76 +29,68 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"io"
+
 	"labix.org/v2/mgo/bson"
+
 	"os"
 )
 
 //ReadJSON reads all JSON data from a reader.
 func ReadJSON(r io.Reader) (map[string]interface{}, error) {
-	read, err := ReadData(r)
-	if err != nil {
-		return nil, err
+	b, e := ReadData(r)
+	if e != nil {
+		return nil, e
 	}
-	var holder interface{}
-	err = json.Unmarshal(read, &holder)
-	if err != nil {
-		return nil, &UtilError{read, "unmarshalling data from", err}
+	var m map[string]interface{}
+	if e = json.Unmarshal(b, &m); e != nil {
+		return nil, &UtilError{b, "unmarshalling data from", e}
 	}
-	j, ok := holder.(map[string]interface{})
-	if !ok {
-		return nil, &UtilError{holder, "casting to JSON", nil}
-	}
-	return j, nil
+	return m, nil
 }
 
 //LoadMap loads a map stored in a file.
-func LoadMap(fname string) (ret map[bson.ObjectId]bool, err error) {
-	f, err := os.Open(fname)
-	if err != nil {
-		err = &UtilError{fname, "opening", err}
-		return
+func LoadMap(n string) (map[bson.ObjectId]bool, error) {
+	f, e := os.Open(n)
+	if e != nil {
+		return nil, &UtilError{n, "opening", e}
 	}
-	dec := gob.NewDecoder(f)
-	err = dec.Decode(&ret)
-	if err != nil {
-		err = &UtilError{fname, "decoding map stored in", err}
+	d := gob.NewDecoder(f)
+	var m map[bson.ObjectId]bool
+	if e = d.Decode(&m); e != nil {
+		return nil, &UtilError{n, "decoding map stored in", e}
 	}
-	return
+	return m, nil
 }
 
 //SaveMap saves a map to the filesystem.
-func SaveMap(mp map[bson.ObjectId]bool, fname string) (err error) {
-	f, err := os.Create(fname)
-	if err != nil {
-		err = &UtilError{fname, "creating", err}
-		return
+func SaveMap(m map[bson.ObjectId]bool, n string) error {
+	f, e := os.Create(n)
+	if e != nil {
+		return &UtilError{n, "creating", e}
 	}
 	enc := gob.NewEncoder(f)
-	err = enc.Encode(&mp)
-	if err != nil {
-		err = &UtilError{mp, "encoding map", err}
-	}
-	return
-}
-
-//WriteJSON writes JSON marshalled data to to the writer.
-func WriteJSON(w io.Writer, data interface{}) error {
-	marshalled, err := json.Marshal(data)
-	if err != nil {
-		return &UtilError{data, "marshalling json", err}
-	}
-	_, err = w.Write(marshalled)
-	if err != nil {
-		return &UtilError{marshalled, "writing json", err}
+	if e = enc.Encode(&m); e != nil {
+		return &UtilError{m, "encoding map", e}
 	}
 	return nil
 }
 
-func JSON(data interface{}) ([]byte, error) {
+//WriteJSON writes JSON marshalled data to to the writer.
+func WriteJSON(w io.Writer, i interface{}) error {
+	m, e := json.Marshal(i)
+	if e != nil {
+		return &UtilError{i, "marshalling json", e}
+	}
+	if _, e = w.Write(m); e != nil {
+		return &UtilError{m, "writing json", e}
+	}
+	return nil
+}
+
+func JSON(i interface{}) ([]byte, error) {
 	b := new(bytes.Buffer)
-	err := WriteJSON(b, data)
-	if err != nil {
-		return nil, err
+	if e := WriteJSON(b, i); e != nil {
+		return nil, e
 	}
 	return b.Bytes(), nil
 }

@@ -29,7 +29,9 @@ package tool
 import (
 	"bytes"
 	"io"
+
 	"labix.org/v2/mgo/bson"
+
 	"os/exec"
 	"strings"
 	"time"
@@ -75,9 +77,9 @@ func Langs() []Language {
 	return langs
 }
 
-func Supported(lang Language) bool {
-	for _, l := range Langs() {
-		if l == lang {
+func Supported(l Language) bool {
+	for _, c := range Langs() {
+		if l == c {
 			return true
 		}
 	}
@@ -85,8 +87,8 @@ func Supported(lang Language) bool {
 }
 
 //SetTimeLimit sets the maximum time for which the RunCommand function can run.
-func SetTimeLimit(seconds uint) {
-	timeLimit = time.Duration(seconds) * time.Second
+func SetTimeLimit(s uint) {
+	timeLimit = time.Duration(s) * time.Second
 }
 
 //TimeLimit returns the current timeout setting.
@@ -95,46 +97,45 @@ func TimeLimit() uint {
 }
 
 //HasStdErr checks whether the ExecResult has standard error output.
-func (this *ExecResult) HasStdErr() bool {
-	return this.StdErr != nil && len(this.StdErr) > 0
+func (e *ExecResult) HasStdErr() bool {
+	return e.StdErr != nil && len(e.StdErr) > 0
 }
 
 //HasStdOut checks whether the ExecResult has standard output.
-func (this *ExecResult) HasStdOut() bool {
-	return this.StdOut != nil &&
-		len(strings.TrimSpace(string(this.StdOut))) > 0
+func (e *ExecResult) HasStdOut() bool {
+	return e.StdOut != nil && len(strings.TrimSpace(string(e.StdOut))) > 0
 }
 
 //RunCommand executes a given command given by args and stdin. It terminates
 //when the command finishes execution or times out. An ExecResult containing the
 //command's output is returned.
-func RunCommand(args []string, stdin io.Reader) (res *ExecResult) {
-	res = new(ExecResult)
-	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Stdin = stdin
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &stdout, &stderr
-	err := cmd.Start()
-	for MemoryError(err) || AccessError(err) {
-		err = cmd.Start()
+func RunCommand(args []string, stdin io.Reader) (r *ExecResult) {
+	r = new(ExecResult)
+	c := exec.Command(args[0], args[1:]...)
+	c.Stdin = stdin
+	var so, se bytes.Buffer
+	c.Stdout, c.Stderr = &so, &se
+	e := c.Start()
+	for MemoryError(e) || AccessError(e) {
+		e = c.Start()
 	}
-	if err != nil {
-		res.Err = &StartError{args, err}
+	if e != nil {
+		r.Err = &StartError{args, e}
 		return
 	}
-	doneChan := make(chan error)
+	d := make(chan error)
 	go func() {
-		doneChan <- cmd.Wait()
+		d <- c.Wait()
 	}()
 	select {
 	case <-time.After(timeLimit):
-		cmd.Process.Kill()
-		res.Err = &TimeoutError{args}
-	case err := <-doneChan:
-		if err != nil {
-			res.Err = &EndError{args, err, string(stderr.Bytes())}
+		c.Process.Kill()
+		r.Err = &TimeoutError{args}
+	case e := <-d:
+		if e != nil {
+			r.Err = &EndError{args, e, string(se.Bytes())}
 		}
-		res.StdOut, res.StdErr = stdout.Bytes(), stderr.Bytes()
+		r.StdOut, r.StdErr = so.Bytes(), se.Bytes()
 	}
 	return
 }

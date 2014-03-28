@@ -26,113 +26,104 @@ package db
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/user"
 	"labix.org/v2/mgo/bson"
 )
 
 //User retrieves a user matching the given id from the active database.
-func User(id string) (ret *user.User, err error) {
-	session, err := Session()
-	if err != nil {
-		return
+func User(id string) (*user.User, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
 	}
-	defer session.Close()
-	c := session.DB("").C(USERS)
-	err = c.FindId(id).One(&ret)
-	if err != nil {
-		err = &DBGetError{"user", err, id}
+	defer s.Close()
+	c := s.DB("").C(USERS)
+	var u *user.User
+	if e = c.FindId(id).One(&u); e != nil {
+		return nil, &DBGetError{"user", e, id}
 	}
-	return
+	return u, nil
 }
 
 //Users retrieves users matching the given interface from the active database.
-func Users(matcher interface{}, sort ...string) (ret []*user.User, err error) {
-	session, err := Session()
-	if err != nil {
-		return
+func Users(matcher interface{}, sort ...string) ([]*user.User, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
 	}
-	defer session.Close()
-	c := session.DB("").C(USERS)
+	defer s.Close()
+	c := s.DB("").C(USERS)
 	q := c.Find(matcher)
 	if len(sort) > 0 {
 		q = q.Sort(sort...)
 	}
-	err = q.Select(bson.M{user.ID: 1}).All(&ret)
-	if err != nil {
-		err = &DBGetError{"users", err, matcher}
+	var u []*user.User
+	if e = q.Select(bson.M{user.ID: 1}).All(&u); e != nil {
+		return nil, &DBGetError{"users", e, matcher}
 	}
-	return
+	return u, nil
 }
 
-func UserNames(matcher interface{}) (ret []string, err error) {
-	session, err := Session()
-	if err != nil {
-		return
+func UserNames(matcher interface{}) ([]string, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
 	}
-	defer session.Close()
-	c := session.DB("").C(USERS)
-	err = c.Find(matcher).Sort(NAME).Distinct(NAME, &ret)
-	if err != nil {
-		err = &DBGetError{"users", err, matcher}
+	defer s.Close()
+	c := s.DB("").C(USERS)
+	var n []string
+	if e = c.Find(matcher).Sort(NAME).Distinct(NAME, &n); e != nil {
+		return nil, &DBGetError{"users", e, matcher}
 	}
-	return
+	return n, nil
 }
 
 //AddUsers adds new users to the active database.
-func AddUsers(users ...*user.User) (err error) {
-	session, err := Session()
-	if err != nil {
-		return
+func AddUsers(users ...*user.User) error {
+	s, e := Session()
+	if e != nil {
+		return e
 	}
-	defer session.Close()
-	c := session.DB("").C(USERS)
-	err = c.Insert(users)
-	if err != nil {
-		err = fmt.Errorf(
-			"Encountered error %q when adding users %q to db",
-			err, users)
+	defer s.Close()
+	c := s.DB("").C(USERS)
+	if e = c.Insert(users); e != nil {
+		return fmt.Errorf("error %q adding users %q to db", e, users)
 	}
-	return
+	return nil
 }
 
 //RemoveUserById removes a user matching
 //the given id from the active database.
-func RemoveUserById(id string) (err error) {
-	subs, err := Submissions(bson.M{USER: id},
-		bson.M{ID: 1})
-	if err != nil {
-		return
+func RemoveUserById(id string) error {
+	ss, e := Submissions(bson.M{USER: id}, bson.M{ID: 1})
+	if e != nil {
+		return e
 	}
-	for _, sub := range subs {
-		err = RemoveSubmissionById(sub.Id)
-		if err != nil {
-			return
+	for _, s := range ss {
+		if e = RemoveSubmissionById(s.Id); e != nil {
+			return e
 		}
 	}
-	err = RemoveById(USERS, id)
-	return
+	return RemoveById(USERS, id)
 }
 
-func RenameUser(oldName, newName string) (err error) {
-	u, err := User(oldName)
-	if err != nil {
-		return
+func RenameUser(o, n string) error {
+	u, e := User(o)
+	if e != nil {
+		return e
 	}
-	u.Name = newName
-	err = Add(USERS, u)
-	if err != nil {
-		return
+	u.Name = n
+	if e = Add(USERS, u); e != nil {
+		return e
 	}
-	change := bson.M{SET: bson.M{USER: newName}}
-	matcher := bson.M{USER: oldName}
-	err = UpdateAll(PROJECTS, matcher, change)
-	if err != nil {
-		return
+	m := bson.M{USER: o}
+	c := bson.M{SET: bson.M{USER: n}}
+	if e = UpdateAll(PROJECTS, m, c); e != nil {
+		return e
 	}
-	err = UpdateAll(SUBMISSIONS, matcher, change)
-	if err != nil {
-		return
+	if e = UpdateAll(SUBMISSIONS, m, c); e != nil {
+		return e
 	}
-	err = RemoveUserById(oldName)
-	return
+	return RemoveUserById(o)
 }

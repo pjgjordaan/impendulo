@@ -26,12 +26,16 @@ package processing
 
 import (
 	"fmt"
+	"path/filepath"
+
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/tool/gcc"
+	"github.com/godfried/impendulo/tool/jacoco"
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
@@ -46,164 +50,203 @@ const (
 	LOG_TOOLS = "processing/tools.go"
 )
 
-//Tools retrieves the Impendulo tool suite for a Processor's language.
-//Each tool is already constructed.
-func Tools(proc *Processor) (tools []tool.Tool, err error) {
-	switch tool.Language(proc.project.Lang) {
+func TestTools(p *TestProcessor, tf *project.File) ([]tool.Tool, error) {
+	switch tool.Language(p.project.Lang) {
 	case tool.JAVA:
-		tools = javaTools(proc)
+		return javaTestTools(p, tf), nil
 	case tool.C:
-		tools = cTools(proc)
-	default:
-		//Only Java is supported so far...
-		err = fmt.Errorf("No tools found for %s language.",
-			proc.project.Lang)
+		return cTestTools(p, tf), nil
 	}
-	return
+	//Only Java is supported so far...
+	return nil, fmt.Errorf("no tools found for %s language", p.project.Lang)
 }
 
-func cTools(proc *Processor) []tool.Tool {
+func cTestTools(p *TestProcessor, tf *project.File) []tool.Tool {
+	return []tool.Tool{}
+}
+
+func javaTestTools(p *TestProcessor, tf *project.File) []tool.Tool {
+	a := make([]tool.Tool, 0, 10)
+	test := &junit.Test{
+		Id:      tf.Id,
+		Name:    tf.Name,
+		Package: tf.Package,
+		Test:    tf.Data,
+	}
+	var t tool.Tool
+	var e error
+	t, e = junit.New(test, p.toolDir)
+	if e != nil {
+		util.Log(e, LOG_TOOLS)
+	} else {
+		a = append(a, t)
+	}
+	t, e = Jacoco(p, test)
+	if e != nil {
+		util.Log(e, LOG_TOOLS)
+		return a
+	}
+	return append(a, t)
+}
+
+func Jacoco(p *TestProcessor, test *junit.Test) (tool.Tool, error) {
+	t := tool.NewTarget(test.Name, test.Package, filepath.Join(p.toolDir, test.Id.Hex()), tool.JAVA)
+	return jacoco.New(p.rootDir, p.srcDir, t)
+}
+
+//Tools retrieves the Impendulo tool suite for a Processor's language.
+//Each tool is already constructed.
+func Tools(p *Processor) ([]tool.Tool, error) {
+	switch tool.Language(p.project.Lang) {
+	case tool.JAVA:
+		return javaTools(p), nil
+	case tool.C:
+		return cTools(p), nil
+	}
+	//Only Java is supported so far...
+	return nil, fmt.Errorf("no tools found for %s language", p.project.Lang)
+}
+
+func cTools(p *Processor) []tool.Tool {
 	return []tool.Tool{}
 }
 
 //javaTools retrieves Impendulo's Java tool suite.
-func javaTools(proc *Processor) []tool.Tool {
-	tools := make([]tool.Tool, 0, 10)
+func javaTools(p *Processor) []tool.Tool {
+	a := make([]tool.Tool, 0, 10)
 	//Only add tools if they were created successfully
-	fbTool, err := findbugs.New()
-	if err == nil {
-		tools = append(tools, fbTool)
+	var t tool.Tool
+	var e error
+	t, e = checkstyle.New()
+	if e != nil {
+		util.Log(e, LOG_TOOLS)
 	} else {
-		util.Log(err, LOG_TOOLS)
+		a = append(a, t)
 	}
-	csTool, err := checkstyle.New()
-	if err == nil {
-		tools = append(tools, csTool)
+	t, e = findbugs.New()
+	if e != nil {
+		util.Log(e, LOG_TOOLS)
 	} else {
-		util.Log(err, LOG_TOOLS)
+		a = append(a, t)
 	}
-	jpfTool, err := JPF(proc)
-	if err == nil {
-		tools = append(tools, jpfTool)
+	t, e = JPF(p)
+	if e != nil {
+		util.Log(e, LOG_TOOLS)
 	} else {
-		util.Log(err, LOG_TOOLS)
+		a = append(a, t)
 	}
-	pmdTool, err := PMD(proc)
-	if err == nil {
-		tools = append(tools, pmdTool)
+	t, e = PMD(p)
+	if e != nil {
+		util.Log(e, LOG_TOOLS)
 	} else {
-		util.Log(err, LOG_TOOLS)
+		a = append(a, t)
 	}
-	tests, err := JUnit(proc)
-	if err == nil && len(tests) > 0 {
-		tools = append(tools, tests...)
-	} else if err != nil {
-		util.Log(err, LOG_TOOLS)
+	tests, e := JUnit(p)
+	if e != nil {
+		util.Log(e, LOG_TOOLS)
+	} else if len(tests) > 0 {
+		a = append(a, tests...)
 	}
-	userTests, err := UserJUnit(proc)
-	if err == nil && len(userTests) > 0 {
-		tools = append(tools, userTests...)
-	} else if err != nil {
-		util.Log(err, LOG_TOOLS)
+	tests, e = UserJUnit(p)
+	if e != nil {
+		util.Log(e, LOG_TOOLS)
+	} else if len(tests) > 0 {
+		a = append(a, tests...)
 	}
-	return tools
+	return a
 }
 
 //Compiler retrieves a compiler for a Processor's language.
-func Compiler(proc *Processor) (compiler tool.Tool, err error) {
-	l := tool.Language(proc.project.Lang)
+func Compiler(p *Processor) (tool.Tool, error) {
+	l := tool.Language(p.project.Lang)
 	switch l {
 	case tool.JAVA:
-		compiler, err = javac.New("")
+		return javac.New("")
 	case tool.C:
-		makeFile, merr := db.Makefile(bson.M{db.PROJECTID: proc.project.Id}, nil)
-		if merr != nil {
-			compiler, err = gcc.New()
+		m, e := db.Makefile(bson.M{db.PROJECTID: p.project.Id}, nil)
+		if e != nil {
+			return gcc.New()
 		} else {
-			compiler, err = mk.New(makeFile, proc.toolDir)
+			return mk.New(m, p.toolDir)
 		}
-	default:
-		err = fmt.Errorf("No compiler found for %s language.", l)
 	}
-	return
+	return nil, fmt.Errorf("no compiler found for %s language", l)
 }
 
 //JPF creates a new instance of the JPF tool.
-func JPF(proc *Processor) (runnable tool.Tool, err error) {
+func JPF(p *Processor) (tool.Tool, error) {
 	//First we need the project's JPF configuration.
-	jpfFile, err := db.JPFConfig(
-		bson.M{db.PROJECTID: proc.project.Id}, nil)
-	if err != nil {
-		return
+	c, e := db.JPFConfig(bson.M{db.PROJECTID: p.project.Id}, nil)
+	if e != nil {
+		return nil, e
 	}
-	runnable, err = jpf.New(jpfFile, proc.toolDir)
-	return
+	return jpf.New(c, p.toolDir)
 }
 
 //PMD creates a new instance of the PMD tool.
-func PMD(proc *Processor) (pmdTool tool.Tool, err error) {
+func PMD(p *Processor) (tool.Tool, error) {
 	//First we need the project's PMD rules.
-	rules, err := db.PMDRules(bson.M{db.PROJECTID: proc.project.Id}, nil)
-	if err != nil || rules == nil || len(rules.Rules) == 0 {
-		rules, err = pmd.DefaultRules(proc.project.Id)
-		if err != nil {
-			return
+	r, e := db.PMDRules(bson.M{db.PROJECTID: p.project.Id}, nil)
+	if e != nil || r == nil || len(r.Rules) == 0 {
+		r, e = pmd.DefaultRules(p.project.Id)
+		if e != nil {
+			return nil, e
 		}
-		err = db.AddPMDRules(rules)
+		e = db.AddPMDRules(r)
+		if e != nil {
+			return nil, e
+		}
 	}
-	pmdTool, err = pmd.New(rules)
-	return
+	return pmd.New(r)
 }
 
 //JUnit creates a new JUnit tool instances for each available JUnit test for a given project.
-func JUnit(proc *Processor) (ret []tool.Tool, err error) {
+func JUnit(p *Processor) ([]tool.Tool, error) {
 	//First we need the project's JUnit tests.
-	tests, err := db.JUnitTests(bson.M{db.PROJECTID: proc.project.Id, db.TYPE: bson.M{db.NE: junit.USER}}, nil)
-	if err != nil {
-		return
+	ts, e := db.JUnitTests(bson.M{db.PROJECTID: p.project.Id, db.TYPE: bson.M{db.NE: junit.USER}}, nil)
+	if e != nil {
+		return nil, e
 	}
-	testDir, err := config.JUNIT_TESTING.Path()
-	if err != nil {
-		return
+	d, e := config.JUNIT_TESTING.Path()
+	if e != nil {
+		return nil, e
 	}
 	//Now we copy our test runner to the proccessor's tool directory.
-	err = util.Copy(proc.toolDir, testDir)
-	if err != nil {
-		return
+	if e = util.Copy(p.toolDir, d); e != nil {
+		return nil, e
 	}
-	ret = make([]tool.Tool, 0, len(tests))
-	for _, test := range tests {
-		unitTest, terr := junit.New(test, proc.toolDir)
-		if terr != nil {
-			util.Log(terr, LOG_TOOLS)
+	js := make([]tool.Tool, 0, len(ts))
+	for _, t := range ts {
+		j, e := junit.New(t, p.toolDir)
+		if e != nil {
+			util.Log(e, LOG_TOOLS)
 		} else {
-			ret = append(ret, unitTest)
+			js = append(js, j)
 		}
 	}
-	return
+	return js, nil
 }
 
-func UserJUnit(proc *Processor) (ret []tool.Tool, err error) {
-	tests, err := db.JUnitTests(bson.M{db.PROJECTID: proc.project.Id, db.TYPE: junit.USER}, nil)
-	if err != nil {
-		return
+func UserJUnit(p *Processor) ([]tool.Tool, error) {
+	ts, e := db.JUnitTests(bson.M{db.PROJECTID: p.project.Id, db.TYPE: junit.USER}, nil)
+	if e != nil {
+		return nil, e
 	}
-	testDir, err := config.JUNIT_TESTING.Path()
-	if err != nil {
-		return
+	d, e := config.JUNIT_TESTING.Path()
+	if e != nil {
+		return nil, e
 	}
-	err = util.Copy(proc.toolDir, testDir)
-	if err != nil {
-		return
+	if e = util.Copy(p.toolDir, d); e != nil {
+		return nil, e
 	}
-	ret = make([]tool.Tool, 0, len(tests))
-	for _, test := range tests {
-		unitTest, terr := junit_user.New(test, proc.toolDir)
-		if terr != nil {
-			util.Log(terr, LOG_TOOLS)
+	js := make([]tool.Tool, 0, len(ts))
+	for _, t := range ts {
+		j, e := junit_user.New(t, p.toolDir)
+		if e != nil {
+			util.Log(e, LOG_TOOLS)
 		} else {
-			ret = append(ret, unitTest)
+			js = append(js, j)
 		}
 	}
-	return
+	return js, nil
 }

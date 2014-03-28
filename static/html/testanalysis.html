@@ -8,29 +8,52 @@
 {{$sid := .ctx.Browse.Sid}}
 {{$lang := submissionLang $sid}} 
 {{$testResults := .childResults}}
-<h4 class="text-center code-popover-h" >
-  <small>tool</small> {{.ctx.Browse.Result}}
-  <a href="#code_wrapper" id="codepopoverlink">
-    {{$fileName}}
-  </a>
-  @ {{date $currentFile.Time}}
-</h4>
-<div id="code_wrapper" class="popover-code hidden">
-  <pre class="brush: {{$lang}}; class-name: 'popover-code'">
-    {{string $currentFile.Data}}
-  </pre>
+{{$tc := chartTime (index .files .ctx.Browse.Current)}}
+{{$tn := chartTime (index .files .ctx.Browse.Next)}}
+<div class="row">
+  <div class="col-md-3">
+  </div>
+  <div class="col-md-6">
+    <h4 class="text-center code-popover-h" >
+      <small>tool</small> {{.ctx.Browse.Result}}
+      <a href="#code_wrapper" id="codepopoverlink">
+	{{$fileName}}
+      </a>
+      @ {{date $currentFile.Time}}
+    </h4>
+    <div id="code_wrapper" class="popover-code hidden">
+      <pre class="brush: {{$lang}}; class-name: 'popover-code'">
+	{{string $currentFile.Data}}
+      </pre>
+    </div>
+    <script type="text/javascript">
+      highlight(undefined);
+      addPopover('codepopoverlink', 'code_wrapper');
+    </script>
+    <form class="form-inline centered" role="form" onsubmit="return ajaxChart({{.ctx.Browse.Sid.Hex}},{{.ctx.Browse.File}},{{.ctx.Browse.Result}},{{$tc}},{{$tn}},{{.ctx.Browse.Uid}},{{$currentFile.Id.Hex}},'submissions')">
+      <div class="form-group">
+	<label class="sr-only" for="submissions">Submissions</label>
+	<select class="form-control select-inline" name="submissions" id="submissions" multiple>
+	</select>
+      </div>
+      <button type="submit" class="btn btn-default">
+	<span class="glyphicon glyphicon-arrow-right"></span>
+      </button>
+    </form>
+    <script type="text/javascript" language="javascript">
+      window.onload = function()
+      {
+      addSubmissions({{.ctx.Browse.Pid.Hex}}, 'submissions');
+      ;}
+    </script>
+  </div>
+  <div class="col-md-3">
+  </div>
 </div>
-<script type="text/javascript">
-  highlight(undefined);
-  addPopover('codepopoverlink', 'code_wrapper');
-</script>
-<div id="chart" class="chart" xmlns:xlink="http://www.w3.org/1999/xlink">
-  <div id="chart-tooltip" class="tooltip"></div>
+<div id="chartHolder">
 </div>
 <script>
-  {{$tc := chartTime (index .files .ctx.Browse.Current)}}
-  {{$tn := chartTime (index .files .ctx.Browse.Next)}}
-  ajaxChart({{.ctx.Browse.Sid.Hex}},{{.ctx.Browse.File}},{{.ctx.Browse.Result}},{{$tc}},{{$tn}},{{$currentFile.Id.Hex}});
+  ajaxChart({{.ctx.Browse.Sid.Hex}},{{.ctx.Browse.File}},{{.ctx.Browse.Result}},{{$tc}},{{$tn}},{{.ctx.Browse.Uid}},{{$currentFile.Id.Hex}});
 </script>
 {{$sliced := slice $childFiles $current}}
 {{$adjustment := adjustment $childFiles $current}}

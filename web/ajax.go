@@ -18,8 +18,8 @@ type (
 	AJAX func(*http.Request) ([]byte, error)
 )
 
-func (a AJAX) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	b, e := a(req)
+func (a AJAX) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	b, e := a(r)
 	if e != nil {
 		util.Log(e, LOG_HANDLERS)
 		b, _ = util.JSON(map[string]interface{}{"error": e.Error()})
@@ -27,101 +27,137 @@ func (a AJAX) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprint(w, string(b))
 }
 
-func GenerateAJAX(router *pat.Router) {
-	ajaxFuncs := map[string]AJAX{
+func GenerateAJAX(r *pat.Router) {
+	fs := map[string]AJAX{
 		"chart": getChart, "tools": getTools, "users": getUsers,
-		"skeletons": getSkeletons, "code": getCode,
+		"skeletons": getSkeletons, "code": getCode, "submissions": submissions,
 	}
-	for name, fn := range ajaxFuncs {
-		router.Add("GET", "/"+name, fn)
+	for n, f := range fs {
+		r.Add("GET", "/"+n, f)
 	}
 }
 
-func getUsers(req *http.Request) ([]byte, error) {
-	projectId, _, e := getProjectId(req)
+func submissions(r *http.Request) ([]byte, error) {
+	pid, _, e := getProjectId(r)
 	if e != nil {
 		return nil, e
 	}
-	u, e := users(projectId)
+	s, e := db.Submissions(bson.M{db.PROJECTID: pid}, nil)
+	if e != nil {
+		return nil, e
+	}
+	return util.JSON(map[string]interface{}{"submissions": s})
+}
+
+func getUsers(r *http.Request) ([]byte, error) {
+	pid, _, e := getProjectId(r)
+	if e != nil {
+		return nil, e
+	}
+	u, e := users(pid)
 	if e != nil {
 		return nil, e
 	}
 	return util.JSON(map[string]interface{}{"users": u})
 }
 
-func getTools(req *http.Request) ([]byte, error) {
-	projectId, _, e := getProjectId(req)
+func getTools(r *http.Request) ([]byte, error) {
+	pid, _, e := getProjectId(r)
 	if e != nil {
 		return nil, e
 	}
-	t, e := tools(projectId)
+	t, e := tools(pid)
 	if e != nil {
 		return nil, e
 	}
 	return util.JSON(map[string]interface{}{"tools": t})
 }
 
-func getCode(req *http.Request) ([]byte, error) {
-	resultId, _, e := getId(req, "resultid", "result")
+func getCode(r *http.Request) ([]byte, error) {
+	rid, _, e := getId(r, "resultid", "result")
 	if e != nil {
 		return nil, e
 	}
-	r, e := db.ToolResult(bson.M{db.ID: resultId}, bson.M{db.FILEID: 1})
+	tr, e := db.ToolResult(bson.M{db.ID: rid}, bson.M{db.FILEID: 1})
 	if e != nil {
 		return nil, e
 	}
-	f, e := db.File(bson.M{db.ID: r.GetFileId()}, nil)
+	f, e := db.File(bson.M{db.ID: tr.GetFileId()}, nil)
 	if e != nil {
 		return nil, e
 	}
 	return util.JSON(map[string]interface{}{"code": string(f.Data)})
 }
 
-func getSkeletons(req *http.Request) ([]byte, error) {
-	projectId, _, e := getProjectId(req)
+func getSkeletons(r *http.Request) ([]byte, error) {
+	pid, _, e := getProjectId(r)
 	if e != nil {
 		return nil, e
 	}
-	vals, e := skeletons(projectId)
+	s, e := skeletons(pid)
 	if e != nil {
 		return nil, e
 	}
-	return util.JSON(map[string]interface{}{"skeletons": vals})
+	return util.JSON(map[string]interface{}{"skeletons": s})
 }
 
-func getChart(req *http.Request) ([]byte, error) {
-	subId, _, e := getSubId(req)
+func getChart(r *http.Request) ([]byte, error) {
+	e := r.ParseForm()
 	if e != nil {
 		return nil, e
 	}
-	n, e := GetString(req, "file")
+	sid, _, e := getSubId(r)
 	if e != nil {
 		return nil, e
 	}
-	r, e := GetString(req, "result")
+	n, e := GetString(r, "file")
 	if e != nil {
 		return nil, e
 	}
-	switch r {
+	rn, e := GetString(r, "result")
+	if e != nil {
+		return nil, e
+	}
+	switch rn {
 	case jacoco.NAME:
-		cId, e := util.ReadId(req.FormValue("childfileid"))
+		cId, e := util.ReadId(r.FormValue("childfileid"))
 		if e != nil {
 			return nil, e
 		}
-		r += "-" + cId.Hex()
+		rn += "-" + cId.Hex()
 	case junit.NAME:
-		r, _ = util.Extension(n)
-		if cId, e := util.ReadId(req.FormValue("childfileid")); e == nil {
-			r += "-" + cId.Hex()
+		rn, _ = util.Extension(n)
+		if cId, e := util.ReadId(r.FormValue("childfileid")); e == nil {
+			rn += "-" + cId.Hex()
 		}
 	}
-	files, e := db.Files(bson.M{db.SUBID: subId, db.NAME: n}, bson.M{db.DATA: 0})
+	fs, e := db.Files(bson.M{db.SUBID: sid, db.NAME: n}, bson.M{db.DATA: 0}, db.TIME)
 	if e != nil {
 		return nil, e
 	}
-	c, e := LoadChart(r, files)
+	c, e := LoadChart(rn, fs)
 	if e != nil {
 		return nil, e
 	}
-	return util.JSON(c)
+	cmp := false
+	if subs, ok := r.Form["submissions[]"]; ok {
+		for _, s := range subs {
+			sid, e := util.ReadId(s)
+			if e != nil {
+				return nil, e
+			}
+			fs, e := db.Files(bson.M{db.SUBID: sid, db.NAME: n}, bson.M{db.DATA: 0})
+			if e != nil {
+				return nil, e
+			}
+			nc, e := LoadChart(rn, fs)
+			if e != nil {
+				return nil, e
+			}
+			c = append(c, nc...)
+		}
+		cmp = len(subs) > 0
+	}
+	m := map[string]interface{}{"chart": c, "compare": cmp}
+	return util.JSON(m)
 }

@@ -78,22 +78,6 @@
       {{end}}
     </ul>
   </li>
-  {{else if .ctx.Browse.Level.Is "chart"}}
-  <li class="dropdown">
-    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-      {{$resultName}} Chart <span class="caret"></span>
-    </a>
-    <ul class="dropdown-menu" role="menu">
-      {{$compare := .compare}}
-      {{range $results}}  
-      <li>
-	<a href="{{compareChart $sid $uid . $fileName $compare}}">
-	  {{.}}
-	</a>
-      </li>
-      {{end}}
-    </ul>
-  </li>
   {{end}}
   {{end}}
   {{end}}

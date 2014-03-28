@@ -117,6 +117,9 @@ path {
     margin-top: 0px;
 }
 
+.select-inline{
+    width:60%;
+}
 
 #overview-chart{
     position: relative;
@@ -137,6 +140,7 @@ path {
     font: 10px sans-serif;
     background: yellow;
     box-shadow: 2px 2px 1px #888;
+    overflow: auto;
 }
 
 .center{

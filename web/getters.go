@@ -41,7 +41,7 @@ import (
 type (
 	//Args represents arguments passed to html templates or to template.Execute.
 	Args   map[string]interface{}
-	Getter func(req *http.Request, ctx *Context) (Args, string, error)
+	Getter func(r *http.Request, c *Context) (Args, string, error)
 )
 
 var (
@@ -68,92 +68,92 @@ func defaultGetters() map[string]Getter {
 }
 
 //GenerateGets loads post request handlers and adds them to the router.
-func GenerateGets(router *pat.Router, gets map[string]Getter, views map[string]string) {
-	for name, fn := range gets {
-		handleFunc := fn.CreateGet(name, views[name])
-		pattern := "/" + name
-		router.Add("GET", pattern, Handler(handleFunc)).Name(name)
+func GenerateGets(r *pat.Router, gets map[string]Getter, views map[string]string) {
+	for n, f := range gets {
+		h := f.CreateGet(n, views[n])
+		p := "/" + n
+		r.Add("GET", p, Handler(h)).Name(n)
 	}
 }
 
-func (this Getter) CreateGet(name, view string) Handler {
-	return func(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-		args, msg, e := this(req, ctx)
-		if msg != "" {
-			ctx.AddMessage(msg, e != nil)
+func (g Getter) CreateGet(name, view string) Handler {
+	return func(w http.ResponseWriter, r *http.Request, c *Context) error {
+		a, m, e := g(r, c)
+		if m != "" {
+			c.AddMessage(m, e != nil)
 		}
 		if e != nil {
-			http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+			http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 			return e
 		}
-		t, e := util.GetStrings(args, "templates")
+		t, e := util.GetStrings(a, "templates")
 		if e != nil {
-			ctx.AddMessage("Could not load page.", true)
-			http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
+			c.AddMessage("Could not load page.", true)
+			http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 			return e
 		}
-		delete(args, "templates")
-		ctx.Browse.View = view
-		if ctx.Browse.View == "home" {
-			ctx.Browse.SetLevel(name)
+		delete(a, "templates")
+		c.Browse.View = view
+		if c.Browse.View == "home" {
+			c.Browse.SetLevel(name)
 		}
-		args["ctx"] = ctx
-		return T(append(t, getNav(ctx))...).Execute(w, args)
+		a["ctx"] = c
+		return T(append(t, getNav(c))...).Execute(w, a)
 	}
 }
 
 //configView loads a tool's configuration page.
-func configView(req *http.Request, ctx *Context) (Args, string, error) {
-	tool, e := GetString(req, "tool")
+func configView(r *http.Request, c *Context) (Args, string, error) {
+	t, e := GetString(r, "tool")
 	if e != nil {
-		tool = "none"
+		t = "none"
 	}
-	return Args{"tool": tool, "templates": []string{"configview", toolTemplate(tool)}},
+	return Args{"tool": t, "templates": []string{"configview", toolTemplate(t)}},
 		"", nil
 }
 
 //getSubmissions displays a list of submissions.
-func getSubmissions(req *http.Request, ctx *Context) (Args, string, error) {
-	e := ctx.Browse.Update(req)
+func getSubmissions(r *http.Request, c *Context) (Args, string, error) {
+	e := c.Browse.Update(r)
 	if e != nil {
 		return nil, "Could not load submissions.", e
 	}
-	var matcher bson.M
-	if !ctx.Browse.IsUser {
-		matcher = bson.M{db.PROJECTID: ctx.Browse.Pid}
+	var m bson.M
+	if !c.Browse.IsUser {
+		m = bson.M{db.PROJECTID: c.Browse.Pid}
 	} else {
-		matcher = bson.M{db.USER: ctx.Browse.Uid}
+		m = bson.M{db.USER: c.Browse.Uid}
 	}
-	subs, e := db.Submissions(matcher, nil, "-"+db.TIME)
+	s, e := db.Submissions(m, nil, "-"+db.TIME)
 	if e != nil {
 		return nil, "Could not load submissions.", e
 	}
 	t := make([]string, 1)
-	if ctx.Browse.IsUser {
+	if c.Browse.IsUser {
 		t[0] = "usersubmissionresult"
 	} else {
 		t[0] = "projectsubmissionresult"
 	}
-	return Args{"subRes": subs, "templates": t}, "", nil
+	return Args{"subRes": s, "templates": t}, "", nil
 }
 
 //getFiles diplays information about files.
-func getFiles(req *http.Request, ctx *Context) (Args, string, error) {
-	e := ctx.Browse.Update(req)
+func getFiles(r *http.Request, c *Context) (Args, string, error) {
+	e := c.Browse.Update(r)
 	if e != nil {
 		return nil, "Could not retrieve files.", e
 	}
-	matcher := bson.M{db.SUBID: ctx.Browse.Sid, db.OR: [2]bson.M{bson.M{db.TYPE: project.SRC}, bson.M{db.TYPE: project.TEST}}}
-	fileInfo, e := db.FileInfos(matcher)
+	m := bson.M{db.SUBID: c.Browse.Sid, db.OR: [2]bson.M{bson.M{db.TYPE: project.SRC}, bson.M{db.TYPE: project.TEST}}}
+	f, e := db.FileInfos(m)
 	if e != nil {
 		return nil, "Could not retrieve files.", e
 	}
-	return Args{"fileInfo": fileInfo, "templates": []string{"fileresult"}}, "", nil
+	return Args{"fileInfo": f, "templates": []string{"fileresult"}}, "", nil
 }
 
 //editDBView
-func editDBView(req *http.Request, ctx *Context) (Args, string, error) {
-	editing, e := GetString(req, "editing")
+func editDBView(r *http.Request, c *Context) (Args, string, error) {
+	editing, e := GetString(r, "editing")
 	if e != nil {
 		editing = "Project"
 	}
@@ -162,12 +162,12 @@ func editDBView(req *http.Request, ctx *Context) (Args, string, error) {
 		"", nil
 }
 
-func loadProject(req *http.Request, ctx *Context) (Args, string, error) {
-	projectId, msg, e := getProjectId(req)
+func loadProject(r *http.Request, c *Context) (Args, string, error) {
+	pid, m, e := getProjectId(r)
 	if e != nil {
-		return nil, msg, e
+		return nil, m, e
 	}
-	p, e := db.Project(bson.M{db.ID: projectId}, nil)
+	p, e := db.Project(bson.M{db.ID: pid}, nil)
 	if e != nil {
 		return nil, "Could not find project.", e
 	}
@@ -175,157 +175,157 @@ func loadProject(req *http.Request, ctx *Context) (Args, string, error) {
 		"templates": []string{"editdbview", "editproject"}}, "", nil
 }
 
-func loadUser(req *http.Request, ctx *Context) (Args, string, error) {
-	uname, msg, e := getUserId(req)
+func loadUser(r *http.Request, c *Context) (Args, string, error) {
+	n, m, e := getUserId(r)
 	if e != nil {
-		return nil, msg, e
+		return nil, m, e
 	}
-	u, e := db.User(uname)
+	u, e := db.User(n)
 	if e != nil {
-		return nil, fmt.Sprintf("Could not find user %s.", uname), e
+		return nil, fmt.Sprintf("Could not find user %s.", n), e
 	}
 	return Args{"editing": "User", "user": u, "templates": []string{"editdbview", "edituser"}}, "", nil
 }
 
-func loadSubmission(req *http.Request, ctx *Context) (Args, string, error) {
-	projectId, msg, e := getProjectId(req)
+func loadSubmission(r *http.Request, c *Context) (Args, string, error) {
+	pid, m, e := getProjectId(r)
 	if e != nil {
-		return nil, msg, e
+		return nil, m, e
 	}
-	subId, msg, e := getSubId(req)
+	sid, m, e := getSubId(r)
 	if e != nil {
-		return nil, msg, e
+		return nil, m, e
 	}
-	s, e := db.Submission(bson.M{db.ID: subId}, nil)
+	s, e := db.Submission(bson.M{db.ID: sid}, nil)
 	if e != nil {
 		return nil, "Could not find submission.", e
 	}
-	return Args{"editing": "Submission", "projectId": projectId, "submission": s,
+	return Args{"editing": "Submission", "projectId": pid, "submission": s,
 		"templates": []string{"editdbview", "editsubmission"}}, "", nil
 }
 
-func loadFile(req *http.Request, ctx *Context) (Args, string, error) {
-	projectId, msg, e := getProjectId(req)
+func loadFile(r *http.Request, c *Context) (Args, string, error) {
+	pid, m, e := getProjectId(r)
 	if e != nil {
-		return nil, msg, e
+		return nil, m, e
 	}
-	subId, msg, e := getSubId(req)
+	sid, m, e := getSubId(r)
 	if e != nil {
-		return nil, msg, e
+		return nil, m, e
 	}
-	fileId, msg, e := getFileId(req)
+	fid, m, e := getFileId(r)
 	if e != nil {
-		return nil, msg, e
+		return nil, m, e
 	}
-	f, e := db.File(bson.M{db.ID: fileId}, nil)
+	f, e := db.File(bson.M{db.ID: fid}, nil)
 	if e != nil {
 		return nil, "Could not find file.", e
 	}
-	return Args{"editing": "File", "projectId": projectId, "submissionId": subId, "file": f,
+	return Args{"editing": "File", "projectId": pid, "submissionId": sid, "file": f,
 		"templates": []string{"editdbview", "editfile"}}, "", nil
 }
 
 //displayResult displays a tool's result.
-func displayResult(req *http.Request, ctx *Context) (Args, string, error) {
-	a, e := _displayResult(req, ctx)
+func displayResult(r *http.Request, c *Context) (Args, string, error) {
+	a, e := _displayResult(r, c)
 	if e != nil {
 		return nil, "Could not load results.", e
 	}
 	return a, "", nil
 }
 
-func _displayResult(req *http.Request, ctx *Context) (Args, error) {
-	e := ctx.Browse.Update(req)
+func _displayResult(r *http.Request, c *Context) (Args, error) {
+	e := c.Browse.Update(r)
 	if e != nil {
 		return nil, e
 	}
-	if ctx.Browse.childResult() {
-		return _displayChildResult(req, ctx)
+	if c.Browse.childResult() {
+		return _displayChildResult(r, c)
 	}
-	files, e := Snapshots(ctx.Browse.Sid, ctx.Browse.File, ctx.Browse.Type)
+	fs, e := Snapshots(c.Browse.Sid, c.Browse.File, c.Browse.Type)
 	if e != nil {
 		return nil, e
 	}
-	currentFile, e := getFile(files[ctx.Browse.Current].Id)
+	cf, e := getFile(fs[c.Browse.Current].Id)
 	if e != nil {
 		return nil, e
 	}
-	results, e := analysisNames(ctx.Browse.Pid, ctx.Browse.Type)
+	rs, e := analysisNames(c.Browse.Pid, c.Browse.Type)
 	if e != nil {
 		return nil, e
 	}
-	currentResult, e := GetResult(ctx.Browse.Result, currentFile.Id)
+	cr, e := GetResult(c.Browse.Result, cf.Id)
 	if e != nil {
 		return nil, e
 	}
-	nextFile, e := getFile(files[ctx.Browse.Next].Id)
+	nf, e := getFile(fs[c.Browse.Next].Id)
 	if e != nil {
 		return nil, e
 	}
-	nextResult, e := GetResult(ctx.Browse.Result, nextFile.Id)
+	nr, e := GetResult(c.Browse.Result, nf.Id)
 	if e != nil {
 		return nil, e
 	}
 	t := []string{"analysisview", "pager", "srcanalysis", ""}
-	if !isError(currentResult) || isError(nextResult) {
-		t[3] = currentResult.Template()
+	if !isError(cr) || isError(nr) {
+		t[3] = cr.Template()
 	} else {
-		t[3] = nextResult.Template()
+		t[3] = nr.Template()
 	}
 	return Args{
-		"files": files, "currentFile": currentFile, "currentResult": currentResult, "results": results,
-		"nextFile": nextFile, "nextResult": nextResult, "templates": t,
+		"files": fs, "currentFile": cf, "currentResult": cr, "results": rs,
+		"nextFile": nf, "nextResult": nr, "templates": t,
 	}, nil
 }
 
-func displayChildResult(req *http.Request, ctx *Context) (Args, string, error) {
-	a, e := _displayChildResult(req, ctx)
+func displayChildResult(r *http.Request, c *Context) (Args, string, error) {
+	a, e := _displayChildResult(r, c)
 	if e != nil {
 		return nil, "Could not load results.", e
 	}
 	return a, "", nil
 }
 
-func _displayChildResult(req *http.Request, ctx *Context) (Args, error) {
-	e := ctx.Browse.Update(req)
+func _displayChildResult(r *http.Request, c *Context) (Args, error) {
+	e := c.Browse.Update(r)
 	if e != nil {
 		return nil, e
 	}
-	parentFiles, e := Snapshots(ctx.Browse.Sid, ctx.Browse.File, ctx.Browse.Type)
+	parentFiles, e := Snapshots(c.Browse.Sid, c.Browse.File, c.Browse.Type)
 	if e != nil {
 		return nil, e
 	}
-	if cur, ce := getCurrent(req, len(parentFiles)-1); ce == nil {
-		ctx.Browse.Current = cur
+	if cur, ce := getCurrent(r, len(parentFiles)-1); ce == nil {
+		c.Browse.Current = cur
 	}
-	if next, ne := getNext(req, len(parentFiles)-1); ne == nil {
-		ctx.Browse.Next = next
+	if next, ne := getNext(r, len(parentFiles)-1); ne == nil {
+		c.Browse.Next = next
 	}
-	currentFile, e := getFile(parentFiles[ctx.Browse.Current].Id)
+	currentFile, e := getFile(parentFiles[c.Browse.Current].Id)
 	if e != nil {
 		return nil, e
 	}
-	results, e := resultNames(ctx.Browse.Pid, testView)
+	results, e := resultNames(c.Browse.Pid, testView)
 	if e != nil {
 		return nil, e
 	}
-	nextFile, e := getFile(parentFiles[ctx.Browse.Next].Id)
+	nextFile, e := getFile(parentFiles[c.Browse.Next].Id)
 	if e != nil {
 		return nil, e
 	}
-	childFiles, e := Snapshots(ctx.Browse.Sid, ctx.Browse.ChildFile, ctx.Browse.ChildType)
+	childFiles, e := Snapshots(c.Browse.Sid, c.Browse.ChildFile, c.Browse.ChildType)
 	if e != nil {
 		return nil, e
 	}
-	currentChild, e := db.File(bson.M{db.ID: childFiles[ctx.Browse.CurrentChild].Id}, nil)
+	currentChild, e := db.File(bson.M{db.ID: childFiles[c.Browse.CurrentChild].Id}, nil)
 	if e != nil {
 		return nil, e
 	}
-	currentChildResult, e := GetTestResult(ctx.Browse.Result, currentChild.Id.Hex(), currentFile.Id)
+	currentChildResult, e := GetTestResult(c.Browse.Result, currentChild.Id.Hex(), currentFile.Id)
 	if e != nil {
 		return nil, e
 	}
-	nextChildResult, e := GetTestResult(ctx.Browse.Result, currentChild.Id.Hex(), nextFile.Id)
+	nextChildResult, e := GetTestResult(c.Browse.Result, currentChild.Id.Hex(), nextFile.Id)
 	if e != nil {
 		return nil, e
 	}
@@ -343,27 +343,27 @@ func _displayChildResult(req *http.Request, ctx *Context) (Args, error) {
 }
 
 //getSubmissionsChart displays a chart of submissions.
-func getSubmissionsChart(req *http.Request, ctx *Context) (Args, string, error) {
-	e := ctx.Browse.Update(req)
+func getSubmissionsChart(r *http.Request, c *Context) (Args, string, error) {
+	e := c.Browse.Update(r)
 	if e != nil {
 		return nil, "Could not load chart.", e
 	}
-	var matcher bson.M
-	if !ctx.Browse.IsUser {
-		matcher = bson.M{db.PROJECTID: ctx.Browse.Pid}
+	var m bson.M
+	if !c.Browse.IsUser {
+		m = bson.M{db.PROJECTID: c.Browse.Pid}
 	} else {
-		matcher = bson.M{db.USER: ctx.Browse.Uid}
+		m = bson.M{db.USER: c.Browse.Uid}
 	}
-	subs, e := db.Submissions(matcher, nil, "-"+db.TIME)
+	s, e := db.Submissions(m, nil, "-"+db.TIME)
 	if e != nil {
 		return nil, "Could not load chart.", e
 	}
-	chartData := SubmissionChart(subs)
+	d := SubmissionChart(s)
 	t := make([]string, 1)
-	if ctx.Browse.IsUser {
+	if c.Browse.IsUser {
 		t[0] = "usersubmissionchart"
 	} else {
 		t[0] = "projectsubmissionchart"
 	}
-	return Args{"chart": chartData, "templates": t}, "", nil
+	return Args{"chart": d, "templates": t}, "", nil
 }

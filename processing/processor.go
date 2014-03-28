@@ -26,15 +26,15 @@ package processing
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/tool/jacoco"
 	"github.com/godfried/impendulo/tool/javac"
-	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
 	"os"
 	"path/filepath"
 )
@@ -52,6 +52,8 @@ type (
 		tools    []tool.Tool
 	}
 	TestProcessor struct {
+		sub      *project.Submission
+		project  *project.Project
 		id       bson.ObjectId
 		results  bson.M
 		rootDir  string
@@ -68,158 +70,151 @@ const (
 
 //NewProcessor creates a Processor and sets up the environment and
 //tools for it.
-func NewProcessor(subId bson.ObjectId) (proc *Processor, err error) {
-	sub, err := db.Submission(bson.M{db.ID: subId}, nil)
-	if err != nil {
-		return
+func NewProcessor(sid bson.ObjectId) (*Processor, error) {
+	s, e := db.Submission(bson.M{db.ID: sid}, nil)
+	if e != nil {
+		return nil, e
 	}
-	matcher := bson.M{db.ID: sub.ProjectId}
-	proj, err := db.Project(matcher, nil)
-	if err != nil {
-		return
+	p, e := db.Project(bson.M{db.ID: s.ProjectId}, nil)
+	if e != nil {
+		return nil, e
 	}
-	dir := filepath.Join(os.TempDir(), sub.Id.Hex())
-	toolDir := filepath.Join(dir, "tools")
-	proc = &Processor{
-		sub:     sub,
-		project: proj,
-		rootDir: dir,
-		srcDir:  filepath.Join(dir, "src"),
-		toolDir: toolDir,
+	d := filepath.Join(os.TempDir(), s.Id.Hex())
+	proc := &Processor{
+		sub:     s,
+		project: p,
+		rootDir: d,
+		srcDir:  filepath.Join(d, "src"),
+		toolDir: filepath.Join(d, "tools"),
 	}
 	//Can't proceed without our compiler
-	proc.compiler, err = Compiler(proc)
-	if err != nil {
-		return
+	proc.compiler, e = Compiler(proc)
+	if e != nil {
+		return nil, e
 	}
-	proc.tools, err = Tools(proc)
-	return
+	proc.tools, e = Tools(proc)
+	if e != nil {
+		return nil, e
+	}
+	return proc, nil
 }
 
 //Process listens for a submission's incoming files and processes them.
-func (this *Processor) Process(fileChan chan bson.ObjectId, doneChan chan E) {
-	util.Log("Processing submission", this.sub, LOG_PROCESSOR)
-	defer os.RemoveAll(this.rootDir)
+func (p *Processor) Process(fc chan bson.ObjectId, dc chan E) {
+	util.Log("Processing submission", p.sub, LOG_PROCESSOR)
+	defer func() {
+		os.RemoveAll(p.rootDir)
+		util.Log("Processed submission", p.sub, LOG_PROCESSOR)
+		dc <- E{}
+	}()
 	//Processing loop.
 processing:
 	for {
 		select {
-		case fId := <-fileChan:
-			err := this.ProcessFile(fId)
-			if err != nil {
-				util.Log(err, LOG_PROCESSOR)
+		case fId := <-fc:
+			if e := p.ProcessFile(fId); e != nil {
+				util.Log(e, LOG_PROCESSOR)
 			}
 			//Indicate that we are finished with the file.
-			fileChan <- fId
-		case <-doneChan:
+			fc <- fId
+		case <-dc:
 			//We are done so time to exit.
 			break processing
 		}
 	}
-	err := db.UpdateStatus(this.sub)
-	if err != nil {
-		util.Log(err, LOG_PROCESSOR)
+	if e := db.UpdateStatus(p.sub); e != nil {
+		util.Log(e, LOG_PROCESSOR)
 	}
-	err = db.UpdateTime(this.sub)
-	if err != nil {
-		util.Log(err, LOG_PROCESSOR)
+	if e := db.UpdateTime(p.sub); e != nil {
+		util.Log(e, LOG_PROCESSOR)
 	}
-	util.Log("Processed submission", this.sub, LOG_PROCESSOR)
-	doneChan <- E{}
 }
 
-func (this *Processor) ProcessFile(fileId bson.ObjectId) (err error) {
+func (p *Processor) ProcessFile(fid bson.ObjectId) error {
 	//Retrieve file and process it.
-	file, err := db.File(bson.M{db.ID: fileId}, nil)
-	if err != nil {
-		return
+	f, e := db.File(bson.M{db.ID: fid}, nil)
+	if e != nil {
+		return e
 	}
-	switch file.Type {
+	switch f.Type {
 	case project.TEST:
-		err = this.ProcessTest(file)
+		return p.ProcessTest(f)
 	case project.ARCHIVE:
-		err = this.ProcessArchive(file)
+		return p.ProcessArchive(f)
 	case project.SRC:
-		err = this.ProcessSource(file)
-	default:
-		err = fmt.Errorf("Cannot process file type %s.", file.Type)
+		return p.ProcessSource(f)
 	}
-	return
+	return fmt.Errorf("cannot process file type %s", f.Type)
 }
 
 //ProcessFile extracts archives and runs tools on source files.
-func (this *Processor) ProcessSource(file *project.File) (err error) {
-	util.Log("Processing file:", file, LOG_PROCESSOR)
-	defer util.Log("Processed file:", file, err, LOG_PROCESSOR)
+func (p *Processor) ProcessSource(f *project.File) error {
+	util.Log("Processing file:", f, LOG_PROCESSOR)
+	defer util.Log("Processed file:", f, LOG_PROCESSOR)
 	//Create a target for the tools to run on and save the file.
-	target := tool.NewTarget(file.Name, file.Package, this.srcDir, tool.Language(this.project.Lang))
-	err = util.SaveFile(target.FilePath(), file.Data)
-	if err == nil {
-		this.RunTools(file, target)
+	t := tool.NewTarget(f.Name, f.Package, p.srcDir, tool.Language(p.project.Lang))
+	if e := util.SaveFile(t.FilePath(), f.Data); e != nil {
+		util.Log(e, LOG_PROCESSOR)
+		return e
 	}
-	return
+	p.RunTools(f, t)
+	return nil
 }
 
-func (this *Processor) ProcessTest(test *project.File) (err error) {
-	target := tool.NewTarget(test.Name, test.Package, this.srcDir, tool.Language(this.project.Lang))
-	err = util.SaveFile(target.FilePath(), test.Data)
-	if err != nil {
-		return
+func (p *Processor) ProcessTest(test *project.File) error {
+	t := tool.NewTarget(test.Name, test.Package, p.srcDir, tool.Language(p.project.Lang))
+	if e := util.SaveFile(t.FilePath(), test.Data); e != nil {
+		return e
 	}
-	junitJar, err := config.JUNIT.Path()
-	if err != nil {
-		return
+	j, e := config.JUNIT.Path()
+	if e != nil {
+		return e
 	}
-	this.compiler.(*javac.Tool).AddCP(junitJar)
-	err = this.Compile(test.Id, target)
-	if err != nil {
-		return
+	p.compiler.(*javac.Tool).AddCP(j)
+	if e = p.Compile(test.Id, t); e != nil {
+		return e
 	}
-	testProc, err := NewTestProcessor(test, this)
-	if err != nil {
-		return
+	tp, e := NewTestProcessor(test, p)
+	if e != nil {
+		return e
 	}
-	files, err := db.Files(bson.M{db.SUBID: test.SubId, db.TYPE: project.SRC}, bson.M{db.ID: 1})
-	if err != nil {
-		return
+	fs, e := db.Files(bson.M{db.SUBID: test.SubId, db.TYPE: project.SRC}, bson.M{db.ID: 1})
+	if e != nil {
+		return e
 	}
-	for _, f := range files {
-		perr := testProc.Process(f.Id)
-		if err != nil {
-			util.Log(perr)
+	for _, f := range fs {
+		if e := tp.Process(f.Id); e != nil {
+			util.Log(e, LOG_PROCESSOR)
 		}
 	}
-	return
+	return nil
 }
 
 //Extract extracts files from an archive, stores and processes them.
-func (this *Processor) ProcessArchive(archive *project.File) error {
+func (p *Processor) ProcessArchive(a *project.File) error {
 	//Extract and store the files.
-	extracted, err := util.UnzipToMap(archive.Data)
-	if err != nil {
-		return err
+	m, e := util.UnzipToMap(a.Data)
+	if e != nil {
+		return e
 	}
-	for name, data := range extracted {
-		err = this.StoreFile(name, data)
-		if err != nil {
-			util.Log(err, LOG_PROCESSOR)
+	for n, d := range m {
+		if e = p.StoreFile(n, d); e != nil {
+			util.Log(e, LOG_PROCESSOR)
 		}
 	}
 	//We don't need the archive anymore
-	err = db.RemoveFileById(archive.Id)
-	if err != nil {
-		util.Log(err, LOG_PROCESSOR)
+	if e = db.RemoveFileById(a.Id); e != nil {
+		util.Log(e, LOG_PROCESSOR)
 	}
-	files, err := db.Files(bson.M{db.SUBID: this.sub.Id}, bson.M{db.TIME: 1, db.ID: 1}, db.TIME)
-	if err != nil {
-		return err
+	fs, e := db.Files(bson.M{db.SUBID: p.sub.Id}, bson.M{db.TIME: 1, db.ID: 1}, db.TIME)
+	if e != nil {
+		return e
 	}
-	ChangeStatus(Status{len(files), 0})
+	ChangeStatus(Status{len(fs), 0})
 	//Process archive files.
-	for _, file := range files {
-		err = this.ProcessFile(file.Id)
-		if err != nil {
-			util.Log(err, LOG_PROCESSOR)
+	for _, f := range fs {
+		if e = p.ProcessFile(f.Id); e != nil {
+			util.Log(e, LOG_PROCESSOR)
 		}
 		ChangeStatus(Status{-1, 0})
 	}
@@ -228,158 +223,135 @@ func (this *Processor) ProcessArchive(archive *project.File) error {
 
 //StoreFile creates a new project.File given an encoded file name and file data.
 //The new project.File is then saved in the database.
-func (this *Processor) StoreFile(name string, data []byte) (err error) {
-	file, err := project.ParseName(name)
-	if err != nil {
-		return
+func (p *Processor) StoreFile(n string, d []byte) error {
+	f, e := project.ParseName(n)
+	if e != nil {
+		return e
 	}
-	matcher := bson.M{db.SUBID: this.sub.Id, db.TYPE: file.Type, db.TIME: file.Time}
-	if !db.Contains(db.FILES, matcher) {
-		file.SubId = this.sub.Id
-		file.Data = data
-		err = db.Add(db.FILES, file)
+	if db.Contains(db.FILES, bson.M{db.SUBID: p.sub.Id, db.TYPE: f.Type, db.TIME: f.Time}) {
+		return nil
 	}
-	return
+	f.SubId = p.sub.Id
+	f.Data = d
+	return db.Add(db.FILES, f)
 }
 
 //RunTools runs all available tools on a file. It skips a tool if
 //there is already a result for it present. This makes it possible to
 //rerun old tools or add new tools and run them on old files without having
 //to rerun all the tools.
-func (this *Processor) RunTools(file *project.File, target *tool.Target) {
+func (p *Processor) RunTools(f *project.File, target *tool.Target) {
 	//First we compile our file.
-	err := this.Compile(file.Id, target)
-	if err != nil {
-		util.Log(err, LOG_PROCESSOR)
+	if e := p.Compile(f.Id, target); e != nil {
+		util.Log(e, LOG_PROCESSOR)
 		return
 	}
-	for _, t := range this.tools {
+	for _, t := range p.tools {
 		//Skip the tool if it has already been run.
-		if _, ok := file.Results[t.Name()]; ok {
+		if _, ok := f.Results[t.Name()]; ok {
 			continue
 		}
-		res, err := t.Run(file.Id, target)
-		if err != nil {
+		r, e := t.Run(f.Id, target)
+		if e != nil {
 			//Report any errors and store timeouts.
-			util.Log(
-				fmt.Errorf("Encountered error %q when running tool %s on file %s.",
-					err, t.Name(), file.Id.Hex()), LOG_PROCESSOR)
-			if tool.IsTimeout(err) {
-				err = db.AddFileResult(file.Id, t.Name(), tool.TIMEOUT)
+			util.Log(fmt.Errorf("error %q running tool %s on file %s.", e, t.Name(), f.Id.Hex()), LOG_PROCESSOR)
+			if tool.IsTimeout(e) {
+				e = db.AddFileResult(f.Id, t.Name(), tool.TIMEOUT)
 			} else {
-				err = db.AddFileResult(file.Id, t.Name(), tool.ERROR)
+				e = db.AddFileResult(f.Id, t.Name(), tool.ERROR)
 			}
-		} else if res != nil {
-			err = db.AddResult(res, t.Name())
+		} else if r != nil {
+			e = db.AddResult(r, t.Name())
 		} else {
-			err = db.AddFileResult(file.Id, t.Name(), tool.NORESULT)
+			e = db.AddFileResult(f.Id, t.Name(), tool.NORESULT)
 		}
-		if err != nil {
-			util.Log(err, LOG_PROCESSOR)
+		if e != nil {
+			util.Log(e, LOG_PROCESSOR)
 		}
 	}
 }
 
 //Compile compiles a file, stores the result and returns any errors which may have occured.
-func (this *Processor) Compile(fileId bson.ObjectId, target *tool.Target) (err error) {
-	res, err := this.compiler.Run(fileId, target)
+func (p *Processor) Compile(fid bson.ObjectId, t *tool.Target) error {
+	r, e := p.compiler.Run(fid, t)
 	//We want to store the result if it is a compilation error
-	if err != nil && !tool.IsCompileError(err) {
-		return
+	if e == nil || tool.IsCompileError(e) {
+		db.AddResult(r, p.compiler.Name())
 	}
-	db.AddResult(res, this.compiler.Name())
-	return
+	return e
 }
 
-func NewTestProcessor(testFile *project.File, parent *Processor) (proc *TestProcessor, err error) {
-	dir := filepath.Join(parent.rootDir, testFile.Id.Hex())
-	toolDir := filepath.Join(dir, "tools")
-	compiler, err := javac.New("")
-	if err != nil {
-		return
+func NewTestProcessor(tf *project.File, p *Processor) (*TestProcessor, error) {
+	d := filepath.Join(p.rootDir, tf.Id.Hex())
+	td := filepath.Join(d, "tools")
+	c, e := javac.New("")
+	if e != nil {
+		return nil, e
 	}
-	runnerDir, err := config.JUNIT_TESTING.Path()
-	if err != nil {
-		return
+	rd, e := config.JUNIT_TESTING.Path()
+	if e != nil {
+		return nil, e
 	}
-	err = util.Copy(toolDir, runnerDir)
-	if err != nil {
-		return
+	if e = util.Copy(td, rd); e != nil {
+		return nil, e
 	}
-	test := &junit.Test{
-		Id:      testFile.Id,
-		Name:    testFile.Name,
-		Package: testFile.Package,
-		Test:    testFile.Data,
+	srcDir := filepath.Join(d, "src")
+	if e = os.MkdirAll(srcDir, util.DPERM); e != nil {
+		return nil, e
 	}
-	testTool, err := junit.New(test, toolDir)
-	if err != nil {
-		return
-	}
-	testDir := filepath.Join(toolDir, test.Id.Hex())
-	srcDir := filepath.Join(dir, "src")
-	err = os.MkdirAll(srcDir, util.DPERM)
-	if err != nil {
-		return
-	}
-	testTarget := tool.NewTarget(test.Name, test.Package, testDir, tool.JAVA)
-	cov, err := jacoco.New(dir, srcDir, testTarget)
-	if err != nil {
-		return
-	}
-	proc = &TestProcessor{
-		id:       test.Id,
-		results:  testFile.Results,
-		rootDir:  dir,
+	tp := &TestProcessor{
+		sub:      p.sub,
+		project:  p.project,
+		id:       tf.Id,
+		results:  tf.Results,
+		rootDir:  d,
 		srcDir:   srcDir,
-		toolDir:  toolDir,
-		compiler: compiler,
-		tools:    []tool.Tool{testTool, cov},
+		toolDir:  td,
+		compiler: c,
 	}
-	return
+	tp.tools, e = TestTools(tp, tf)
+	if e != nil {
+		return nil, e
+	}
+	return tp, nil
 }
 
-func (this *TestProcessor) Process(fileId bson.ObjectId) (err error) {
-	file, err := db.File(bson.M{db.ID: fileId}, nil)
-	if err != nil {
-		return
+func (tp *TestProcessor) Process(fid bson.ObjectId) error {
+	f, e := db.File(bson.M{db.ID: fid}, nil)
+	if e != nil {
+		return e
 	}
-	target := tool.NewTarget(file.Name, file.Package, this.srcDir, tool.JAVA)
-	err = util.SaveFile(target.FilePath(), file.Data)
-	if err != nil {
-		return
+	target := tool.NewTarget(f.Name, f.Package, tp.srcDir, tool.JAVA)
+	if e = util.SaveFile(target.FilePath(), f.Data); e != nil {
+		return e
 	}
-	_, err = this.compiler.Run(file.Id, target)
-	if err != nil {
-		return
+	if _, e = tp.compiler.Run(fid, target); e != nil {
+		return e
 	}
-	for _, t := range this.tools {
-		rerr := this.Run(t, file, target)
-		if err != nil {
-			util.Log(rerr, LOG_PROCESSOR)
+	for _, c := range tp.tools {
+		if e := tp.Run(c, f, target); e != nil {
+			util.Log(e, LOG_PROCESSOR)
 		}
 	}
-	return
+	return nil
 }
 
-func (this *TestProcessor) Run(t tool.Tool, file *project.File, target *tool.Target) (err error) {
-	name := t.Name() + "-" + file.Id.Hex()
-	if _, ok := this.results[name]; ok {
-		return
+func (tp *TestProcessor) Run(t tool.Tool, f *project.File, target *tool.Target) error {
+	n := t.Name() + "-" + f.Id.Hex()
+	if _, ok := tp.results[n]; ok {
+		return nil
 	}
-	res, rerr := t.Run(this.id, target)
-	if rerr != nil {
-		util.Log(rerr, LOG_PROCESSOR)
+	r, e := t.Run(tp.id, target)
+	if e != nil {
+		util.Log(e, LOG_PROCESSOR)
 		//Report any errors and store timeouts.
-		if tool.IsTimeout(rerr) {
-			err = db.AddFileResult(this.id, name, tool.TIMEOUT)
+		if tool.IsTimeout(e) {
+			return db.AddFileResult(tp.id, n, tool.TIMEOUT)
 		} else {
-			err = db.AddFileResult(file.Id, name, tool.ERROR)
+			return db.AddFileResult(tp.id, n, tool.ERROR)
 		}
-	} else if res != nil {
-		err = db.AddResult(res, name)
-	} else {
-		err = db.AddFileResult(this.id, name, tool.NORESULT)
+	} else if r != nil {
+		return db.AddResult(r, n)
 	}
-	return
+	return db.AddFileResult(tp.id, n, tool.NORESULT)
 }

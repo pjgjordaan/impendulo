@@ -5,13 +5,28 @@
   <small>tool</small> {{$resultName}}
 </h4>
 {{if hasChart $resultName}}
-<div id="chart" class="chart" xmlns:xlink="http://www.w3.org/1999/xlink">
-  <div id="chart-tooltip" class="tooltip"></div>
+{{$tc := chartTime (index .files .ctx.Browse.Current)}}
+{{$tn := chartTime (index .files .ctx.Browse.Next)}}
+<form class="form-inline centered" role="form" onsubmit="return ajaxChart({{.ctx.Browse.Sid.Hex}},{{.ctx.Browse.File}},{{.ctx.Browse.Result}},{{$tc}},{{$tn}},{{.ctx.Browse.Uid}},{{.currentFile.Id.Hex}},'submissions')">
+  <div class="form-group">
+    <label class="sr-only" for="submissions">Submissions</label>
+    <select class="form-control select-inline" name="submissions" id="submissions" multiple>
+    </select>
+  </div>
+  <button type="submit" class="btn btn-default">
+    <span class="glyphicon glyphicon-arrow-right"></span>
+  </button>
+</form>
+<script type="text/javascript" language="javascript">
+  window.onload = function()
+  {
+  addSubmissions({{.ctx.Browse.Pid.Hex}}, 'submissions');
+  ;}
+</script>
+<div id="chartHolder">
 </div>
 <script>
-  {{$tc := chartTime (index .files .ctx.Browse.Current)}}
-  {{$tn := chartTime (index .files .ctx.Browse.Next)}}
-  ajaxChart({{.ctx.Browse.Sid.Hex}},{{.ctx.Browse.File}},{{.ctx.Browse.Result}},{{$tc}},{{$tn}});
+  ajaxChart({{.ctx.Browse.Sid.Hex}},{{.ctx.Browse.File}},{{.ctx.Browse.Result}},{{$tc}},{{$tn}},{{.ctx.Browse.Uid}});
 </script>
 {{end}}
 {{if (eq $resultName "Diff")}}

@@ -29,8 +29,10 @@ package processing
 import (
 	"container/list"
 	"fmt"
+
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
 	"runtime"
 )
 
@@ -46,8 +48,8 @@ type (
 	//empty
 	E struct{}
 
-	//procHelper is used to help handle a submission's files.
-	procHelper struct {
+	//Helper is used to help handle a submission's files.
+	Helper struct {
 		subId     bson.ObjectId
 		serveChan chan bson.ObjectId
 		doneChan  chan E
@@ -90,68 +92,73 @@ func max(a, b int) uint {
 
 //Serve launches the default Server. It listens on the configured AMQP URI and
 //spawns at most maxProcs goroutines in order to process submissions.
-func Serve(maxProcs uint) (err error) {
-	if defaultServer, err = NewServer(maxProcs); err == nil {
-		defaultServer.Serve()
+func Serve(maxProcs uint) error {
+	var e error
+	if defaultServer, e = NewServer(maxProcs); e != nil {
+		return e
 	}
-	return
+	defaultServer.Serve()
+	return nil
 }
 
 //Shutdown signals to the default Server that it can shutdown
 //and waits for it to complete all processing. It then shuts down all
 //active producers as well as the status monitor.
-func Shutdown() (err error) {
-	err = defaultServer.Shutdown()
-	if err != nil {
-		return
+func Shutdown() error {
+	if e := defaultServer.Shutdown(); e != nil {
+		return e
 	}
-	err = StopProducers()
-	if err != nil {
-		return
+	if e := StopProducers(); e != nil {
+		return e
 	}
-	err = ShutdownMonitor()
-	return
+	return ShutdownMonitor()
 }
 
 //NewServer constructs a new Server instance which will listen on the coinfigured
 //AMQP URI.
-func NewServer(maxProcs uint) (ret *Server, err error) {
-	ret = &Server{
+func NewServer(maxProcs uint) (*Server, error) {
+	rc := make(chan *Request)
+	sm, st, e := NewSubmitter(rc)
+	if e != nil {
+		return nil, e
+	}
+	r, e := NewRedoer(rc)
+	if e != nil {
+		return nil, e
+	}
+	return &Server{
 		maxProcs:      maxProcs,
-		requestChan:   make(chan *Request),
+		requestChan:   rc,
 		processedChan: make(chan E),
-	}
-	ret.submitter, ret.starter, err = NewSubmitter(ret.requestChan)
-	if err != nil {
-		return
-	}
-	ret.redoer, err = NewRedoer(ret.requestChan)
-	return
+		submitter:     sm,
+		starter:       st,
+		redoer:        r,
+	}, nil
 }
 
 //Serve spawns new processing routines for each submission started.
 //Added files are received here and then sent to the relevant submission goroutine.
-func (this *Server) Serve() {
-	go handleFunc(this.starter)
-	go handleFunc(this.submitter)
-	go handleFunc(this.redoer)
-	helpers := make(map[bson.ObjectId]*procHelper)
-	fileQueues := make(map[bson.ObjectId]*list.List)
-	subQueue := list.New()
+func (s *Server) Serve() {
+	go handleFunc(s.starter)
+	go handleFunc(s.submitter)
+	go handleFunc(s.redoer)
+	hm := make(map[bson.ObjectId]*Helper)
+	fq := make(map[bson.ObjectId]*list.List)
+	sq := list.New()
 	var busy uint = 0
 	//Begin monitoring processing status
 	for {
-		if busy < this.maxProcs && subQueue.Len() > 0 {
+		if busy < s.maxProcs && sq.Len() > 0 {
 			//If there is an available spot,
 			//start processing the next submission.
-			subId := subQueue.Remove(subQueue.Front()).(bson.ObjectId)
-			helper := helpers[subId]
-			helper.started = true
-			if helper.done {
-				delete(helpers, subId)
+			sid := sq.Remove(sq.Front()).(bson.ObjectId)
+			h := hm[sid]
+			h.started = true
+			if h.done {
+				delete(hm, sid)
 			}
-			go helper.handle(this.processedChan, fileQueues[subId])
-			delete(fileQueues, subId)
+			go h.Handle(s.processedChan, fq[sid])
+			delete(fq, sid)
 			busy++
 		} else if busy < 0 {
 			//This will only occur when Shutdown() has been called and
@@ -159,48 +166,48 @@ func (this *Server) Serve() {
 			break
 		}
 		select {
-		case request := <-this.requestChan:
-			helper, ok := helpers[request.SubId]
-			switch request.Type {
+		case r := <-s.requestChan:
+			h, ok := hm[r.SubId]
+			switch r.Type {
 			case SUBMISSION_STOP:
 				if !ok {
-					util.Log(fmt.Errorf("No submission %q found to end.", request.SubId))
+					util.Log(fmt.Errorf("no submission %q found to end", r.SubId))
 				} else {
-					//If the submission has finished, set the submission's procHelper to done
+					//If the submission has finished, set the submission's Helper to done
 					//and if it has already started, remove it from the queue.
-					helper.setDone()
-					if helper.started {
-						delete(helpers, request.SubId)
+					h.SetDone()
+					if h.started {
+						delete(hm, r.SubId)
 					}
 				}
 			case SUBMISSION_START:
 				if ok {
-					util.Log(fmt.Errorf("Submission %s already started.", request.SubId))
+					util.Log(fmt.Errorf("submission %s already started", r.SubId))
 				} else {
 					//This is a new submission so we initialise it.
-					subQueue.PushBack(request.SubId)
-					helpers[request.SubId] = newHelper(request.SubId)
-					fileQueues[request.SubId] = list.New()
+					sq.PushBack(r.SubId)
+					hm[r.SubId] = NewHelper(r.SubId)
+					fq[r.SubId] = list.New()
 					ChangeStatus(Status{Files: 0, Submissions: 1})
 				}
 			case FILE_ADD:
 				if !ok {
-					util.Log(fmt.Errorf("No submission %s found for file %.", request.SubId, request.FileId))
+					util.Log(fmt.Errorf("no submission %s found for file %", r.SubId, r.FileId))
 				} else {
-					if helper.started {
+					if h.started {
 						//Send file to goroutine if
 						//submission processing has started.
-						helper.serveChan <- request.FileId
+						h.serveChan <- r.FileId
 					} else {
 						//Add file to queue if not.
-						fileQueues[request.SubId].PushBack(request.FileId)
+						fq[r.SubId].PushBack(r.FileId)
 					}
 					ChangeStatus(Status{Files: 1, Submissions: 0})
 				}
 			default:
-				util.Log(fmt.Errorf("Unsupported request type %d.", request.Type))
+				util.Log(fmt.Errorf("unsupported request type %d", r.Type))
 			}
-		case <-this.processedChan:
+		case <-s.processedChan:
 			//A submission has been processed so one less goroutine to worry about.
 			busy--
 		}
@@ -208,25 +215,22 @@ func (this *Server) Serve() {
 }
 
 //Shutdown stops Serve from running once all submissions have been processed.
-func (this *Server) Shutdown() (err error) {
-	this.processedChan <- E{}
-	err = this.submitter.Shutdown()
-	if err != nil {
-		return
+func (s *Server) Shutdown() error {
+	s.processedChan <- E{}
+	if e := s.submitter.Shutdown(); e != nil {
+		return e
 	}
-	err = this.starter.Shutdown()
-	if err != nil {
-		return
+	if e := s.starter.Shutdown(); e != nil {
+		return e
 	}
-	err = this.redoer.Shutdown()
-	return
+	return s.redoer.Shutdown()
 }
 
-//newHelper creates a new procHelper for the specified
+//NewHelper creates a new Helper for the specified
 //Submission.
-func newHelper(subId bson.ObjectId) *procHelper {
-	return &procHelper{
-		subId:     subId,
+func NewHelper(sid bson.ObjectId) *Helper {
+	return &Helper{
+		subId:     sid,
 		serveChan: make(chan bson.ObjectId),
 		doneChan:  make(chan E),
 		started:   false,
@@ -235,60 +239,60 @@ func newHelper(subId bson.ObjectId) *procHelper {
 }
 
 //SetDone indicates that this submission will receive no more files.
-func (this *procHelper) setDone() {
-	if this.started {
+func (h *Helper) SetDone() {
+	if h.started {
 		//If it has started send on its channel.
-		this.doneChan <- E{}
+		h.doneChan <- E{}
 	} else {
 		//Otherwise simply set done to true.
-		this.done = true
+		h.done = true
 	}
 }
 
-//handle helps manage the files a submission receives.
+//Handle helps manage the files a submission receives.
 //It spawns a new Processor which runs in a seperate goroutine
-//and receives files to process from this procHelper.
-//fileQueue is the queue of files the submission has received
+//and receives files to process from this Helper.
+//fq is the queue of files the submission has received
 //prior to the start of processing.
-func (this *procHelper) handle(onDone chan E, fileQueue *list.List) {
-	procChan := make(chan bson.ObjectId)
-	stopChan := make(chan E)
-	proc, err := NewProcessor(this.subId)
-	if err != nil {
-		util.Log(err, LOG_SERVER)
-		ChangeStatus(Status{-fileQueue.Len(), -1})
+func (h *Helper) Handle(onDone chan E, fq *list.List) {
+	pc := make(chan bson.ObjectId)
+	sc := make(chan E)
+	p, e := NewProcessor(h.subId)
+	if e != nil {
+		util.Log(e, LOG_SERVER)
+		ChangeStatus(Status{-fq.Len(), -1})
 		onDone <- E{}
 		return
 	}
-	go proc.Process(procChan, stopChan)
+	go p.Process(pc, sc)
 	busy := false
 	for {
 		if !busy {
-			if fileQueue.Len() > 0 {
+			if fq.Len() > 0 {
 				//Not busy and there are files so send one to be processed.
-				fId := fileQueue.Remove(fileQueue.Front()).(bson.ObjectId)
-				procChan <- fId
+				fid := fq.Remove(fq.Front()).(bson.ObjectId)
+				pc <- fid
 				busy = true
-			} else if this.done {
+			} else if h.done {
 				//Not busy and we are done so we should finish up here.
-				stopChan <- E{}
-				<-stopChan
+				sc <- E{}
+				<-sc
 				ChangeStatus(Status{0, -1})
 				onDone <- E{}
 				return
 			}
 		}
 		select {
-		case fId := <-this.serveChan:
+		case fid := <-h.serveChan:
 			//Add new files to the queue.
-			fileQueue.PushBack(fId)
-		case <-procChan:
+			fq.PushBack(fid)
+		case <-pc:
 			//Processor has finished with its current file.
 			busy = false
 			ChangeStatus(Status{-1, 0})
-		case <-this.doneChan:
+		case <-h.doneChan:
 			//Submission will receive no more files.
-			this.done = true
+			h.done = true
 		}
 	}
 }

@@ -26,57 +26,54 @@ package util
 
 import (
 	"fmt"
+
 	"labix.org/v2/mgo/bson"
+
 	"strconv"
 )
 
 //ReadId tries to read a bson.ObjectId from a string.
-func ReadId(ival interface{}) (id bson.ObjectId, err error) {
-	switch v := ival.(type) {
+func ReadId(i interface{}) (bson.ObjectId, error) {
+	switch v := i.(type) {
 	case bson.ObjectId:
-		id = v
+		return v, nil
 	case string:
 		if !bson.IsObjectIdHex(v) {
-			err = &CastError{"bson.ObjectId", v}
+			return "", &CastError{"bson.ObjectId", v}
 		} else {
-			id = bson.ObjectIdHex(v)
+			return bson.ObjectIdHex(v), nil
 		}
-	default:
-		err = &CastError{"id", v}
 	}
-	return
+	return "", &CastError{"id", i}
 }
 
 //GetString converts a value in a map to a string.
-func GetString(jobj map[string]interface{}, key string) (val string, err error) {
-	ival, ok := jobj[key]
+func GetString(m map[string]interface{}, k string) (string, error) {
+	i, ok := m[k]
 	if !ok {
-		err = &MissingError{key}
-		return
+		return "", &MissingError{k}
 	}
-	switch v := ival.(type) {
+	switch v := i.(type) {
 	case string:
-		val = v
-	default:
-		val = fmt.Sprint(v)
+		return v, nil
 	}
-	return
+	return fmt.Sprint(i), nil
 }
 
 //GetInt converts a value in a map to an int.
-func GetInt(m map[string]interface{}, key string) (int, error) {
-	i, ok := m[key]
+func GetInt(m map[string]interface{}, k string) (int, error) {
+	i, ok := m[k]
 	if !ok {
-		return 0, &MissingError{key}
+		return 0, &MissingError{k}
 	}
 	return Int(i)
 }
 
 //GetInt64 converts a value in a map to an int64.
-func GetInt64(m map[string]interface{}, key string) (int64, error) {
-	i, ok := m[key]
+func GetInt64(m map[string]interface{}, k string) (int64, error) {
+	i, ok := m[k]
 	if !ok {
-		return 0, &MissingError{key}
+		return 0, &MissingError{k}
 	}
 	return Int64(i)
 }
@@ -166,84 +163,81 @@ func Float64(i interface{}) (float64, error) {
 }
 
 //GetId converts a value in a map to a bson.ObjectId.
-func GetId(jobj map[string]interface{}, key string) (id bson.ObjectId, err error) {
-	ival, ok := jobj[key]
+func GetId(m map[string]interface{}, k string) (bson.ObjectId, error) {
+	i, ok := m[k]
 	if !ok {
-		err = &MissingError{key}
-		return
+		return "", &MissingError{k}
 	}
-	id, err = ReadId(ival)
-	return
+	return ReadId(i)
 }
 
 //GetM converts a value in a map to a bson.M.
-func GetM(jobj map[string]interface{}, key string) (val bson.M, err error) {
-	ival, ok := jobj[key]
+func GetM(m map[string]interface{}, k string) (bson.M, error) {
+	i, ok := m[k]
 	if !ok {
-		err = &MissingError{key}
-		return
+		return nil, &MissingError{k}
 	}
-	switch v := ival.(type) {
+	switch v := i.(type) {
 	case bson.M:
-		val = v
-	default:
-		err = &CastError{"bson.M", v}
+		return v, nil
+	case map[string]interface{}:
+		return bson.M(v), nil
 	}
-	return
+	return nil, &CastError{"bson.M", i}
 }
 
 //GetBytes converts a value in a map to a []byte.
-func GetBytes(jobj map[string]interface{}, key string) ([]byte, error) {
-	ival, ok := jobj[key]
+func GetBytes(m map[string]interface{}, k string) ([]byte, error) {
+	i, ok := m[k]
 	if !ok {
-		return nil, &MissingError{key}
+		return nil, &MissingError{k}
 	}
-	return toBytes(ival)
+	return toBytes(i)
 }
 
 //GetStrings converts a value in a map to a []string.
-func GetStrings(jobj map[string]interface{}, key string) ([]string, error) {
-	ival, ok := jobj[key]
+func GetStrings(m map[string]interface{}, k string) ([]string, error) {
+	i, ok := m[k]
 	if !ok {
-		return nil, &MissingError{key}
+		return nil, &MissingError{k}
 	}
-	return toStrings(ival)
+	return toStrings(i)
 }
 
 //toBytes converts an interface to a []byte.
-func toBytes(ival interface{}) ([]byte, error) {
-	val, ok := ival.([]byte)
+func toBytes(i interface{}) ([]byte, error) {
+	v, ok := i.([]byte)
 	if !ok {
-		return nil, &CastError{"[]byte", ival}
+		return nil, &CastError{"[]byte", i}
 	}
-	return val, nil
+	return v, nil
 }
 
 //toStrings converts an interface to a []string.
-func toStrings(ivals interface{}) ([]string, error) {
-	vals, ok := ivals.([]string)
+func toStrings(i interface{}) ([]string, error) {
+	v, ok := i.([]string)
 	if !ok {
-		islice, ok := ivals.([]interface{})
+		a, ok := i.([]interface{})
 		if !ok {
-			return nil, &CastError{"[]string", ivals}
+			return nil, &CastError{"[]string", i}
 		}
-		vals = make([]string, len(islice))
-		for i, ival := range islice {
-			val, ok := ival.(string)
+		v = make([]string, len(a))
+		for j, i := range a {
+			s, ok := i.(string)
 			if !ok {
-				return nil, &CastError{"string", ival}
+				return nil, &CastError{"string", i}
 			}
-			vals[i] = val
+			v[j] = s
 		}
 	}
-	return vals, nil
+	return v, nil
 }
 
 //ToSet converts an array to a set.
 func ToSet(vals []string) map[string]bool {
-	ret := make(map[string]bool)
+	s := make(map[string]bool)
 	for _, v := range vals {
-		ret[v] = true
+		s[v] = true
 	}
-	return ret
+	return s
 }

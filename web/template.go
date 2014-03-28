@@ -91,19 +91,18 @@ var (
 		"submissions":     projectSubmissions,
 		"files":           submissionFiles,
 		"projects":        projects,
-		"langProjects": func(lang string) ([]*project.Project, error) {
-			return db.Projects(bson.M{db.LANG: lang}, nil, db.NAME)
+		"langProjects": func(l string) ([]*project.Project, error) {
+			return db.Projects(bson.M{db.LANG: l}, nil, db.NAME)
 		},
 		"analysisNames":         analysisNames,
 		"chartNames":            chartNames,
 		"users":                 func() ([]*user.User, error) { return db.Users(nil, user.ID) },
 		"skeletons":             skeletons,
-		"getFiles":              func(subId bson.ObjectId) string { return fmt.Sprintf("getfiles?subid=%s", subId.Hex()) },
-		"getUserChart":          func(user string) string { return fmt.Sprintf("getsubmissionschart?userid=%s", user) },
-		"getProjectChart":       func(id bson.ObjectId) string { return fmt.Sprintf("getsubmissionschart?projectid=%s", id.Hex()) },
-		"getUserSubmissions":    func(user string) string { return fmt.Sprintf("getsubmissions?userid=%s", user) },
-		"getProjectSubmissions": func(id bson.ObjectId) string { return fmt.Sprintf("getsubmissions?projectid=%s", id.Hex()) },
-		"compareChart":          compareChart,
+		"getFiles":              func(sid bson.ObjectId) string { return fmt.Sprintf("getfiles?subid=%s", sid.Hex()) },
+		"getUserChart":          func(u string) string { return fmt.Sprintf("getsubmissionschart?userid=%s", u) },
+		"getProjectChart":       func(pid bson.ObjectId) string { return fmt.Sprintf("getsubmissionschart?projectid=%s", pid.Hex()) },
+		"getUserSubmissions":    func(u string) string { return fmt.Sprintf("getsubmissions?userid=%s", u) },
+		"getProjectSubmissions": func(pid bson.ObjectId) string { return fmt.Sprintf("getsubmissions?projectid=%s", pid.Hex()) },
 		"collections":           db.Collections,
 		"overviewChart":         overviewChart,
 		"typeCounts":            TypeCounts,
@@ -126,84 +125,69 @@ const (
 )
 
 func chartTime(f *project.File) (float64, error) {
-	s, err := db.Submission(bson.M{db.ID: f.SubId}, nil)
-	if err != nil {
-		return -1.0, err
+	s, e := db.Submission(bson.M{db.ID: f.SubId}, nil)
+	if e != nil {
+		return -1.0, e
 	}
 	return util.Round(float64(f.Time-s.Time)/1000.0, 2), nil
 }
 
-func analysisNames(projectId bson.ObjectId, t project.Type) ([]string, error) {
+func analysisNames(pid bson.ObjectId, t project.Type) ([]string, error) {
 	switch t {
 	case project.TEST:
-		return resultNames(projectId, testView)
+		return resultNames(pid, testView)
 	case project.SRC:
-		return resultNames(projectId, analysisView)
+		return resultNames(pid, analysisView)
 	}
 	return nil, fmt.Errorf("unsupported file type %s", t)
 }
 
-func chartNames(projectId bson.ObjectId, t project.Type) ([]string, error) {
+func chartNames(pid bson.ObjectId, t project.Type) ([]string, error) {
 	switch t {
 	case project.SRC:
-		return resultNames(projectId, chartView)
+		return resultNames(pid, chartView)
 	}
 	return nil, fmt.Errorf("unsupported file type %s", t)
 }
 
-func resultNames(projectId bson.ObjectId, v view) (names []string, err error) {
+func resultNames(pid bson.ObjectId, v view) ([]string, error) {
 	switch v {
 	case testView:
-		names = []string{javac.NAME, tool.CODE, diff.NAME, junit.NAME, jacoco.NAME}
+		return []string{javac.NAME, tool.CODE, diff.NAME, junit.NAME, jacoco.NAME}, nil
 	case analysisView:
-		names, err = db.AllResultNames(projectId)
+		return db.AllResultNames(pid)
 	case chartView:
-		names, err = db.ChartResultNames(projectId)
-	default:
-		err = fmt.Errorf("Unsupported view type %d", v)
+		return db.ChartResultNames(pid)
 	}
-	return
+	return nil, fmt.Errorf("unsupported view type %d", v)
 }
 
-func submissionLang(subId bson.ObjectId) (lang string, err error) {
-	sub, err := db.Submission(bson.M{db.ID: subId}, nil)
-	if err != nil {
-		return
+func submissionLang(sid bson.ObjectId) (string, error) {
+	s, e := db.Submission(bson.M{db.ID: sid}, nil)
+	if e != nil {
+		return "", e
 	}
-	project, err := db.Project(bson.M{db.ID: sub.ProjectId}, nil)
-	if err != nil {
-		return
+	p, e := db.Project(bson.M{db.ID: s.ProjectId}, nil)
+	if e != nil {
+		return "", e
 	}
-	lang = strings.ToLower(project.Lang)
-	return
+	return strings.ToLower(p.Lang), nil
 }
 
 func projects() ([]*project.Project, error) {
 	return db.Projects(nil, nil, db.NAME)
 }
 
-func skeletons(projectId bson.ObjectId) ([]*project.Skeleton, error) {
-	return db.Skeletons(bson.M{db.PROJECTID: projectId}, bson.M{db.DATA: 0}, db.NAME)
+func skeletons(pid bson.ObjectId) ([]*project.Skeleton, error) {
+	return db.Skeletons(bson.M{db.PROJECTID: pid}, bson.M{db.DATA: 0}, db.NAME)
 }
 
-func compareChart(sid bson.ObjectId, uid, result, file, compare string) string {
-	return singleChart(sid, uid, result, file) + fmt.Sprintf("&compare=%s", compare)
+func projectSubmissions(pid bson.ObjectId) ([]*project.Submission, error) {
+	return db.Submissions(bson.M{db.PROJECTID: pid}, nil, "-"+db.TIME)
 }
 
-func singleChart(sid bson.ObjectId, uid, result, file string) string {
-	return fmt.Sprintf("displaychart?subid=%s&userid=%s&result=%s&file=%s", sid.Hex(), uid, result, file)
-}
-
-func projectSubmissions(id bson.ObjectId) (subs []*project.Submission, err error) {
-	matcher := bson.M{db.PROJECTID: id}
-	subs, err = db.Submissions(matcher, nil, "-"+db.TIME)
-	return
-}
-
-func submissionFiles(id bson.ObjectId) (files []*project.File, err error) {
-	matcher := bson.M{db.SUBID: id}
-	files, err = db.Files(matcher, nil, "-"+db.TIME)
-	return
+func submissionFiles(sid bson.ObjectId) ([]*project.File, error) {
+	return db.Files(bson.M{db.SUBID: sid}, nil, "-"+db.TIME)
 }
 
 //isError checks whether a result is an ErrorResult.
@@ -216,65 +200,53 @@ func isError(i interface{}) bool {
 //must be strings and are keys in the map while the item which immediately follows them
 //will be the value which corresponds to that key in the map. The list must therefore
 //contain an even number of items.
-func args(values ...interface{}) (ret Args, err error) {
+func args(values ...interface{}) (Args, error) {
 	if len(values)%2 != 0 {
-		err = errors.New("Invalid args call.")
-		return
+		return nil, errors.New("Invalid args call.")
 	}
-	ret = make(Args, len(values)/2)
+	a := make(Args, len(values)/2)
 	for i := 0; i < len(values); i += 2 {
-		key, ok := values[i].(string)
-		if !ok {
-			err = errors.New("args keys must be strings.")
-			return
+		if k, ok := values[i].(string); ok {
+			a[k] = values[i+1]
+		} else {
+			return nil, fmt.Errorf("key %v is not a string", values[i])
 		}
-		ret[key] = values[i+1]
 	}
-	return
+	return a, nil
 }
 
 //insert adds a key-value pair to the specified map.
-func insert(args Args, key string, value interface{}) Args {
-	args[key] = value
-	return args
+func insert(a Args, k string, v interface{}) Args {
+	a[k] = v
+	return a
 }
 
 //fileCount
-func fileCount(subId bson.ObjectId, tipe project.Type) (int, error) {
-	return db.Count(
-		db.FILES,
-		bson.M{
-			db.SUBID: subId,
-			db.TYPE:  tipe,
-		},
-	)
+func fileCount(sid bson.ObjectId, t project.Type) (int, error) {
+	return db.Count(db.FILES, bson.M{db.SUBID: sid, db.TYPE: t})
 }
 
 //slice gets a subslice from files which is at most PAGER_SIZE
 //in length with selected within in the subslice.
-func slice(files []*project.File, selected int) (ret []*project.File) {
+func slice(files []*project.File, i int) []*project.File {
 	if len(files) < PAGER_SIZE {
-		ret = files
-	} else if selected < PAGER_SIZE/2 {
-		ret = files[:PAGER_SIZE]
-	} else if selected+PAGER_SIZE/2 >= len(files) {
-		ret = files[len(files)-PAGER_SIZE:]
-	} else {
-		ret = files[selected-PAGER_SIZE/2 : selected+PAGER_SIZE/2]
+		return files
+	} else if i < PAGER_SIZE/2 {
+		return files[:PAGER_SIZE]
+	} else if i+PAGER_SIZE/2 >= len(files) {
+		return files[len(files)-PAGER_SIZE:]
 	}
-	return
+	return files[i-PAGER_SIZE/2 : i+PAGER_SIZE/2]
 }
 
 //adjustment determines the adjustment slice will make to files.
-func adjustment(files []*project.File, selected int) (ret int) {
-	if len(files) < PAGER_SIZE || selected < PAGER_SIZE/2 {
-		ret = 0
-	} else if selected+PAGER_SIZE/2 >= len(files) {
-		ret = len(files) - PAGER_SIZE
-	} else {
-		ret = selected - PAGER_SIZE/2
+func adjustment(files []*project.File, i int) int {
+	if len(files) < PAGER_SIZE || i < PAGER_SIZE/2 {
+		return 0
+	} else if i+PAGER_SIZE/2 >= len(files) {
+		return len(files) - PAGER_SIZE
 	}
-	return
+	return i - PAGER_SIZE/2
 }
 
 //submissionCount
@@ -284,18 +256,17 @@ func submissionCount(id interface{}) (int, error) {
 		return db.Count(db.SUBMISSIONS, bson.M{db.PROJECTID: tipe})
 	case string:
 		return db.Count(db.SUBMISSIONS, bson.M{db.USER: tipe})
-	default:
-		return -1, fmt.Errorf("Unknown id type %q.", id)
 	}
+	return -1, fmt.Errorf("Unknown id type %q.", id)
 }
 
 //sum calculates the sum of vals.
 func sum(vals ...interface{}) (int, error) {
 	s := 0
 	for _, i := range vals {
-		v, err := util.Int(i)
-		if err != nil {
-			return 0, err
+		v, e := util.Int(i)
+		if e != nil {
+			return 0, e
 		}
 		s += v
 	}
@@ -303,32 +274,32 @@ func sum(vals ...interface{}) (int, error) {
 }
 
 func percent(a, b interface{}) (float64, error) {
-	c, err := util.Float64(a)
-	if err != nil {
-		return 0.0, err
+	c, e := util.Float64(a)
+	if e != nil {
+		return 0.0, e
 	}
-	d, err := util.Float64(b)
-	if err != nil {
-		return 0.0, err
+	d, e := util.Float64(b)
+	if e != nil {
+		return 0.0, e
 	}
 	return d / c * 100.0, nil
 }
 
-func round(i, p interface{}) (float64, error) {
-	x, err := util.Float64(i)
-	if err != nil {
-		return 0.0, err
+func round(i, ip interface{}) (float64, error) {
+	x, e := util.Float64(i)
+	if e != nil {
+		return 0.0, e
 	}
-	prec, err := util.Int(p)
-	if err != nil {
-		return 0.0, err
+	p, e := util.Int(ip)
+	if e != nil {
+		return 0.0, e
 	}
-	return util.Round(x, prec), nil
+	return util.Round(x, p), nil
 }
 
 //setBreaks replaces newlines with HTML break tags.
-func setBreaks(val string) string {
-	return strings.Replace(val, "\n", "<br>", -1)
+func setBreaks(s string) string {
+	return strings.Replace(s, "\n", "<br>", -1)
 }
 
 //TemplateDir retrieves the directory
@@ -347,13 +318,13 @@ func BaseTemplates() []string {
 	if baseTemplates != nil {
 		return baseTemplates
 	}
-	tdir := TemplateDir()
+	t := TemplateDir()
 	baseTemplates = []string{
-		filepath.Join(tdir, "base.html"),
-		filepath.Join(tdir, "index.html"),
-		filepath.Join(tdir, "messages.html"),
-		filepath.Join(tdir, "footer.html"),
-		filepath.Join(tdir, "breadcrumb.html"),
+		filepath.Join(t, "base.html"),
+		filepath.Join(t, "index.html"),
+		filepath.Join(t, "messages.html"),
+		filepath.Join(t, "footer.html"),
+		filepath.Join(t, "breadcrumb.html"),
 	}
 	return baseTemplates
 }
@@ -363,10 +334,10 @@ func T(names ...string) *template.Template {
 	t := template.New("base.html").Funcs(funcs)
 	all := make([]string, len(BaseTemplates()), len(BaseTemplates())+len(names))
 	copy(all, BaseTemplates())
-	for _, name := range names {
-		path := filepath.Join(TemplateDir(), name+".html")
-		if util.Exists(path) {
-			all = append(all, path)
+	for _, n := range names {
+		p := filepath.Join(TemplateDir(), n+".html")
+		if util.Exists(p) {
+			all = append(all, p)
 		}
 	}
 	t = template.Must(t.ParseFiles(all...))

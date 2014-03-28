@@ -44,56 +44,56 @@ type (
 )
 
 //SetReport
-func (this *Result) SetReport(report tool.Report) {
-	if report == nil {
-		this.Report = nil
+func (r *Result) SetReport(n tool.Report) {
+	if n == nil {
+		r.Report = nil
 	} else {
-		this.Report = report.(*Report)
+		r.Report = n.(*Report)
 	}
 }
 
 //OnGridFS
-func (this *Result) OnGridFS() bool {
-	return this.GridFS
+func (r *Result) OnGridFS() bool {
+	return r.GridFS
 }
 
 //GetName
-func (this *Result) GetName() string {
+func (r *Result) GetName() string {
 	return NAME
 }
 
 //GetId
-func (this *Result) GetId() bson.ObjectId {
-	return this.Id
+func (r *Result) GetId() bson.ObjectId {
+	return r.Id
 }
 
 //GetFileId
-func (this *Result) GetFileId() bson.ObjectId {
-	return this.FileId
+func (r *Result) GetFileId() bson.ObjectId {
+	return r.FileId
 }
 
 //Summary
-func (this *Result) Summary() *tool.Summary {
+func (r *Result) Summary() *tool.Summary {
 	return &tool.Summary{
-		Name: this.GetName(),
+		Name: r.GetName(),
 	}
 }
 
 //GetReport
-func (this *Result) GetReport() tool.Report {
-	return this.Report
+func (r *Result) GetReport() tool.Report {
+	return r.Report
 }
 
-func (this *Result) Success() bool {
-	return this.Report != nil
+func (r *Result) Success() bool {
+	return r.Report != nil
 }
 
-func (this *Result) Template() string {
+func (r *Result) Template() string {
 	return "jacocoresult"
 }
 
-func (this *Result) GetType() string {
-	return this.Type
+func (r *Result) GetType() string {
+	return r.Type
 }
 
 //ChartVals

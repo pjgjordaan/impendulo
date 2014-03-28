@@ -26,6 +26,7 @@ package result
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/junit"
 	"labix.org/v2/mgo/bson"
@@ -109,8 +110,8 @@ func (this *Result) Success() bool {
 //ChartVals
 func (this *Result) ChartVals() []*tool.ChartVal {
 	return []*tool.ChartVal{
-		&tool.ChartVal{"Errors", float64(this.Report.Errors), true, this.FileId},
 		&tool.ChartVal{"Failures", float64(this.Report.Failures), true, this.FileId},
+		&tool.ChartVal{"Errors", float64(this.Report.Errors), false, this.FileId},
 	}
 }
 

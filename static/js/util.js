@@ -242,18 +242,63 @@ function addCodeModal(dest, resultId, bug, start, end){
     });
 }
 
-function ajaxChart(subID, file, result, currentTime, nextTime, childID){
+function ajaxChart(subID, file, result, currentTime, nextTime, user, childID, src){
     var url = 'chart?subid='+subID+'&file='+file+'&result='+result;
     if(childID !== undefined){
 	url += '&childfileid='+childID;
     }
-    if(currentTime === undefined){
-	currentTime = -1;
+    var s = {};
+    if(src !== undefined){
+	s = {'submissions': $('#' + src).val()};
+	$('#'+src).multiselect('destroy');
+	var l = document.getElementById(src);
+	l.options.length = 0;
+	$('#'+src).multiselect({
+	    noneSelectedText: "Compare submissions",
+	    selectedText: "# submissions selected to compare"
+	});
+	$('#'+src).multiselected = true;
     }
-    if(nextTime === undefined){
-	nextTime = -1;
-    }
+    $.getJSON(url, s, function(data){
+	showChart(name, name, data['chart'], currentTime, nextTime, user);
+    });
+    return false;
+}
+
+
+function addSubmissions(pid, dest){
+    var url = 'submissions?projectid='+pid;
     $.getJSON(url, function(data){
-	showChart(name, name, data, false, currentTime, nextTime);
+	$('#'+dest).multiselect();
+	$('#'+dest).multiselect('destroy');
+	var destList = document.getElementById(dest);
+	destList.options.length = 0;
+	var items = data['submissions'];
+	for(var i = 0; i < items.length; i++) {
+	    var option = document.createElement('option');
+	    option.value = items[i].Id;
+	    option.text = ' ' + items[i].User + ' - ' + new Date(items[i].Time).toLocaleString();
+	    destList.add(option);
+	}
+	$('#'+dest).multiselect({
+	    noneSelectedText: "Compare submissions",
+	    selectedText: "# submissions selected to compare"
+	});
+	$('#'+dest).multiselected = true;
     });
 }
+
+$(function () {
+    $('.tree li:has(ul)').addClass('parent_li').find(' > span').attr('title', 'Collapse this branch');
+    $('.tree li.parent_li > span').on('click', function (e) {
+        var children = $(this).parent('li.parent_li').find(' > ul > li');
+        if (children.is(":visible")) {
+            children.hide('fast');
+            $(this).attr('title', 'Expand this branch').find(' > i').addClass('icon-plus-sign').removeClass('icon-minus-sign');
+        } else {
+            children.show('fast');
+            $(this).attr('title', 'Collapse this branch').find(' > i').addClass('icon-minus-sign').removeClass('icon-plus-sign');
+        }
+        e.stopPropagation();
+    });
+});
