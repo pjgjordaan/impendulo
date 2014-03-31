@@ -36,7 +36,6 @@ function showChart(fileName, resultName, chartData, currentTime, nextTime, curre
     NEXT_TIME = nextTime;
     CURRENT_USER = currentUser;
     if (resultName === 'Summary'){
-	//summaryTimeChart(fileName, resultName, chartData, compare, currentTime, nextTime);
     } else{
 	timeChart(fileName, resultName, chartData, currentTime, nextTime);
     }
@@ -128,7 +127,7 @@ function timeChart(fileName, resultName, chartData) {
 	    .transition()
             .duration(500)
             .ease('linear')
-	    .style('opacity', 0);
+	    .style('display', 'none');
     };
 
     var line = d3.svg.line()
@@ -206,7 +205,7 @@ function timeChart(fileName, resultName, chartData) {
 		.attr('cy', y(mid));
 	});
     d3.select('#chartHolder').html('');
-    d3.select('#chartHolder').html('<div class="row"><div class="col-md-10"><div id="chart" class="chart" xmlns:xlink="http://www.w3.org/1999/xlink"></div></div><div class="col-md-2"><div id="legend"></div></div></div>"');
+    d3.select('#chartHolder').html('<div class="row"><div class="col-md-10"><div id="chart" class="chart" xmlns:xlink="http://www.w3.org/1999/xlink"></div></div><div class="col-md-2"><div class="legend"></div></div></div>"');
    
     var chart = d3.select('#chart')
 	.append('svg:svg')
@@ -268,7 +267,7 @@ function timeChart(fileName, resultName, chartData) {
 	.attr('class', 'line-active')
 	.attr('key', chartKey)
 	.style('stroke', activeColour)
-	.style("stroke-width", ACTIVE_WIDTH)
+	.style('stroke-width', ACTIVE_WIDTH)
 	.attr('d', function(d) { 
 	    return line(d.values); 
 	});
@@ -331,7 +330,7 @@ function timeChart(fileName, resultName, chartData) {
 	    id: 'submission' + legendData[i].values[0].subId,
 	    text: legendData[i].values[0].user,
 	    state:{
-		opened: i == 0
+		opened: true
 	    },
 	    children: []
 	}
@@ -347,7 +346,7 @@ function timeChart(fileName, resultName, chartData) {
 	legendTree.push(e);
     }
     
-    $('#legend')
+    $('.legend')
 	.on('open_node.jstree', function(e, data){
 	    configureVisibility(legendData, false);
 	})
@@ -359,11 +358,12 @@ function timeChart(fileName, resultName, chartData) {
 		'themes' : { 'icons': false },
 		'data' : legendTree    
 	    } ,
-	    "checkbox" : {
-		"keep_selected_style" : false
+	    'checkbox' : {
+		'keep_selected_style' : false
 	    },
-	    "plugins" : [ "wholerow", "checkbox" ]
+	    'plugins' : [ 'wholerow', 'checkbox' ]
 	});
+    $('.legend').scrollTop(0);
 
 }
 
@@ -419,9 +419,9 @@ function configureChildren(parent, initialToggle){
 	});
 	if(initialToggle){
 	    toggleVisibility(k, true);
-	    if(parent.values[j].show){
+	    if(j === 0){
 		status ++;
-		$('#'+k+' > .jstree-wholerow').trigger('click');
+		$('#'+k + ' > .jstree-anchor').trigger('click');
 	    }
 	}
     }
@@ -496,7 +496,7 @@ function showTooltip(d){
 	.transition()
         .duration(500)	
 	.ease('linear')
-	.style('opacity', 1);
+	.style('display', 'inline');
 }
 
 function star(x, y, scale)
@@ -579,12 +579,12 @@ function invert(hex) {
     if (hex.length != 7 || hex.indexOf('#') != 0) {
 	return null;
     }
-    return "#" + pad((255 - parseInt(hex.substring(1, 3), 16)).toString(16)) + pad((255 - parseInt(hex.substring(3, 5), 16)).toString(16)) + pad((255 - parseInt(hex.substring(5, 7), 16)).toString(16));
+    return '#' + pad((255 - parseInt(hex.substring(1, 3), 16)).toString(16)) + pad((255 - parseInt(hex.substring(3, 5), 16)).toString(16)) + pad((255 - parseInt(hex.substring(5, 7), 16)).toString(16));
 }
     
 function pad(num) {
     if (num.length < 2) {
-	return "0" + num;
+	return '0' + num;
     } else {
 	return num;
     }
@@ -611,5 +611,5 @@ function active(d){
 
 function shadeColor(color, percent) {   
     var f=parseInt(color.slice(1),16),t=percent<0?0:255,p=percent<0?percent*-1:percent,R=f>>16,G=f>>8&0x00FF,B=f&0x0000FF;
-    return "#"+(0x1000000+(Math.round((t-R)*p)+R)*0x10000+(Math.round((t-G)*p)+G)*0x100+(Math.round((t-B)*p)+B)).toString(16).slice(1);
+    return '#'+(0x1000000+(Math.round((t-R)*p)+R)*0x10000+(Math.round((t-G)*p)+G)*0x100+(Math.round((t-B)*p)+B)).toString(16).slice(1);
 }

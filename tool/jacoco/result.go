@@ -101,7 +101,7 @@ func (r *Result) ChartVals() []*tool.ChartVal {
 	v := make([]*tool.ChartVal, len(r.Report.Counters))
 	for i, c := range r.Report.Counters {
 		p := util.Round(float64(c.Covered)/float64(c.Covered+c.Missed)*100.0, 2)
-		v[i] = &tool.ChartVal{util.Title(c.Type) + " Coverage", p, i == 0, r.FileId}
+		v[i] = &tool.ChartVal{util.Title(c.Type) + " Coverage", p, r.FileId}
 	}
 	return v
 }

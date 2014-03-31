@@ -82,7 +82,7 @@ func LoadChart(resultName string, files []*project.File) (ChartData, error) {
 		return c.Data, nil
 	}
 	for _, l := range ls {
-		v := []*tool.ChartVal{&tool.ChartVal{"Launches", 0.0, false, l.Id}}
+		v := []*tool.ChartVal{&tool.ChartVal{"Launches", 0.0, l.Id}}
 		c.Add(l, v)
 	}
 	return c.Data, nil
@@ -223,7 +223,7 @@ func (c *Chart) Add(f *project.File, vs []*tool.ChartVal) {
 		p := map[string]interface{}{
 			"x": x, "y": v.Y, "key": v.Name + " " + c.subId,
 			"name": v.Name, "subId": c.subId, "user": c.user,
-			"created": c.start, "time": f.Time, "show": v.Show,
+			"created": c.start, "time": f.Time,
 		}
 		c.Data = append(c.Data, p)
 	}

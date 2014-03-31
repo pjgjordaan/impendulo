@@ -250,14 +250,7 @@ function ajaxChart(subID, file, result, currentTime, nextTime, user, childID, sr
     var s = {};
     if(src !== undefined){
 	s = {'submissions': $('#' + src).val()};
-	$('#'+src).multiselect('destroy');
-	var l = document.getElementById(src);
-	l.options.length = 0;
-	$('#'+src).multiselect({
-	    noneSelectedText: "Compare submissions",
-	    selectedText: "# submissions selected to compare"
-	});
-	$('#'+src).multiselected = true;
+	$('#'+src).multiselect('uncheckAll');
     }
     $.getJSON(url, s, function(data){
 	showChart(name, name, data['chart'], currentTime, nextTime, user);

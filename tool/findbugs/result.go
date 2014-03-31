@@ -26,6 +26,7 @@ package findbugs
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
 )
@@ -100,10 +101,10 @@ func (this *Result) GetReport() tool.Report {
 //ChartVals
 func (this *Result) ChartVals() []*tool.ChartVal {
 	return []*tool.ChartVal{
-		&tool.ChartVal{"All", float64(this.Report.Summary.BugCount), true, this.FileId},
-		&tool.ChartVal{"Priority 1", float64(this.Report.Summary.Priority1), false, this.FileId},
-		&tool.ChartVal{"Priority 2", float64(this.Report.Summary.Priority2), false, this.FileId},
-		&tool.ChartVal{"Priority 3", float64(this.Report.Summary.Priority3), false, this.FileId},
+		&tool.ChartVal{"All", float64(this.Report.Summary.BugCount), this.FileId},
+		&tool.ChartVal{"Priority 1", float64(this.Report.Summary.Priority1), this.FileId},
+		&tool.ChartVal{"Priority 2", float64(this.Report.Summary.Priority2), this.FileId},
+		&tool.ChartVal{"Priority 3", float64(this.Report.Summary.Priority3), this.FileId},
 	}
 }
 

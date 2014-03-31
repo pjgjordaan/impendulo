@@ -26,7 +26,9 @@ package tool
 
 import (
 	"fmt"
+
 	"labix.org/v2/mgo/bson"
+
 	"strings"
 )
 
@@ -34,7 +36,6 @@ type (
 	ChartVal struct {
 		Name   string
 		Y      float64
-		Show   bool
 		FileId bson.ObjectId
 	}
 

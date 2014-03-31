@@ -26,6 +26,7 @@ package jpf
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
 )
@@ -110,8 +111,8 @@ func (this *Result) GetReport() tool.Report {
 //ChartVals
 func (this *Result) ChartVals() []*tool.ChartVal {
 	return []*tool.ChartVal{
-		&tool.ChartVal{"Total Errors", float64(this.Report.Total), true, this.FileId},
-		&tool.ChartVal{"Unique Errors", float64(this.Report.ErrorCount()), false, this.FileId},
+		&tool.ChartVal{"Total Errors", float64(this.Report.Total), this.FileId},
+		&tool.ChartVal{"Unique Errors", float64(this.Report.ErrorCount()), this.FileId},
 	}
 }
 

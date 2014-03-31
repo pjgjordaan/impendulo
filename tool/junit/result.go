@@ -106,8 +106,8 @@ func (this *Result) Success() bool {
 //ChartVals
 func (this *Result) ChartVals() []*tool.ChartVal {
 	return []*tool.ChartVal{
-		&tool.ChartVal{"Failures", float64(this.Report.Failures), true, this.FileId},
-		&tool.ChartVal{"Errors", float64(this.Report.Errors), false, this.FileId},
+		&tool.ChartVal{"Failures", float64(this.Report.Failures), this.FileId},
+		&tool.ChartVal{"Errors", float64(this.Report.Errors), this.FileId},
 	}
 }
 

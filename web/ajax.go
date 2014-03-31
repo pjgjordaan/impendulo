@@ -139,7 +139,6 @@ func getChart(r *http.Request) ([]byte, error) {
 	if e != nil {
 		return nil, e
 	}
-	cmp := false
 	if subs, ok := r.Form["submissions[]"]; ok {
 		for _, s := range subs {
 			sid, e := util.ReadId(s)
@@ -156,8 +155,7 @@ func getChart(r *http.Request) ([]byte, error) {
 			}
 			c = append(c, nc...)
 		}
-		cmp = len(subs) > 0
 	}
-	m := map[string]interface{}{"chart": c, "compare": cmp}
+	m := map[string]interface{}{"chart": c}
 	return util.JSON(m)
 }

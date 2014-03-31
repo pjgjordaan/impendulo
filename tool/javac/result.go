@@ -106,8 +106,8 @@ func (this *Result) ChartVals() []*tool.ChartVal {
 		yW = float64(this.Report.Count)
 	}
 	return []*tool.ChartVal{
-		&tool.ChartVal{"Errors", yE, true, this.FileId},
-		&tool.ChartVal{"Warnings", yW, false, this.FileId},
+		&tool.ChartVal{"Errors", yE, this.FileId},
+		&tool.ChartVal{"Warnings", yW, this.FileId},
 	}
 }
 

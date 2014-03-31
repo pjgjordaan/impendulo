@@ -26,12 +26,16 @@ package web
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/util"
+
 	"io/ioutil"
+
 	"labix.org/v2/mgo/bson"
+
 	"net/http"
 	"net/url"
 	"path"
@@ -248,7 +252,11 @@ func testedFileName(subId bson.ObjectId) (name string, err error) {
 	}
 	for _, test := range tests {
 		for idstr, _ := range test.Results {
-			id, ierr := util.ReadId(idstr)
+			s := strings.Split(idstr, "-")
+			if len(s) < 2 {
+				continue
+			}
+			id, ierr := util.ReadId(s[len(s)-1])
 			if ierr != nil {
 				continue
 			}
