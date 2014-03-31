@@ -26,12 +26,14 @@ package receiver
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
 	"net"
 )
 
@@ -67,252 +69,235 @@ const (
 )
 
 //Spawn creates a new ConnHandler of type SubmissionHandler.
-func (this *SubmissionSpawner) Spawn() ConnHandler {
+func (s *SubmissionSpawner) Spawn() ConnHandler {
 	return &SubmissionHandler{}
 }
 
 //Start sets the connection, launches the Handle method
 //and ends the session when it returns.
-func (this *SubmissionHandler) Start(conn net.Conn) {
-	this.conn = conn
-	this.submission = new(project.Submission)
-	this.submission.Id = bson.NewObjectId()
-	this.End(this.Handle())
+func (s *SubmissionHandler) Start(c net.Conn) {
+	s.conn = c
+	s.submission = new(project.Submission)
+	s.submission.Id = bson.NewObjectId()
+	s.End(s.Handle())
 }
 
 //End ends a session and reports any errors to the user.
-func (this *SubmissionHandler) End(err error) {
-	defer this.conn.Close()
-	var msg string
-	if err != nil {
-		msg = "ERROR: " + err.Error()
-		util.Log(err, LOG_RECEIVER)
-	} else {
-		msg = OK
+func (s *SubmissionHandler) End(e error) {
+	defer s.conn.Close()
+	msg := OK
+	if e != nil {
+		msg = "ERROR: " + e.Error()
+		util.Log(e, LOG_RECEIVER)
 	}
-	this.write(msg)
+	s.write(msg)
 }
 
 //Handle manages a connection by authenticating it,
 //processing its Submission and reading Files from it.
-func (this *SubmissionHandler) Handle() (err error) {
-	err = this.Login()
-	if err != nil {
-		return
+func (s *SubmissionHandler) Handle() error {
+	var e error
+	if e = s.Login(); e != nil {
+		return e
 	}
-	err = this.LoadInfo()
-	if err != nil {
-		return
+	if e = s.LoadInfo(); e != nil {
+		return e
 	}
-	this.processingKey, err = processing.StartSubmission(this.submission.Id)
-	if err != nil {
-		return
+	s.processingKey, e = processing.StartSubmission(s.submission.Id)
+	if e != nil {
+		return e
 	}
-	defer func() { processing.EndSubmission(this.submission.Id, this.processingKey) }()
-	done := false
-	for err == nil && !done {
-		done, err = this.Read()
+	defer func() { processing.EndSubmission(s.submission.Id, s.processingKey) }()
+	d := false
+	for !d {
+		d, e = s.Read()
+		if e != nil {
+			return e
+		}
 	}
-	return
+	return nil
 }
 
 //Login authenticates a Submission.
 //It validates the user's credentials and permissions.
-func (this *SubmissionHandler) Login() (err error) {
-	loginInfo, err := util.ReadJSON(this.conn)
-	if err != nil {
-		return
+func (s *SubmissionHandler) Login() error {
+	i, e := util.ReadJSON(s.conn)
+	if e != nil {
+		return e
 	}
-	req, err := util.GetString(loginInfo, REQ)
-	if err != nil {
-		return
-	} else if req != LOGIN {
-		err = fmt.Errorf("Invalid request %q, expected %q", req, LOGIN)
-		return
+	r, e := util.GetString(i, REQ)
+	if e != nil {
+		return e
+	} else if r != LOGIN {
+		return fmt.Errorf("Invalid request %q, expected %q", r, LOGIN)
 	}
 	//Read user details
-	this.submission.User, err = util.GetString(loginInfo, db.USER)
-	if err != nil {
-		return
+	s.submission.User, e = util.GetString(i, db.USER)
+	if e != nil {
+		return e
 	}
-	pword, err := util.GetString(loginInfo, user.PWORD)
-	if err != nil {
-		return
+	pw, e := util.GetString(i, user.PWORD)
+	if e != nil {
+		return e
 	}
-	mode, err := util.GetString(loginInfo, project.MODE)
-	if err != nil {
-		return
+	m, e := util.GetString(i, project.MODE)
+	if e != nil {
+		return e
 	}
-	err = this.submission.SetMode(mode)
-	if err != nil {
-		return
+	if e = s.submission.SetMode(m); e != nil {
+		return e
 	}
-	u, err := db.User(this.submission.User)
-	if err != nil {
-		return
+	u, e := db.User(s.submission.User)
+	if e != nil {
+		return e
 	}
-	if !util.Validate(u.Password, u.Salt, pword) {
-		err = fmt.Errorf("%q used an invalid username or password",
-			this.submission.User)
-		return
+	if !util.Validate(u.Password, u.Salt, pw) {
+		return fmt.Errorf("%q used invalid username or password", s.submission.User)
 	}
 	//Send a list of available projects to the user.
-	projects, err := db.Projects(nil, nil, db.NAME)
-	if err != nil {
-		return
+	ps, e := db.Projects(nil, nil, db.NAME)
+	if e != nil {
+		return e
 	}
-	projectInfos := make([]*ProjectInfo, len(projects))
-	matcher := bson.M{db.USER: this.submission.User}
-	i := 0
-	for _, p := range projects {
-		matcher[db.PROJECTID] = p.Id
-		subs, _ := db.Submissions(matcher, nil)
-		projectInfos[i] = &ProjectInfo{p, subs}
-		i++
+	pi := make([]*ProjectInfo, 0, len(ps))
+	for _, p := range ps {
+		ss, e := db.Submissions(bson.M{db.USER: s.submission.User, db.PROJECTID: p.Id}, nil)
+		if e != nil {
+			util.Log(e)
+			continue
+		}
+		pi = append(pi, &ProjectInfo{p, ss})
 	}
-	err = this.writeJSON(projectInfos)
-	return
+	return s.writeJSON(pi)
 }
 
 //LoadInfo reads the Json request info.
 //A new submission is then created or an existing one resumed
 //depending on the request.
-func (this *SubmissionHandler) LoadInfo() (err error) {
-	reqInfo, err := util.ReadJSON(this.conn)
-	if err != nil {
-		return
+func (s *SubmissionHandler) LoadInfo() error {
+	i, e := util.ReadJSON(s.conn)
+	if e != nil {
+		return e
 	}
-	req, err := util.GetString(reqInfo, REQ)
-	if err != nil {
-		return
-	} else if req == NEW {
-		err = this.createSubmission(reqInfo)
-	} else if req == CONTINUE {
-		err = this.continueSubmission(reqInfo)
-	} else {
-		err = fmt.Errorf("Invalid request %q", req)
+	r, e := util.GetString(i, REQ)
+	if e != nil {
+		return e
 	}
-	return
+	switch r {
+	case NEW:
+		return s.createSubmission(i)
+	case CONTINUE:
+		return s.continueSubmission(i)
+	}
+	return fmt.Errorf("invalid request %q", r)
 }
 
 //createSubmission is used when a client wishes to create a new submission.
 //Submission info is read from the subInfo map and used to create a new
 //submission in the db.
-func (this *SubmissionHandler) createSubmission(subInfo map[string]interface{}) (err error) {
-	idStr, err := util.GetString(subInfo, db.PROJECTID)
-	if err != nil {
-		return
+func (s *SubmissionHandler) createSubmission(subInfo map[string]interface{}) error {
+	ps, e := util.GetString(subInfo, db.PROJECTID)
+	if e != nil {
+		return e
 	}
-	this.submission.ProjectId, err = util.ReadId(idStr)
-	if err != nil {
-		return
+	s.submission.ProjectId, e = util.ReadId(ps)
+	if e != nil {
+		return e
 	}
-	this.submission.Time, err = util.GetInt64(subInfo, db.TIME)
-	if err != nil {
-		return
+	s.submission.Time, e = util.GetInt64(subInfo, db.TIME)
+	if e != nil {
+		return e
 	}
-	this.submission.Status = project.BUSY
-	err = db.Add(db.SUBMISSIONS, this.submission)
-	if err == nil {
-		err = this.writeJSON(this.submission)
+	s.submission.Status = project.BUSY
+	if e = db.Add(db.SUBMISSIONS, s.submission); e != nil {
+		return e
 	}
-	return
+	return s.writeJSON(s.submission)
 }
 
 //continueSubmission is used when a client wishes to continue with a previous submission.
 //The submission id is read from the subInfo map and then the submission os loaded from the db.
-func (this *SubmissionHandler) continueSubmission(subInfo map[string]interface{}) (err error) {
-	idStr, err := util.GetString(subInfo, db.SUBID)
-	if err != nil {
-		return
+func (s *SubmissionHandler) continueSubmission(subInfo map[string]interface{}) error {
+	v, e := util.GetString(subInfo, db.SUBID)
+	if e != nil {
+		return e
 	}
-	id, err := util.ReadId(idStr)
-	if err != nil {
-		return
+	id, e := util.ReadId(v)
+	if e != nil {
+		return e
 	}
-	change := bson.M{db.SET: bson.M{db.STATUS: project.BUSY}}
-	err = db.Update(db.SUBMISSIONS, bson.M{db.ID: id}, change)
-	if err != nil {
-		return
+	if e = db.Update(db.SUBMISSIONS, bson.M{db.ID: id}, bson.M{db.SET: bson.M{db.STATUS: project.BUSY}}); e != nil {
+		return e
 	}
-	this.submission, err = db.Submission(bson.M{db.ID: id}, nil)
-	if err != nil {
-		return
+	s.submission, e = db.Submission(bson.M{db.ID: id}, nil)
+	if e != nil {
+		return e
 	}
-	err = this.write(OK)
-	return
+	return s.write(OK)
 }
 
 //Read reads Files from the connection and sends them for processing.
-func (this *SubmissionHandler) Read() (done bool, err error) {
+func (s *SubmissionHandler) Read() (bool, error) {
 	//Receive file metadata and request info
-	requestInfo, err := util.ReadJSON(this.conn)
-	if err != nil {
-		return
+	i, e := util.ReadJSON(s.conn)
+	if e != nil {
+		return false, e
 	}
 	//Get the type of request
-	req, err := util.GetString(requestInfo, REQ)
-	if err != nil {
-		return
+	r, e := util.GetString(i, REQ)
+	if e != nil {
+		return false, e
 	}
-	if req == SEND {
-		err = this.write(OK)
-		if err != nil {
-			return
+	switch r {
+	case SEND:
+		if e = s.write(OK); e != nil {
+			return false, e
 		}
 		//Receive file data
-		var buffer []byte
-		buffer, err = util.ReadData(this.conn)
-		if err != nil {
-			return
+		b, e := util.ReadData(s.conn)
+		if e != nil {
+			return false, e
 		}
-		err = this.write(OK)
-		if err != nil {
-			return
+		if e = s.write(OK); e != nil {
+			return false, e
 		}
-		delete(requestInfo, REQ)
-		var file *project.File
+		delete(i, REQ)
+		var f *project.File
 		//Create a new file
-		switch this.submission.Mode {
+		switch s.submission.Mode {
 		case project.ARCHIVE_MODE:
-			file = project.NewArchive(
-				this.submission.Id, buffer)
+			f = project.NewArchive(s.submission.Id, b)
 		case project.FILE_MODE:
-			file, err = project.NewFile(
-				this.submission.Id, requestInfo, buffer)
-			if err != nil {
-				return
+			if f, e = project.NewFile(s.submission.Id, i, b); e != nil {
+				return false, e
 			}
 		}
-		err = db.Add(db.FILES, file)
-		if err != nil {
-			return
+		if e = db.Add(db.FILES, f); e != nil {
+			return false, e
 		}
 		//Send file to be processed.
-		err = processing.AddFile(file, this.processingKey)
-	} else if req == LOGOUT {
+		return false, processing.AddFile(f, s.processingKey)
+	case LOGOUT:
 		//Logout request so we are done with this client.
-		done = true
-	} else {
-		err = fmt.Errorf("Unknown request %q", req)
+		return true, nil
 	}
-	return
+	return false, fmt.Errorf("Unknown request %q", r)
 }
 
 //writeJSON writes an JSON data to this SubmissionHandler's connection.
-func (this *SubmissionHandler) writeJSON(data interface{}) (err error) {
-	err = util.WriteJSON(this.conn, data)
-	if err == nil {
-		_, err = this.conn.Write([]byte(util.EOT))
+func (s *SubmissionHandler) writeJSON(i interface{}) error {
+	if e := util.WriteJSON(s.conn, i); e != nil {
+		return e
 	}
-	return
+	_, e := s.conn.Write([]byte(util.EOT))
+	return e
 }
 
 //write writes a string to this SubmissionHandler's connection.
-func (this *SubmissionHandler) write(data string) (err error) {
-	_, err = this.conn.Write([]byte(data))
-	if err == nil {
-		_, err = this.conn.Write([]byte(util.EOT))
+func (s *SubmissionHandler) write(d string) error {
+	if _, e := s.conn.Write([]byte(d)); e != nil {
+		return e
 	}
-	return
+	_, e := s.conn.Write([]byte(util.EOT))
+	return e
 }

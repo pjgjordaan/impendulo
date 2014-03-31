@@ -30,9 +30,11 @@ package diff
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
+
 	"html/template"
 	"os"
 	"path/filepath"
@@ -40,51 +42,47 @@ import (
 )
 
 //Diff calculates and returns the diff between orig and change.
-func Diff(orig, change string) (ret string, err error) {
+func Diff(orig, change string) (string, error) {
 	//Load diff executable
-	exec, err := config.DIFF.Path()
-	if err != nil {
-		return
+	d, e := config.DIFF.Path()
+	if e != nil {
+		return "", e
 	}
-	base, err := util.BaseDir()
-	if err != nil {
-		return
+	b, e := util.BaseDir()
+	if e != nil {
+		return "", e
 	}
 	//Store one string temporarily on disk since we can only pipe one
 	//argument to diff.
-	origName := filepath.Join(base, fmt.Sprint(&orig)+fmt.Sprint(&change))
-	err = util.SaveFile(origName, []byte(orig))
-	if err != nil {
-		return
+	p := filepath.Join(b, fmt.Sprint(&orig)+fmt.Sprint(&change))
+	if e = util.SaveFile(p, []byte(orig)); e != nil {
+		return "", e
 	}
-	defer os.Remove(origName)
-	args := []string{exec, "-u", origName, "-"}
-	execRes := tool.RunCommand(args, strings.NewReader(change))
-	ret = string(execRes.StdOut)
-	return
+	defer os.Remove(p)
+	a := []string{d, "-u", p, "-"}
+	r := tool.RunCommand(a, strings.NewReader(change))
+	return string(r.StdOut), nil
 }
 
 //Diff2HTML converts a diff to HTML and returns the HTML.
-func Diff2HTML(diff string) (ret template.HTML, err error) {
+func Diff2HTML(d string) (template.HTML, error) {
 	//If there is no diff we don't need to run the script.
-	if diff == "" {
-		ret = template.HTML("<h4 class=\"text-success\">Files equivalent.<h4>")
-		return
+	if d == "" {
+		return template.HTML("<h4 class=\"text-success\">Files equivalent.<h4>"), nil
 	}
 	//Load the script
-	script, err := config.DIFF2HTML.Path()
-	if err != nil {
-		return
+	s, e := config.DIFF2HTML.Path()
+	if e != nil {
+		return "", e
 	}
 	//Execute it and convert the result to HTML.
-	execRes := tool.RunCommand([]string{script}, strings.NewReader(diff))
-	if execRes.HasStdErr() {
-		err = fmt.Errorf("Could not generate html: %q", string(execRes.StdErr))
-	} else if execRes.Err != nil {
-		err = execRes.Err
+	r := tool.RunCommand([]string{s}, strings.NewReader(d))
+	if r.HasStdErr() {
+		return "", fmt.Errorf("Could not generate html: %q", string(r.StdErr))
+	} else if r.Err != nil {
+		return "", r.Err
 	}
-	ret = template.HTML(string(execRes.StdOut))
-	return
+	return template.HTML(string(r.StdOut)), nil
 }
 
 //SetHeader adds a header to a diff string.

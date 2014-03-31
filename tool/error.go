@@ -61,60 +61,54 @@ type (
 )
 
 //MemoryError checks whether an error is a memory error.
-func MemoryError(err error) bool {
-	pErr, ok := err.(*os.PathError)
-	if !ok {
-		return false
-	}
-	return pErr.Err.Error() == "cannot allocate memory"
+func MemoryError(e error) bool {
+	pe, ok := e.(*os.PathError)
+	return ok && pe.Err.Error() == "cannot allocate memory"
 }
 
 //AccessError checks whether an error is an access error.
-func AccessError(err error) bool {
-	pErr, ok := err.(*os.PathError)
-	if !ok {
-		return false
-	}
-	return pErr.Err.Error() == "bad file descriptor"
+func AccessError(e error) bool {
+	ae, ok := e.(*os.PathError)
+	return ok && ae.Err.Error() == "bad file descriptor"
 }
 
 //IsCompileError checks whether an error is a CompileError.
-func IsCompileError(err error) (ok bool) {
-	_, ok = err.(*CompileError)
-	return
+func IsCompileError(e error) bool {
+	_, ok := e.(*CompileError)
+	return ok
 }
 
 //IsTimeout checks whether an error is a timeout error.
-func IsTimeout(err error) (ok bool) {
-	if err != nil {
-		_, ok = err.(*TimeoutError)
+func IsTimeout(e error) bool {
+	if e != nil {
+		_, ok := e.(*TimeoutError)
+		return ok
 	}
-	return
+	return false
 }
 
 //IsEndError checks whether an error is an EndError.
-func IsEndError(err error) (ok bool) {
-	if err != nil {
-		_, ok = err.(*EndError)
+func IsEndError(e error) bool {
+	if e != nil {
+		_, ok := e.(*EndError)
+		return ok
 	}
-	return
+	return false
 }
 
 //Error
-func (this *TimeoutError) Error() string {
-	return fmt.Sprintf("Command %q timed out.", this.args)
+func (t *TimeoutError) Error() string {
+	return fmt.Sprintf("command %q timed out", t.args)
 }
 
 //Error
-func (this *StartError) Error() string {
-	return fmt.Sprintf("Encountered startup error %q executing command %q",
-		this.err, this.args)
+func (s *StartError) Error() string {
+	return fmt.Sprintf("start error %q executing command %q", s.err, s.args)
 }
 
 //Error
-func (this *EndError) Error() string {
-	return fmt.Sprintf("Encountered end error %q: %s executing command %q",
-		this.err, this.stdErr, this.args)
+func (e *EndError) Error() string {
+	return fmt.Sprintf("end error %q: %s executing command %q", e.err, e.stdErr, e.args)
 }
 
 //NewCompileError
@@ -126,17 +120,16 @@ func NewCompileError(name, msg string) *CompileError {
 }
 
 //Error
-func (this *CompileError) Error() string {
-	return fmt.Sprintf("Could not compile %q due to: %q.", this.name, this.msg)
+func (c *CompileError) Error() string {
+	return fmt.Sprintf("compile failure %q due to: %q.", c.name, c.msg)
 }
 
 //Error
-func (this *XMLError) Error() string {
-	return fmt.Sprintf("Encountered error %q while parsing xml in %s.",
-		this.err, this.origin)
+func (x *XMLError) Error() string {
+	return fmt.Sprintf("error %q parsing XML in %s", x.err, x.origin)
 }
 
 //NewXMLError
-func NewXMLError(err error, origin string) *XMLError {
-	return &XMLError{err, origin}
+func NewXMLError(e error, origin string) *XMLError {
+	return &XMLError{e, origin}
 }

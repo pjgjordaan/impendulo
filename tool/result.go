@@ -145,39 +145,39 @@ var (
 
 //NewErrorResult creates an ErrorResult. There are 3 types:
 //Timeout, No result and error.
-func NewErrorResult(tipe, resultName string) *ErrorResult {
-	var err error
+func NewErrorResult(tipe, name string) *ErrorResult {
+	var e error
 	switch tipe {
 	case TIMEOUT:
-		err = fmt.Errorf("A timeout occured during execution of %s.", resultName)
+		e = fmt.Errorf("A timeout occured during execution of %s.", name)
 	case NORESULT:
-		err = fmt.Errorf("No result available for %s.", resultName)
+		e = fmt.Errorf("No result available for %s.", name)
 	default:
 		tipe = ERROR
-		err = fmt.Errorf("%s: could not retrieve result for %s.", tipe, resultName)
+		e = fmt.Errorf("%s: could not retrieve result for %s.", tipe, name)
 	}
 	return &ErrorResult{
-		err:  err,
+		err:  e,
 		name: tipe,
 	}
 }
 
 //GetName
-func (this *ErrorResult) GetName() string {
-	return this.name
+func (e *ErrorResult) GetName() string {
+	return e.name
 }
 
-func (this *ErrorResult) GetType() string {
+func (e *ErrorResult) GetType() string {
 	return ERROR
 }
 
 //GetReport
-func (this *ErrorResult) GetReport() Report {
-	return this.err.Error()
+func (e *ErrorResult) GetReport() Report {
+	return e.err.Error()
 }
 
 //Template
-func (this *ErrorResult) Template() string {
+func (e *ErrorResult) Template() string {
 	return "emptyresult"
 }
 
@@ -189,21 +189,21 @@ func NewCodeResult(lang string, data []byte) *CodeResult {
 	}
 }
 
-func (this *CodeResult) GetType() string {
+func (c *CodeResult) GetType() string {
 	return CODE
 }
 
 //GetName
-func (this *CodeResult) GetName() string {
-	return this.GetType()
+func (c *CodeResult) GetName() string {
+	return c.GetType()
 }
 
 //GetReport
-func (this *CodeResult) GetReport() Report {
-	return this
+func (c *CodeResult) GetReport() Report {
+	return c
 }
 
-func (this *CodeResult) Template() string {
+func (c *CodeResult) Template() string {
 	return "coderesult"
 }
 
@@ -214,27 +214,27 @@ func NewSummaryResult() *SummaryResult {
 	}
 }
 
-func (this *SummaryResult) GetType() string {
+func (s *SummaryResult) GetType() string {
 	return SUMMARY
 }
 
 //GetName
-func (this *SummaryResult) GetName() string {
+func (s *SummaryResult) GetName() string {
 	return SUMMARY
 }
 
 //GetReport
-func (this *SummaryResult) GetReport() Report {
-	return this.summary
+func (s *SummaryResult) GetReport() Report {
+	return s.summary
 }
 
 //Template
-func (this *SummaryResult) Template() string {
+func (s *SummaryResult) Template() string {
 	return "summaryresult"
 }
 
 //AddSummary adds a ToolResult's summary to this SummaryResult's
 //list of summaries.
-func (this *SummaryResult) AddSummary(result ToolResult) {
-	this.summary = append(this.summary, result.Summary())
+func (s *SummaryResult) AddSummary(result ToolResult) {
+	s.summary = append(s.summary, result.Summary())
 }

@@ -29,6 +29,7 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
+
 	"strings"
 )
 
@@ -46,40 +47,37 @@ type (
 //NewResult creates a new Result with a single file.
 //A Result is actually only made up of a single file's source code
 //and never contains a diff. This is calculated seperately.
-func NewResult(file *project.File) *Result {
-	header := file.Name + " " + util.Date(file.Time)
-	data := strings.TrimSpace(string(file.Data))
+func NewResult(f *project.File) *Result {
 	return &Result{
-		header: header,
-		data:   data,
+		header: f.Name + " " + util.Date(f.Time),
+		data:   strings.TrimSpace(string(f.Data)),
 	}
 }
 
 //Create calculates the diff of two Results' code, converts it to HTML
 //and returns this.
-func (this *Result) Create(next *Result) (ret string, err error) {
-	ret, err = Diff(this.data, next.data)
-	if err != nil {
-		return
+func (r *Result) Create(next *Result) (string, error) {
+	d, e := Diff(r.data, next.data)
+	if e != nil {
+		return "", e
 	}
-	ret = SetHeader(ret, this.header, next.header)
-	return
+	return SetHeader(d, r.header, next.header), nil
 }
 
-func (this *Result) GetType() string {
+func (r *Result) GetType() string {
 	return NAME
 }
 
 //GetName
-func (this *Result) GetName() string {
+func (r *Result) GetName() string {
 	return NAME
 }
 
 //GetReport
-func (this *Result) GetReport() tool.Report {
-	return this
+func (r *Result) GetReport() tool.Report {
+	return r
 }
 
-func (this *Result) Template() string {
+func (r *Result) Template() string {
 	return "diffresult"
 }

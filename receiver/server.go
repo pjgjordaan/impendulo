@@ -28,7 +28,9 @@ package receiver
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/util"
+
 	"net"
 	"strconv"
 )
@@ -56,28 +58,24 @@ const (
 //spawn a new goroutine for each connection.
 //Each goroutine launched will handle its connection and
 //its type is determined by HandlerSpawner.
-func Run(port uint, spawner HandlerSpawner) {
+func Run(p uint, s HandlerSpawner) {
 	//Start listening for connections
-	netListen, err := net.Listen("tcp", ":"+strconv.Itoa(int(port)))
-	if err != nil {
-		util.Log(fmt.Errorf(
-			"Encountered error %q when listening on port %d",
-			err, port), LOG_SERVER)
+	l, e := net.Listen("tcp", ":"+strconv.Itoa(int(p)))
+	if e != nil {
+		util.Log(fmt.Errorf("error %q listening on port %d", e, p), LOG_SERVER)
 		return
 	}
-	defer netListen.Close()
+	defer l.Close()
 	for {
-		conn, err := netListen.Accept()
-		if err != nil {
-			util.Log(fmt.Errorf(
-				"Encountered error %q when accepting connection",
-				err), LOG_SERVER)
+		c, e := l.Accept()
+		if e != nil {
+			util.Log(fmt.Errorf("error %q accepting connection", e), LOG_SERVER)
 		} else {
 			//Spawn a handler for each new connection.
-			go func(c net.Conn) {
-				handler := spawner.Spawn()
-				handler.Start(c)
-			}(conn)
+			go func(cn net.Conn) {
+				h := s.Spawn()
+				h.Start(cn)
+			}(c)
 		}
 	}
 }

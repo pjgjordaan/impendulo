@@ -26,7 +26,7 @@ package processing
 
 import (
 	"encoding/json"
-	"fmt"
+
 	"github.com/godfried/impendulo/project"
 	uuid "github.com/nu7hatch/gouuid"
 	"github.com/streadway/amqp"
@@ -62,28 +62,22 @@ func init() {
 	rps = make(map[string]*ReceiveProducer)
 }
 
-func NewReceiveProducer(name, amqpURI, exchange, exchangeType, publishKey, bindingKey, ctag string) (rp *ReceiveProducer, err error) {
-	var ok bool
-	if rp, ok = rps[name]; ok {
-		return
+func NewReceiveProducer(name, amqpURI, exchange, exchangeType, publishKey, bindingKey, ctag string) (*ReceiveProducer, error) {
+	if r, ok := rps[name]; ok {
+		return r, nil
 	}
 	if ctag == "" {
-		var u4 *uuid.UUID
-		u4, err = uuid.NewV4()
-		if err != nil {
-			return
+		u4, e := uuid.NewV4()
+		if e != nil {
+			return nil, e
 		}
 		ctag = u4.String()
 	}
-	rp = &ReceiveProducer{
-		tag:        ctag,
-		bindingKey: bindingKey,
+	p, e := NewProducer(name, amqpURI, exchange, exchangeType, publishKey)
+	if e != nil {
+		return nil, e
 	}
-	rp.Producer, err = NewProducer(name, amqpURI, exchange, exchangeType, publishKey)
-	if err != nil {
-		return
-	}
-	q, err := rp.ch.QueueDeclare(
+	q, e := p.ch.QueueDeclare(
 		"",    // name of the queue
 		false, // durable
 		false, // delete when usused
@@ -91,81 +85,82 @@ func NewReceiveProducer(name, amqpURI, exchange, exchangeType, publishKey, bindi
 		false, // noWait
 		nil,   // arguments
 	)
-	if err != nil {
-		return
+	if e != nil {
+		return nil, e
 	}
-	rp.queue = q.Name
-	rp.ch.Qos(PREFETCH_COUNT, PREFETCH_SIZE, false)
-	err = rp.ch.QueueBind(
-		q.Name,        // name of the queue
-		rp.bindingKey, // bindingKey
-		exchange,      // sourceExchange
-		false,         // noWait
-		nil,           // arguments
-	)
-	if err == nil {
-		rps[name] = rp
+	p.ch.Qos(PREFETCH_COUNT, PREFETCH_SIZE, false)
+	if e = p.ch.QueueBind(
+		q.Name,     // name of the queue
+		bindingKey, // bindingKey
+		exchange,   // sourceExchange
+		false,      // noWait
+		nil,        // arguments
+	); e != nil {
+		return nil, e
 	}
-	return
+	r := &ReceiveProducer{
+		queue:      q.Name,
+		tag:        ctag,
+		bindingKey: bindingKey,
+		Producer:   p,
+	}
+	rps[name] = r
+	return r, nil
 }
 
-func (rp *ReceiveProducer) ReceiveProduce(data []byte) (reply []byte, err error) {
-	u4, err := uuid.NewV4()
-	if err != nil {
-		return
+func (r *ReceiveProducer) ReceiveProduce(d []byte) ([]byte, error) {
+	u4, e := uuid.NewV4()
+	if e != nil {
+		return nil, e
 	}
 	cid := u4.String()
-	msgs, err := rp.ch.Consume(rp.queue, rp.tag, false, false, false, false, nil)
-	if err != nil {
-		return
+	ds, e := r.ch.Consume(r.queue, r.tag, false, false, false, false, nil)
+	if e != nil {
+		return nil, e
 	}
-	err = rp.ch.Publish(
-		rp.exchange,   // publish to an exchange
-		rp.publishKey, // routing to 0 or more queues
-		true,          // mandatory
-		false,         // immediate
+	if e = r.ch.Publish(
+		r.exchange,   // publish to an exchange
+		r.publishKey, // routing to 0 or more queues
+		true,         // mandatory
+		false,        // immediate
 		amqp.Publishing{
-			ReplyTo:       rp.bindingKey,
+			ReplyTo:       r.bindingKey,
 			CorrelationId: cid,
 			ContentType:   "text/plain",
-			Body:          data,
+			Body:          d,
 			DeliveryMode:  amqp.Persistent, // 1=non-persistent, 2=persistent
 			Priority:      0,               // 0-9
 		},
-	)
-	if err != nil {
-		return
+	); e != nil {
+		return nil, e
 	}
-	var d amqp.Delivery
-	for d = range msgs {
+	var reply []byte
+	for d := range ds {
 		if d.CorrelationId == cid {
 			d.Ack(false)
 			reply = d.Body
 			break
 		}
 	}
-	err = rp.ch.Cancel(rp.tag, false)
-	return
+	if e = r.ch.Cancel(r.tag, false); e != nil {
+		return nil, e
+	}
+	return reply, nil
 }
 
-func NewProducer(name, amqpURI, exchange, exchangeType, publishKey string) (p *Producer, err error) {
-	var ok bool
-	if p, ok = producers[name]; ok {
-		return
+func NewProducer(name, amqpURI, exchange, exchangeType, publishKey string) (*Producer, error) {
+	if p, ok := producers[name]; ok {
+		return p, nil
 	}
-	p = &Producer{
-		publishKey: publishKey,
-		exchange:   exchange,
+	c, e := amqp.Dial(amqpURI)
+	if e != nil {
+		return nil, e
 	}
-	p.conn, err = amqp.Dial(amqpURI)
-	if err != nil {
-		return
+	ch, e := c.Channel()
+	if e != nil {
+		return nil, e
 	}
-	p.ch, err = p.conn.Channel()
-	if err != nil {
-		return
-	}
-	err = p.ch.ExchangeDeclare(
+	if e = ch.ExchangeDeclare(
 		exchange,     // name
 		exchangeType, // type
 		true,         // durable
@@ -173,15 +168,21 @@ func NewProducer(name, amqpURI, exchange, exchangeType, publishKey string) (p *P
 		false,        // internal
 		false,        // noWait
 		nil,          // arguments
-	)
-	if err == nil {
-		producers[name] = p
+	); e != nil {
+		return nil, e
 	}
-	return
+	p := &Producer{
+		conn:       c,
+		ch:         ch,
+		publishKey: publishKey,
+		exchange:   exchange,
+	}
+	producers[name] = p
+	return p, nil
 }
 
 //Produce publishes the provided data on the amqp.Channel as configured previously.
-func (p *Producer) Produce(data []byte) error {
+func (p *Producer) Produce(d []byte) error {
 	return p.ch.Publish(
 		p.exchange,   // publish to an exchange
 		p.publishKey, // routing to 0 or more queues
@@ -189,7 +190,7 @@ func (p *Producer) Produce(data []byte) error {
 		false,        // immediate
 		amqp.Publishing{
 			ContentType:  "text/plain",
-			Body:         data,
+			Body:         d,
 			DeliveryMode: amqp.Persistent, // 1=non-persistent, 2=persistent
 			Priority:     0,               // 0-9
 		},
@@ -197,41 +198,31 @@ func (p *Producer) Produce(data []byte) error {
 }
 
 //Shutdown stops this Producer by closing its channel and connection.
-func (p *Producer) Shutdown() (err error) {
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("Error: %s during producer shutdown on exchange %s.", err, p.exchange)
-		}
-	}()
-	if p == nil {
-		return
-	}
+func (p *Producer) Shutdown() error {
 	if p.ch != nil {
-		err = p.ch.Close()
-		if err != nil {
-			return
+		if e := p.ch.Close(); e != nil {
+			return e
 		}
 	}
 	if p.conn != nil {
-		err = p.conn.Close()
+		return p.conn.Close()
 	}
-	return
+	return nil
 }
 
 //StopProducers shuts all active producers down.
-func StopProducers() (err error) {
+func StopProducers() error {
 	for _, p := range producers {
 		if p == nil {
 			continue
 		}
-		err = p.Shutdown()
-		if err != nil {
-			return
+		if e := p.Shutdown(); e != nil {
+			return e
 		}
 	}
 	producers = make(map[string]*Producer)
 	rps = make(map[string]*ReceiveProducer)
-	return
+	return nil
 }
 
 //StatusChanger creates a Producer which can update Impendulo's status.
@@ -241,17 +232,16 @@ func StatusChanger(amqpURI string) (*Producer, error) {
 
 //ChangeStatus is used to update Impendulo's current
 //processing status.
-func ChangeStatus(change Status) (err error) {
-	sc, err := StatusChanger(amqpURI)
-	if err != nil {
-		return
+func ChangeStatus(change Status) error {
+	s, e := StatusChanger(amqpURI)
+	if e != nil {
+		return e
 	}
-	marshalled, err := json.Marshal(change)
-	if err != nil {
-		return
+	m, e := json.Marshal(change)
+	if e != nil {
+		return e
 	}
-	err = sc.Produce(marshalled)
-	return
+	return s.Produce(m)
 }
 
 //IdleWaiter
@@ -259,57 +249,57 @@ func IdleWaiter(amqpURI string) (*ReceiveProducer, error) {
 	return NewReceiveProducer("idle_waiter", amqpURI, "wait_exchange", DIRECT, "wait_request_key", "wait_response_key", "")
 }
 
-func WaitIdle() (err error) {
-	idleWaiter, err := IdleWaiter(amqpURI)
-	if err != nil {
-		return
+func WaitIdle() error {
+	w, e := IdleWaiter(amqpURI)
+	if e != nil {
+		return e
 	}
-	_, err = idleWaiter.ReceiveProduce(nil)
-	return
+	_, e = w.ReceiveProduce(nil)
+	return e
 }
 
 func StatusRetriever(amqpURI string) (*ReceiveProducer, error) {
 	return NewReceiveProducer("status_retriever", amqpURI, "status_exchange", DIRECT, "status_request_key", "status_response_key", "")
 }
 
-func GetStatus() (ret *Status, err error) {
-	statusRetriever, err := StatusRetriever(amqpURI)
-	if err != nil {
-		return
+func GetStatus() (*Status, error) {
+	sr, e := StatusRetriever(amqpURI)
+	if e != nil {
+		return nil, e
 	}
-	resp, err := statusRetriever.ReceiveProduce(nil)
-	if err != nil {
-		return
+	r, e := sr.ReceiveProduce(nil)
+	if e != nil {
+		return nil, e
 	}
-	ret = new(Status)
-	err = json.Unmarshal(resp, &ret)
-	return
+	s := new(Status)
+	if e = json.Unmarshal(r, &s); e != nil {
+		return nil, e
+	}
+	return s, nil
 }
 
 func FileProducer(amqpURI string, fileKey string) (*Producer, error) {
 	return NewProducer("file_producer_"+fileKey, amqpURI, "submission_exchange", DIRECT, fileKey)
 }
 
-func AddFile(file *project.File, fileKey string) (err error) {
-	fileProducer, err := FileProducer(amqpURI, fileKey)
-	if err != nil {
-		return
+func AddFile(f *project.File, k string) error {
+	p, e := FileProducer(amqpURI, k)
+	if e != nil {
+		return e
 	}
 	//We only need to process source files  and archives.
-	if !file.CanProcess() {
+	if !f.CanProcess() {
 		return nil
 	}
-	req := &Request{
-		FileId: file.Id,
-		SubId:  file.SubId,
+	m, e := json.Marshal(&Request{
+		FileId: f.Id,
+		SubId:  f.SubId,
 		Type:   FILE_ADD,
+	})
+	if e != nil {
+		return e
 	}
-	marshalled, err := json.Marshal(req)
-	if err != nil {
-		return
-	}
-	err = fileProducer.Produce(marshalled)
-	return
+	return p.Produce(m)
 }
 
 //StartProducer creates a new Producer which is used to signal the start or end of a submission.
@@ -318,59 +308,57 @@ func StartProducer(amqpURI string) (*ReceiveProducer, error) {
 	return NewReceiveProducer("submission_producer_"+id, amqpURI, "submission_exchange", DIRECT, "submission_key", id, "")
 }
 
-func StartSubmission(id bson.ObjectId) (fileKey string, err error) {
-	startProducer, err := StartProducer(amqpURI)
-	if err != nil {
-		return
+func StartSubmission(id bson.ObjectId) (string, error) {
+	p, e := StartProducer(amqpURI)
+	if e != nil {
+		return "", e
 	}
-	req := &Request{
+	m, e := json.Marshal(&Request{
 		FileId: id,
 		SubId:  id,
 		Type:   SUBMISSION_START,
+	})
+	if e != nil {
+		return "", e
 	}
-	marshalled, err := json.Marshal(req)
-	if err != nil {
-		return
+	d, e := p.ReceiveProduce([]byte{})
+	if e != nil {
+		return "", e
 	}
-	data, err := startProducer.ReceiveProduce([]byte{})
-	if err != nil {
-		return
+	p.publishKey = string(d)
+	e = p.Produce(m)
+	if e != nil {
+		return "", e
 	}
-	fileKey = string(data)
-	startProducer.publishKey = fileKey
-	err = startProducer.Produce(marshalled)
-	return
+	return p.publishKey, nil
 }
 
 //EndSubmission sends a message on AMQP that this submission has been completed by the user
 //and can thus be closed when processing is done.
-func EndSubmission(id bson.ObjectId, fileKey string) (err error) {
-	endProducer, err := FileProducer(amqpURI, fileKey)
-	if err != nil {
-		return
+func EndSubmission(id bson.ObjectId, k string) error {
+	p, e := FileProducer(amqpURI, k)
+	if e != nil {
+		return e
 	}
-	req := &Request{
+	m, e := json.Marshal(&Request{
 		FileId: id,
 		SubId:  id,
 		Type:   SUBMISSION_STOP,
+	})
+	if e != nil {
+		return e
 	}
-	marshalled, err := json.Marshal(req)
-	if err != nil {
-		return
-	}
-	err = endProducer.Produce(marshalled)
-	return
+	return p.Produce(m)
 }
 
 func RedoProducer(amqpURI string) (*Producer, error) {
 	return NewProducer("redo_producer", amqpURI, "submission_exchange", DIRECT, "redo_key")
 }
 
-func RedoSubmission(id bson.ObjectId) (err error) {
-	redoProducer, err := RedoProducer(amqpURI)
-	if err != nil {
-		return
+func RedoSubmission(id bson.ObjectId) error {
+	p, e := RedoProducer(amqpURI)
+	if e != nil {
+		return e
 	}
-	err = redoProducer.Produce([]byte(id.Hex()))
-	return
+	return p.Produce([]byte(id.Hex()))
 }
