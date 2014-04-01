@@ -54,39 +54,37 @@ func ReadData(r io.Reader) ([]byte, error) {
 	if r == nil {
 		return nil, fmt.Errorf("Can't read from a nil io.Reader")
 	}
-	buffer := new(bytes.Buffer)
-	eot := []byte(EOT)
+	b := new(bytes.Buffer)
+	t := []byte(EOT)
 	p := make([]byte, 2048)
 	busy := true
 	for busy {
-		bytesRead, err := r.Read(p)
-		read := p[:bytesRead]
-		if err == io.EOF {
+		n, e := r.Read(p)
+		s := p[:n]
+		if e == io.EOF {
 			busy = false
-		} else if err != nil {
-			return nil, &UtilError{r, "reading from", err}
-		} else if bytes.HasSuffix(read, eot) {
-			read = read[:len(read)-len(eot)]
+		} else if e != nil {
+			return nil, &UtilError{r, "reading from", e}
+		} else if bytes.HasSuffix(s, t) {
+			s = s[:len(s)-len(t)]
 			busy = false
 		}
-		buffer.Write(read)
+		b.Write(s)
 	}
-	return buffer.Bytes(), nil
+	return b.Bytes(), nil
 }
 
-//SaveFile saves a file (given as a []byte) as fname.
-func SaveFile(fname string, data []byte) error {
-	err := os.MkdirAll(filepath.Dir(fname), DPERM)
-	if err != nil {
-		return &UtilError{fname, "creating", err}
+//SaveFile saves a file (given as a []byte) as n.
+func SaveFile(n string, d []byte) error {
+	if e := os.MkdirAll(filepath.Dir(n), DPERM); e != nil {
+		return &UtilError{n, "creating", e}
 	}
-	f, err := os.Create(fname)
-	if err != nil {
-		return &UtilError{fname, "creating", err}
+	f, e := os.Create(n)
+	if e != nil {
+		return &UtilError{n, "creating", e}
 	}
-	_, err = f.Write(data)
-	if err != nil {
-		return &UtilError{fname, "writing to", err}
+	if _, e = f.Write(d); e != nil {
+		return &UtilError{n, "writing to", e}
 	}
 	return nil
 }
@@ -97,132 +95,123 @@ func ReadBytes(r io.Reader) []byte {
 	if r == nil {
 		return make([]byte, 0)
 	}
-	buffer := new(bytes.Buffer)
-	_, err := buffer.ReadFrom(r)
-	if err != nil {
+	b := new(bytes.Buffer)
+	if _, e := b.ReadFrom(r); e != nil {
 		return make([]byte, 0)
-	} else {
-		return buffer.Bytes()
 	}
+	return b.Bytes()
 }
 
 //GetPackage retrieves the package name from a Java source file.
 func GetPackage(r io.Reader) string {
-	scanner := bufio.NewScanner(r)
-	scanner.Split(bufio.ScanWords)
-	for scanner.Scan() {
-		if scanner.Text() == "package" {
-			scanner.Scan()
-			return strings.Split(scanner.Text(), ";")[0]
+	s := bufio.NewScanner(r)
+	s.Split(bufio.ScanWords)
+	for s.Scan() {
+		if s.Text() == "package" {
+			s.Scan()
+			return strings.Split(s.Text(), ";")[0]
 		}
 	}
 	return ""
 }
 
 //copyFile
-func (this *copier) copyFile(path string, f os.FileInfo, err error) error {
-	if err != nil {
-		return err
+func (c *copier) copyFile(p string, f os.FileInfo, e error) error {
+	if e != nil {
+		return e
 	}
-	return this.copy(path, f)
+	return c.copy(p, f)
 }
 
 //copy
-func (this *copier) copy(path string, f os.FileInfo) (err error) {
-	if err != nil {
-		return
-	}
+func (c *copier) copy(p string, f os.FileInfo) error {
 	if f == nil {
-		return
+		return nil
 	}
-	destPath, err := filepath.Rel(this.src, path)
-	if err != nil {
-		return
+	dp, e := filepath.Rel(c.src, p)
+	if e != nil {
+		return e
 	}
-	if destPath == "." {
-		destPath = ""
+	if dp == "." {
+		dp = ""
 	}
-	destPath = filepath.Join(this.dest, destPath)
+	dp = filepath.Join(c.dest, dp)
 	if f.IsDir() {
-		err = os.MkdirAll(destPath, os.ModePerm)
-		return
+		return os.MkdirAll(dp, os.ModePerm)
 	}
-	srcFile, err := os.Open(path)
-	if err != nil {
-		return
+	sf, e := os.Open(p)
+	if e != nil {
+		return e
 	}
-	destFile, err := os.Create(destPath)
-	if err != nil {
-		return
+	df, e := os.Create(dp)
+	if e != nil {
+		return e
 	}
-	_, err = io.Copy(destFile, srcFile)
-	return
+	_, e = io.Copy(df, sf)
+	return e
 }
 
-//Copy copies the contents of src to dest.
-func Copy(dest, src string) error {
-	c := &copier{dest, src}
-	return filepath.Walk(src, c.copyFile)
+//Copy copies the contents of s to d.
+func Copy(d, s string) error {
+	c := &copier{d, s}
+	return filepath.Walk(s, c.copyFile)
 }
 
 //Exists checks whether a given path exists.
-func Exists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
+func Exists(p string) bool {
+	_, e := os.Stat(p)
+	return e == nil
 }
 
 //IsFile checks whether a given path is a file.
-func IsFile(path string) bool {
-	stat, err := os.Stat(path)
-	if err != nil {
+func IsFile(p string) bool {
+	s, e := os.Stat(p)
+	if e != nil {
 		return false
 	}
-	return !stat.IsDir()
+	return !s.IsDir()
 }
 
 //IsDir checks whether a given path is a directory.
-func IsDir(path string) bool {
-	stat, err := os.Stat(path)
-	if err != nil {
+func IsDir(p string) bool {
+	s, e := os.Stat(p)
+	if e != nil {
 		return false
 	}
-	return stat.IsDir()
+	return s.IsDir()
 }
 
 //IsExec checks whether a given path is an executable file.
-func IsExec(path string) bool {
-	stat, err := os.Stat(path)
-	if err != nil {
+func IsExec(p string) bool {
+	s, e := os.Stat(p)
+	if e != nil {
 		return false
 	}
-	return !stat.IsDir() && (stat.Mode()&0100) != 0
+	return !s.IsDir() && (s.Mode()&0100) != 0
 }
 
-func CopyFile(dest, src string) (err error) {
-	r, err := os.Open(src)
-	if err != nil {
-		return
+func CopyFile(d, s string) error {
+	r, e := os.Open(s)
+	if e != nil {
+		return e
 	}
-	err = os.MkdirAll(filepath.Dir(dest), DPERM)
-	if err != nil {
-		return
+	if e = os.MkdirAll(filepath.Dir(d), DPERM); e != nil {
+		return e
 	}
-	w, err := os.Create(dest)
-	if err != nil {
-		return
+	w, e := os.Create(d)
+	if e != nil {
+		return e
 	}
-	_, err = io.Copy(w, r)
-	return
+	_, e = io.Copy(w, r)
+	return e
 }
 
-func Extension(fullName string) (name, ext string) {
-	split := strings.Split(fullName, ".")
-	switch len(split) {
+func Extension(n string) (string, string) {
+	s := strings.Split(n, ".")
+	switch len(s) {
 	case 0, 1:
-		ext = ""
+		return n, ""
 	default:
-		name = strings.Join(split[0:len(split)-1], ".")
-		ext = split[len(split)-1]
+		return strings.Join(s[0:len(s)-1], "."), s[len(s)-1]
 	}
-	return
 }

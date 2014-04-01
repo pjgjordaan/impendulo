@@ -49,21 +49,20 @@ type (
 	}
 )
 
-func (this *MissingError) Error() string {
-	return fmt.Sprintf("Error reading value for %q.", this.key)
+func (m *MissingError) Error() string {
+	return fmt.Sprintf("read error: %q.", m.key)
 }
 
-func (this *CastError) Error() string {
-	return fmt.Sprintf("Error casting value %q to %q.", this.value, this.tipe)
+func (c *CastError) Error() string {
+	return fmt.Sprintf("casting error: %q to %q.", c.value, c.tipe)
 }
 
-func IsCastError(err error) (ok bool) {
-	_, ok = err.(*CastError)
-	return
+func IsCastError(e error) bool {
+	_, ok := e.(*CastError)
+	return ok
 }
 
 //Error
-func (this *UtilError) Error() string {
-	return fmt.Sprintf(`Encountered error %q while %s %q.`,
-		this.err, this.tipe, this.origin)
+func (u *UtilError) Error() string {
+	return fmt.Sprintf("error %q while %s %q.", u.err, u.tipe, u.origin)
 }

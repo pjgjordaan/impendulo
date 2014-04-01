@@ -29,7 +29,9 @@ package user
 import (
 	"bufio"
 	"fmt"
+
 	"github.com/godfried/impendulo/util"
+
 	"os"
 	"strings"
 )
@@ -69,38 +71,37 @@ func (this *User) String() string {
 }
 
 //New creates a new user with file submission permissions.
-func New(uname, pword string) *User {
-	hash, salt := util.Hash(pword)
-	return &User{uname, hash, salt, STUDENT}
+func New(u, p string) *User {
+	h, s := util.Hash(p)
+	return &User{u, h, s, STUDENT}
 }
 
 //Read reads user configurations from a file.
 //It also sets up their passwords.
-func Read(fname string) (users []*User, err error) {
-	f, err := os.Open(fname)
-	if err != nil {
-		return
+func Read(n string) ([]*User, error) {
+	f, e := os.Open(n)
+	if e != nil {
+		return nil, e
 	}
-	scanner := bufio.NewScanner(f)
-	defaultSize := 1000
-	users = make([]*User, 0, defaultSize)
-	for scanner.Scan() {
-		vals := strings.Split(scanner.Text(), ":")
-		if len(vals) != 2 {
-			err = fmt.Errorf("Line %s in config file not formatted correctly.", scanner.Text())
-			return
+	s := bufio.NewScanner(f)
+	us := make([]*User, 0, 1000)
+	i := 0
+	for s.Scan() {
+		vs := strings.Split(s.Text(), ":")
+		if len(vs) != 2 {
+			return nil, fmt.Errorf("line %d %s formatted incorrectly", i, s.Text())
 		}
-		uname := strings.TrimSpace(vals[0])
-		pword := strings.TrimSpace(vals[1])
-		users = append(users, New(uname, pword))
+		us = append(us, New(strings.TrimSpace(vs[0]), strings.TrimSpace(vs[1])))
+		i++
 	}
-	err = scanner.Err()
-	return
-
+	if e = s.Err(); e != nil {
+		return nil, e
+	}
+	return us, nil
 }
 
-func ValidPermission(perm int) bool {
-	switch Permission(perm) {
+func ValidPermission(p int) bool {
+	switch Permission(p) {
 	case NONE, STUDENT, TEACHER, ADMIN:
 		return true
 	default:
@@ -108,8 +109,8 @@ func ValidPermission(perm int) bool {
 	}
 }
 
-func (this Permission) Name() string {
-	switch this {
+func (p Permission) Name() string {
+	switch p {
 	case NONE:
 		return "None"
 	case STUDENT:

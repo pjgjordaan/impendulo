@@ -49,23 +49,22 @@ var (
 //init sets up the loggers.
 func init() {
 	y, m, d := time.Now().Date()
-	base, err := LogDir()
-	if err != nil {
-		panic(err)
+	dir, e := LogDir()
+	if e != nil {
+		panic(e)
 	}
-	dir := filepath.Join(base, strconv.Itoa(y), m.String(), strconv.Itoa(d))
-	err = os.MkdirAll(dir, DPERM)
-	if err != nil {
-		panic(err)
+	dir = filepath.Join(dir, strconv.Itoa(y), m.String(), strconv.Itoa(d))
+	if e = os.MkdirAll(dir, DPERM); e != nil {
+		panic(e)
 	}
-	now := time.Now().Format(layout)
-	errLogger, err = NewLogger(filepath.Join(dir, "E_"+now+".log"))
-	if err != nil {
-		panic(err)
+	n := time.Now().Format(layout)
+	errLogger, e = NewLogger(filepath.Join(dir, "E_"+n+".log"))
+	if e != nil {
+		panic(e)
 	}
-	infoLogger, err = NewLogger(filepath.Join(dir, "I_"+now+".log"))
-	if err != nil {
-		panic(err)
+	infoLogger, e = NewLogger(filepath.Join(dir, "I_"+n+".log"))
+	if e != nil {
+		panic(e)
 	}
 }
 
@@ -73,53 +72,53 @@ func LogDir() (string, error) {
 	if logDir != "" {
 		return logDir, nil
 	}
-	base, err := BaseDir()
-	if err != nil {
-		return "", err
+	b, e := BaseDir()
+	if e != nil {
+		return "", e
 	}
-	logDir = filepath.Join(base, "logs")
+	logDir = filepath.Join(b, "logs")
 	return logDir, nil
 }
 
 //SetErrorConsoleLogging sets whether errors should be logged to the console.
-func SetErrorLogging(setting string) {
-	errLogger.setLogging(setting)
+func SetErrorLogging(s string) {
+	errLogger.setLogging(s)
 }
 
 //SetInfoConsoleLogging sets whether info should be logged to the console.
-func SetInfoLogging(setting string) {
-	infoLogger.setLogging(setting)
+func SetInfoLogging(s string) {
+	infoLogger.setLogging(s)
 }
 
-func (this *Logger) setLogging(setting string) {
-	if setting == "a" {
-		this.file = true
-		this.console = true
-	} else if setting == "f" {
-		this.file = true
-	} else if setting == "c" {
-		this.console = true
+func (l *Logger) setLogging(s string) {
+	switch s {
+	case "a":
+		l.file = true
+		l.console = true
+	case "f":
+		l.file = true
+	case "c":
+		l.console = true
 	}
 }
 
 //Log safely logs data to this logger's log file.
-func (this *Logger) Log(vals ...interface{}) {
-	if this.file {
-		this.logger.Print(vals)
+func (l *Logger) Log(v ...interface{}) {
+	if l.file {
+		l.logger.Print(v)
 	}
-	if this.console {
-		fmt.Println(vals)
+	if l.console {
+		fmt.Println(v)
 	}
 }
 
 //NewLogger creates a new SyncLogger which writes its logs to the specified file.
-func NewLogger(fname string) (logger *Logger, err error) {
-	logFile, err := os.Create(fname)
-	if err != nil {
-		return
+func NewLogger(n string) (*Logger, error) {
+	f, e := os.Create(n)
+	if e != nil {
+		return nil, e
 	}
-	logger = &Logger{log.New(logFile, "", log.LstdFlags), false, false}
-	return
+	return &Logger{log.New(f, "", log.LstdFlags), false, false}, nil
 }
 
 //Log sends data to be logged to the appropriate logger.

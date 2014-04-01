@@ -242,3 +242,12 @@ func NewChart(s *project.Submission) *Chart {
 func NewChartData() ChartData {
 	return make(ChartData, 0, 1000)
 }
+
+func hasChart(cs ...interface{}) bool {
+	for _, c := range cs {
+		if _, ok := c.(tool.ChartResult); ok {
+			return true
+		}
+	}
+	return false
+}

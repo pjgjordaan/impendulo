@@ -10,6 +10,7 @@
 {{$testResults := .childResults}}
 {{$tc := chartTime (index .files .ctx.Browse.Current)}}
 {{$tn := chartTime (index .files .ctx.Browse.Next)}}
+{{$showChart := hasChart $currentResult $nextResult}}
 <div class="row">
   <div class="col-md-3">
   </div>
@@ -30,6 +31,7 @@
       highlight(undefined);
       addPopover('codepopoverlink', 'code_wrapper');
     </script>
+    {{if $showChart}}
     <form class="form-inline centered" role="form" onsubmit="return ajaxChart({{.ctx.Browse.Sid.Hex}},{{.ctx.Browse.File}},{{.ctx.Browse.Result}},{{$tc}},{{$tn}},{{.ctx.Browse.Uid}},{{$currentFile.Id.Hex}},'submissions')">
       <div class="form-group">
 	<label class="sr-only" for="submissions">Submissions</label>
@@ -46,15 +48,18 @@
       addSubmissions({{.ctx.Browse.Pid.Hex}}, 'submissions');
       ;}
     </script>
+    {{end}}
   </div>
   <div class="col-md-3">
   </div>
 </div>
+{{if $showChart}}
 <div id="chartHolder">
 </div>
 <script>
   ajaxChart({{.ctx.Browse.Sid.Hex}},{{.ctx.Browse.File}},{{.ctx.Browse.Result}},{{$tc}},{{$tn}},{{.ctx.Browse.Uid}},{{$currentFile.Id.Hex}});
 </script>
+{{end}}
 {{$sliced := slice $childFiles $current}}
 {{$adjustment := adjustment $childFiles $current}}
 <div id="wrapper" style="text-align: center">    

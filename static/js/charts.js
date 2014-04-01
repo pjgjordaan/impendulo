@@ -60,7 +60,23 @@ function timeChart(fileName, resultName, chartData) {
 	.entries(allTools);  
     var activeLineData = d3.nest()
 	.key(getKey)
-	.entries(activeTools);  
+	.entries(chartData);
+    activeLineData = activeLineData
+	.filter(function(d){
+	    var j = -1;
+	    for(var i = 0; i < d.values.length - 1; i ++){
+		var a0 = active(d.values[i]) && !isLaunch(d.values[i]);
+		var a1 = active(d.values[i+1]) && !isLaunch(d.values[i+1]);
+		if(a0 && a1){
+		    j = i;
+		}
+	    }
+	    if(j === -1){
+		return false;
+	    }
+	    d.values = [d.values[j], d.values[j+1]]; 
+	    return true;
+	});
     var m = [10, 150, 50, 100];
     var w = 1100 - m[1] - m[3];
     var h = 300 - m[0] - m[2];
@@ -602,11 +618,11 @@ function active(d){
     if(d.user !== CURRENT_USER){
 	return false;
     }
-    if (CURRENT_TIME === -1 || NEXT_TIME === -1){
+//    if (CURRENT_TIME === -1 || NEXT_TIME === -1){
 	return getX(d) === CURRENT_TIME || getX(d) === NEXT_TIME;
-    } else{
-	return getX(d) >= CURRENT_TIME && getX(d) <= NEXT_TIME;
-    }
+  //  } else{
+//	return getX(d) >= CURRENT_TIME && getX(d) <= NEXT_TIME;
+  //  }
 }
 
 function shadeColor(color, percent) {   

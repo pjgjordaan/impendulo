@@ -26,6 +26,7 @@ package util
 
 import (
 	"code.google.com/p/gorilla/securecookie"
+
 	"crypto/rand"
 	"crypto/sha1"
 	"encoding/base64"
@@ -41,55 +42,59 @@ var (
 )
 
 //CookieKeys generates cookie keys.
-func CookieKeys() (auth, enc []byte, err error) {
-	auth, err = cookieKey(authName)
-	if err != nil {
-		return
+func CookieKeys() ([]byte, []byte, error) {
+	a, e := cookieKey(authName)
+	if e != nil {
+		return nil, nil, e
 	}
-	enc, err = cookieKey(encName)
-	return
+	enc, e := cookieKey(encName)
+	if e != nil {
+		return nil, nil, e
+	}
+	return a, enc, nil
 }
 
-func cookieKey(fname string) (data []byte, err error) {
-	base, err := BaseDir()
-	if err != nil {
-		return
+func cookieKey(n string) ([]byte, error) {
+	b, e := BaseDir()
+	if e != nil {
+		return nil, e
 	}
-	fpath := filepath.Join(base, fname)
-	data, rerr := ioutil.ReadFile(fpath)
-	if rerr == nil {
-		return
+	p := filepath.Join(b, n)
+	d, e := ioutil.ReadFile(p)
+	if e == nil {
+		return d, nil
 	}
-	data = securecookie.GenerateRandomKey(32)
-	err = SaveFile(fpath, data)
-	return
+	d = securecookie.GenerateRandomKey(32)
+	if e = SaveFile(p, d); e != nil {
+		return nil, e
+	}
+	return d, nil
 }
 
 //Validate authenticates a provided password against a hashed password.
-func Validate(hashed, salt, pword string) bool {
-	computed := ComputeHash(pword, salt)
-	return hashed == computed
+func Validate(h, s, p string) bool {
+	return h == ComputeHash(p, s)
 }
 
-//Hash hashes the provided password.
-func Hash(pword string) (hash, salt string) {
-	salt = GenString(32)
-	return ComputeHash(pword, salt), salt
+//Hash hashes the provided password and returns the hash as well as the salt used.
+func Hash(p string) (string, string) {
+	s := GenString(32)
+	return ComputeHash(p, s), s
 }
 
 //ComputeHash computes the hash for a password and its salt.
-func ComputeHash(pword, salt string) string {
+func ComputeHash(p, s string) string {
 	h := sha1.New()
-	io.WriteString(h, pword+salt)
+	io.WriteString(h, p+s)
 	return hex.EncodeToString(h.Sum(nil))
 }
 
 //GenString generates a psuedo-random string using the crypto/rand package.
-func GenString(size int) string {
-	b := make([]byte, size)
+func GenString(n int) string {
+	b := make([]byte, n)
 	rand.Read(b)
-	en := base64.StdEncoding
-	d := make([]byte, en.EncodedLen(len(b)))
-	en.Encode(d, b)
+	e := base64.StdEncoding
+	d := make([]byte, e.EncodedLen(len(b)))
+	e.Encode(d, b)
 	return string(d)
 }

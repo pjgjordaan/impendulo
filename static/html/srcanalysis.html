@@ -4,7 +4,7 @@
 <h4 class="text-center">
   <small>tool</small> {{$resultName}}
 </h4>
-{{if hasChart $resultName}}
+{{if hasChart .currentResult .nextResult}}
 {{$tc := chartTime (index .files .ctx.Browse.Current)}}
 {{$tn := chartTime (index .files .ctx.Browse.Next)}}
 <form class="form-inline centered" role="form" onsubmit="return ajaxChart({{.ctx.Browse.Sid.Hex}},{{.ctx.Browse.File}},{{.ctx.Browse.Result}},{{$tc}},{{$tn}},{{.ctx.Browse.Uid}},{{.currentFile.Id.Hex}},'submissions')">

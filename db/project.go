@@ -26,8 +26,9 @@ package db
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -44,385 +45,352 @@ func (f *FileInfo) HasCharts() bool {
 	return f.Type == project.SRC
 }
 
-//File retrieves a file matching the given interface from the active database.
-func File(matcher, selector interface{}) (ret *project.File, err error) {
-	session, err := Session()
-	if err != nil {
-		return
+//File retrieves a file matching m from the active database.
+func File(m, sl interface{}) (*project.File, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
 	}
-	defer session.Close()
-	c := session.DB("").C(FILES)
-	err = c.Find(matcher).Select(selector).One(&ret)
-	if err != nil {
-		err = &DBGetError{"file", err, matcher}
+	defer s.Close()
+	var f *project.File
+	if e = s.DB("").C(FILES).Find(m).Select(sl).One(&f); e != nil {
+		return nil, &GetError{"file", e, m}
 	}
-	return
+	return f, nil
 }
 
-//Files retrieves files matching the given interface from the active database.
-func Files(matcher, selector interface{}, sort ...string) (ret []*project.File, err error) {
-	session, err := Session()
-	if err != nil {
-		return
+//Files retrieves files matching m from the active database.
+func Files(m, sl interface{}, sort ...string) ([]*project.File, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
 	}
-	defer session.Close()
-	c := session.DB("").C(FILES)
-	q := c.Find(matcher)
+	defer s.Close()
+	q := s.DB("").C(FILES).Find(m)
 	if len(sort) > 0 {
 		q = q.Sort(sort...)
 	}
-	err = q.Select(selector).All(&ret)
-	if err != nil {
-		err = &DBGetError{"files", err, matcher}
+	var fs []*project.File
+	if e = q.Select(sl).All(&fs); e != nil {
+		return nil, &GetError{"files", e, m}
 	}
-	return
+	return fs, nil
 }
 
 //FileInfos retrieves names of file information.
-func FileInfos(matcher bson.M) (ret []*FileInfo, err error) {
-	names, err := FileNames(matcher)
-	if err != nil {
-		return
+func FileInfos(m bson.M) ([]*FileInfo, error) {
+	ns, e := FileNames(m)
+	if e != nil {
+		return nil, e
 	}
-	ret = make([]*FileInfo, len(names))
-	for i, name := range names {
-		matcher[NAME] = name
-		var c int
-		c, err = Count(FILES, matcher)
-		if err != nil {
-			return
+	fi := make([]*FileInfo, len(ns))
+	for i, n := range ns {
+		m[NAME] = n
+		c, e := Count(FILES, m)
+		if e != nil {
+			return nil, e
 		}
-		var f *project.File
-		f, err = File(matcher, bson.M{TYPE: 1})
-		if err != nil {
-			return
+		f, e := File(m, bson.M{TYPE: 1})
+		if e != nil {
+			return nil, e
 		}
-		ret[i] = &FileInfo{
-			Name:  name,
-			Count: c,
-			Type:  f.Type,
-		}
+		fi[i] = &FileInfo{Name: n, Count: c, Type: f.Type}
 	}
-	return
+	return fi, nil
 }
 
 //FileNames retrieves names of files
 //matching the given interface from the active database.
-func FileNames(matcher interface{}) (ret []string, err error) {
-	session, err := Session()
-	if err != nil {
-		return
+func FileNames(m interface{}) ([]string, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
 	}
-	defer session.Close()
-	c := session.DB("").C(FILES)
-	err = c.Find(matcher).Distinct(NAME, &ret)
-	if err != nil {
-		err = &DBGetError{"filenames", err, matcher}
+	defer s.Close()
+	var ns []string
+	if e = s.DB("").C(FILES).Find(m).Distinct(NAME, &ns); e != nil {
+		return nil, &GetError{"filenames", e, m}
 	}
-	return
+	return ns, nil
 }
 
-//Submission retrieves a submission matching
-//the given interface from the active database.
-func Submission(matcher, selector interface{}) (ret *project.Submission, err error) {
-	session, err := Session()
-	if err != nil {
-		return
+//Submission retrieves a submission matching m from the active database.
+func Submission(m, sl interface{}) (*project.Submission, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
 	}
-	defer session.Close()
-	c := session.DB("").C(SUBMISSIONS)
-	err = c.Find(matcher).Select(selector).One(&ret)
-	if err != nil {
-		err = &DBGetError{"submission", err, matcher}
-	} else if ret.Status == project.UNKNOWN {
-		err = UpdateStatus(ret)
+	defer s.Close()
+	var sb *project.Submission
+	if e = s.DB("").C(SUBMISSIONS).Find(m).Select(sl).One(&sb); e != nil {
+		return nil, &GetError{"submission", e, m}
 	}
-	return
+	if sb.Status == project.UNKNOWN {
+		if e = UpdateStatus(sb); e != nil {
+			return nil, e
+		}
+	}
+	return sb, nil
 }
 
-//Submissions retrieves submissions matching
-//the given interface from the active database.
-func Submissions(matcher, selector interface{}, sort ...string) (ret []*project.Submission, err error) {
-	session, err := Session()
-	if err != nil {
-		return
+//Submissions retrieves submissions matching m from the active database.
+func Submissions(m, sl interface{}, sort ...string) ([]*project.Submission, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
 	}
-	defer session.Close()
-	c := session.DB("").C(SUBMISSIONS)
-	q := c.Find(matcher)
+	defer s.Close()
+	q := s.DB("").C(SUBMISSIONS).Find(m)
 	if len(sort) > 0 {
 		q = q.Sort(sort...)
 	}
-	err = q.Select(selector).All(&ret)
-	if err != nil {
-		err = &DBGetError{"submissions", err, matcher}
+	var ss []*project.Submission
+	if e = q.Select(sl).All(&ss); e != nil {
+		return nil, &GetError{"submissions", e, m}
 	}
-	return
+	return ss, nil
 }
 
-//Project retrieves a project matching
-//the given interface from the active database.
-func Project(matcher, selector interface{}) (ret *project.Project, err error) {
-	session, err := Session()
-	if err != nil {
-		return
+//Project retrieves a project matching m from the active database.
+func Project(m, sl interface{}) (*project.Project, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
 	}
-	defer session.Close()
-	c := session.DB("").C(PROJECTS)
-	err = c.Find(matcher).Select(selector).One(&ret)
-	if err != nil {
-		err = &DBGetError{"project", err, matcher}
+	defer s.Close()
+	var p *project.Project
+	if e = s.DB("").C(PROJECTS).Find(m).Select(sl).One(&p); e != nil {
+		return nil, &GetError{"project", e, m}
 	}
-	return
+	return p, nil
 }
 
-//Projects retrieves projects matching
-//the given interface from the active database.
-func Projects(matcher, selector interface{}, sort ...string) (ret []*project.Project, err error) {
-	session, err := Session()
-	if err != nil {
-		return
+//Projects retrieves projects matching m from the active database.
+func Projects(m, sl interface{}, sort ...string) ([]*project.Project, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
 	}
-	defer session.Close()
-	c := session.DB("").C(PROJECTS)
-	q := c.Find(matcher)
+	defer s.Close()
+	q := s.DB("").C(PROJECTS).Find(m)
 	if len(sort) > 0 {
 		q = q.Sort(sort...)
 	}
-	err = q.Select(selector).All(&ret)
-	if err != nil {
-		err = &DBGetError{"projects", err, matcher}
+	var p []*project.Project
+	if e = q.Select(sl).All(&p); e != nil {
+		return nil, &GetError{"projects", e, m}
 	}
-	return
+	return p, nil
 }
 
-func Skeleton(matcher, selector interface{}) (ret *project.Skeleton, err error) {
-	session, err := Session()
-	if err != nil {
-		return
+func Skeleton(m, sl interface{}) (*project.Skeleton, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
 	}
-	defer session.Close()
-	c := session.DB("").C(SKELETONS)
-	err = c.Find(matcher).Select(selector).One(&ret)
-	if err != nil {
-		err = &DBGetError{"skeleton", err, matcher}
+	defer s.Close()
+	var sk *project.Skeleton
+	if e = s.DB("").C(SKELETONS).Find(m).Select(sl).One(&sk); e != nil {
+		return nil, &GetError{"skeleton", e, m}
 	}
-	return
+	return sk, nil
 }
 
-func Skeletons(matcher, selector interface{}, sort ...string) (ret []*project.Skeleton, err error) {
-	session, err := Session()
-	if err != nil {
-		return
+func Skeletons(m, sl interface{}, sort ...string) ([]*project.Skeleton, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
 	}
-	defer session.Close()
-	c := session.DB("").C(SKELETONS)
-	q := c.Find(matcher)
+	defer s.Close()
+	q := s.DB("").C(SKELETONS).Find(m)
 	if len(sort) > 0 {
 		q = q.Sort(sort...)
 	}
-	err = q.Select(selector).All(&ret)
-	if err != nil {
-		err = &DBGetError{"skeletons", err, matcher}
+	var sk []*project.Skeleton
+	if e = q.Select(sl).All(&sk); e != nil {
+		return nil, &GetError{"skeletons", e, m}
 	}
-	return
+	return sk, nil
 }
 
 //RemoveFileById removes a file matching the given id from the active database.
-func RemoveFileById(id interface{}) (err error) {
-	file, err := File(bson.M{ID: id}, bson.M{RESULTS: 1})
-	if err != nil {
-		return
+func RemoveFileById(id interface{}) error {
+	f, e := File(bson.M{ID: id}, bson.M{RESULTS: 1})
+	if e != nil {
+		return e
 	}
-	for _, resId := range file.Results {
-		if _, ok := resId.(bson.ObjectId); !ok {
+	for _, r := range f.Results {
+		if _, ok := r.(bson.ObjectId); !ok {
 			continue
 		}
-		RemoveById(RESULTS, resId)
+		RemoveById(RESULTS, r)
 	}
-	err = RemoveById(FILES, id)
-	return
+	return RemoveById(FILES, id)
 }
 
 //RemoveSubmissionById removes a submission matching
 //the given id from the active database.
-func RemoveSubmissionById(id interface{}) (err error) {
-	files, err := Files(bson.M{SUBID: id},
-		bson.M{ID: 1})
-	if err != nil {
-		return
+func RemoveSubmissionById(id interface{}) error {
+	fs, e := Files(bson.M{SUBID: id}, bson.M{ID: 1})
+	if e != nil {
+		return e
 	}
-	for _, file := range files {
-		err = RemoveFileById(file.Id)
-		if err != nil {
-			return
+	for _, f := range fs {
+		if e = RemoveFileById(f.Id); e != nil {
+			return e
 		}
 	}
-	err = RemoveById(SUBMISSIONS, id)
-	return
+	return RemoveById(SUBMISSIONS, id)
 }
 
 //RemoveProjectById removes a project matching
 //the given id from the active database.
-func RemoveProjectById(id interface{}) (err error) {
-	projectMatch := bson.M{PROJECTID: id}
-	idSelect := bson.M{ID: 1}
-	subs, err := Submissions(projectMatch, idSelect)
-	if err != nil {
-		return
+func RemoveProjectById(id interface{}) error {
+	pm := bson.M{PROJECTID: id}
+	is := bson.M{ID: 1}
+	ss, e := Submissions(pm, is)
+	if e != nil {
+		return e
 	}
-	for _, sub := range subs {
-		err = RemoveSubmissionById(sub.Id)
-		if err != nil {
-			return
+	for _, s := range ss {
+		if e = RemoveSubmissionById(s.Id); e != nil {
+			return e
 		}
 	}
-	skeletons, err := Skeletons(projectMatch, idSelect)
-	if err != nil {
-		return
+	sks, e := Skeletons(pm, is)
+	if e != nil {
+		return e
 	}
-	for _, skeleton := range skeletons {
-		RemoveById(SKELETONS, skeleton.Id)
+	for _, sk := range sks {
+		RemoveById(SKELETONS, sk.Id)
 	}
-	tests, err := JUnitTests(projectMatch, idSelect)
-	if err != nil {
-		return
+	ts, e := JUnitTests(pm, is)
+	if e != nil {
+		return e
 	}
-	for _, test := range tests {
-		RemoveById(TESTS, test.Id)
+	for _, t := range ts {
+		RemoveById(TESTS, t.Id)
 	}
-	jpfConfig, err := JPFConfig(projectMatch, idSelect)
-	if err == nil {
-		RemoveById(JPF, jpfConfig.Id)
+	c, e := JPFConfig(pm, is)
+	if e == nil {
+		RemoveById(JPF, c.Id)
 	}
-	pmdRules, err := PMDRules(projectMatch, idSelect)
-	if err == nil {
-		RemoveById(PMD, pmdRules.Id)
+	r, e := PMDRules(pm, is)
+	if e == nil {
+		RemoveById(PMD, r.Id)
 	}
-	err = RemoveById(PROJECTS, id)
-	return
+	return RemoveById(PROJECTS, id)
 }
 
-func LastFile(matcher, selector interface{}) (file *project.File, err error) {
-	files, err := Files(matcher, selector, "-"+TIME)
-	if err != nil {
-		return
+func LastFile(m, sl interface{}) (*project.File, error) {
+	fs, e := Files(m, sl, "-"+TIME)
+	if e != nil {
+		return nil, e
 	}
-	if len(files) == 0 {
-		err = fmt.Errorf("No files for matcher %q", matcher)
-		return
+	if len(fs) == 0 {
+		return nil, fmt.Errorf("no files for matcher %q", m)
 	}
-	file = files[0]
-	return
+	return fs[0], nil
 }
 
-func statusFile(sub *project.Submission) (file *project.File, err error) {
-	matcher := bson.M{TYPE: project.SRC, SUBID: sub.Id}
-	selector := bson.M{RESULTS: 1, TIME: 1}
-	file, err = LastFile(matcher, selector)
-	if err != nil && sub.Status != project.BUSY {
-		err = RemoveSubmissionById(sub.Id)
+func statusFile(s *project.Submission) (*project.File, error) {
+	f, e := LastFile(bson.M{TYPE: project.SRC, SUBID: s.Id}, bson.M{RESULTS: 1, TIME: 1})
+	if e != nil {
+		if s.Status != project.BUSY {
+			return nil, RemoveSubmissionById(s.Id)
+		}
+		return nil, e
 	}
-	return
+	return f, nil
 }
 
-func UpdateStatus(sub *project.Submission) (err error) {
-	file, err := statusFile(sub)
-	if err != nil || file == nil {
-		return
+func UpdateStatus(s *project.Submission) error {
+	f, e := statusFile(s)
+	if e != nil || f == nil {
+		return e
 	}
-	junitStatus := CheckJUnit(sub.ProjectId, file)
-	jpfStatus := CheckJPF(sub.ProjectId, file)
+	junitStatus := CheckJUnit(s.ProjectId, f)
+	jpfStatus := CheckJPF(s.ProjectId, f)
 	switch junitStatus {
 	case project.JUNIT:
 		switch jpfStatus {
 		case project.UNKNOWN:
-			sub.Status = project.JUNIT
+			s.Status = project.JUNIT
 		case project.JPF:
-			sub.Status = project.ALL
+			s.Status = project.ALL
 		case project.NOTJPF:
-			sub.Status = project.JUNIT_NOTJPF
+			s.Status = project.JUNIT_NOTJPF
 		}
 	case project.NOTJUNIT:
 		switch jpfStatus {
 		case project.UNKNOWN:
-			sub.Status = project.NOTJUNIT
+			s.Status = project.NOTJUNIT
 		case project.JPF:
-			sub.Status = project.JPF_NOTJUNIT
+			s.Status = project.JPF_NOTJUNIT
 		case project.NOTJPF:
-			sub.Status = project.FAILED
+			s.Status = project.FAILED
 		}
 	case project.UNKNOWN:
 		switch jpfStatus {
 		case project.UNKNOWN:
-			sub.Status = project.UNKNOWN
+			s.Status = project.UNKNOWN
 		case project.JPF:
-			sub.Status = project.JPF
+			s.Status = project.JPF
 		case project.NOTJPF:
-			sub.Status = project.NOTJPF
+			s.Status = project.NOTJPF
 		}
 	}
-	change := bson.M{SET: bson.M{STATUS: sub.Status}}
-	err = Update(SUBMISSIONS, bson.M{ID: sub.Id}, change)
-	return
+	return Update(SUBMISSIONS, bson.M{ID: s.Id}, bson.M{SET: bson.M{STATUS: s.Status}})
 }
 
-func timeFile(sub *project.Submission) (file *project.File, err error) {
-	matcher := bson.M{SUBID: sub.Id}
-	selector := bson.M{TIME: 1}
-	files, err := Files(matcher, selector, TIME)
-	if err != nil {
-		return
+func timeFile(sub *project.Submission) (*project.File, error) {
+	fs, e := Files(bson.M{SUBID: sub.Id}, bson.M{TIME: 1}, TIME)
+	if e != nil {
+		return nil, e
 	}
-	if len(files) == 0 {
+	if len(fs) == 0 {
 		if sub.Status != project.BUSY {
-			err = RemoveSubmissionById(sub.Id)
+			return nil, RemoveSubmissionById(sub.Id)
 		}
-		return
+		return nil, nil
 	}
-	file = files[0]
-	return
+	return fs[0], nil
 }
 
-func UpdateTime(sub *project.Submission) (err error) {
-	file, err := timeFile(sub)
-	if err != nil || file == nil {
-		return
+func UpdateTime(sub *project.Submission) error {
+	f, e := timeFile(sub)
+	if e != nil || f == nil {
+		return e
 	}
-	if file.Time >= sub.Time {
-		return
+	if f.Time >= sub.Time {
+		return nil
 	}
-	change := bson.M{SET: bson.M{TIME: file.Time}}
-	err = Update(SUBMISSIONS, bson.M{ID: sub.Id}, change)
-	return
+	return Update(SUBMISSIONS, bson.M{ID: sub.Id}, bson.M{SET: bson.M{TIME: f.Time}})
 }
 
-func CheckJUnit(projectId bson.ObjectId, file *project.File) project.Status {
-	tests, err := JUnitTests(bson.M{PROJECTID: projectId}, bson.M{NAME: 1})
-	if err != nil || len(tests) == 0 {
+func CheckJUnit(pid bson.ObjectId, f *project.File) project.Status {
+	ts, e := JUnitTests(bson.M{PROJECTID: pid}, bson.M{NAME: 1})
+	if e != nil || len(ts) == 0 {
 		return project.UNKNOWN
 	}
-	for _, test := range tests {
-		name := tool.NewTarget(test.Name, "", "", "").Name
-		id, ok := file.Results[name].(bson.ObjectId)
+	for _, t := range ts {
+		n, _ := util.Extension(t.Name)
+		id, ok := f.Results[n].(bson.ObjectId)
 		if !ok {
 			return project.NOTJUNIT
 		}
-		testResult, terr := JUnitResult(bson.M{ID: id}, nil)
-		if terr != nil || !testResult.Success() {
+		if r, e := JUnitResult(bson.M{ID: id}, nil); e != nil || !r.Success() {
 			return project.NOTJUNIT
 		}
 	}
 	return project.JUNIT
 }
 
-func CheckJPF(projectId bson.ObjectId, file *project.File) project.Status {
-	_, err := JPFConfig(bson.M{PROJECTID: projectId}, bson.M{ID: 1})
-	if err != nil {
+func CheckJPF(pid bson.ObjectId, f *project.File) project.Status {
+	if _, e := JPFConfig(bson.M{PROJECTID: pid}, bson.M{ID: 1}); e != nil {
 		return project.UNKNOWN
 	}
-	res, jerr := JPFResult(bson.M{FILEID: file.Id}, nil)
-	if jerr == nil && res.Success() {
+	if r, e := JPFResult(bson.M{FILEID: f.Id}, nil); e == nil && r.Success() {
 		return project.JPF
 	}
 	return project.NOTJPF

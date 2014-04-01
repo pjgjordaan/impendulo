@@ -87,7 +87,7 @@ var (
 		"args":            args,
 		"insert":          insert,
 		"isError":         isError,
-		"hasChart":        func(n string) bool { return n != tool.CODE && n != diff.NAME && n != tool.SUMMARY },
+		"hasChart":        hasChart,
 		"submissions":     projectSubmissions,
 		"files":           submissionFiles,
 		"projects":        projects,

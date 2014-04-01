@@ -34,120 +34,106 @@ import (
 )
 
 //Unzip extracts a file (given as a []byte) to dir.
-func Unzip(dir string, data []byte) (err error) {
-	br := bytes.NewReader(data)
-	zr, err := zip.NewReader(br, int64(br.Len()))
-	if err != nil {
-		err = &UtilError{data, "creating zip reader from", err}
-		return
+func Unzip(d string, p []byte) error {
+	br := bytes.NewReader(p)
+	zr, e := zip.NewReader(br, int64(br.Len()))
+	if e != nil {
+		return &UtilError{p, "creating zip reader from", e}
 	}
-	for _, zf := range zr.File {
-		err = ExtractFile(zf, dir)
-		if err != nil {
-			return
+	for _, f := range zr.File {
+		if e = ExtractFile(f, d); e != nil {
+			return e
 		}
 	}
-	return
+	return nil
 }
 
 //ExtractFile extracts the contents of a zip.File and saves it in dir.
-func ExtractFile(zf *zip.File, dir string) error {
+func ExtractFile(zf *zip.File, d string) error {
 	if zf == nil {
 		return fmt.Errorf("Could not extract nil *zip.File")
 	}
-	frc, err := zf.Open()
-	if err != nil {
-		return &UtilError{zf, "opening zipfile", err}
+	r, e := zf.Open()
+	if e != nil {
+		return &UtilError{zf, "opening zipfile", e}
 	}
-	defer frc.Close()
-	path := filepath.Join(dir, zf.Name)
+	defer r.Close()
+	p := filepath.Join(d, zf.Name)
 	if zf.FileInfo().IsDir() {
-		err = os.MkdirAll(path, DPERM)
-		if err != nil {
-			err = &UtilError{path, "creating directory", err}
+		if e = os.MkdirAll(p, DPERM); e != nil {
+			return &UtilError{p, "creating directory", e}
 		}
-		return err
+		return nil
 	}
-	err = os.MkdirAll(filepath.Dir(path), DPERM)
-	if err != nil {
-		return &UtilError{path, "creating directory", err}
+	if e = os.MkdirAll(filepath.Dir(p), DPERM); e != nil {
+		return &UtilError{p, "creating directory", e}
 	}
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, zf.Mode())
-	if err != nil {
-		return &UtilError{path, "opening", err}
+	f, e := os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, zf.Mode())
+	if e != nil {
+		return &UtilError{p, "opening", e}
 	}
 	defer f.Close()
-	_, err = io.Copy(f, frc)
-	if err != nil {
-		err = &UtilError{f, "copying to", err}
+	if _, e = io.Copy(f, r); e != nil {
+		return &UtilError{f, "copying to", e}
 	}
-	return err
+	return nil
 }
 
 //UnzipToMap reads the contents of a zip file into a map.
 //Each file's path is a map key and its data is the associated value.
-func UnzipToMap(data []byte) (ret map[string][]byte, err error) {
-	br := bytes.NewReader(data)
-	zr, err := zip.NewReader(br, int64(br.Len()))
-	if err != nil {
-		err = &UtilError{data, "creating zip reader from", err}
-		return
+func UnzipToMap(d []byte) (map[string][]byte, error) {
+	br := bytes.NewReader(d)
+	zr, e := zip.NewReader(br, int64(br.Len()))
+	if e != nil {
+		return nil, &UtilError{d, "creating zip reader from", e}
 	}
-	ret = make(map[string][]byte)
+	m := make(map[string][]byte)
 	for _, zf := range zr.File {
 		if zf.FileInfo().IsDir() {
 			continue
 		}
-		ret[zf.FileInfo().Name()], err = ExtractBytes(zf)
-		if err != nil {
-			return
+		m[zf.FileInfo().Name()], e = ExtractBytes(zf)
+		if e != nil {
+			return nil, e
 		}
 	}
-	return
+	return m, nil
 }
 
 //ExtractBytes extracts data from a zip.File.
-func ExtractBytes(zf *zip.File) (ret []byte, err error) {
-	frc, err := zf.Open()
-	if err != nil {
-		err = &UtilError{zf, "opening zipfile", err}
-	} else {
-		defer frc.Close()
-		ret = ReadBytes(frc)
+func ExtractBytes(zf *zip.File) ([]byte, error) {
+	r, e := zf.Open()
+	if e != nil {
+		return nil, &UtilError{zf, "opening zipfile", e}
 	}
-	return
+	defer r.Close()
+	return ReadBytes(r), nil
 }
 
 //Zip creates a zip archive from a map which has file names as its keys and
 //file contents as its values.
-func ZipMap(files map[string][]byte) (ret []byte, err error) {
-	buf := new(bytes.Buffer)
-	zw := zip.NewWriter(buf)
-	for name, data := range files {
-		err = AddToZip(zw, name, data)
-		if err != nil {
-			return
+func ZipMap(m map[string][]byte) ([]byte, error) {
+	b := new(bytes.Buffer)
+	zw := zip.NewWriter(b)
+	for n, d := range m {
+		if e := AddToZip(zw, n, d); e != nil {
+			return nil, e
 		}
 	}
-	err = zw.Close()
-	if err != nil {
-		err = &UtilError{zw, "closing zip", err}
-	} else {
-		ret = buf.Bytes()
+	if e := zw.Close(); e != nil {
+		return nil, &UtilError{zw, "closing zip", e}
 	}
-	return
+	return b.Bytes(), nil
 }
 
 //AddToZip adds a new file to a zip.Writer.
-func AddToZip(zw *zip.Writer, name string, data []byte) (err error) {
-	f, err := zw.Create(name)
-	if err != nil {
-		err = &UtilError{name, "creating zipfile", err}
-		return
+func AddToZip(zw *zip.Writer, n string, d []byte) error {
+	f, e := zw.Create(n)
+	if e != nil {
+		return &UtilError{n, "creating zipfile", e}
 	}
-	_, err = f.Write(data)
-	if err != nil {
-		err = &UtilError{f, "writing to zipfile", err}
+	if _, e = f.Write(d); e != nil {
+		return &UtilError{f, "writing to zipfile", e}
 	}
-	return
+	return nil
 }

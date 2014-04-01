@@ -38,43 +38,40 @@ func User(id string) (*user.User, error) {
 		return nil, e
 	}
 	defer s.Close()
-	c := s.DB("").C(USERS)
 	var u *user.User
-	if e = c.FindId(id).One(&u); e != nil {
-		return nil, &DBGetError{"user", e, id}
+	if e = s.DB("").C(USERS).FindId(id).One(&u); e != nil {
+		return nil, &GetError{"user", e, id}
 	}
 	return u, nil
 }
 
 //Users retrieves users matching the given interface from the active database.
-func Users(matcher interface{}, sort ...string) ([]*user.User, error) {
+func Users(m interface{}, sort ...string) ([]*user.User, error) {
 	s, e := Session()
 	if e != nil {
 		return nil, e
 	}
 	defer s.Close()
-	c := s.DB("").C(USERS)
-	q := c.Find(matcher)
+	q := s.DB("").C(USERS).Find(m)
 	if len(sort) > 0 {
 		q = q.Sort(sort...)
 	}
 	var u []*user.User
 	if e = q.Select(bson.M{user.ID: 1}).All(&u); e != nil {
-		return nil, &DBGetError{"users", e, matcher}
+		return nil, &GetError{"users", e, m}
 	}
 	return u, nil
 }
 
-func UserNames(matcher interface{}) ([]string, error) {
+func UserNames(m interface{}) ([]string, error) {
 	s, e := Session()
 	if e != nil {
 		return nil, e
 	}
 	defer s.Close()
-	c := s.DB("").C(USERS)
 	var n []string
-	if e = c.Find(matcher).Sort(NAME).Distinct(NAME, &n); e != nil {
-		return nil, &DBGetError{"users", e, matcher}
+	if e = s.DB("").C(USERS).Find(m).Sort(NAME).Distinct(NAME, &n); e != nil {
+		return nil, &GetError{"users", e, m}
 	}
 	return n, nil
 }
@@ -86,8 +83,7 @@ func AddUsers(users ...*user.User) error {
 		return e
 	}
 	defer s.Close()
-	c := s.DB("").C(USERS)
-	if e = c.Insert(users); e != nil {
+	if e = s.DB("").C(USERS).Insert(users); e != nil {
 		return fmt.Errorf("error %q adding users %q to db", e, users)
 	}
 	return nil

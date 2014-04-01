@@ -29,49 +29,37 @@ import (
 )
 
 type (
-	//DBGetError represents errors encountered
-	//when retrieving data from the db.
-	DBGetError struct {
+	//GetError represents errors encountered when retrieving data.
+	GetError struct {
 		tipe    string
 		err     error
 		matcher interface{}
 	}
 
-	//DBAddError represents errors encountered
-	//when adding data to the db.
-	DBAddError struct {
+	//AddError represents errors encountered when adding data.
+	AddError struct {
 		msg string
 		err error
 	}
 
-	//DBRemoveError represents errors encountered
-	//when removing data from the db.
-	DBRemoveError struct {
+	//RemoveError represents errors encountered when removing data.
+	RemoveError struct {
 		tipe    string
 		err     error
 		matcher interface{}
 	}
 )
 
-func (this *DBGetError) Error() string {
-	return fmt.Sprintf(
-		"Encountered error %q when retrieving %q matching %q from db",
-		this.err, this.tipe, this.matcher,
-	)
+func (g *GetError) Error() string {
+	return fmt.Sprintf("error %q  retrieving %q matching %q", g.err, g.tipe, g.matcher)
 }
 
 //Error
-func (this *DBAddError) Error() string {
-	return fmt.Sprintf(
-		"Encountered error %q when adding %q to db",
-		this.err, this.msg,
-	)
+func (a *AddError) Error() string {
+	return fmt.Sprintf("error %q adding %q", a.err, a.msg)
 }
 
 //Error
-func (this *DBRemoveError) Error() string {
-	return fmt.Sprintf(
-		"Encountered error %q when removing %q matching %q from db",
-		this.err, this.tipe, this.matcher,
-	)
+func (r *RemoveError) Error() string {
+	return fmt.Sprintf("error %q removing %q matching %q", r.err, r.tipe, r.matcher)
 }

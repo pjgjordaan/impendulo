@@ -26,6 +26,7 @@ package db
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/diff"
@@ -38,6 +39,7 @@ import (
 	junit_user "github.com/godfried/impendulo/tool/junit_user/result"
 	"github.com/godfried/impendulo/tool/pmd"
 	"labix.org/v2/mgo/bson"
+
 	"sort"
 	"strings"
 )
@@ -60,7 +62,7 @@ func CheckstyleResult(matcher, selector bson.M) (ret *checkstyle.Result, err err
 	matcher[NAME] = checkstyle.NAME
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
-		err = &DBGetError{"result", err, matcher}
+		err = &GetError{"result", err, matcher}
 	} else if HasGridFile(ret, selector) {
 		err = GridFile(ret.GetId(), &ret.Report)
 	}
@@ -79,7 +81,7 @@ func PMDResult(matcher, selector bson.M) (ret *pmd.Result, err error) {
 	matcher[NAME] = pmd.NAME
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
-		err = &DBGetError{"result", err, matcher}
+		err = &GetError{"result", err, matcher}
 	} else if HasGridFile(ret, selector) {
 		err = GridFile(ret.GetId(), &ret.Report)
 	}
@@ -98,7 +100,7 @@ func FindbugsResult(matcher, selector bson.M) (ret *findbugs.Result, err error) 
 	matcher[NAME] = findbugs.NAME
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
-		err = &DBGetError{"result", err, matcher}
+		err = &GetError{"result", err, matcher}
 	} else if HasGridFile(ret, selector) {
 		err = GridFile(ret.GetId(), &ret.Report)
 	}
@@ -117,7 +119,7 @@ func JPFResult(matcher, selector bson.M) (ret *jpf.Result, err error) {
 	matcher[NAME] = jpf.NAME
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
-		err = &DBGetError{"result", err, matcher}
+		err = &GetError{"result", err, matcher}
 	} else if HasGridFile(ret, selector) {
 		err = GridFile(ret.GetId(), &ret.Report)
 	}
@@ -136,7 +138,7 @@ func JUnitResult(matcher, selector bson.M) (ret *junit.Result, err error) {
 	matcher[TYPE] = junit.NAME
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
-		err = &DBGetError{"result", err, matcher}
+		err = &GetError{"result", err, matcher}
 	} else if HasGridFile(ret, selector) {
 		err = GridFile(ret.GetId(), &ret.Report)
 	}
@@ -153,7 +155,7 @@ func JacocoResult(matcher, selector bson.M) (ret *jacoco.Result, err error) {
 	matcher[TYPE] = jacoco.NAME
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
-		err = &DBGetError{"result", err, matcher}
+		err = &GetError{"result", err, matcher}
 	} else if HasGridFile(ret, selector) {
 		err = GridFile(ret.GetId(), &ret.Report)
 	}
@@ -170,7 +172,7 @@ func JUnitUserResult(matcher, selector bson.M) (ret *junit_user.Result, err erro
 	matcher[TYPE] = junit_user.NAME
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
-		err = &DBGetError{"result", err, matcher}
+		err = &GetError{"result", err, matcher}
 	} else if HasGridFile(ret, selector) {
 		err = GridFile(ret.GetId(), &ret.Report)
 	}
@@ -189,7 +191,7 @@ func JavacResult(matcher, selector bson.M) (ret *javac.Result, err error) {
 	matcher[NAME] = javac.NAME
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
-		err = &DBGetError{"result", err, matcher}
+		err = &GetError{"result", err, matcher}
 	} else if HasGridFile(ret, selector) {
 		err = GridFile(ret.GetId(), &ret.Report)
 	}
@@ -206,7 +208,7 @@ func GCCResult(matcher, selector bson.M) (ret *gcc.Result, err error) {
 	matcher[NAME] = gcc.NAME
 	err = c.Find(matcher).Select(selector).One(&ret)
 	if err != nil {
-		err = &DBGetError{"result", err, matcher}
+		err = &GetError{"result", err, matcher}
 	} else if HasGridFile(ret, selector) {
 		err = GridFile(ret.GetId(), &ret.Report)
 	}
@@ -223,7 +225,7 @@ func resultType(matcher bson.M) (string, error) {
 	var holder *TypeHolder
 	err = c.Find(matcher).One(&holder)
 	if err != nil {
-		return "", &DBGetError{"result type", err, matcher}
+		return "", &GetError{"result type", err, matcher}
 	}
 	return holder.Type, nil
 }
@@ -334,7 +336,7 @@ func ResultName(matcher bson.M) (name string, err error) {
 		Select(bson.M{NAME: 1}).
 		Distinct(NAME, &names)
 	if err != nil {
-		err = &DBGetError{"result", err, matcher}
+		err = &GetError{"result", err, matcher}
 	} else if len(names) == 0 {
 		err = fmt.Errorf("Could not retrieve result name.")
 	} else {
@@ -368,7 +370,7 @@ func AddResult(res tool.ToolResult, name string) (err error) {
 	col := session.DB("").C(RESULTS)
 	err = col.Insert(res)
 	if err != nil {
-		err = &DBAddError{res.GetName(), err}
+		err = &AddError{res.GetName(), err}
 	}
 	return
 }

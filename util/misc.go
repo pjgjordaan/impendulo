@@ -49,14 +49,11 @@ func InstallPath() (string, error) {
 	if installPath != "" {
 		return installPath, nil
 	}
-	gopath := os.Getenv("GOPATH")
-	if gopath == "" {
+	p := os.Getenv("GOPATH")
+	if p == "" {
 		return "", errors.New("GOPATH is not set.")
 	}
-	installPath = filepath.Join(
-		gopath, "src", "github.com",
-		"godfried", "impendulo",
-	)
+	installPath = filepath.Join(p, "src", "github.com", "godfried", "impendulo")
 	return installPath, nil
 }
 
@@ -65,39 +62,38 @@ func BaseDir() (string, error) {
 	if baseDir != "" {
 		return baseDir, nil
 	}
-	cur, err := user.Current()
-	if err != nil {
-		return "", err
+	c, e := user.Current()
+	if e != nil {
+		return "", e
 	}
-	dir := filepath.Join(cur.HomeDir, ".impendulo")
-	if Exists(dir) {
-		baseDir = dir
+	d := filepath.Join(c.HomeDir, ".impendulo")
+	if Exists(d) {
+		baseDir = d
 		return baseDir, nil
 	}
-	err = os.MkdirAll(dir, DPERM)
-	if err != nil {
-		return "", err
+	if e = os.MkdirAll(d, DPERM); e != nil {
+		return "", e
 	}
-	baseDir = dir
+	baseDir = d
 	return baseDir, nil
 }
 
 //RemoveEmpty removes whitespace characters from a string.
-func RemoveEmpty(toChange string) string {
-	return RemoveAll(toChange, " ", "\n", "\t", "\r")
+func RemoveEmpty(c string) string {
+	return RemoveAll(c, " ", "\n", "\t", "\r")
 }
 
-func RemoveAll(toChange string, symbols ...string) string {
-	for _, symb := range symbols {
-		toChange = strings.Replace(toChange, symb, "", -1)
+func RemoveAll(c string, symbols ...string) string {
+	for _, s := range symbols {
+		c = strings.Replace(c, s, "", -1)
 	}
-	return toChange
+	return c
 }
 
-//EqualsOne returns true if test is equal to any of the members of args.
-func EqualsOne(test interface{}, args ...interface{}) bool {
-	for _, arg := range args {
-		if test == arg {
+//EqualsOne returns true if i is equal to any of the members of as.
+func EqualsOne(i interface{}, as ...interface{}) bool {
+	for _, a := range as {
+		if i == a {
 			return true
 		}
 	}
@@ -105,13 +101,13 @@ func EqualsOne(test interface{}, args ...interface{}) bool {
 }
 
 //ShortName gets the shortened class name of a Java class.
-func ShortName(exec string) string {
-	elements := strings.Split(exec, ".")
-	num := len(elements)
-	if num < 2 {
-		return exec
+func ShortName(n string) string {
+	e := strings.Split(n, ".")
+	c := len(e)
+	if c < 2 {
+		return n
 	}
-	return strings.Join(elements[num-2:], ".")
+	return strings.Join(e[c-2:], ".")
 }
 
 func Min(a, b int) int {
@@ -145,6 +141,7 @@ func Round(x float64, prec int) float64 {
 	}
 	return float64(int64(r)) / p
 }
+
 func SplitTitles(titles string) []string {
 	var a []string
 	i := 0

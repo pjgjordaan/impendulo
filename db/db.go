@@ -28,6 +28,7 @@ package db
 
 import (
 	"fmt"
+
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 )
@@ -39,45 +40,45 @@ var (
 
 //Setup creates a mongodb session.
 //This must be called before using any other db functions.
-func Setup(conn string) error {
-	activeSession, err := mgo.Dial(conn)
-	if err != nil {
-		return err
+func Setup(c string) error {
+	s, e := mgo.Dial(c)
+	if e != nil {
+		return e
 	}
 	sessionChan = make(chan *mgo.Session)
 	requestChan = make(chan bool)
-	go serveSession(activeSession)
+	go serveSession(s)
 	return nil
 }
 
 //serveSession manages the active session.
-func serveSession(activeSession *mgo.Session) {
+func serveSession(s *mgo.Session) {
 	for {
-		req, ok := <-requestChan
-		if !ok || !req {
+		r, ok := <-requestChan
+		if !ok || !r {
 			break
 		}
-		if activeSession == nil {
+		if s == nil {
 			sessionChan <- nil
 		} else {
-			sessionChan <- activeSession.Clone()
+			sessionChan <- s.Clone()
 		}
 	}
-	if activeSession != nil {
-		activeSession.Close()
+	if s != nil {
+		s.Close()
 	}
 	close(requestChan)
 	close(sessionChan)
 }
 
 //Session retrieves the current active session.
-func Session() (s *mgo.Session, err error) {
+func Session() (*mgo.Session, error) {
 	requestChan <- true
 	s, ok := <-sessionChan
 	if s == nil || !ok {
-		err = fmt.Errorf("Could not retrieve session.")
+		return nil, fmt.Errorf("could not retrieve session")
 	}
-	return
+	return s, nil
 }
 
 //Close shuts down the current session.
@@ -87,151 +88,119 @@ func Close() {
 
 //DeleteDB removes a db.
 func DeleteDB(db string) error {
-	session, err := Session()
-	if err != nil {
-		return err
+	s, e := Session()
+	if e != nil {
+		return e
 	}
-	defer session.Close()
-	return session.DB(db).DropDatabase()
+	defer s.Close()
+	return s.DB(db).DropDatabase()
 }
 
-//CopyDB is used to copy the contents of one database to a new
-//location.
-func CopyDB(from, to string) (err error) {
-	err = DeleteDB(to)
-	if err != nil {
-		return
+//CopyDB is used to copy the contents of one database to a new location.
+func CopyDB(f, t string) error {
+	if e := DeleteDB(f); e != nil {
+		return e
 	}
-	session, err := Session()
-	if err != nil {
-		return
+	s, e := Session()
+	if e != nil {
+		return e
 	}
-	defer session.Close()
-	err = session.Run(
-		bson.D{
-			{"copydb", "1"},
-			{"fromdb", from},
-			{"todb", to},
-		}, nil)
-	return
+	defer s.Close()
+	return s.Run(bson.D{{"copydb", "1"}, {"fromdb", f}, {"todb", t}}, nil)
 }
 
 //CloneCollection
-func CloneCollection(origin, collection string) (err error) {
-	session, err := Session()
-	if err != nil {
-		return
+func CloneCollection(o, c string) error {
+	s, e := Session()
+	if e != nil {
+		return e
 	}
-	defer session.Close()
-	err = session.DB("").Run(
-		bson.D{
-			{"cloneCollection", collection},
-			{"from", origin},
-		}, nil)
-	return
+	defer s.Close()
+	return s.DB("").Run(bson.D{{"cloneCollection", c}, {"from", o}}, nil)
 }
 
 //CloneData
-func CloneData(origin string) (err error) {
-	collections := []string{USERS, PROJECTS, SUBMISSIONS, FILES, TESTS, JPF, PMD}
-	for _, col := range collections {
-		err = CloneCollection(origin, col)
-		if err != nil {
-			return
+func CloneData(o string) error {
+	cs := []string{USERS, PROJECTS, SUBMISSIONS, FILES, TESTS, JPF, PMD}
+	for _, c := range cs {
+		if e := CloneCollection(o, c); e != nil {
+			return e
 		}
 	}
-	return
+	return nil
 }
 
 //Add adds a document to the specified collection.
-func Add(colName string, data interface{}) (err error) {
-	session, err := Session()
-	if err != nil {
-		return
+func Add(n string, i interface{}) error {
+	s, e := Session()
+	if e != nil {
+		return e
 	}
-	defer session.Close()
-	col := session.DB("").C(colName)
-	err = col.Insert(data)
-	if err != nil {
-		err = &DBAddError{colName, err}
+	defer s.Close()
+	if e = s.DB("").C(n).Insert(i); e != nil {
+		return &AddError{n, e}
 	}
-	return
+	return nil
 }
 
-//RemoveById removes a document matching the given id in collection colName from the active database.
-func RemoveById(colName string, id interface{}) (err error) {
-	session, err := Session()
-	if err != nil {
-		return
+//RemoveById removes a document matching the given id in collection n from the active database.
+func RemoveById(n string, id interface{}) error {
+	s, e := Session()
+	if e != nil {
+		return e
 	}
-	defer session.Close()
-	err = session.DB("").C(colName).RemoveId(id)
-	if err != nil {
-		err = &DBRemoveError{colName, err, id}
+	defer s.Close()
+	if e = s.DB("").C(n).RemoveId(id); e != nil {
+		return &RemoveError{n, e, id}
 	}
-	return
+	return nil
 }
 
-//Update updates documents from the collection col
-//matching matcher with the changes specified by change.
-func Update(col string, matcher, change interface{}) (err error) {
-	session, err := Session()
-	if err != nil {
-		return
+//Update updates documents from the collection n matching m with the changes specified by c.
+func Update(n string, m, c interface{}) error {
+	s, e := Session()
+	if e != nil {
+		return e
 	}
-	defer session.Close()
-	tcol := session.DB("").C(col)
-	err = tcol.Update(matcher, change)
-	if err != nil {
-		err = fmt.Errorf(
-			"Encountered error %q when updating %q matching %q to %q in db",
-			err, col, matcher, change,
-		)
+	defer s.Close()
+	if e = s.DB("").C(n).Update(m, c); e != nil {
+		return fmt.Errorf("error %q: updating %q matching %q to %q", e, n, m, c)
 	}
-	return
+	return nil
 }
 
-func UpdateAll(col string, matcher, change interface{}) (err error) {
-	session, err := Session()
-	if err != nil {
-		return
+func UpdateAll(n string, m, c interface{}) error {
+	s, e := Session()
+	if e != nil {
+		return e
 	}
-	defer session.Close()
-	tcol := session.DB("").C(col)
-	_, err = tcol.UpdateAll(matcher, change)
-	if err != nil {
-		err = fmt.Errorf(
-			"Encountered error %q when updating %q matching %q to %q in db",
-			err, col, matcher, change,
-		)
+	defer s.Close()
+	if _, e = s.DB("").C(n).UpdateAll(m, c); e != nil {
+		return fmt.Errorf("error %q: updating %q matching %q to %q", e, n, m, c)
 	}
-	return
+	return nil
 }
 
-//Contains checks whether the collection col contains any items matching matcher.
-func Contains(col string, matcher interface{}) bool {
-	n, err := Count(col, matcher)
-	return err == nil && n > 0
+//Contains checks whether the collection n contains any items matching m.
+func Contains(n string, m interface{}) bool {
+	c, e := Count(n, m)
+	return e == nil && c > 0
 }
 
 //Count calculates the amount of items in the collection col which match matcher.
-func Count(col string, matcher interface{}) (n int, err error) {
-	session, err := Session()
-	if err != nil {
-		return
+func Count(n string, m interface{}) (int, error) {
+	s, e := Session()
+	if e != nil {
+		return -1, e
 	}
-	defer session.Close()
-	c := session.DB("").C(col)
-	n, err = c.Find(matcher).Count()
-	if err != nil {
-		err = &DBGetError{col + " count", err, matcher}
+	defer s.Close()
+	count, e := s.DB("").C(n).Find(m).Count()
+	if e != nil {
+		return -1, &GetError{n + " count", e, m}
 	}
-	return
+	return count, nil
 }
 
 func Collections() []string {
-	return []string{
-		USERS, SUBMISSIONS, FILES,
-		RESULTS, TESTS, PROJECTS, JPF, PMD,
-	}
+	return []string{USERS, SUBMISSIONS, FILES, RESULTS, TESTS, PROJECTS, JPF, PMD}
 }
