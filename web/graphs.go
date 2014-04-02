@@ -63,12 +63,9 @@ func LoadChart(resultName string, files []*project.File) (ChartData, error) {
 		}
 		switch resultName {
 		case tool.SUMMARY:
-			e = addAll(c, f)
+			addAll(c, f)
 		default:
-			e = addSingle(c, f, resultName)
-		}
-		if e != nil {
-			return nil, e
+			addSingle(c, f, resultName)
 		}
 	}
 	f, e := db.File(bson.M{db.ID: files[0].Id}, bson.M{db.SUBID: 1})
@@ -88,24 +85,30 @@ func LoadChart(resultName string, files []*project.File) (ChartData, error) {
 	return c.Data, nil
 }
 
-func addAll(c *Chart, f *project.File) error {
+func addAll(c *Chart, f *project.File) {
 	for _, id := range f.Results {
+		if _, e := util.ReadId(id); e != nil {
+			continue
+		}
 		r, e := db.ChartResult(bson.M{db.ID: id}, nil)
 		if e != nil {
 			continue
 		}
 		c.Add(f, r.ChartVals()[:1])
 	}
-	return nil
+	return
 }
 
-func addSingle(c *Chart, f *project.File, n string) error {
+func addSingle(c *Chart, f *project.File, n string) {
+	if _, e := util.ReadId(f.Results[n]); e != nil {
+		return
+	}
 	r, e := db.ChartResult(bson.M{db.ID: f.Results[n]}, nil)
 	if e != nil {
-		return nil
+		return
 	}
 	c.Add(f, r.ChartVals())
-	return nil
+	return
 }
 
 func SubmissionChart(subs []*project.Submission) ChartData {

@@ -38,6 +38,6 @@ type (
 )
 
 //NewSkeleton
-func NewSkeleton(projectId bson.ObjectId, name string, data []byte) *Skeleton {
-	return &Skeleton{Id: bson.NewObjectId(), ProjectId: projectId, Name: name, Data: data}
+func NewSkeleton(pid bson.ObjectId, n string, d []byte) *Skeleton {
+	return &Skeleton{Id: bson.NewObjectId(), ProjectId: pid, Name: n, Data: d}
 }

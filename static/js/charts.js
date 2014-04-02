@@ -368,7 +368,7 @@ function timeChart(fileName, resultName, chartData) {
 	})
 	.on('redraw.jstree', function(e, data){
 	    configureVisibility(legendData, true);
-	})
+	}) 
 	.jstree({ 
 	    'core' : {
 		'themes' : { 'icons': false },
@@ -377,7 +377,7 @@ function timeChart(fileName, resultName, chartData) {
 	    'checkbox' : {
 		'keep_selected_style' : false
 	    },
-	    'plugins' : [ 'wholerow', 'checkbox' ]
+	    'plugins' : [ 'wholerow', 'checkbox']
 	});
     $('.legend').scrollTop(0);
 
@@ -422,7 +422,7 @@ function configureChildren(parent, initialToggle){
     var status = 0;
     for(var j = 0; j < parent.values.length; j ++){
 	var k = trimSpace(parent.values[j].key);
-	d3.select('#'+k).style('background-color', getColour(k));
+	$('#'+k).children('.jstree-wholerow').css('background-color', getColour(k));
 	$('#'+k).on('click', function(e, data){
 	    var id = d3.select(this).attr('id');
 	    if(e.target.parentElement.getAttribute('id') !== id && e.target.parentElement.parentElement.getAttribute('id') !== id){

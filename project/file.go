@@ -27,12 +27,13 @@ package project
 import (
 	"bytes"
 	"fmt"
+
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
 	"reflect"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type (
@@ -58,63 +59,55 @@ const (
 )
 
 //String
-func (this *File) String() string {
-	return "Type: project.File; Id: " + this.Id.Hex() +
-		"; SubId: " + this.SubId.Hex() + "; Name: " + this.Name +
-		"; Package: " + this.Package + "; Type: " + string(this.Type) +
-		"; Time: " + util.Date(this.Time)
+func (f *File) String() string {
+	return "Type: project.File; Id: " + f.Id.Hex() +
+		"; SubId: " + f.SubId.Hex() + "; Name: " + f.Name +
+		"; Package: " + f.Package + "; Type: " + string(f.Type) +
+		"; Time: " + util.Date(f.Time)
 }
 
 //Equals
-func (this *File) Equals(that *File) bool {
-	if reflect.DeepEqual(this, that) {
+func (f *File) Equals(cf *File) bool {
+	if reflect.DeepEqual(f, cf) {
 		return true
 	}
-	return that != nil &&
-		this.String() == that.String() &&
-		bytes.Equal(this.Data, that.Data)
+	return cf != nil && f.String() == cf.String() && bytes.Equal(f.Data, cf.Data)
 }
 
 //Same
-func (this *File) Same(that *File) bool {
-	return this.Id == that.Id
+func (f *File) Same(cf *File) bool {
+	return f.Id == cf.Id
 }
 
 //CanProcess returns whether a file is meant to be processed.
-func (this *File) CanProcess() bool {
-	return this.Type == SRC || this.Type == ARCHIVE || this.Type == TEST
+func (f *File) CanProcess() bool {
+	return f.Type == SRC || f.Type == ARCHIVE || f.Type == TEST
 }
 
 //NewFile
-func NewFile(subId bson.ObjectId, info map[string]interface{}, data []byte) (file *File, err error) {
-	id := bson.NewObjectId()
-	file = &File{Id: id, SubId: subId, Data: data}
-	tipe, err := util.GetString(info, TYPE)
-	if err != nil && util.IsCastError(err) {
-		return
+func NewFile(sid bson.ObjectId, m map[string]interface{}, d []byte) (*File, error) {
+	tp, e := util.GetString(m, TYPE)
+	if e != nil && util.IsCastError(e) {
+		return nil, e
 	}
-	file.Type = Type(tipe)
-	file.Name, err = util.GetString(info, NAME)
-	if err != nil {
-		return
+	n, e := util.GetString(m, NAME)
+	if e != nil {
+		return nil, e
 	}
-	file.Package, err = util.GetString(info, PKG)
-	if err != nil {
-		return
+	p, e := util.GetString(m, PKG)
+	if e != nil {
+		return nil, e
 	}
-	file.Time, err = util.GetInt64(info, TIME)
-	return
+	t, e := util.GetInt64(m, TIME)
+	if e != nil {
+		return nil, e
+	}
+	return &File{Id: bson.NewObjectId(), SubId: sid, Data: d, Type: Type(tp), Name: n, Package: p, Time: t}, nil
 }
 
 //NewArchive
-func NewArchive(subId bson.ObjectId, data []byte) *File {
-	id := bson.NewObjectId()
-	return &File{
-		Id:    id,
-		SubId: subId,
-		Data:  data,
-		Type:  ARCHIVE,
-	}
+func NewArchive(sid bson.ObjectId, d []byte) *File {
+	return &File{Id: bson.NewObjectId(), SubId: sid, Data: d, Type: ARCHIVE}
 }
 
 //ParseName retrieves file metadata encoded in a file name.
@@ -124,66 +117,59 @@ func NewArchive(subId bson.ObjectId, data []byte) *File {
 //Where values between '[]' are optional, '*' indicates 0 to many,
 //values inside '""' are literals and values inside '<>'
 //describe the contents at that position.
-func ParseName(name string) (file *File, err error) {
-	elems := strings.Split(name, "_")
-	if len(elems) < 3 {
-		err = fmt.Errorf("Encoded name %q does not have enough parameters.", name)
-		return
+func ParseName(n string) (*File, error) {
+	es := strings.Split(n, "_")
+	if len(es) < 3 {
+		return nil, fmt.Errorf("Encoded name %q does not have enough parameters.", n)
 	}
-	file = new(File)
-	file.Id = bson.NewObjectId()
-	mod := elems[len(elems)-1]
-	nextIndex := 3
-	if len(elems[len(elems)-2]) > 10 {
-		nextIndex = 2
+	mod := es[len(es)-1]
+	ni := 3
+	if len(es[len(es)-2]) > 10 {
+		ni = 2
 	}
-	timeString := elems[len(elems)-nextIndex]
-	if len(timeString) == 13 {
-		file.Time, err = strconv.ParseInt(timeString, 10, 64)
-		if err != nil {
-			err = fmt.Errorf(
-				"%s in name %s could not be parsed as an int.",
-				timeString, name)
-			return
+	ts := es[len(es)-ni]
+	var t int64
+	var e error
+	if len(ts) == 13 {
+		if t, e = strconv.ParseInt(ts, 10, 64); e != nil {
+			return nil, fmt.Errorf("%s in %s could not be parsed as an int", ts, n)
 		}
-	} else if timeString[0] == '2' && len(timeString) == 17 {
-		var t time.Time
-		t, err = util.CalcTime(timeString)
-		if err != nil {
-			return
+	} else if ts[0] == '2' && len(ts) == 17 {
+		ct, e := util.CalcTime(ts)
+		if e != nil {
+			return nil, e
 		}
-		file.Time = util.GetMilis(t)
+		t = util.GetMilis(ct)
 	} else {
-		err = fmt.Errorf(
-			"Unknown time format %s in %s.",
-			timeString, name)
-		return
+		return nil, fmt.Errorf("unknown time format %s in %s.", ts, n)
 	}
-	if len(elems) > nextIndex {
-		nextIndex++
-		pos := len(elems) - nextIndex
-		file.Name = elems[pos]
-		for i := 0; i < pos; i++ {
-			file.Package += elems[i]
-			if i < pos-1 {
-				file.Package += "."
+	var fn, pkg string
+	if len(es) > ni {
+		ni++
+		p := len(es) - ni
+		fn = es[p]
+		for i := 0; i < p; i++ {
+			pkg += es[i]
+			if i < p-1 {
+				pkg += "."
 			}
-			if isOutFolder(elems[i]) {
-				file.Package = ""
+			if isOutFolder(es[i]) {
+				pkg = ""
 			}
 		}
 	}
-	if strings.HasSuffix(file.Name, JSRC) {
-		file.Type = SRC
+	var tp Type
+	if strings.HasSuffix(fn, JSRC) {
+		tp = SRC
 	} else if mod == "l" {
-		file.Type = LAUNCH
+		tp = LAUNCH
 	} else {
-		err = fmt.Errorf("Unsupported file type in name %s", name)
+		return nil, fmt.Errorf("unsupported file type in name %s", n)
 	}
-	return
+	return &File{Id: bson.NewObjectId(), Type: tp, Name: fn, Package: pkg, Time: t}, nil
 }
 
 //isOutFolder
-func isOutFolder(arg string) bool {
-	return arg == SRC_DIR || arg == BIN_DIR
+func isOutFolder(a string) bool {
+	return a == SRC_DIR || a == BIN_DIR
 }

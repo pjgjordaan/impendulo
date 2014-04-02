@@ -28,6 +28,7 @@ package project
 
 import (
 	"github.com/godfried/impendulo/util"
+
 	"labix.org/v2/mgo/bson"
 )
 
@@ -43,19 +44,18 @@ type (
 )
 
 //TypeName
-func (this *Project) TypeName() string {
+func (p *Project) TypeName() string {
 	return "project"
 }
 
 //String
-func (this *Project) String() string {
-	return "Type: project.Project; Id: " + this.Id.Hex() +
-		"; Name: " + this.Name + "; User: " + this.User +
-		"; Lang: " + this.Lang + "; Time: " + util.Date(this.Time)
+func (p *Project) String() string {
+	return "Type: project.Project; Id: " + p.Id.Hex() +
+		"; Name: " + p.Name + "; User: " + p.User +
+		"; Lang: " + p.Lang + "; Time: " + util.Date(p.Time)
 }
 
 //New
-func New(name, user, lang string) *Project {
-	id := bson.NewObjectId()
-	return &Project{id, name, user, lang, util.CurMilis()}
+func New(n, u, l string) *Project {
+	return &Project{bson.NewObjectId(), n, u, l, util.CurMilis()}
 }

@@ -138,7 +138,11 @@ path {
 .legend {
     font: 10px sans-serif;
     overflow:auto;
-    height: 250px;
+    height: 270px;
+}
+
+.jstree-ocl {
+    width: 0px !important;
 }
 
 .center{

@@ -26,6 +26,7 @@ package project
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 )
@@ -57,24 +58,24 @@ const (
 )
 
 //SetMode
-func (this *Submission) SetMode(mode string) error {
-	if mode != FILE_MODE && mode != ARCHIVE_MODE {
-		return fmt.Errorf("Unknown mode %s.", mode)
+func (s *Submission) SetMode(m string) error {
+	if m != FILE_MODE && m != ARCHIVE_MODE {
+		return fmt.Errorf("Unknown mode %s.", m)
 	}
-	this.Mode = mode
+	s.Mode = m
 	return nil
 }
 
 //String
-func (this *Submission) String() string {
-	return "Type: project.Submission; Id: " + this.Id.Hex() +
-		"; ProjectId: " + this.ProjectId.Hex() +
-		"; User: " + this.User + "; Mode: " + this.Mode +
-		"; Time: " + util.Date(this.Time)
+func (s *Submission) String() string {
+	return "Type: project.Submission; Id: " + s.Id.Hex() +
+		"; ProjectId: " + s.ProjectId.Hex() +
+		"; User: " + s.User + "; Mode: " + s.Mode +
+		"; Time: " + util.Date(s.Time)
 }
 
-func (this *Submission) Result() string {
-	switch this.Status {
+func (s *Submission) Result() string {
+	switch s.Status {
 	case UNKNOWN:
 		return "Unknown status."
 	case BUSY:
@@ -96,12 +97,11 @@ func (this *Submission) Result() string {
 	case ALL:
 		return "Successfully passed JPF and unit testing evaluation."
 	default:
-		return fmt.Sprintf("Invalid status %d.", this.Status)
+		return fmt.Sprintf("Invalid status %d.", s.Status)
 	}
 }
 
 //NewSubmission
-func NewSubmission(projectId bson.ObjectId, user, mode string, time int64) *Submission {
-	subId := bson.NewObjectId()
-	return &Submission{subId, projectId, user, mode, time, BUSY}
+func NewSubmission(pid bson.ObjectId, u, m string, t int64) *Submission {
+	return &Submission{bson.NewObjectId(), pid, u, m, t, BUSY}
 }
