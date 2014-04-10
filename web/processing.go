@@ -161,130 +161,148 @@ func getUserId(req *http.Request) (userid, msg string, err error) {
 }
 
 //getString.
-func getString(req *http.Request, name string) (val, msg string, err error) {
-	val, err = GetString(req, name)
-	if err != nil {
-		msg = fmt.Sprintf("Could not read %s.", name)
+func getString(r *http.Request, n string) (string, string, error) {
+	s, e := GetString(r, n)
+	if e != nil {
+		return "", fmt.Sprintf("could not read %s", n), e
 	}
-	return
+	return s, "", e
 }
 
-func getTestType(req *http.Request) (tipe junit.Type, msg string, err error) {
-	val := strings.ToLower(req.FormValue("testtype"))
-	switch val {
+func getTestType(r *http.Request) (junit.Type, error) {
+	v := strings.ToLower(r.FormValue("testtype"))
+	switch v {
 	case "default":
-		tipe = junit.DEFAULT
+		return junit.DEFAULT, nil
 	case "admin":
-		tipe = junit.ADMIN
+		return junit.ADMIN, nil
 	case "user":
-		tipe = junit.USER
+		return junit.USER, nil
 	default:
-		err = fmt.Errorf("Unknown test type %s.", val)
-		msg = err.Error()
+		return -1, fmt.Errorf("unsupported test type %s", v)
 	}
-	return
 }
 
-func ServePath(u *url.URL, src string) (servePath string, err error) {
+func ServePath(u *url.URL, src string) (string, error) {
 	if !strings.HasPrefix(u.Path, "/") {
 		u.Path = "/" + u.Path
 	}
-	cleaned := path.Clean(u.Path)
-	ext, err := filepath.Rel("/"+filepath.Base(src), cleaned)
-	if err != nil {
-		return
+	ext, e := filepath.Rel("/"+filepath.Base(src), path.Clean(u.Path))
+	if e != nil {
+		return "", e
 	}
-	servePath = filepath.Join(src, ext)
-	if util.IsDir(servePath) && !strings.HasSuffix(u.Path, "/") {
+	sp := filepath.Join(src, ext)
+	if util.IsDir(sp) && !strings.HasSuffix(u.Path, "/") {
 		u.Path = u.Path + "/"
 	}
-	return
+	return sp, nil
 }
 
 //getCredentials
-func getCredentials(req *http.Request) (uname, pword, msg string, err error) {
-	uname, msg, err = getString(req, "username")
-	if err != nil {
+func getCredentials(r *http.Request) (u, p, m string, e error) {
+	if u, m, e = getString(r, "username"); e != nil {
 		return
 	}
-	pword, msg, err = getString(req, "password")
+	p, m, e = getString(r, "password")
 	return
 }
 
 //Snapshots retrieves snapshots of a given file in a submission.
-func Snapshots(subId bson.ObjectId, fileName string, tipe project.Type) (ret []*project.File, err error) {
-	matcher := bson.M{db.SUBID: subId, db.NAME: fileName, db.TYPE: tipe}
-	selector := bson.M{db.DATA: 0}
-	ret, err = db.Files(matcher, selector, db.TIME)
-	if err == nil && len(ret) == 0 {
-		err = fmt.Errorf("No files found with name %q.", fileName)
+func Snapshots(sid bson.ObjectId, n string, t project.Type) ([]*project.File, error) {
+	fs, e := db.Files(bson.M{db.SUBID: sid, db.NAME: n, db.TYPE: t}, bson.M{db.DATA: 0}, db.TIME)
+	if e != nil {
+		return nil, e
 	}
-	return
+	if len(fs) == 0 {
+		return nil, fmt.Errorf("no files found with name %q.", n)
+	}
+	return fs, nil
 }
 
 //getFile
-func getFile(id bson.ObjectId) (file *project.File, err error) {
-	selector := bson.M{db.NAME: 1, db.TIME: 1}
-	file, err = db.File(bson.M{db.ID: id}, selector)
-	return
+func getFile(id bson.ObjectId) (*project.File, error) {
+	return db.File(bson.M{db.ID: id}, bson.M{db.NAME: 1, db.TIME: 1})
 }
 
 //projectName retrieves the project name associated with the project identified by id.
-func projectName(idval interface{}) (name string, err error) {
-	id, err := util.ReadId(idval)
-	if err != nil {
-		return
+func projectName(i interface{}) (string, error) {
+	id, e := util.ReadId(i)
+	if e != nil {
+		return "", e
 	}
-	matcher := bson.M{db.ID: id}
-	selector := bson.M{db.NAME: 1}
-	proj, err := db.Project(matcher, selector)
-	if err != nil {
-		return
+	p, e := db.Project(bson.M{db.ID: id}, bson.M{db.NAME: 1})
+	if e != nil {
+		return "", e
 	}
-	name = proj.Name
-	return
+	return p.Name, nil
 }
 
-func testedFileName(subId bson.ObjectId) (name string, err error) {
-	tests, err := db.Files(bson.M{db.SUBID: subId, db.TYPE: project.TEST}, bson.M{db.DATA: 0})
-	if err != nil {
-		return
+func childFile(sid bson.ObjectId, n string) (*project.File, error) {
+	pfs, e := db.Files(bson.M{db.SUBID: sid, db.NAME: n}, bson.M{db.DATA: 0})
+	if e != nil {
+		return nil, e
 	}
-	for _, test := range tests {
-		for idstr, _ := range test.Results {
-			s := strings.Split(idstr, "-")
-			if len(s) < 2 {
-				continue
-			}
-			id, ierr := util.ReadId(s[len(s)-1])
-			if ierr != nil {
-				continue
-			}
-			f, derr := db.File(bson.M{db.ID: id}, bson.M{db.NAME: 1})
-			if derr != nil {
-				continue
-			}
-			name = f.Name
-			return
+	if len(pfs) == 0 {
+		return nil, fmt.Errorf("no files named %s in submission %s", n, sid)
+	}
+	switch pfs[0].Type {
+	case project.SRC:
+		s, e := db.Submission(bson.M{db.ID: sid}, nil)
+		if e != nil {
+			return nil, e
 		}
+		ts, e := db.JUnitTests(bson.M{db.PROJECTID: s.ProjectId, db.TYPE: junit.USER}, bson.M{db.NAME: 1})
+		if e != nil {
+			return nil, e
+		}
+		for _, t := range ts {
+			tn, _ := util.Extension(t.Name)
+			for _, pf := range pfs {
+				f, e := db.File(bson.M{db.SUBID: sid, db.TYPE: project.TEST, db.NAME: t.Name, db.RESULTS + "." + tn + "-" + pf.Id.Hex(): bson.M{db.EXISTS: true}}, bson.M{db.DATA: 0})
+				if e != nil {
+					continue
+				}
+				return f, nil
+			}
+		}
+		return nil, fmt.Errorf("no tests found for file %s in submission %s", n, sid)
+	case project.TEST:
+		for _, t := range pfs {
+			for k, _ := range t.Results {
+				s := strings.Split(k, "-")
+				if len(s) < 2 {
+					continue
+				}
+				id, e := util.ReadId(s[len(s)-1])
+				if e != nil {
+					continue
+				}
+				f, e := db.File(bson.M{db.ID: id}, bson.M{db.DATA: 0})
+				if e != nil {
+					continue
+				}
+				return f, nil
+			}
+		}
+		return nil, fmt.Errorf("No file name found for submission %s", sid.Hex())
+	default:
+		return nil, fmt.Errorf("unsupported type %s", pfs[0].Type)
 	}
-	err = fmt.Errorf("No file name found for submission %s", subId.Hex())
-	return
 }
 
-func users(projectId bson.ObjectId) (names []string, err error) {
-	submissions, err := db.Submissions(bson.M{db.PROJECTID: projectId}, nil)
-	if err != nil {
-		return
+func users(pid bson.ObjectId) ([]string, error) {
+	ss, e := db.Submissions(bson.M{db.PROJECTID: pid}, nil)
+	if e != nil {
+		return nil, e
 	}
-	names = make([]string, 0, len(submissions))
-	added := make(map[string]bool)
-	for _, s := range submissions {
-		if added[s.User] {
+	ns := make([]string, 0, len(ss))
+	a := make(map[string]bool)
+	for _, s := range ss {
+		if a[s.User] {
 			continue
 		}
-		names = append(names, s.User)
-		added[s.User] = true
+		ns = append(ns, s.User)
+		a[s.User] = true
 	}
-	return
+	return ns, nil
 }

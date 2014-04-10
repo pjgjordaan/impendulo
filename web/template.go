@@ -95,7 +95,6 @@ var (
 			return db.Projects(bson.M{db.LANG: l}, nil, db.NAME)
 		},
 		"analysisNames":         analysisNames,
-		"chartNames":            chartNames,
 		"users":                 func() ([]*user.User, error) { return db.Users(nil, user.ID) },
 		"skeletons":             skeletons,
 		"getFiles":              func(sid bson.ObjectId) string { return fmt.Sprintf("getfiles?subid=%s", sid.Hex()) },
@@ -121,7 +120,6 @@ const (
 	PAGER_SIZE      = 10
 	testView   view = iota
 	analysisView
-	chartView
 )
 
 func chartTime(f *project.File) (float64, error) {
@@ -142,22 +140,12 @@ func analysisNames(pid bson.ObjectId, t project.Type) ([]string, error) {
 	return nil, fmt.Errorf("unsupported file type %s", t)
 }
 
-func chartNames(pid bson.ObjectId, t project.Type) ([]string, error) {
-	switch t {
-	case project.SRC:
-		return resultNames(pid, chartView)
-	}
-	return nil, fmt.Errorf("unsupported file type %s", t)
-}
-
 func resultNames(pid bson.ObjectId, v view) ([]string, error) {
 	switch v {
 	case testView:
 		return []string{javac.NAME, tool.CODE, diff.NAME, junit.NAME, jacoco.NAME}, nil
 	case analysisView:
 		return db.AllResultNames(pid)
-	case chartView:
-		return db.ChartResultNames(pid)
 	}
 	return nil, fmt.Errorf("unsupported view type %d", v)
 }

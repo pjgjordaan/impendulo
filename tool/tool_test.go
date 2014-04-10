@@ -32,25 +32,25 @@ import (
 
 func TestRunCommand(t *testing.T) {
 	failCmd := []string{"chmod", "777"}
-	execRes := RunCommand(failCmd, nil)
-	if execRes.Err == nil {
+	_, e := RunCommand(failCmd, nil)
+	if e == nil {
 		t.Error("Command should have failed")
 	}
 	succeedCmd := []string{"ls", "-a", "-l"}
-	execRes = RunCommand(succeedCmd, nil)
-	if execRes.Err != nil {
-		t.Error(execRes.Err)
+	_, e = RunCommand(succeedCmd, nil)
+	if e != nil {
+		t.Error(e)
 	}
 	noCmd := []string{"lsa"}
-	execRes = RunCommand(noCmd, nil)
-	if _, ok := execRes.Err.(*StartError); !ok {
-		t.Error("Command should not have started", execRes.Err)
+	_, e = RunCommand(noCmd, nil)
+	if _, ok := e.(*StartError); !ok {
+		t.Error("Command should not have started", e)
 	}
 	SetTimeLimit(0)
 	longCmd := []string{"sleep", "10"}
-	execRes = RunCommand(longCmd, nil)
-	if !IsTimeout(execRes.Err) {
-		t.Error("Expected timeout, got ", execRes.Err)
+	_, e = RunCommand(longCmd, nil)
+	if !IsTimeout(e) {
+		t.Error("Expected timeout, got ", e)
 	}
 	SetTimeLimit(10)
 }

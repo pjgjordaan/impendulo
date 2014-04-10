@@ -30,6 +30,7 @@ package main
 import (
 	"flag"
 	"fmt"
+
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processing"
@@ -39,6 +40,7 @@ import (
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/web"
 	"labix.org/v2/mgo/bson"
+
 	"os"
 	"runtime"
 	"strconv"
@@ -60,23 +62,21 @@ const (
 )
 
 func init() {
-	defualt, err := config.DefaultConfig()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+	d, e := config.DefaultConfig()
+	if e != nil {
+		fmt.Fprintln(os.Stderr, e)
 	}
 	//Setup flags
 	flag.StringVar(&backupDB, "b", "", "Specify a backup db (default none).")
 	flag.StringVar(&errLog, "e", "a", "Specify where to log errors to (default console & file).")
 	flag.StringVar(&infoLog, "i", "f", "Specify where to log info to (default file).")
-	flag.StringVar(&cfgFile, "c", defualt, fmt.Sprintf("Specify a configuration file (default %s).", defualt))
+	flag.StringVar(&cfgFile, "c", d, fmt.Sprintf("Specify a configuration file (default %s).", d))
 	flag.StringVar(&dbName, "db", db.DEBUG_DB, fmt.Sprintf("Specify a db to use (default %s).", db.DEBUG_DB))
 	flag.StringVar(&dbAddr, "da", db.ADDRESS, fmt.Sprintf("Specify a db address to use (default %s).", db.ADDRESS))
-	flag.StringVar(
-		&access, "a", "",
+	flag.StringVar(&access, "a", "",
 		"Change a user's access permissions."+
 			"Available permissions: NONE=0, STUDENT=1, TEACHER=2, ADMIN=3."+
-			"Example: -a=pieter:2.",
-	)
+			"Example: -a=pieter:2.")
 	flag.StringVar(&mqURI, "mq", processing.DEFAULT_AMQP_URI, fmt.Sprintf("Specify the address of the Rabbitmq server (default %s).", processing.DEFAULT_AMQP_URI))
 
 	pFlags = flag.NewFlagSet("processor", flag.ExitOnError)
@@ -92,11 +92,11 @@ func init() {
 }
 
 func main() {
-	var err error
+	var e error
 	defer func() {
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			util.Log(err)
+		if e != nil {
+			fmt.Fprintln(os.Stderr, e)
+			util.Log(e)
 		}
 	}()
 	//Set the number of processors to use to the number of available CPUs.
@@ -106,103 +106,96 @@ func main() {
 	util.SetInfoLogging(infoLog)
 	processing.SetAMQP_URI(mqURI)
 	//Handle setup flags
-	if err = backup(); err != nil {
+	if e = backup(backupDB); e != nil {
 		return
 	}
-	if err = setupConn(); err != nil {
+	if e = setupConn(dbAddr, dbName); e != nil {
 		return
 	}
 	defer db.Close()
-	if err = modifyAccess(); err != nil {
+	if e = modifyAccess(access); e != nil {
 		return
 	}
 	if flag.NArg() < 1 {
-		err = fmt.Errorf("Too few arguments provided %d", flag.NArg())
+		e = fmt.Errorf("too few arguments provided %d", flag.NArg())
 		return
 	}
-	if err = config.LoadConfigs(cfgFile); err != nil {
+	if e = config.LoadConfigs(cfgFile); e != nil {
 		return
 	}
 	switch flag.Arg(0) {
 	case "web":
-		runWebServer()
+		runWebServer(httpPort)
 	case "receiver":
-		runFileReceiver()
+		runFileReceiver(tcpPort)
 	case "processor":
-		runFileProcessor()
+		runFileProcessor(mProcs, timeLimit)
 	}
 }
 
 //modifyAccess changes a specified user's access permissions.
 //Modification is specified as username:new_permission_level where
 //new_permission_level can be integers from 0 to 3.
-func modifyAccess() error {
-	if access == "" {
+func modifyAccess(a string) error {
+	if a == "" {
 		return nil
 	}
-	params := strings.Split(access, ":")
-	if len(params) != 2 {
-		return fmt.Errorf("Invalid parameters %s for user access modification.", access)
+	ps := strings.Split(a, ":")
+	if len(ps) != 2 {
+		return fmt.Errorf("invalid parameters %s for user access modification", a)
 	}
-	val, err := strconv.Atoi(params[1])
-	if err != nil {
-		return fmt.Errorf("Invalid user access token %s.", params[1])
+	v, e := strconv.Atoi(ps[1])
+	if e != nil {
+		return fmt.Errorf("invalid user access token %s", ps[1])
 	}
-	newPerm := user.Permission(val)
-	if newPerm < user.NONE || newPerm > user.ADMIN {
-		return fmt.Errorf("Invalid user access token %d.", val)
+	p := user.Permission(v)
+	if p < user.NONE || p > user.ADMIN {
+		return fmt.Errorf("invalid user access token %d", v)
 	}
-
-	change := bson.M{db.SET: bson.M{user.ACCESS: newPerm}}
-	err = db.Update(db.USERS, bson.M{user.ID: params[0]}, change)
-	if err != nil {
-		return fmt.Errorf("Could not update user %s's access permissions.", params[0])
+	if e = db.Update(db.USERS, bson.M{user.ID: ps[0]}, bson.M{db.SET: bson.M{user.ACCESS: p}}); e != nil {
+		return fmt.Errorf("update error: user %s's access permissions", ps[0])
 	}
-	fmt.Printf("Updated %s's permission level to %s.\n", params[0], newPerm.Name())
+	fmt.Printf("updated %s's permission level to %s\n", ps[0], p.Name())
 	return nil
 }
 
 //backup backs up the default database to a specified backup.
-func backup() (err error) {
-	if backupDB == "" {
-		return
+func backup(b string) error {
+	if b == "" {
+		return nil
 	}
-	err = db.Setup(db.DEFAULT_CONN)
-	if err != nil {
-		return
+	if e := db.Setup(db.DEFAULT_CONN); e != nil {
+		return e
 	}
 	defer db.Close()
-	err = db.CopyDB(db.DEFAULT_DB, backupDB)
-	if err == nil {
-		fmt.Printf("Successfully Backed-up Main Database to %s.\n", backupDB)
+	if e := db.CopyDB(db.DEFAULT_DB, b); e != nil {
+		return e
 	}
-	return
+	fmt.Printf("successfully backed-up main db to %s.\n", b)
+	return nil
 }
 
 //setupConn sets up the database connection
-func setupConn() (err error) {
-	err = db.Setup(dbAddr + dbName)
-	return
+func setupConn(a, n string) error {
+	return db.Setup(a + n)
 }
 
 //runWebServer runs the webserver
-func runWebServer() {
+func runWebServer(p uint) {
 	wFlags.Parse(os.Args[2:])
-	//processing.SetClientAddress(rpcAddr, rpcPort)
-	web.Run(httpPort)
+	web.Run(p)
 }
 
 //runFileReceiver runs the TCP file receiving server.
-func runFileReceiver() {
+func runFileReceiver(p uint) {
 	rFlags.Parse(os.Args[2:])
-	//processing.SetClientAddress(rpcAddr, rpcPort)
 	receiver.Run(tcpPort, new(receiver.SubmissionSpawner))
 }
 
 //runFileProcessor runs the file processing server.
-func runFileProcessor() {
+func runFileProcessor(n, t uint) {
 	pFlags.Parse(os.Args[2:])
-	tool.SetTimeLimit(timeLimit)
+	tool.SetTimeLimit(t)
 	go processing.MonitorStatus()
-	processing.Serve(mProcs)
+	processing.Serve(n)
 }

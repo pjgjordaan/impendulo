@@ -28,8 +28,10 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
+
 	"strconv"
 )
 
@@ -101,28 +103,21 @@ func (this *Report) Header() (header string) {
 	return
 }
 
-func calcCount(tipe string, data []byte) (n int, err error) {
+func calcCount(tipe string, data []byte) (int, error) {
 	prog := fmt.Sprintf("/^[^:]+:[0-9]+:[0-9]+: (%s):/ {e++} END {print e + 0} 1", tipe)
-	args := []string{"awk", prog}
-	stdIn := bytes.NewReader(data)
-	res := tool.RunCommand(args, stdIn)
-	if res.Err != nil {
-		err = res.Err
-		return
-	} else if res.HasStdErr() {
-		err = fmt.Errorf("Encountered awk error %s", string(res.StdErr))
-		return
+	r, e := tool.RunCommand([]string{"awk", prog}, bytes.NewReader(data))
+	if e != nil {
+		return -1, e
+	} else if r.HasStdErr() {
+		return -1, fmt.Errorf("Encountered awk error %s", string(r.StdErr))
 	}
-	split := bytes.Split(bytes.TrimSpace(res.StdOut), []byte("\n"))
-	if len(split) < 1 {
-		err = fmt.Errorf("Awk output %s too short", string(res.StdOut))
-		return
+	sp := bytes.Split(bytes.TrimSpace(r.StdOut), []byte("\n"))
+	if len(sp) < 1 {
+		return -1, fmt.Errorf("Awk output %s too short", string(r.StdOut))
 	}
-	split = bytes.Split(bytes.TrimSpace(split[len(split)-1]), []byte(" "))
-	if len(split) < 1 {
-		err = fmt.Errorf("Awk output %s too short", string(res.StdOut))
-		return
+	sp = bytes.Split(bytes.TrimSpace(sp[len(sp)-1]), []byte(" "))
+	if len(sp) < 1 {
+		return -1, fmt.Errorf("Awk output %s too short", string(r.StdOut))
 	}
-	n, _ = strconv.Atoi(string(split[0]))
-	return
+	return strconv.Atoi(string(sp[0]))
 }

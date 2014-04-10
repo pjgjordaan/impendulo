@@ -46,25 +46,21 @@ func (this *Tool) Name() string {
 	return NAME
 }
 
-func (this *Tool) Run(fileId bson.ObjectId, t *tool.Target) (res tool.ToolResult, err error) {
-	args := []string{this.cmd, "-C", t.Dir, "-f", this.path}
-	execRes := tool.RunCommand(args, nil)
-	if execRes.Err != nil {
-		if !tool.IsEndError(execRes.Err) {
-			err = execRes.Err
-		} else {
-			//Unsuccessfull compile.
-			res, err = gcc.NewResult(fileId, execRes.StdErr)
-			if err == nil {
-				err = tool.NewCompileError(t.FullName(), string(execRes.StdErr))
-			}
+func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
+	r, e := tool.RunCommand([]string{t.cmd, "-C", target.Dir, "-f", t.path}, nil)
+	if e != nil {
+		if !tool.IsEndError(e) {
+			return nil, e
 		}
-	} else if execRes.HasStdErr() {
+		//Unsuccessfull compile.
+		nr, e := gcc.NewResult(fileId, r.StdErr)
+		if e != nil {
+			return nil, e
+		}
+		return nr, tool.NewCompileError(target.FullName(), string(r.StdErr))
+	} else if r.HasStdErr() {
 		//Compiler warnings.
-		res, err = gcc.NewResult(fileId, execRes.StdErr)
-	} else {
-		res, err = gcc.NewResult(fileId, tool.COMPILE_SUCCESS)
+		return gcc.NewResult(fileId, r.StdErr)
 	}
-	return
-
+	return gcc.NewResult(fileId, tool.COMPILE_SUCCESS)
 }

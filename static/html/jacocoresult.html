@@ -1,5 +1,6 @@
 {{define "result"}}
-{{$class := .Report.Class .state.ChildFile}}
+{{$s := .state.Src}}
+{{$class := .Report.Class $s}}
 {{$addr := address $class}}
 <div class="panel-group" id="jacocoaccordion{{$addr}}">
   <div class="panel panel-default">

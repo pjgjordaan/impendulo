@@ -27,8 +27,10 @@ package mongo
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
+
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -46,62 +48,54 @@ type (
 //ExportData exports data from collections in the specified database
 //to a specified location as a zip file. This makes use of the mongoexport utility.
 func ExportData(outFile, db string, cols []string) error {
-	files := make(map[string][]byte, len(cols))
+	fs := make(map[string][]byte, len(cols))
 	for _, col := range cols {
-		outFile := filepath.Join(os.TempDir(), col+".json")
-		res := tool.RunCommand([]string{"mongoexport", "-d", db, "-c", col, "-o", outFile}, nil)
-		if res.Err != nil {
-			return res.Err
+		o := filepath.Join(os.TempDir(), col+".json")
+		_, e := tool.RunCommand([]string{"mongoexport", "-d", db, "-c", col, "-o", o}, nil)
+		if e != nil {
+			return e
 		}
-		f, err := os.Open(outFile)
-		if err != nil {
-			return err
+		f, e := os.Open(o)
+		if e != nil {
+			return e
 		}
-		data, err := ioutil.ReadAll(f)
-		if err != nil {
-			return err
+		d, e := ioutil.ReadAll(f)
+		if e != nil {
+			return e
 		}
-		files[col+".json"] = data
+		fs[col+".json"] = d
 	}
-	zipped, err := util.ZipMap(files)
-	if err != nil {
-		return err
+	zs, e := util.ZipMap(fs)
+	if e != nil {
+		return e
 	}
-	return util.SaveFile(outFile, zipped)
+	return util.SaveFile(outFile, zs)
 }
 
 //ImportData imports collections stored in a zip file
 //to the specified database.
-func ImportData(db string, zipData []byte) error {
-	tmpDir := filepath.Join(os.TempDir(), strconv.FormatInt(time.Now().Unix(), 10))
-	err := util.Unzip(tmpDir, zipData)
-	if err != nil {
-		return err
+func ImportData(db string, zip []byte) error {
+	td := filepath.Join(os.TempDir(), strconv.FormatInt(time.Now().Unix(), 10))
+	if e := util.Unzip(td, zip); e != nil {
+		return e
 	}
-	dbImporter := Importer(db)
-	filepath.Walk(tmpDir, dbImporter.ImportFile)
+	filepath.Walk(td, Importer(db).ImportFile)
 	return nil
 }
 
 //ImportFile imports a single collection found in the file specified by path
 //to the database specified by this Importer. This makes use of the mongoimport utility.
-func (this Importer) ImportFile(path string, info os.FileInfo, inErr error) (err error) {
+func (i Importer) ImportFile(path string, info os.FileInfo, inErr error) error {
 	if inErr != nil {
-		err = inErr
-		return
+		return inErr
 	}
 	if !strings.HasSuffix(path, ".json") {
-		return
+		return nil
 	}
-	elems := strings.Split(filepath.Base(path), ".")
-	if len(elems) != 2 {
-		err = fmt.Errorf("Invalid collection file %s.", path)
-		return
+	sp := strings.Split(filepath.Base(path), ".")
+	if len(sp) != 2 {
+		return fmt.Errorf("invalid collection file %s", path)
 	}
-	col := elems[0]
-	res := tool.RunCommand([]string{"mongoimport", "-d", string(this), "-c", col, "--file", path}, nil)
-	if res.Err != nil {
-		return res.Err
-	}
-	return nil
+	_, e := tool.RunCommand([]string{"mongoimport", "-d", string(i), "-c", sp[0], "--file", path}, nil)
+	return e
 }

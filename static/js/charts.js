@@ -31,17 +31,14 @@ var CURRENT_USER = '';
 var ACTIVE_SHADE = -0.3;
 var ACTIVE_WIDTH = 3;
 var getColour = null;
-function showChart(fileName, resultName, chartData, currentTime, nextTime, currentUser){
+function showChart(chartData, currentTime, nextTime, currentUser){
     CURRENT_TIME = currentTime;
     NEXT_TIME = nextTime;
     CURRENT_USER = currentUser;
-    if (resultName === 'Summary'){
-    } else{
-	timeChart(fileName, resultName, chartData, currentTime, nextTime);
-    }
+    timeChart(chartData, currentTime, nextTime);
 }    
 
-function timeChart(fileName, resultName, chartData) {
+function timeChart(chartData) {
     if (chartData === null){
 	return;
     }

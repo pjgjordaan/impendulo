@@ -28,10 +28,12 @@ package findbugs
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
 	"os"
 	"path/filepath"
 )
@@ -65,33 +67,30 @@ func (this *FindBugs) Name() string {
 //Findbugs is run with the following flags: -effort:max, -experimental, -relaxed.
 //The result is written to an XML file which is then read and used to create a
 //Findbugs Result.
-func (this *FindBugs) Run(fileId bson.ObjectId, t *tool.Target) (res tool.ToolResult, err error) {
+func (t *FindBugs) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
 	//Setup arguments
-	java, err := config.JAVA.Path()
-	if err != nil {
-		return
+	jp, e := config.JAVA.Path()
+	if e != nil {
+		return nil, e
 	}
-	outFile := filepath.Join(t.Dir, "findbugs.xml")
-	args := []string{java, "-jar", this.cmd, "-textui", "-effort:max", "-experimental",
-		"-xml:withMessages", "-relaxed", "-output", outFile, t.PackagePath()}
-	defer os.Remove(outFile)
+	o := filepath.Join(target.Dir, "findbugs.xml")
+	a := []string{jp, "-jar", t.cmd, "-textui", "-effort:max", "-experimental",
+		"-xml:withMessages", "-relaxed", "-output", o, target.PackagePath()}
+	defer os.Remove(o)
 	//Run Findbugs and load result.
-	execRes := tool.RunCommand(args, nil)
-	resFile, err := os.Open(outFile)
-	if err == nil {
-		//Success
-		data := util.ReadBytes(resFile)
-		res, err = NewResult(fileId, data)
-		if err != nil && execRes.Err != nil {
-			err = execRes.Err
+	r, re := tool.RunCommand(a, nil)
+	rf, e := os.Open(o)
+	if e == nil {
+		nr, e := NewResult(fileId, util.ReadBytes(rf))
+		if e != nil {
+			if re != nil {
+				e = re
+			}
+			return nil, e
 		}
-	} else if execRes.HasStdErr() {
-		//Findbugs generated an error
-		err = fmt.Errorf("Could not run findbugs: %q.",
-			string(execRes.StdErr))
-	} else {
-		//Normal error
-		err = execRes.Err
+		return nr, nil
+	} else if r.HasStdErr() {
+		return nil, fmt.Errorf("could not run findbugs: %q", string(r.StdErr))
 	}
-	return
+	return nil, re
 }

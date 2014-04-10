@@ -26,6 +26,7 @@ package junit_user
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
@@ -33,6 +34,7 @@ import (
 	"github.com/godfried/impendulo/tool/junit_user/result"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
 	"os"
 	"path/filepath"
 )
@@ -55,13 +57,13 @@ type (
 	}
 )
 
-func (this *TestFile) Update(file *project.File) {
-	this.id = file.Id
-	this.Target = tool.NewTarget(file.Name, file.Package, this.Target.Dir, tool.JAVA)
+func (t *TestFile) Update(f *project.File) {
+	t.id = f.Id
+	t.Target = tool.NewTarget(f.Name, f.Package, t.Target.Dir, tool.JAVA)
 }
 
-func New(test *junit.Test, dir string) (junit *Tool, err error) {
-	junit = &Tool{
+func New(test *junit.Test, dir string) *Tool {
+	return &Tool{
 		name: test.Name,
 		pkg:  test.Package,
 		dir:  dir,
@@ -71,66 +73,60 @@ func New(test *junit.Test, dir string) (junit *Tool, err error) {
 			Target: tool.NewTarget(test.Name, test.Package, filepath.Join(dir, test.Id.Hex()), tool.JAVA),
 		},
 	}
-	return
 }
 
 //Lang is Java
-func (this *Tool) Lang() tool.Language {
+func (t *Tool) Lang() tool.Language {
 	return tool.JAVA
 }
 
-func (this *Tool) Name() string {
-	return this.current.Name
+func (t *Tool) Name() string {
+	return t.current.Name
 }
 
-func (this *Tool) Run(fileId bson.ObjectId, t *tool.Target) (res tool.ToolResult, err error) {
-	file, err := db.File(bson.M{db.ID: fileId}, bson.M{db.DATA: 0})
-	if err != nil {
-		return
+func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
+	f, e := db.File(bson.M{db.ID: fileId}, bson.M{db.DATA: 0})
+	if e != nil {
+		return nil, e
 	}
-	matcher := bson.M{project.TYPE: project.TEST, project.NAME: this.name, project.TIME: bson.M{db.LT: file.Time}}
-	files, err := db.Files(matcher, bson.M{db.ID: 1}, "-"+db.TIME)
-	if err != nil {
-		return
+	fs, e := db.Files(bson.M{project.TYPE: project.TEST, project.NAME: t.name, project.TIME: bson.M{db.LT: f.Time}}, bson.M{db.ID: 1}, "-"+db.TIME)
+	if e != nil {
+		return nil, e
 	}
-	if len(files) == 0 {
-		err = fmt.Errorf("No user implementations of %s found for %s.", this.name, file.Name)
-		return
+	if len(fs) == 0 {
+		return nil, fmt.Errorf("No user implementations of %s found for %s.", t.name, f.Name)
 	}
-	if files[0].Id != this.current.id {
-		err = this.update(files[0].Id)
-		if err != nil {
-			return
+	if fs[0].Id != t.current.id {
+		if e = t.update(fs[0].Id); e != nil {
+			return nil, e
 		}
 	}
-	res, err = this.runner.Run(fileId, t)
-	if err != nil {
-		return
+	r, e := t.runner.Run(fileId, target)
+	if e != nil {
+		return nil, e
 	}
-	res, err = result.New(this.current.id, res)
-	return
+	return result.New(t.current.id, r)
 }
 
-func (this *Tool) update(newTest bson.ObjectId) (err error) {
-	if util.Exists(this.current.FilePath()) {
-		err = os.Remove(this.current.FilePath())
-		if err != nil {
-			return
+func (t *Tool) update(newTest bson.ObjectId) error {
+	if util.Exists(t.current.FilePath()) {
+		if e := os.Remove(t.current.FilePath()); e != nil {
+			return e
 		}
 	}
-	testFile, err := db.File(bson.M{db.ID: newTest}, nil)
-	if err != nil {
-		return
+	tf, e := db.File(bson.M{db.ID: newTest}, nil)
+	if e != nil {
+		return e
 	}
-	this.current.Update(testFile)
-	test := &junit.Test{
-		Id:      this.current.testId,
-		Name:    testFile.Name,
-		Package: testFile.Package,
+	t.current.Update(tf)
+	jt := &junit.Test{
+		Id:      t.current.testId,
+		Name:    tf.Name,
+		Package: tf.Package,
 		Type:    junit.USER,
-		Test:    testFile.Data,
+		Test:    tf.Data,
 		Data:    nil,
 	}
-	this.runner, err = junit.New(test, this.dir)
-	return
+	t.runner, e = junit.New(jt, t.dir)
+	return e
 }

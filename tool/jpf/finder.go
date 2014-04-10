@@ -27,11 +27,13 @@ package jpf
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
 	"os"
 	"path/filepath"
 )
@@ -83,48 +85,44 @@ func GetClasses(tipe, fname string) (classes []*Class, err error) {
 //a specific type using JPFFinder, a Java class which searches for all concrete subclasses
 //of a class or interface (gov.nasa.jpf.search.Search or gov.nasa.jpf.JPFListener for example).
 //These classes are then written to a Json output file.
-func findClasses(tipe, fname string) (found []byte, err error) {
+func findClasses(tipe, fname string) ([]byte, error) {
 	//Load configurations
-	finderDir, err := config.JPF_FINDER.Path()
-	if err != nil {
-		return
+	fd, e := config.JPF_FINDER.Path()
+	if e != nil {
+		return nil, e
 	}
-	home, err := config.JPF_HOME.Path()
-	if err != nil {
-		return
+	hd, e := config.JPF_HOME.Path()
+	if e != nil {
+		return nil, e
 	}
-	gson, err := config.GSON.Path()
-	if err != nil {
-		return
+	gp, e := config.GSON.Path()
+	if e != nil {
+		return nil, e
 	}
-	java, err := config.JAVA.Path()
-	if err != nil {
-		return
+	jp, e := config.JAVA.Path()
+	if e != nil {
+		return nil, e
 	}
 	//Setup and compile JPFFinder
-	target := tool.NewTarget("JPFFinder.java", "finder", finderDir, tool.JAVA)
-	cp := filepath.Join(home, "build", "main") + ":" + target.Dir + ":" + gson
-	comp, err := javac.New(cp)
-	if err != nil {
-		return
+	t := tool.NewTarget("JPFFinder.java", "finder", fd, tool.JAVA)
+	cp := filepath.Join(hd, "build", "main") + ":" + t.Dir + ":" + gp
+	c, e := javac.New(cp)
+	if e != nil {
+		return nil, e
 	}
-	_, err = comp.Run(bson.NewObjectId(), target)
-	if err != nil {
-		return
+	if _, e = c.Run(bson.NewObjectId(), t); e != nil {
+		return nil, e
 	}
-	//Run JPFFinder and retrieve the output.
-	args := []string{java, "-cp", cp, target.Executable(), tipe, fname}
-	execRes := tool.RunCommand(args, nil)
-	resFile, err := os.Open(fname)
-	if err == nil {
-		found = util.ReadBytes(resFile)
-	} else if execRes.Err != nil {
-		err = execRes.Err
-	} else if execRes.HasStdErr() {
-		err = fmt.Errorf("Could not run finder: %q.",
-			string(execRes.StdErr))
+	r, re := tool.RunCommand([]string{jp, "-cp", cp, t.Executable(), tipe, fname}, nil)
+	rf, e := os.Open(fname)
+	if e == nil {
+		return util.ReadBytes(rf), nil
+	} else if re != nil {
+		return nil, re
+	} else if r.HasStdErr() {
+		return nil, fmt.Errorf("could not run finder: %q", string(r.StdErr))
 	}
-	return
+	return nil, nil
 }
 
 //readClasses unmarshalls an array of type *Class from a Json byte array.
@@ -134,12 +132,10 @@ func readClasses(data []byte) (classes []*Class, err error) {
 }
 
 //loadClasses loads an array of type *Class from a Json file.
-func loadClasses(fname string) (vals []*Class, err error) {
-	f, err := os.Open(fname)
-	if err != nil {
-		return
+func loadClasses(fname string) ([]*Class, error) {
+	f, e := os.Open(fname)
+	if e != nil {
+		return nil, e
 	}
-	data := util.ReadBytes(f)
-	vals, err = readClasses(data)
-	return
+	return readClasses(util.ReadBytes(f))
 }

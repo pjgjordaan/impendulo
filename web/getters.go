@@ -305,7 +305,7 @@ func _displayChildResult(r *http.Request, c *Context) (Args, error) {
 	if e != nil {
 		return nil, e
 	}
-	results, e := resultNames(c.Browse.Pid, testView)
+	results, e := analysisNames(c.Browse.Pid, c.Browse.Type)
 	if e != nil {
 		return nil, e
 	}
@@ -321,11 +321,25 @@ func _displayChildResult(r *http.Request, c *Context) (Args, error) {
 	if e != nil {
 		return nil, e
 	}
-	currentChildResult, e := GetTestResult(c.Browse.Result, currentChild.Id.Hex(), currentFile.Id)
+	var hc, hn string
+	var ic, in bson.ObjectId
+	switch c.Browse.ChildType {
+	case project.SRC:
+		ic = currentFile.Id
+		in = nextFile.Id
+		hc = currentChild.Id.Hex()
+		hn = currentChild.Id.Hex()
+	case project.TEST:
+		ic = currentChild.Id
+		in = currentChild.Id
+		hc = currentFile.Id.Hex()
+		hn = nextFile.Id.Hex()
+	}
+	currentChildResult, e := GetChildResult(c.Browse.Result, hc, ic)
 	if e != nil {
 		return nil, e
 	}
-	nextChildResult, e := GetTestResult(c.Browse.Result, currentChild.Id.Hex(), nextFile.Id)
+	nextChildResult, e := GetChildResult(c.Browse.Result, hn, in)
 	if e != nil {
 		return nil, e
 	}

@@ -41,57 +41,50 @@ type (
 )
 
 //New creates a new javac instance. cp is the classpath used when compiling.
-func New(cp string) (tool *Tool, err error) {
-	tool = &Tool{
-		cp: cp,
+func New(cp string) (*Tool, error) {
+	p, e := config.JAVAC.Path()
+	if e != nil {
+		return nil, e
 	}
-	tool.cmd, err = config.JAVAC.Path()
-	return
+	return &Tool{cp: cp, cmd: p}, nil
 }
 
 //Lang is Java.
-func (this *Tool) Lang() tool.Language {
+func (t *Tool) Lang() tool.Language {
 	return tool.JAVA
 }
 
 //Name is Javac
-func (this *Tool) Name() string {
+func (t *Tool) Name() string {
 	return NAME
 }
 
-func (this *Tool) AddCP(add string) {
-	if this.cp != "" {
-		this.cp += ":"
+func (t *Tool) AddCP(s string) {
+	if t.cp != "" {
+		t.cp += ":"
 	}
-	this.cp += add
+	t.cp += s
 }
 
 //Run compiles the Java source file specified by t. We compile with maximum warnings and compile
 //classes implicitly loaded by the source code. All compilation results will be stored (success,
 //errors and warnings).
-func (this *Tool) Run(fileId bson.ObjectId, t *tool.Target) (res tool.ToolResult, err error) {
-	cp := this.cp
+func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
+	cp := t.cp
 	if cp != "" {
 		cp += ":"
 	}
-	cp += t.Dir
-	args := []string{this.cmd, "-cp", cp + ":" + t.Dir,
-		"-implicit:class", "-Xlint", t.FilePath()}
-	//Compile the file.
-	execRes := tool.RunCommand(args, nil)
-	if execRes.Err != nil {
-		if !tool.IsEndError(execRes.Err) {
-			err = execRes.Err
-		} else {
-			//Unsuccessfull compile.
-			res = NewResult(fileId, execRes.StdErr)
-			err = tool.NewCompileError(t.FullName(), string(execRes.StdErr))
+	cp += target.Dir
+	a := []string{t.cmd, "-cp", cp + ":" + target.Dir, "-implicit:class", "-Xlint", target.FilePath()}
+	r, e := tool.RunCommand(a, nil)
+	if e != nil {
+		if !tool.IsEndError(e) {
+			return nil, e
 		}
-	} else if execRes.HasStdErr() {
+		return NewResult(fileId, r.StdErr), tool.NewCompileError(target.FullName(), string(r.StdErr))
+	} else if r.HasStdErr() {
 		//Compiler warnings.
-		res = NewResult(fileId, execRes.StdErr)
-	} else {
-		res = NewResult(fileId, tool.COMPILE_SUCCESS)
+		return NewResult(fileId, r.StdErr), nil
 	}
-	return
+	return NewResult(fileId, tool.COMPILE_SUCCESS), nil
 }

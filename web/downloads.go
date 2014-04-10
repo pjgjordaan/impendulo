@@ -31,6 +31,7 @@ import (
 	"github.com/godfried/impendulo/tool/mongo"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -57,73 +58,73 @@ func Downloaders() map[string]Downloader {
 }
 
 //GenerateDownloads
-func GenerateDownloads(router *pat.Router, downloads map[string]Downloader) {
-	for name, fn := range downloads {
-		handleFunc := fn.CreateDownload()
-		pattern := "/" + name
-		router.Add("GET", pattern, Handler(handleFunc)).Name(name)
+func GenerateDownloads(r *pat.Router, d map[string]Downloader) {
+	for n, f := range d {
+		r.Add("GET", "/"+n, Handler(f.CreateDownload())).Name(n)
 	}
 }
 
 //CreateDownload.
-func (this Downloader) CreateDownload() Handler {
-	return func(w http.ResponseWriter, req *http.Request, ctx *Context) error {
-		path, err := this(req)
-		if err != nil {
-			ctx.AddMessage("Could not load file for downloading.", true)
-			http.Redirect(w, req, req.Referer(), http.StatusSeeOther)
-		} else {
-			http.ServeFile(w, req, path)
+func (d Downloader) CreateDownload() Handler {
+	return func(w http.ResponseWriter, r *http.Request, c *Context) error {
+		p, e := d(r)
+		if e != nil {
+			c.AddMessage("could not load file for downloading.", true)
+			http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
+			return e
 		}
-		return err
+		http.ServeFile(w, r, p)
+		return nil
 	}
 }
 
 //LoadSkeleton makes a project skeleton available for download.
-func LoadSkeleton(req *http.Request) (path string, err error) {
-	id, _, err := getSkeletonId(req)
-	if err != nil {
-		return
+func LoadSkeleton(r *http.Request) (string, error) {
+	id, _, e := getSkeletonId(r)
+	if e != nil {
+		return "", e
 	}
-	base, err := util.BaseDir()
-	if err != nil {
-		return
+	b, e := util.BaseDir()
+	if e != nil {
+		return "", e
 	}
-	path = filepath.Join(base, "skeletons", id.String()+".zip")
+	p := filepath.Join(b, "skeletons", id.String()+".zip")
 	//If the skeleton is saved for downloading we don't need to store it again.
-	if util.Exists(path) {
-		return
+	if util.Exists(p) {
+		return p, nil
 	}
-	s, err := db.Skeleton(bson.M{db.ID: id}, nil)
-	if err != nil {
-		return
+	s, e := db.Skeleton(bson.M{db.ID: id}, nil)
+	if e != nil {
+		return "", e
 	}
 	//Save file to filesystem and return path to it.
-	err = util.SaveFile(path, s.Data)
-	return
+	if e = util.SaveFile(p, s.Data); e != nil {
+		return "", e
+	}
+	return p, nil
 }
 
 //ExportData
-func ExportData(req *http.Request) (path string, err error) {
-	dbName, err := GetString(req, "db")
-	if err != nil {
-		return
+func ExportData(r *http.Request) (string, error) {
+	n, e := GetString(r, "db")
+	if e != nil {
+		return "", e
 	}
-	collections, err := GetStrings(req, "collections")
-	if err != nil {
-		return
+	c, e := GetStrings(r, "collections")
+	if e != nil {
+		return "", e
 	}
-	name := strconv.FormatInt(time.Now().Unix(), 10)
-	base, err := util.BaseDir()
-	if err != nil {
-		return
+	b, e := util.BaseDir()
+	if e != nil {
+		return "", e
 	}
-	path = filepath.Join(base, "exports", name+".zip")
-	err = mongo.ExportData(path, dbName, collections)
-	return
+	p := filepath.Join(b, "exports", strconv.FormatInt(time.Now().Unix(), 10)+".zip")
+	if e = mongo.ExportData(p, n, c); e != nil {
+		return "", e
+	}
+	return p, nil
 }
 
-func LoadIntlola(req *http.Request) (path string, err error) {
-	path, err = config.INTLOLA.Path()
-	return
+func LoadIntlola(r *http.Request) (string, error) {
+	return config.INTLOLA.Path()
 }

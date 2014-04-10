@@ -449,7 +449,7 @@ func JavaResultNames(projectId bson.ObjectId) (ret []string, err error) {
 	for i, test := range tests {
 		ret[i] = strings.Split(test.Name, ".")[0]
 	}
-	ret = append(ret, checkstyle.NAME, findbugs.NAME, javac.NAME)
+	ret = append(ret, checkstyle.NAME, findbugs.NAME, javac.NAME, jacoco.NAME)
 	_, jerr := JPFConfig(bson.M{PROJECTID: projectId}, bson.M{ID: 1})
 	if jerr == nil {
 		ret = append(ret, jpf.NAME)

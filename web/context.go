@@ -26,13 +26,18 @@ package web
 
 import (
 	"code.google.com/p/gorilla/sessions"
+
 	"encoding/gob"
+	"errors"
 	"fmt"
+
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool/jacoco"
 	"github.com/godfried/impendulo/tool/junit"
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
 	"net/http"
 	"strconv"
 	"strings"
@@ -88,9 +93,9 @@ func (c *Context) save() {
 }
 
 //Save stores the current session.
-func (c *Context) Save(req *http.Request, buff *HttpBuffer) error {
+func (c *Context) Save(r *http.Request, b *HttpBuffer) error {
 	c.save()
-	return c.Session.Save(req, buff)
+	return c.Session.Save(r, b)
 }
 
 //IsView checks whether the given view matches the user's current view.
@@ -100,15 +105,15 @@ func (c *Context) IsView(v string) bool {
 
 //LoggedIn checks whether a user is signed in.
 func (c *Context) LoggedIn() bool {
-	_, err := c.Username()
-	return err == nil
+	_, e := c.Username()
+	return e == nil
 }
 
 //Username retrieves the current user's username.
 func (c *Context) Username() (string, error) {
 	u, ok := c.Session.Values["user"].(string)
 	if !ok {
-		return "", fmt.Errorf("Could not retrieve user.")
+		return "", fmt.Errorf("could not retrieve user")
 	}
 	return u, nil
 }
@@ -125,13 +130,11 @@ func (c *Context) RemoveUser() {
 
 //AddMessage adds a message to be displayed to the user.
 func (c *Context) AddMessage(m string, isErr bool) {
-	var t string
 	if isErr {
-		t = "error"
+		c.Session.AddFlash(m, "error")
 	} else {
-		t = "success"
+		c.Session.AddFlash(m, "success")
 	}
-	c.Session.AddFlash(m, t)
 }
 
 //Errors retrieves all error messages.
@@ -145,8 +148,8 @@ func (c *Context) Successes() []interface{} {
 }
 
 //LoadContext loads a context from the session.
-func LoadContext(sess *sessions.Session) *Context {
-	c := &Context{Session: sess}
+func LoadContext(s *sessions.Session) *Context {
+	c := &Context{Session: s}
 	if v, ok := c.Session.Values["browse"]; ok {
 		c.Browse = v.(*Browse)
 	} else {
@@ -156,15 +159,32 @@ func LoadContext(sess *sessions.Session) *Context {
 		c.Browse.Next = 0
 		c.Browse.CurrentChild = 0
 	}
-	u, err := c.Username()
-	if err != nil {
+	u, e := c.Username()
+	if e != nil {
 		return c
 	}
-	_, err = db.User(u)
-	if err != nil {
+	if _, e = db.User(u); e != nil {
 		c.RemoveUser()
 	}
 	return c
+}
+
+func (b *Browse) Src() (string, error) {
+	if b.Type == project.SRC && b.File != "" {
+		return b.File, nil
+	} else if b.ChildType == project.SRC && b.ChildFile != "" {
+		return b.ChildFile, nil
+	}
+	return "", errors.New("no source file available")
+}
+
+func (b *Browse) Test() (string, error) {
+	if b.Type == project.TEST && b.File != "" {
+		return b.File, nil
+	} else if b.ChildType == project.TEST && b.ChildFile != "" {
+		return b.ChildFile, nil
+	}
+	return "", errors.New("no source file available")
 }
 
 func (b *Browse) ClearSubmission() {
@@ -179,9 +199,9 @@ func (b *Browse) ClearSubmission() {
 	b.ChildType = project.SRC
 }
 
-func (b *Browse) SetDisplayCount(req *http.Request) error {
-	i, err := GetInt(req, "displaycount")
-	if err == nil {
+func (b *Browse) SetDisplayCount(r *http.Request) error {
+	i, e := GetInt(r, "displaycount")
+	if e == nil {
 		b.DisplayCount = i + 10
 	} else {
 		b.DisplayCount = 10
@@ -189,9 +209,9 @@ func (b *Browse) SetDisplayCount(req *http.Request) error {
 	return nil
 }
 
-func (b *Browse) SetUid(req *http.Request) error {
-	id, _, err := getUserId(req)
-	if err != nil {
+func (b *Browse) SetUid(r *http.Request) error {
+	id, _, e := getUserId(r)
+	if e != nil {
 		return nil
 	}
 	b.IsUser = true
@@ -199,25 +219,25 @@ func (b *Browse) SetUid(req *http.Request) error {
 	return nil
 }
 
-func (b *Browse) SetSid(req *http.Request) error {
-	id, _, err := getSubId(req)
-	if err != nil {
+func (b *Browse) SetSid(r *http.Request) error {
+	id, _, e := getSubId(r)
+	if e != nil {
 		return nil
 	}
-	sub, err := db.Submission(bson.M{db.ID: id}, bson.M{db.PROJECTID: 1, db.USER: 1})
-	if err != nil {
-		return err
+	s, e := db.Submission(bson.M{db.ID: id}, bson.M{db.PROJECTID: 1, db.USER: 1})
+	if e != nil {
+		return e
 	}
 	b.ClearSubmission()
 	b.Sid = id
-	b.Pid = sub.ProjectId
-	b.Uid = sub.User
+	b.Pid = s.ProjectId
+	b.Uid = s.User
 	return nil
 }
 
-func (b *Browse) SetPid(req *http.Request) error {
-	pid, _, err := getProjectId(req)
-	if err != nil {
+func (b *Browse) SetPid(r *http.Request) error {
+	pid, _, e := getProjectId(r)
+	if e != nil {
 		return nil
 	}
 	b.IsUser = false
@@ -225,112 +245,113 @@ func (b *Browse) SetPid(req *http.Request) error {
 	return nil
 }
 
-func (b *Browse) SetResult(req *http.Request) error {
-	r, err := GetString(req, "result")
-	if err != nil {
+func (b *Browse) SetResult(r *http.Request) error {
+	res, e := GetString(r, "result")
+	if e != nil {
 		return nil
 	}
-	b.Result = r
+	b.Result = res
 	return nil
 }
 
-func (b *Browse) SetFile(req *http.Request) error {
-	n, err := GetString(req, "file")
-	if err != nil {
+func (b *Browse) SetFile(r *http.Request) error {
+	n, e := GetString(r, "file")
+	if e != nil {
 		return nil
 	}
-	b.File = n
-	f, err := db.File(bson.M{db.SUBID: b.Sid, db.NAME: n}, bson.M{db.TYPE: 1})
-	if err != nil {
-		return err
+	f, e := db.File(bson.M{db.SUBID: b.Sid, db.NAME: n}, bson.M{db.TYPE: 1})
+	if e != nil {
+		return e
 	}
+	b.File = n
 	b.Type = f.Type
 	b.Current = 0
 	b.Next = 0
 	return nil
 }
 
-func (b *Browse) setIndices(req *http.Request, files []*project.File) error {
+func (b *Browse) setIndices(r *http.Request, fs []*project.File) error {
 	defer func() {
 		if b.Current == b.Next {
-			b.Next = (b.Current + 1) % len(files)
+			b.Next = (b.Current + 1) % len(fs)
 		}
 	}()
-	c, err := getCurrent(req, len(files)-1)
-	if err != nil {
-		return err
+	c, e := getCurrent(r, len(fs)-1)
+	if e != nil {
+		return e
 	}
-	n, err := getNext(req, len(files)-1)
-	if err != nil {
-		return err
+	n, e := getNext(r, len(fs)-1)
+	if e != nil {
+		return e
 	}
 	b.Current = c
 	b.Next = n
 	return nil
 }
 
-func (b *Browse) setTimeIndices(req *http.Request, files []*project.File) error {
-	t, err := strconv.ParseInt(req.FormValue("time"), 10, 64)
-	if err != nil {
+func (b *Browse) setTimeIndices(r *http.Request, fs []*project.File) error {
+	t, e := strconv.ParseInt(r.FormValue("time"), 10, 64)
+	if e != nil {
 		return nil
 	}
-	for i, f := range files {
+	for i, f := range fs {
 		if f.Time == t {
 			b.Current = i
-			b.Next = (i + 1) % len(files)
+			b.Next = (i + 1) % len(fs)
 			return nil
 		}
 	}
 	return fmt.Errorf("no file found at time %d", t)
 }
 
-func (b *Browse) SetFileIndices(req *http.Request) error {
+func (b *Browse) SetFileIndices(r *http.Request) error {
 	if b.File == "" {
 		return nil
 	}
-	files, err := Snapshots(b.Sid, b.File, b.Type)
-	if err != nil {
-		return err
+	fs, e := Snapshots(b.Sid, b.File, b.Type)
+	if e != nil {
+		return e
 	}
 
-	if err = b.setIndices(req, files); err != nil {
-		return b.setTimeIndices(req, files)
+	if e = b.setIndices(r, fs); e != nil {
+		return b.setTimeIndices(r, fs)
 	}
 	return nil
 }
 
-func (b *Browse) SetChild(req *http.Request) error {
+func (b *Browse) SetChild(r *http.Request) error {
 	if b.ChildFile == "" {
-		f, err := testedFileName(b.Sid)
-		if err != nil {
+		f, e := childFile(b.Sid, b.File)
+		if e != nil {
+			util.Log(e)
 			return nil
 		}
-		b.ChildFile = f
-		b.ChildType = project.SRC
+		b.ChildFile = f.Name
+		b.ChildType = f.Type
 		b.CurrentChild = 0
 	}
-	files, err := Snapshots(b.Sid, b.ChildFile, b.ChildType)
-	if err != nil {
-		return err
+	fs, e := Snapshots(b.Sid, b.ChildFile, b.ChildType)
+	if e != nil {
+		return e
 	}
-	if i, err := getIndex(req, "currentchild", len(files)-1); err == nil {
+	if i, e := getIndex(r, "currentchild", len(fs)-1); e == nil {
 		b.CurrentChild = i
 	}
 	return nil
 }
 
-func (b *Browse) Update(req *http.Request) error {
+func (b *Browse) Update(r *http.Request) error {
 	setters := []Setter{b.SetPid, b.SetUid, b.SetSid, b.SetResult, b.SetFile, b.SetFileIndices, b.SetDisplayCount, b.SetChild}
 	for _, s := range setters {
-		if err := s(req); err != nil {
-			return err
+		if e := s(r); e != nil {
+			return e
 		}
 	}
 	return nil
 }
 
 func (b *Browse) childResult() bool {
-	return b.Type == project.TEST && (b.Result == junit.NAME || b.Result == jacoco.NAME)
+	return (b.Type == project.TEST && (b.Result == junit.NAME || b.Result == jacoco.NAME)) || (b.Type == project.SRC && b.Result == jacoco.NAME)
 }
 
 func (b *Browse) SetLevel(route string) {
@@ -351,27 +372,26 @@ func (b *Browse) SetLevel(route string) {
 		b.Level = CHART
 	case "displayresult":
 		b.Level = ANALYSIS
-
 	}
 }
 
-func (this Level) Is(level string) bool {
+func (l Level) Is(level string) bool {
 	level = strings.ToLower(level)
 	switch level {
 	case "home":
-		return this == HOME
+		return l == HOME
 	case "projects":
-		return this == PROJECTS
+		return l == PROJECTS
 	case "users":
-		return this == USERS
+		return l == USERS
 	case "submissions":
-		return this == SUBMISSIONS
+		return l == SUBMISSIONS
 	case "files":
-		return this == FILES
+		return l == FILES
 	case "analysis":
-		return this == ANALYSIS
+		return l == ANALYSIS
 	case "chart":
-		return this == CHART
+		return l == CHART
 	default:
 		return false
 	}

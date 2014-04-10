@@ -2,9 +2,11 @@ package jacoco
 
 import (
 	"encoding/xml"
+
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
 	"os"
 	"path/filepath"
 	"testing"
@@ -43,12 +45,12 @@ func TestProject(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	res := tool.RunCommand([]string{"ant", "-f", path}, nil)
-	if res.Err != nil {
-		t.Error(res.Err)
+	r, e := tool.RunCommand([]string{"ant", "-f", path}, nil)
+	if e != nil {
+		t.Error(e)
 	}
 	if !util.Exists(filepath.Join(resDir, "report", "html")) || !util.Exists(filepath.Join(resDir, "report", "report.xml")) {
-		t.Error("No report created.\n", string(res.StdErr), string(res.StdOut))
+		t.Error("No report created.\n", string(r.StdErr), string(r.StdOut))
 	}
 }
 

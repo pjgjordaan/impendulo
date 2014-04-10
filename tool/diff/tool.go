@@ -60,7 +60,10 @@ func Diff(orig, change string) (string, error) {
 	}
 	defer os.Remove(p)
 	a := []string{d, "-u", p, "-"}
-	r := tool.RunCommand(a, strings.NewReader(change))
+	r, e := tool.RunCommand(a, strings.NewReader(change))
+	if e != nil {
+		return "", e
+	}
 	return string(r.StdOut), nil
 }
 
@@ -76,11 +79,11 @@ func Diff2HTML(d string) (template.HTML, error) {
 		return "", e
 	}
 	//Execute it and convert the result to HTML.
-	r := tool.RunCommand([]string{s}, strings.NewReader(d))
+	r, e := tool.RunCommand([]string{s}, strings.NewReader(d))
 	if r.HasStdErr() {
 		return "", fmt.Errorf("Could not generate html: %q", string(r.StdErr))
-	} else if r.Err != nil {
-		return "", r.Err
+	} else if e != nil {
+		return "", e
 	}
 	return template.HTML(string(r.StdOut)), nil
 }

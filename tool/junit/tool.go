@@ -28,11 +28,13 @@ package junit
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
 	"os"
 	"path/filepath"
 )
@@ -48,103 +50,91 @@ type (
 
 //New creates a new  instance of the JUnit Tool.
 //test is the JUnit Test to be run. dir is the location of the submission's tool directory.
-func New(test *Test, toolDir string) (junit *Tool, err error) {
+func New(test *Test, toolDir string) (*Tool, error) {
 	//Load jar locations
-	junitJar, err := config.JUNIT.Path()
-	if err != nil {
-		return
+	j, e := config.JUNIT.Path()
+	if e != nil {
+		return nil, e
 	}
-	antJunit, err := config.ANT_JUNIT.Path()
-	if err != nil {
-		return
+	aj, e := config.ANT_JUNIT.Path()
+	if e != nil {
+		return nil, e
 	}
-	ant, err := config.ANT.Path()
-	if err != nil {
-		return
+	a, e := config.ANT.Path()
+	if e != nil {
+		return nil, e
 	}
-	testDir := filepath.Join(toolDir, test.Id.Hex())
+	td := filepath.Join(toolDir, test.Id.Hex())
 	//Save the test files to the submission's tool directory.
-	t := tool.NewTarget(test.Name, test.Package, testDir, tool.JAVA)
-	err = util.SaveFile(t.FilePath(), test.Test)
-	if err != nil {
-		return
+	t := tool.NewTarget(test.Name, test.Package, td, tool.JAVA)
+	if e = util.SaveFile(t.FilePath(), test.Test); e != nil {
+		return nil, e
 	}
 	if len(test.Data) != 0 {
-		err = util.Unzip(t.PackagePath(), test.Data)
-		if err != nil {
-			return
+		if e = util.Unzip(t.PackagePath(), test.Data); e != nil {
+			return nil, e
 		}
 	}
-	dataLocation := filepath.Join(t.PackagePath(), "data")
-	//This is used to run the JUnit test using ant.
-	runner := tool.NewTarget("TestRunner.java", "testing", toolDir, tool.JAVA)
-	cp := toolDir + ":" + t.Dir + ":" + junitJar + ":" + antJunit + ":" + ant
-	junit = &Tool{
-		cp:           cp,
-		dataLocation: dataLocation,
+	return &Tool{
+		cp:           toolDir + ":" + t.Dir + ":" + j + ":" + aj + ":" + a,
+		dataLocation: filepath.Join(t.PackagePath(), "data"),
 		test:         t,
-		runner:       runner,
-	}
-	return
+		runner:       tool.NewTarget("TestRunner.java", "testing", toolDir, tool.JAVA),
+	}, nil
 }
 
 //Lang is Java
-func (this *Tool) Lang() tool.Language {
+func (t *Tool) Lang() tool.Language {
 	return tool.JAVA
 }
 
-//Name is JUnit
-func (this *Tool) Name() string {
-	return this.test.Name
+func (t *Tool) Name() string {
+	return t.test.Name
 }
 
 //Run runs a JUnit test on the provided Java source file. The source and test files are first
 //compiled and we run the tests via a Java runner class which uses ant to generate XML output.
-func (this *Tool) Run(fileId bson.ObjectId, t *tool.Target) (res tool.ToolResult, err error) {
-	java, err := config.JAVA.Path()
-	if err != nil {
-		return
+func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
+	jp, e := config.JAVA.Path()
+	if e != nil {
+		return nil, e
 	}
-	cp := this.cp
+	cp := t.cp
 	if cp != "" {
 		cp += ":"
 	}
-	cp += t.Dir
-	comp, err := javac.New(cp)
-	if err != nil {
-		return
+	cp += target.Dir
+	c, e := javac.New(cp)
+	if e != nil {
+		return nil, e
 	}
 	//First compile the files
-	_, err = comp.Run(fileId, this.test)
-	if err != nil {
-		return
+	if _, e = c.Run(fileId, t.test); e != nil {
+		return nil, e
 	}
-	_, err = comp.Run(fileId, this.runner)
-	if err != nil {
-		return
+	if _, e = c.Run(fileId, t.runner); e != nil {
+		return nil, e
 	}
 	//Set the arguments
-	outName := this.test.Name + "_junit"
-	outDir := t.PackagePath()
-	outFile := filepath.Join(outDir, this.test.Name+"_junit.xml")
-	args := []string{java, "-cp", cp, this.runner.Executable(),
-		this.test.Executable(), this.dataLocation, outName, outDir}
-	defer os.Remove(outFile)
+	on := t.test.Name + "_junit"
+	od := target.PackagePath()
+	of := filepath.Join(od, t.test.Name+"_junit.xml")
+	a := []string{jp, "-cp", cp, t.runner.Executable(), t.test.Executable(), t.dataLocation, on, od}
+	defer os.Remove(of)
 	//Run the tests and load the result
-	execRes := tool.RunCommand(args, nil)
-	resFile, err := os.Open(outFile)
-	if err == nil {
-		//Tests ran successfully.
-		data := util.ReadBytes(resFile)
-		res, err = NewResult(fileId, this.test.Name, data)
-		if err != nil && execRes.Err != nil {
-			err = execRes.Err
+	r, re := tool.RunCommand(a, nil)
+	rf, e := os.Open(of)
+	if e == nil {
+		nr, e := NewResult(fileId, t.test.Name, util.ReadBytes(rf))
+		if e != nil {
+			if re != nil {
+				e = re
+			}
+			return nil, e
 		}
-	} else if execRes.HasStdErr() {
-		//The Java runner generated an error.
-		err = fmt.Errorf("Could not run junit: %q.", string(execRes.StdErr))
-	} else {
-		err = execRes.Err
+		return nr, nil
+	} else if r.HasStdErr() {
+		return nil, fmt.Errorf("could not run junit: %q.", string(r.StdErr))
 	}
-	return
+	return nil, re
 }

@@ -28,9 +28,13 @@ import (
 	"errors"
 	"fmt"
 
+	"sort"
+	"strings"
+
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/jacoco"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 )
@@ -64,6 +68,8 @@ func LoadChart(resultName string, files []*project.File) (ChartData, error) {
 		switch resultName {
 		case tool.SUMMARY:
 			addAll(c, f)
+		case jacoco.NAME:
+			addSpecial(c, f, resultName)
 		default:
 			addSingle(c, f, resultName)
 		}
@@ -80,7 +86,7 @@ func LoadChart(resultName string, files []*project.File) (ChartData, error) {
 	}
 	for _, l := range ls {
 		v := []*tool.ChartVal{&tool.ChartVal{"Launches", 0.0, l.Id}}
-		c.Add(l, v)
+		c.Add(l.Time, v)
 	}
 	return c.Data, nil
 }
@@ -94,7 +100,7 @@ func addAll(c *Chart, f *project.File) {
 		if e != nil {
 			continue
 		}
-		c.Add(f, r.ChartVals()[:1])
+		c.Add(f.Time, r.ChartVals()[:1])
 	}
 	return
 }
@@ -107,8 +113,37 @@ func addSingle(c *Chart, f *project.File, n string) {
 	if e != nil {
 		return
 	}
-	c.Add(f, r.ChartVals())
+	c.Add(f.Time, r.ChartVals())
 	return
+}
+
+func addSpecial(c *Chart, f *project.File, result string) {
+	for n, rid := range f.Results {
+		if !strings.HasPrefix(n, result) {
+			continue
+		}
+		sp := strings.Split(n, "-")
+		if len(sp) != 2 {
+			continue
+		}
+		fid, e := util.ReadId(sp[1])
+		if e != nil {
+			continue
+		}
+		cf, e := db.File(bson.M{db.ID: fid}, bson.M{db.TIME: 1})
+		if e != nil {
+			continue
+		}
+		if _, e := util.ReadId(rid); e != nil {
+			continue
+		}
+		r, e := db.ChartResult(bson.M{db.ID: rid}, nil)
+		if e != nil {
+			continue
+		}
+		c.Add(cf.Time, r.ChartVals())
+	}
+	sort.Sort(c)
 }
 
 func SubmissionChart(subs []*project.Submission) ChartData {
@@ -217,19 +252,37 @@ func TypeCounts(id interface{}) []int {
 }
 
 //Add inserts new coordinates into data used to display a chart.
-func (c *Chart) Add(f *project.File, vs []*tool.ChartVal) {
+func (c *Chart) Add(t int64, vs []*tool.ChartVal) {
 	if len(vs) == 0 {
 		return
 	}
-	x := util.Round(float64(f.Time-c.start)/1000.0, 2)
+	x := util.Round(float64(t-c.start)/1000.0, 2)
 	for _, v := range vs {
 		p := map[string]interface{}{
 			"x": x, "y": v.Y, "key": v.Name + " " + c.subId,
 			"name": v.Name, "subId": c.subId, "user": c.user,
-			"created": c.start, "time": f.Time,
+			"created": c.start, "time": t,
 		}
 		c.Data = append(c.Data, p)
 	}
+}
+
+func (c *Chart) Len() int {
+	return len(c.Data)
+}
+func (c *Chart) Swap(i, j int) {
+	c.Data[i], c.Data[j] = c.Data[j], c.Data[i]
+}
+func (c *Chart) Less(i, j int) bool {
+	xi, ok := c.Data[i]["x"].(float64)
+	if !ok {
+		return false
+	}
+	xj, ok := c.Data[j]["x"].(float64)
+	if !ok {
+		return true
+	}
+	return xi < xj
 }
 
 //NewChart initialises new chart data.

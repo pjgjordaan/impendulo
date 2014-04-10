@@ -28,10 +28,12 @@ package pmd
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
 	"os"
 	"path/filepath"
 	"strings"
@@ -75,24 +77,24 @@ func (this *Tool) Name() string {
 
 //Run runs PMD on a provided Java source file. PMD writes its output to an XML file which we then read
 //and use to create a PMD Result.
-func (this *Tool) Run(fileId bson.ObjectId, t *tool.Target) (res tool.ToolResult, err error) {
-	outFile := filepath.Join(t.Dir, "pmd.xml")
-	args := []string{this.cmd, "pmd", "-f", "xml", "-stress",
-		"-shortnames", "-R", this.rules, "-r", outFile, "-d", t.Dir}
-	defer os.Remove(outFile)
-	execRes := tool.RunCommand(args, nil)
-	resFile, err := os.Open(outFile)
-	if err == nil {
+func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
+	o := filepath.Join(target.Dir, "pmd.xml")
+	a := []string{t.cmd, "pmd", "-f", "xml", "-stress", "-shortnames", "-R", t.rules, "-r", o, "-d", target.Dir}
+	defer os.Remove(o)
+	r, re := tool.RunCommand(a, nil)
+	rf, e := os.Open(o)
+	if e == nil {
 		//Tests ran successfully.
-		data := util.ReadBytes(resFile)
-		res, err = NewResult(fileId, data)
-		if err != nil && execRes.Err != nil {
-			err = execRes.Err
+		nr, e := NewResult(fileId, util.ReadBytes(rf))
+		if e != nil {
+			if re != nil {
+				e = re
+			}
+			return nil, e
 		}
-	} else if execRes.HasStdErr() {
-		err = fmt.Errorf("Could not run pmd: %q.", string(execRes.StdErr))
-	} else {
-		err = execRes.Err
+		return nr, nil
+	} else if r.HasStdErr() {
+		return nil, fmt.Errorf("Could not run pmd: %q.", string(r.StdErr))
 	}
-	return
+	return nil, re
 }

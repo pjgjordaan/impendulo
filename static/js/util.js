@@ -242,18 +242,30 @@ function addCodeModal(dest, resultId, bug, start, end){
     });
 }
 
-function ajaxChart(subID, file, result, currentTime, nextTime, user, childID, src){
-    var url = 'chart?subid='+subID+'&file='+file+'&result='+result;
-    if(childID !== undefined){
-	url += '&childfileid='+childID;
+function ajaxChart(vals){
+    if(vals.subID === undefined){
+	return;
     }
-    var s = {};
-    if(src !== undefined){
-	s = {'submissions': $('#' + src).val()};
-	$('#'+src).multiselect('uncheckAll');
+    if(vals.file === undefined){
+	return;
     }
-    $.getJSON(url, s, function(data){
-	showChart(name, name, data['chart'], currentTime, nextTime, user);
+    if(vals.result === undefined){
+	return;
+    }
+    var subs = [vals.subID];
+    if(vals.src !== undefined){
+	subs = subs.concat($('#' + vals.src).val());
+	$('#'+vals.src).multiselect('uncheckAll');
+    }
+    var params = {'submissions': subs, 'file': vals.file, 'result': vals.result};
+    if(vals.testfileID !== undefined){
+	params.testfileid = vals.testfileID;
+    }
+    if(vals.srcfileID !== undefined){
+	params.srcfileid = vals.srcfileID;
+    }
+    $.getJSON('chart', params, function(data){
+	showChart(data['chart'], vals.currentTime, vals.nextTime, vals.user);
     });
     return false;
 }

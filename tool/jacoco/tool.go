@@ -2,12 +2,16 @@ package jacoco
 
 import (
 	"bytes"
+
 	"code.google.com/p/go.net/html"
+
 	"encoding/xml"
 	"errors"
+
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,67 +28,58 @@ const (
 	NAME = "Jacoco"
 )
 
-func New(baseDir, srcDir string, test *tool.Target) (t tool.Tool, err error) {
-	resDir := filepath.Join(baseDir, "target")
-	p, err := NewProject("Jacoco Coverage", srcDir, resDir, test)
-	if err != nil {
-		return
+func New(baseDir, srcDir string, test *tool.Target) (tool.Tool, error) {
+	rd := filepath.Join(baseDir, "target")
+	p, e := NewProject("Jacoco Coverage", srcDir, rd, test)
+	if e != nil {
+		return nil, e
 	}
-	data, err := xml.Marshal(p)
-	if err != nil {
-		return
+	d, e := xml.Marshal(p)
+	if e != nil {
+		return nil, e
 	}
-	buildPath := filepath.Join(baseDir, "build.xml")
-	err = util.SaveFile(buildPath, data)
-	if err != nil {
-		return
+	bp := filepath.Join(baseDir, "build.xml")
+	if e = util.SaveFile(bp, d); e != nil {
+		return nil, e
 	}
-	t = &Tool{
-		buildPath: buildPath,
-		resPath:   resDir,
+	return &Tool{
+		buildPath: bp,
+		resPath:   rd,
 		test:      test,
-	}
-	return
+	}, nil
 }
 
-func (this *Tool) Run(fileId bson.ObjectId, target *tool.Target) (res tool.ToolResult, err error) {
-	execRes := tool.RunCommand([]string{"ant", "-f", this.buildPath}, nil)
-	if execRes.Err != nil {
-		err = execRes.Err
-		return
+func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
+	_, e := tool.RunCommand([]string{"ant", "-f", t.buildPath}, nil)
+	if e != nil {
+		return nil, e
 	}
-	xmlPath := filepath.Join(this.resPath, "report", "report.xml")
-	htmlPath := filepath.Join(this.resPath, "report", "html", target.Package, target.FullName()+".html")
-	if !util.Exists(xmlPath) || !util.Exists(htmlPath) {
-		err = errors.New("no report created")
-		util.Log(err, string(execRes.StdErr))
-		return
+	xp := filepath.Join(t.resPath, "report", "report.xml")
+	hp := filepath.Join(t.resPath, "report", "html", target.Package, target.FullName()+".html")
+	if !util.Exists(xp) || !util.Exists(hp) {
+		return nil, errors.New("no report created")
 	}
-	htmlFile, err := os.Open(htmlPath)
-	if err != nil {
-		return
+	hf, e := os.Open(hp)
+	if e != nil {
+		return nil, e
 	}
-	d, err := html.Parse(htmlFile)
-	if err != nil {
-		return
+	d, e := html.Parse(hf)
+	if e != nil {
+		return nil, e
 	}
-	n, err := codeNode(d)
-	if err != nil {
-		return
+	n, e := codeNode(d)
+	if e != nil {
+		return nil, e
 	}
-	code := new(bytes.Buffer)
-	err = html.Render(code, n)
-	if err != nil {
-		return
+	c := new(bytes.Buffer)
+	if e = html.Render(c, n); e != nil {
+		return nil, e
 	}
-	xmlFile, err := os.Open(xmlPath)
-	if err != nil {
-		return
+	xf, e := os.Open(xp)
+	if e != nil {
+		return nil, e
 	}
-	data := util.ReadBytes(xmlFile)
-	res, err = NewResult(fileId, this.test.Name, data, code.Bytes())
-	return
-
+	return NewResult(fileId, t.test.Name, util.ReadBytes(xf), c.Bytes())
 }
 
 func codeNode(d *html.Node) (*html.Node, error) {

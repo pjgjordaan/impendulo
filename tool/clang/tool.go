@@ -38,25 +38,22 @@ func (this *Tool) Name() string {
 	return NAME
 }
 
-func (this *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (res tool.ToolResult, err error) {
-	args := []string{this.cmd, "-Wall", "-Wextra", "-Wno-variadic-macros", "-pedantic", "-O0", "-o", ti.Name, ti.FilePath()}
-	execRes := tool.RunCommand(args, nil)
-	if execRes.Err != nil {
-		if !tool.IsEndError(execRes.Err) {
-			err = execRes.Err
-		} else {
-			//Unsuccessfull compile.
-			res, err = NewResult(fileId, execRes.StdErr)
-			if err == nil {
-				err = tool.NewCompileError(ti.FullName(), string(execRes.StdErr))
-			}
+func (t *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (tool.ToolResult, error) {
+	a := []string{t.cmd, "-Wall", "-Wextra", "-Wno-variadic-macros", "-pedantic", "-O0", "-o", ti.Name, ti.FilePath()}
+	r, e := tool.RunCommand(a, nil)
+	if e != nil {
+		if !tool.IsEndError(e) {
+			return nil, e
 		}
-	} else if execRes.HasStdErr() {
+		//Unsuccessfull compile.
+		nr, e2 = NewResult(fileId, execRes.StdErr)
+		if e2 != nil {
+			return nil, e
+		}
+		return nr, tool.NewCompileError(ti.FullName(), string(r.StdErr))
+	} else if r.HasStdErr() {
 		//Compiler warnings.
-		res, err = NewResult(fileId, execRes.StdErr)
-	} else {
-		res, err = NewResult(fileId, tool.COMPILE_SUCCESS)
+		return NewResult(fileId, r.StdErr)
 	}
-	return
-
+	return NewResult(fileId, tool.COMPILE_SUCCESS)
 }

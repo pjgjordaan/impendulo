@@ -28,11 +28,13 @@ package jpf
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
 	"os"
 	"path/filepath"
 )
@@ -49,99 +51,90 @@ type (
 //New creates a new JPF instance for a given submission. jpfDir is where the
 //Java JPF runner files should be stored for this JPF instance.
 //jpfConfig is the JPF configuration associated with the submission's project.
-func New(jpfConfig *Config, jpfDir string) (jpf *Tool, err error) {
+func New(cfg *Config, jpfDir string) (*Tool, error) {
 	//Load locations
-	runDir, err := config.JPF_RUNNER.Path()
-	if err != nil {
-		return
+	rd, e := config.JPF_RUNNER.Path()
+	if e != nil {
+		return nil, e
 	}
-	jpfJar, err := config.JPF.Path()
-	if err != nil {
-		return
+	jar, e := config.JPF.Path()
+	if e != nil {
+		return nil, e
 	}
-	jpfRunJar, err := config.JPF_RUN.Path()
-	if err != nil {
-		return
+	rjar, e := config.JPF_RUN.Path()
+	if e != nil {
+		return nil, e
 	}
-	gson, err := config.GSON.Path()
-	if err != nil {
-		return
+	g, e := config.GSON.Path()
+	if e != nil {
+		return nil, e
 	}
 	//Copy JPF runner files to the specified location
-	err = util.Copy(jpfDir, runDir)
-	if err != nil {
-		return
+	if e = util.Copy(jpfDir, rd); e != nil {
+		return nil, e
 	}
 	//Save the config file in the same location.
-	jpfPath := filepath.Join(jpfDir, "config.jpf")
-	err = util.SaveFile(jpfPath, jpfConfig.Data)
-	if err != nil {
-		return
+	jp := filepath.Join(jpfDir, "config.jpf")
+	if e = util.SaveFile(jp, cfg.Data); e != nil {
+		return nil, e
 	}
 	//Setup classpath with the required JPF and Json jars.
-	cp := jpfDir + ":" + jpfJar + ":" + jpfRunJar + ":" + gson
+	cp := jpfDir + ":" + jar + ":" + rjar + ":" + g
 	//Compile JPF runner files
-	jpfInfo := tool.NewTarget("JPFRunner.java", "runner", jpfDir, tool.JAVA)
-	pubInfo := tool.NewTarget("ImpenduloPublisher.java", "runner", jpfDir, tool.JAVA)
-	comp, err := javac.New(cp)
-	if err != nil {
-		return
+	jt := tool.NewTarget("JPFRunner.java", "runner", jpfDir, tool.JAVA)
+	pt := tool.NewTarget("ImpenduloPublisher.java", "runner", jpfDir, tool.JAVA)
+	c, e := javac.New(cp)
+	if e != nil {
+		return nil, e
 	}
 	id := bson.NewObjectId()
-	_, err = comp.Run(id, jpfInfo)
-	if err != nil {
-		return
+	if _, e = c.Run(id, jt); e != nil {
+		return nil, e
 	}
-	_, err = comp.Run(id, pubInfo)
-	if err != nil {
-		return
+	if _, e = c.Run(id, pt); e != nil {
+		return nil, e
 	}
-	jpf = &Tool{
-		cp:      cp,
-		jpfPath: jpfPath,
-		exec:    jpfInfo.Executable(),
-	}
-	return
+	return &Tool{cp: cp, jpfPath: jp, exec: jt.Executable()}, nil
 }
 
 //Lang is Java
-func (this *Tool) Lang() tool.Language {
+func (t *Tool) Lang() tool.Language {
 	return tool.JAVA
 }
 
 //Name is JPF
-func (this *Tool) Name() string {
+func (t *Tool) Name() string {
 	return NAME
 }
 
 //Run runs JPF on a specified Java source file. It uses the Java class runner.JPFRunner to
 //actually run JPF on the source file. If the command was successful, the
 //results are read in from a xml file.
-func (this *Tool) Run(fileId bson.ObjectId, t *tool.Target) (res tool.ToolResult, err error) {
+func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
 	//Load arguments
-	java, err := config.JAVA.Path()
-	if err != nil {
-		return
+	jp, e := config.JAVA.Path()
+	if e != nil {
+		return nil, e
 	}
-	outFile := filepath.Join(t.Dir, "jpf")
-	args := []string{java, "-cp", t.Dir + ":" + this.cp, this.exec,
-		this.jpfPath, t.Executable(), t.Dir, outFile}
-	outFile = outFile + ".xml"
-	defer os.Remove(outFile)
+	o := filepath.Join(target.Dir, "jpf")
+	a := []string{jp, "-cp", target.Dir + ":" + t.cp, t.exec, t.jpfPath, target.Executable(), target.Dir, o}
+	o = o + ".xml"
+	defer os.Remove(o)
 	//Run JPF and load result
-	execRes := tool.RunCommand(args, nil)
-	resFile, err := os.Open(outFile)
-	if err == nil {
+	r, re := tool.RunCommand(a, nil)
+	rf, e := os.Open(o)
+	if e == nil {
 		//Tests ran successfully.
-		data := util.ReadBytes(resFile)
-		res, err = NewResult(fileId, data)
-		if err != nil && execRes.Err != nil {
-			err = execRes.Err
+		nr, e := NewResult(fileId, util.ReadBytes(rf))
+		if e != nil {
+			if re != nil {
+				e = re
+			}
+			return nil, e
 		}
-	} else if execRes.HasStdErr() {
-		err = fmt.Errorf("Could not execute jpf runner: %q.", string(execRes.StdErr))
-	} else {
-		err = execRes.Err
+		return nr, nil
+	} else if r.HasStdErr() {
+		return nil, fmt.Errorf("could not execute jpf runner: %q", string(r.StdErr))
 	}
-	return
+	return nil, re
 }

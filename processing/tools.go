@@ -241,12 +241,7 @@ func UserJUnit(p *Processor) ([]tool.Tool, error) {
 	}
 	js := make([]tool.Tool, 0, len(ts))
 	for _, t := range ts {
-		j, e := junit_user.New(t, p.toolDir)
-		if e != nil {
-			util.Log(e, LOG_TOOLS)
-		} else {
-			js = append(js, j)
-		}
+		js = append(js, junit_user.New(t, p.toolDir))
 	}
 	return js, nil
 }

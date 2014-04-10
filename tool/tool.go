@@ -51,7 +51,6 @@ type (
 	//ExecResult is the result of RunCommand.
 	ExecResult struct {
 		StdOut, StdErr []byte
-		Err            error
 	}
 	Language string
 )
@@ -109,8 +108,7 @@ func (e *ExecResult) HasStdOut() bool {
 //RunCommand executes a given command given by args and stdin. It terminates
 //when the command finishes execution or times out. An ExecResult containing the
 //command's output is returned.
-func RunCommand(args []string, stdin io.Reader) (r *ExecResult) {
-	r = new(ExecResult)
+func RunCommand(args []string, stdin io.Reader) (*ExecResult, error) {
 	c := exec.Command(args[0], args[1:]...)
 	c.Stdin = stdin
 	var so, se bytes.Buffer
@@ -120,8 +118,7 @@ func RunCommand(args []string, stdin io.Reader) (r *ExecResult) {
 		e = c.Start()
 	}
 	if e != nil {
-		r.Err = &StartError{args, e}
-		return
+		return nil, &StartError{args, e}
 	}
 	d := make(chan error)
 	go func() {
@@ -130,12 +127,11 @@ func RunCommand(args []string, stdin io.Reader) (r *ExecResult) {
 	select {
 	case <-time.After(timeLimit):
 		c.Process.Kill()
-		r.Err = &TimeoutError{args}
+		return nil, &TimeoutError{args}
 	case e := <-d:
 		if e != nil {
-			r.Err = &EndError{args, e, string(se.Bytes())}
+			e = &EndError{args, e, string(se.Bytes())}
 		}
-		r.StdOut, r.StdErr = so.Bytes(), se.Bytes()
+		return &ExecResult{StdOut: so.Bytes(), StdErr: se.Bytes()}, e
 	}
-	return
 }

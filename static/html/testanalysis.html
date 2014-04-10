@@ -11,6 +11,24 @@
 {{$tc := chartTime (index .files .ctx.Browse.Current)}}
 {{$tn := chartTime (index .files .ctx.Browse.Next)}}
 {{$showChart := hasChart $currentResult $nextResult}}
+{{$test := .ctx.Browse.Test}}
+<script>
+  var isTest = {{$test}} === {{.ctx.Browse.File}};
+  var chartParams = {};
+  chartParams.subID = {{.ctx.Browse.Sid.Hex}};
+  chartParams.file = {{$test}};
+  if(isTest){
+  chartParams.result = {{.ctx.Browse.Result}};
+  chartParams.srcfileID = {{$currentFile.Id.Hex}};
+  }else{
+  chartParams.result = {{.ctx.Browse.Result}};
+  chartParams.testfileID = {{$currentFile.Id.Hex}};
+  }
+  chartParams.user = {{.ctx.Browse.Uid}};
+  chartParams.currentTime = {{chartTime (index .files .ctx.Browse.Current)}};
+  chartParams.nextTime = {{chartTime (index .files .ctx.Browse.Next)}};
+  chartParams.src = 'submissions';
+</script>
 <div class="row">
   <div class="col-md-3">
   </div>
@@ -32,7 +50,7 @@
       addPopover('codepopoverlink', 'code_wrapper');
     </script>
     {{if $showChart}}
-    <form class="form-inline centered" role="form" onsubmit="return ajaxChart({{.ctx.Browse.Sid.Hex}},{{.ctx.Browse.File}},{{.ctx.Browse.Result}},{{$tc}},{{$tn}},{{.ctx.Browse.Uid}},{{$currentFile.Id.Hex}},'submissions')">
+    <form class="form-inline centered" role="form" onsubmit="return ajaxChart(chartParams)">
       <div class="form-group">
 	<label class="sr-only" for="submissions">Submissions</label>
 	<select class="form-control select-inline" name="submissions" id="submissions" multiple>
@@ -43,6 +61,7 @@
       </button>
     </form>
     <script type="text/javascript" language="javascript">
+      $('#submissions').multiselect();
       window.onload = function()
       {
       addSubmissions({{.ctx.Browse.Pid.Hex}}, 'submissions');
@@ -57,7 +76,7 @@
 <div id="chartHolder">
 </div>
 <script>
-  ajaxChart({{.ctx.Browse.Sid.Hex}},{{.ctx.Browse.File}},{{.ctx.Browse.Result}},{{$tc}},{{$tn}},{{.ctx.Browse.Uid}},{{$currentFile.Id.Hex}});
+  ajaxChart(chartParams);
 </script>
 {{end}}
 {{$sliced := slice $childFiles $current}}

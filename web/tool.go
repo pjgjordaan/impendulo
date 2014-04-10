@@ -28,6 +28,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
@@ -45,6 +46,7 @@ import (
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
 	"net/http"
 	"strings"
 )
@@ -96,367 +98,313 @@ func configTools() []string {
 }
 
 //tools
-func tools(projectId bson.ObjectId) (ret []string, err error) {
-	project, err := db.Project(bson.M{db.ID: projectId}, nil)
-	if err != nil {
-		return
+func tools(pid bson.ObjectId) ([]string, error) {
+	p, e := db.Project(bson.M{db.ID: pid}, nil)
+	if e != nil {
+		return nil, e
 	}
-	switch tool.Language(project.Lang) {
+	switch tool.Language(p.Lang) {
 	case tool.JAVA:
-		ret = []string{pmd.NAME, findbugs.NAME, checkstyle.NAME, javac.NAME}
-		_, jerr := db.JPFConfig(bson.M{db.PROJECTID: projectId}, bson.M{db.ID: 1})
-		if jerr == nil {
-			ret = append(ret, jpf.NAME)
+		ts := []string{pmd.NAME, findbugs.NAME, checkstyle.NAME, javac.NAME}
+		if _, e := db.JPFConfig(bson.M{db.PROJECTID: pid}, bson.M{db.ID: 1}); e == nil {
+			ts = append(ts, jpf.NAME)
 		}
-		tests, terr := db.JUnitTests(bson.M{db.PROJECTID: projectId}, bson.M{db.NAME: 1})
-		if terr == nil {
-			for _, test := range tests {
-				name, _ := util.Extension(test.Name)
-				ret = append(ret, name)
+		if db.Contains(db.TESTS, bson.M{db.PROJECTID: pid, db.TYPE: junit.USER}) {
+			ts = append(ts, jacoco.NAME)
+		}
+		js, e := db.JUnitTests(bson.M{db.PROJECTID: pid}, bson.M{db.NAME: 1})
+		if e == nil {
+			for _, j := range js {
+				n, _ := util.Extension(j.Name)
+				ts = append(ts, n)
 			}
 		}
-		if db.Contains(db.TESTS, bson.M{db.PROJECTID: projectId, db.TYPE: junit.USER}) {
-			ret = append(ret, jacoco.NAME)
-		}
+		return ts, nil
 	case tool.C:
-		ret = []string{mk.NAME, gcc.NAME}
+		return []string{mk.NAME, gcc.NAME}, nil
 	default:
-		err = fmt.Errorf("Unknown language %s.", project.Lang)
+		return nil, fmt.Errorf("unknown language %s", p.Lang)
 	}
-	return
 }
 
 //CreateCheckstyle
-func CreateCheckstyle(req *http.Request, ctx *Context) (msg string, err error) {
-	return
+func CreateCheckstyle(r *http.Request, c *Context) (string, error) {
+	return "", nil
 }
 
 //CreateFindbugs
-func CreateFindbugs(req *http.Request, ctx *Context) (msg string, err error) {
-	return
+func CreateFindbugs(r *http.Request, c *Context) (string, error) {
+	return "", nil
 }
 
-func CreateMake(req *http.Request, ctx *Context) (msg string, err error) {
-	projectId, msg, err := getProjectId(req)
-	if err != nil {
-		return
+func CreateMake(r *http.Request, c *Context) (string, error) {
+	pid, m, e := getProjectId(r)
+	if e != nil {
+		return m, e
 	}
-	_, data, err := ReadFormFile(req, "makefile")
-	if err != nil {
-		msg = "Could not read Makefile."
-		return
+	_, d, e := ReadFormFile(r, "makefile")
+	if e != nil {
+		return "Could not read Makefile.", e
 	}
-	makefile := mk.NewMakefile(projectId, data)
-	err = db.AddMakefile(makefile)
-	if err != nil {
-		msg = "Could not create Makefile."
-	} else {
-		msg = "Successfully created Makefile."
+	mf := mk.NewMakefile(pid, d)
+	if e = db.AddMakefile(mf); e != nil {
+		return "Could not create Makefile.", e
 	}
-	return
+	return "Successfully created Makefile.", nil
 }
 
 //CreateJUnit adds a new JUnit test for a given project.
-func CreateJUnit(req *http.Request, ctx *Context) (msg string, err error) {
-	projectId, msg, err := getProjectId(req)
-	if err != nil {
-		return
+func CreateJUnit(r *http.Request, c *Context) (string, error) {
+	pid, m, e := getProjectId(r)
+	if e != nil {
+		return m, e
 	}
-	tipe, msg, err := getTestType(req)
-	if err != nil {
-		return
+	t, e := getTestType(r)
+	if e != nil {
+		return e.Error(), e
 	}
-	testName, testBytes, err := ReadFormFile(req, "test")
-	if err != nil {
-		msg = "Could not read JUnit file."
-		return
+	n, b, e := ReadFormFile(r, "test")
+	if e != nil {
+		return "Could not read JUnit file.", e
 	}
 	//A test does not always need data files.
-	hasData := req.FormValue("data-check")
-	var dataBytes []byte
-	if hasData == "" {
-		dataBytes = make([]byte, 0)
-	} else if hasData == "true" {
-		_, dataBytes, err = ReadFormFile(req, "data")
-		if err != nil {
-			msg = "Could not read data file."
-			return
+	var d []byte
+	if r.FormValue("data-check") == "true" {
+		_, d, e = ReadFormFile(r, "data")
+		if e != nil {
+			return "Could not read data file.", e
 		}
+	} else {
+		d = make([]byte, 0)
 	}
-	//Read package name from file.
-	pkg := util.GetPackage(bytes.NewReader(testBytes))
-	test := junit.NewTest(projectId, testName, pkg, tipe, testBytes, dataBytes)
-	err = db.AddJUnitTest(test)
-	return
+	return "", db.AddJUnitTest(junit.NewTest(pid, n, util.GetPackage(bytes.NewReader(b)), t, b, d))
 }
 
 //AddJPF replaces a project's JPF configuration with a provided configuration file.
-func AddJPF(req *http.Request, ctx *Context) (msg string, err error) {
-	projectId, msg, err := getProjectId(req)
-	if err != nil {
-		return
+func AddJPF(r *http.Request, c *Context) (string, error) {
+	pid, m, e := getProjectId(r)
+	if e != nil {
+		return m, e
 	}
-	_, data, err := ReadFormFile(req, "jpf")
-	if err != nil {
-		msg = "Could not read JPF configuration file."
-		return
+	_, d, e := ReadFormFile(r, "jpf")
+	if e != nil {
+		return "Could not read JPF configuration file.", e
 	}
-	jpfConfig := jpf.NewConfig(projectId, data)
-	err = db.AddJPFConfig(jpfConfig)
-	return
+	return "", db.AddJPFConfig(jpf.NewConfig(pid, d))
 }
 
 //CreateJPF replaces a project's JPF configuration with a new, provided configuration.
-func CreateJPF(req *http.Request, ctx *Context) (msg string, err error) {
-	projectId, msg, err := getProjectId(req)
-	if err != nil {
-		return
+func CreateJPF(r *http.Request, c *Context) (string, error) {
+	pid, m, e := getProjectId(r)
+	if e != nil {
+		return m, e
 	}
 	//Read JPF properties.
-	vals, err := readProperties(req)
-	if err != nil {
-		msg = err.Error()
-		return
+	ps, e := readProperties(r)
+	if e != nil {
+		return e.Error(), e
 	}
 	//Convert to JPF property file style.
-	data, err := jpf.JPFBytes(vals)
-	if err != nil {
-		msg = "Could not create JPF configuration."
-		return
+	d, e := jpf.JPFBytes(ps)
+	if e != nil {
+		return "Could not create JPF configuration.", e
 	}
-	//Save to db.
-	jpfConfig := jpf.NewConfig(projectId, data)
-	err = db.AddJPFConfig(jpfConfig)
-	if err != nil {
-		msg = "Could not create JPF configuration."
-	} else {
-		msg = "Successfully created JPF configuration."
+	if e = db.AddJPFConfig(jpf.NewConfig(pid, d)); e != nil {
+		return "Could not create JPF configuration.", e
 	}
-	return
+	return "Successfully created JPF configuration.", nil
 }
 
 //readProperties reads JPF properties from a raw string and stores them in a map.
-func readProperties(req *http.Request) (vals map[string][]string, err error) {
-	vals = make(map[string][]string)
+func readProperties(r *http.Request) (map[string][]string, error) {
+	p := make(map[string][]string)
 	//Read configured listeners and search.
-	listeners, getErr := GetStrings(req, "addedlisteners")
-	if getErr == nil {
-		vals["listener"] = listeners
+	al, e := GetStrings(r, "addedlisteners")
+	if e == nil {
+		p["listener"] = al
 	}
-	search, getErr := GetString(req, "addedsearches")
-	if getErr == nil {
-		vals["search.class"] = []string{search}
+	s, e := GetString(r, "addedsearches")
+	if e == nil {
+		p["search.class"] = []string{s}
 	}
-	other, getErr := GetString(req, "other")
-	if getErr != nil {
-		return
+	o, e := GetString(r, "other")
+	if e != nil {
+		return p, nil
 	}
-	lines := strings.Split(other, "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if len(line) == 0 {
+	ls := strings.Split(o, "\n")
+	for _, l := range ls {
+		l = strings.TrimSpace(l)
+		if len(l) == 0 {
 			continue
 		}
-		err = readProperty(line, vals)
-		if err != nil {
-			return
+		if e = readProperty(l, p); e != nil {
+			return nil, e
 		}
 	}
-	return
+	return p, nil
 }
 
-func readProperty(line string, props map[string][]string) (err error) {
-	params := strings.Split(util.RemoveEmpty(line), "=")
-	if len(params) != 2 {
-		err = fmt.Errorf("Invalid JPF property %s.", line)
-		return
+func readProperty(line string, props map[string][]string) error {
+	ps := strings.Split(util.RemoveEmpty(line), "=")
+	if len(ps) != 2 {
+		return fmt.Errorf("invalid JPF property %s", line)
 	}
-	key, val := params[0], params[1]
-	if len(key) == 0 {
-		err = errors.New("JPF key cannot be empty.")
-		return
+	k, v := ps[0], ps[1]
+	if len(k) == 0 {
+		return errors.New("JPF key cannot be empty")
 	}
-	if len(val) == 0 {
-		err = fmt.Errorf("JPF value for %s cannot be empty.", key)
-		return
+	if len(v) == 0 {
+		return fmt.Errorf("JPF value for %s cannot be empty", k)
 	}
-	if !jpf.Allowed(key) {
-		err = fmt.Errorf("Cannot set JPF property for %s.", key)
-		return
+	if !jpf.Allowed(k) {
+		return fmt.Errorf("cannot set JPF property for %s", k)
 	}
-	split := strings.Split(val, ",")
-	vals := make([]string, 0, len(split))
-	for _, v := range split {
-		if v != "" {
-			vals = append(vals, v)
+	sp := strings.Split(v, ",")
+	vs := make([]string, 0, len(sp))
+	for _, s := range sp {
+		if s != "" {
+			vs = append(vs, s)
 		}
 	}
-	if v, ok := props[key]; ok {
-		props[key] = append(v, vals...)
+	if v, ok := props[k]; ok {
+		props[k] = append(v, vs...)
 	} else {
-		props[key] = vals
+		props[k] = vs
 	}
-	return
+	return nil
 }
 
 //CreatePMD creates PMD rules for a project from a provided list.
-func CreatePMD(req *http.Request, ctx *Context) (msg string, err error) {
-	projectId, msg, err := getProjectId(req)
-	if err != nil {
-		return
+func CreatePMD(r *http.Request, c *Context) (string, error) {
+	pid, m, e := getProjectId(r)
+	if e != nil {
+		return m, e
 	}
-	rules, err := GetStrings(req, "ruleid")
-	if err != nil {
-		msg = "Could not read rules."
-		return
+	s, e := GetStrings(r, "ruleid")
+	if e != nil {
+		return "Could not read rules.", e
 	}
-	pmdRules, err := pmd.NewRules(projectId, util.ToSet(rules))
-	if err != nil {
-		msg = "Could not create rules."
-		return
+	rs, e := pmd.NewRules(pid, util.ToSet(s))
+	if e != nil {
+		return "Could not create rules.", e
 	}
-	err = db.AddPMDRules(pmdRules)
-	if err != nil {
-		msg = "Could not add rules."
-	} else {
-		msg = "Successfully added rules."
+	if e = db.AddPMDRules(rs); e != nil {
+		return "Could not add rules.", e
 	}
-	return
+	return "Successfully added rules.", nil
 }
 
 //RunTools runs a tool on submissions in a given project.
 //Previous results are deleted if the user has specified that the tool
-//should be rerun on all fi
-func RunTools(req *http.Request, ctx *Context) (msg string, err error) {
-	projectId, msg, err := getProjectId(req)
-	if err != nil {
-		return
+//should be rerun on all files.
+func RunTools(r *http.Request, c *Context) (string, error) {
+	pid, m, e := getProjectId(r)
+	if e != nil {
+		return m, e
 	}
-	tools, err := GetStrings(req, "tools")
-	if err != nil {
-		msg = "Could not read tool."
-		return
+	ts, e := GetStrings(r, "tools")
+	if e != nil {
+		return "Could not read tool.", e
 	}
-	users, err := GetStrings(req, "users")
-	if err != nil {
-		msg = "Could not read tool."
-		return
+	us, e := GetStrings(r, "users")
+	if e != nil {
+		return "Could not read tool.", e
 	}
-	matcher := bson.M{db.PROJECTID: projectId, db.USER: bson.M{db.IN: users}}
-	submissions, err := db.Submissions(matcher, bson.M{db.ID: 1})
-	if err != nil {
-		msg = "Could not retrieve submissions."
-		return
+	ss, e := db.Submissions(bson.M{db.PROJECTID: pid, db.USER: bson.M{db.IN: us}}, bson.M{db.ID: 1})
+	if e != nil {
+		return "Could not retrieve submissions.", e
 	}
-	var runAll bool
-	if req.FormValue("runempty-check") == "true" {
-		runAll = false
-	} else {
-		runAll = true
-	}
-	childTools := make([]string, 0, len(tools))
-	baseTools := make([]string, 0, len(tools))
-	for _, t := range tools {
-		if isChildTool(t, projectId) {
-			childTools = append(childTools, t)
+	ct := make([]string, 0, len(ts))
+	bt := make([]string, 0, len(ts))
+	for _, t := range ts {
+		if isChildTool(t, pid) {
+			ct = append(ct, t)
 		} else {
-			baseTools = append(baseTools, t)
+			bt = append(bt, t)
 		}
 	}
-	redoSubmissions(submissions, baseTools, childTools, runAll)
-	msg = "Successfully started running tools on submissions."
-	return
+	redoSubmissions(ss, bt, ct, r.FormValue("runempty-check") != "true")
+	return "Successfully started running tools on submissions.", nil
 }
 
-func isChildTool(name string, projectId bson.ObjectId) bool {
-	return name == jacoco.NAME || db.Contains(db.TESTS, bson.M{db.PROJECTID: projectId, db.NAME: name})
+func isChildTool(n string, pid bson.ObjectId) bool {
+	return n == jacoco.NAME || db.Contains(db.TESTS, bson.M{db.PROJECTID: pid, db.NAME: n})
 }
 
 func redoSubmissions(submissions []*project.Submission, tools, childTools []string, runAll bool) {
-	selector := bson.M{db.DATA: 0}
-	for _, submission := range submissions {
+	for _, s := range submissions {
 		var srcs []*project.File
-		var err error
+		var e error
 		if len(childTools) > 0 {
-			srcs, err = db.Files(bson.M{db.SUBID: submission.Id, db.TYPE: project.SRC}, bson.M{db.ID: 1})
-			if err != nil {
-				util.Log(err)
+			srcs, e = db.Files(bson.M{db.SUBID: s.Id, db.TYPE: project.SRC}, bson.M{db.ID: 1})
+			if e != nil {
+				util.Log(e)
 			}
 		}
-		matcher := bson.M{db.SUBID: submission.Id}
-		files, err := db.Files(matcher, selector)
-		if err != nil {
-			util.Log(err)
+		fs, e := db.Files(bson.M{db.SUBID: s.Id}, bson.M{db.DATA: 0})
+		if e != nil {
+			util.Log(e)
 			continue
 		}
-		for _, file := range files {
-			runTools(file, tools, runAll)
-			if file.Type == project.TEST && len(childTools) > 0 {
-				runChildTools(file, srcs, childTools, runAll)
+		for _, f := range fs {
+			runTools(f, tools, runAll)
+			if f.Type == project.TEST && len(childTools) > 0 {
+				runChildTools(f, srcs, childTools, runAll)
 			}
 		}
-		err = processing.RedoSubmission(submission.Id)
-		if err != nil {
-			util.Log(err)
+		if e = processing.RedoSubmission(s.Id); e != nil {
+			util.Log(e)
 		}
 	}
 }
 
-func runTools(file *project.File, tools []string, runAll bool) (err error) {
-	for _, t := range tools {
-		resultVal, ok := file.Results[t]
+func runTools(f *project.File, ts []string, runAll bool) {
+	for _, t := range ts {
+		v, ok := f.Results[t]
 		if !ok {
 			continue
 		}
-		resultId, isId := resultVal.(bson.ObjectId)
+		rid, isId := v.(bson.ObjectId)
 		if !runAll && isId {
 			continue
 		}
-		delete(file.Results, t)
+		delete(f.Results, t)
 		if !isId {
 			continue
 		}
-		err = db.RemoveById(db.RESULTS, resultId)
-		if err != nil {
-			util.Log(err)
+		if e := db.RemoveById(db.RESULTS, rid); e != nil {
+			util.Log(e)
 		}
 	}
-	change := bson.M{db.SET: bson.M{db.RESULTS: file.Results}}
-	err = db.Update(db.FILES, bson.M{db.ID: file.Id}, change)
-	if err != nil {
-		util.Log(err)
+	if e := db.Update(db.FILES, bson.M{db.ID: f.Id}, bson.M{db.SET: bson.M{db.RESULTS: f.Results}}); e != nil {
+		util.Log(e)
 	}
-	return
 }
 
-func runChildTools(test *project.File, srcs []*project.File, childTools []string, runAll bool) (err error) {
+func runChildTools(test *project.File, srcs []*project.File, childTools []string, runAll bool) {
 	for _, s := range srcs {
 		for _, t := range childTools {
-			key := t + "-" + s.Id.Hex()
-			resultVal, ok := test.Results[key]
+			k := t + "-" + s.Id.Hex()
+			v, ok := test.Results[k]
 			if !ok {
 				continue
 			}
-			resultId, isId := resultVal.(bson.ObjectId)
+			rid, isId := v.(bson.ObjectId)
 			if !runAll && isId {
 				continue
 			}
-			delete(test.Results, key)
+			delete(test.Results, k)
 			if !isId {
 				continue
 			}
-			err = db.RemoveById(db.RESULTS, resultId)
-			if err != nil {
-				util.Log(err)
+			if e := db.RemoveById(db.RESULTS, rid); e != nil {
+				util.Log(e)
 			}
 		}
 	}
-	change := bson.M{db.SET: bson.M{db.RESULTS: test.Results}}
-	err = db.Update(db.FILES, bson.M{db.ID: test.Id}, change)
-	if err != nil {
-		util.Log(err)
+	if e := db.Update(db.FILES, bson.M{db.ID: test.Id}, bson.M{db.SET: bson.M{db.RESULTS: test.Results}}); e != nil {
+		util.Log(e)
 	}
-	return
 }
 
 //GetResult retrieves a DisplayResult for a given file and result name.
@@ -512,31 +460,30 @@ func GetResult(name string, fileId bson.ObjectId) (tool.DisplayResult, error) {
 	return tool.NewErrorResult(tool.NORESULT, name), nil
 }
 
-func GetTestResult(toolName, suffix string, fileId bson.ObjectId) (tool.DisplayResult, error) {
-	var name string
+func GetChildResult(toolName, suffix string, fileId bson.ObjectId) (tool.DisplayResult, error) {
+	var n string
 	switch toolName {
 	case junit.NAME:
-		f, err := db.File(bson.M{db.ID: fileId}, nil)
-		if err != nil {
-			return nil, err
+		f, e := db.File(bson.M{db.ID: fileId}, nil)
+		if e != nil {
+			return nil, e
 		}
-		name, _ = util.Extension(f.Name)
+		n, _ = util.Extension(f.Name)
 	case jacoco.NAME:
-		name = jacoco.NAME
+		n = jacoco.NAME
 	default:
 		return nil, fmt.Errorf("unsupported tool %s", toolName)
 	}
-	name += "-" + suffix
-	matcher := bson.M{db.ID: fileId}
-	f, err := db.File(matcher, nil)
-	if err != nil {
-		return nil, err
+	n += "-" + suffix
+	f, e := db.File(bson.M{db.ID: fileId}, nil)
+	if e != nil {
+		return nil, e
 	}
-	ival, ok := f.Results[name]
+	i, ok := f.Results[n]
 	if !ok {
-		return tool.NewErrorResult(tool.NORESULT, toolName), err
+		return tool.NewErrorResult(tool.NORESULT, toolName), nil
 	}
-	switch v := ival.(type) {
+	switch v := i.(type) {
 	case bson.ObjectId:
 		//Retrieve result from the db.
 		return db.DisplayResult(bson.M{db.ID: v}, nil)

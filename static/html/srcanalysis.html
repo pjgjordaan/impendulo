@@ -5,9 +5,17 @@
   <small>tool</small> {{$resultName}}
 </h4>
 {{if hasChart .currentResult .nextResult}}
-{{$tc := chartTime (index .files .ctx.Browse.Current)}}
-{{$tn := chartTime (index .files .ctx.Browse.Next)}}
-<form class="form-inline centered" role="form" onsubmit="return ajaxChart({{.ctx.Browse.Sid.Hex}},{{.ctx.Browse.File}},{{.ctx.Browse.Result}},{{$tc}},{{$tn}},{{.ctx.Browse.Uid}},{{.currentFile.Id.Hex}},'submissions')">
+<script>
+  var chartParams = {};
+  chartParams.subID = {{.ctx.Browse.Sid.Hex}};
+  chartParams.file = {{$fileName}};
+  chartParams.result = {{.ctx.Browse.Result}};
+  chartParams.user = {{.ctx.Browse.Uid}};
+  chartParams.currentTime = {{chartTime (index .files .ctx.Browse.Current)}};
+  chartParams.nextTime = {{chartTime (index .files .ctx.Browse.Next)}};
+  chartParams.src = 'submissions';
+</script>
+<form class="form-inline centered" role="form" onsubmit="return ajaxChart(chartParams)">
   <div class="form-group">
     <label class="sr-only" for="submissions">Submissions</label>
     <select class="form-control select-inline" name="submissions" id="submissions" multiple>
@@ -18,6 +26,7 @@
   </button>
 </form>
 <script type="text/javascript" language="javascript">
+  $('#submissions').multiselect();
   window.onload = function()
   {
   addSubmissions({{.ctx.Browse.Pid.Hex}}, 'submissions');
@@ -26,7 +35,7 @@
 <div id="chartHolder">
 </div>
 <script>
-  ajaxChart({{.ctx.Browse.Sid.Hex}},{{.ctx.Browse.File}},{{.ctx.Browse.Result}},{{$tc}},{{$tn}},{{.ctx.Browse.Uid}});
+  ajaxChart(chartParams);
 </script>
 {{end}}
 {{if (eq $resultName "Diff")}}

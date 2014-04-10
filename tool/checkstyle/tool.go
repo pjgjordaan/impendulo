@@ -28,10 +28,12 @@ package checkstyle
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
 	"os"
 	"path/filepath"
 )
@@ -74,26 +76,24 @@ func (this *Tool) Name() string {
 
 //Run runs checkstyle on the provided Java file. We make use of the configured Checkstyle configuration file.
 //Output is written to an xml file which is then read in and used to create a Checkstyle Result.
-func (this *Tool) Run(fileId bson.ObjectId, t *tool.Target) (res tool.ToolResult, err error) {
-	outFile := filepath.Join(t.Dir, "checkstyle.xml")
-	args := []string{this.java, "-jar", this.cmd,
-		"-f", "xml", "-c", this.cfg,
-		"-o", outFile, "-r", t.Dir}
-	defer os.Remove(outFile)
-	execRes := tool.RunCommand(args, nil)
-	resFile, err := os.Open(outFile)
-	if err == nil {
+func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
+	o := filepath.Join(target.Dir, "checkstyle.xml")
+	a := []string{t.java, "-jar", t.cmd, "-f", "xml", "-c", t.cfg, "-o", o, "-r", target.Dir}
+	defer os.Remove(o)
+	r, re := tool.RunCommand(a, nil)
+	rf, e := os.Open(o)
+	if e == nil {
 		//Tests ran successfully.
-		data := util.ReadBytes(resFile)
-		res, err = NewResult(fileId, data)
-		if err != nil && execRes.Err != nil {
-			err = execRes.Err
+		nr, e := NewResult(fileId, util.ReadBytes(rf))
+		if e != nil {
+			if re != nil {
+				e = re
+			}
+			return nil, e
 		}
-	} else if execRes.HasStdErr() {
-		err = fmt.Errorf("Could not run checkstyle: %q.",
-			string(execRes.StdErr))
-	} else {
-		err = execRes.Err
+		return nr, nil
+	} else if r.HasStdErr() {
+		return nil, fmt.Errorf("could not run checkstyle: %q", string(r.StdErr))
 	}
-	return
+	return nil, re
 }
