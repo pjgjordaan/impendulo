@@ -33,11 +33,7 @@ import (
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/tool/diff"
-	"github.com/godfried/impendulo/tool/jacoco"
-	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/jpf"
-	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
@@ -58,6 +54,7 @@ type (
 
 var (
 	funcs = template.FuncMap{
+		"databases":       db.Databases,
 		"projectName":     projectName,
 		"date":            util.Date,
 		"setBreaks":       func(s string) template.HTML { return template.HTML(setBreaks(s)) },
@@ -94,7 +91,7 @@ var (
 		"langProjects": func(l string) ([]*project.Project, error) {
 			return db.Projects(bson.M{db.LANG: l}, nil, db.NAME)
 		},
-		"analysisNames":         analysisNames,
+		"resultNames":           func(sid bson.ObjectId, n string) ([]*db.MRID, error) { return db.ResultNames(sid, n) },
 		"users":                 func() ([]*user.User, error) { return db.Users(nil, user.ID) },
 		"skeletons":             skeletons,
 		"getFiles":              func(sid bson.ObjectId) string { return fmt.Sprintf("getfiles?subid=%s", sid.Hex()) },
@@ -102,7 +99,6 @@ var (
 		"getProjectChart":       func(pid bson.ObjectId) string { return fmt.Sprintf("getsubmissionschart?projectid=%s", pid.Hex()) },
 		"getUserSubmissions":    func(u string) string { return fmt.Sprintf("getsubmissions?userid=%s", u) },
 		"getProjectSubmissions": func(pid bson.ObjectId) string { return fmt.Sprintf("getsubmissions?projectid=%s", pid.Hex()) },
-		"collections":           db.Collections,
 		"overviewChart":         overviewChart,
 		"typeCounts":            TypeCounts,
 		"editables":             func() []string { return []string{"Project", "User", "Submission", "File"} },
@@ -117,9 +113,7 @@ var (
 )
 
 const (
-	PAGER_SIZE      = 10
-	testView   view = iota
-	analysisView
+	PAGER_SIZE = 10
 )
 
 func chartTime(f *project.File) (float64, error) {
@@ -128,26 +122,6 @@ func chartTime(f *project.File) (float64, error) {
 		return -1.0, e
 	}
 	return util.Round(float64(f.Time-s.Time)/1000.0, 2), nil
-}
-
-func analysisNames(pid bson.ObjectId, t project.Type) ([]string, error) {
-	switch t {
-	case project.TEST:
-		return resultNames(pid, testView)
-	case project.SRC:
-		return resultNames(pid, analysisView)
-	}
-	return nil, fmt.Errorf("unsupported file type %s", t)
-}
-
-func resultNames(pid bson.ObjectId, v view) ([]string, error) {
-	switch v {
-	case testView:
-		return []string{javac.NAME, tool.CODE, diff.NAME, junit.NAME, jacoco.NAME}, nil
-	case analysisView:
-		return db.AllResultNames(pid)
-	}
-	return nil, fmt.Errorf("unsupported view type %d", v)
 }
 
 func submissionLang(sid bson.ObjectId) (string, error) {

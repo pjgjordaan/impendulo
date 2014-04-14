@@ -30,14 +30,13 @@ package diff
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 
 	"html/template"
-	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -48,20 +47,16 @@ func Diff(orig, change string) (string, error) {
 	if e != nil {
 		return "", e
 	}
-	b, e := util.BaseDir()
-	if e != nil {
-		return "", e
-	}
 	//Store one string temporarily on disk since we can only pipe one
 	//argument to diff.
-	p := filepath.Join(b, fmt.Sprint(&orig)+fmt.Sprint(&change))
-	if e = util.SaveFile(p, []byte(orig)); e != nil {
+	n, e := util.SaveTemp([]byte(orig))
+	if e != nil {
 		return "", e
 	}
-	defer os.Remove(p)
-	a := []string{d, "-u", p, "-"}
+	defer os.Remove(n)
+	a := []string{d, "-u", n, "-"}
 	r, e := tool.RunCommand(a, strings.NewReader(change))
-	if e != nil {
+	if e != nil && len(r.StdOut) == 0 {
 		return "", e
 	}
 	return string(r.StdOut), nil

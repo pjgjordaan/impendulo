@@ -30,12 +30,24 @@ func (a AJAX) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func GenerateAJAX(r *pat.Router) {
 	fs := map[string]AJAX{
-		"chart": getChart, "tools": getTools, "users": getUsers,
+		"chart": getChart, "tools": getTools, "users": getUsers, "collections": collections,
 		"skeletons": getSkeletons, "code": getCode, "submissions": submissions,
 	}
 	for n, f := range fs {
 		r.Add("GET", "/"+n, f)
 	}
+}
+
+func collections(r *http.Request) ([]byte, error) {
+	n, e := GetString(r, "db")
+	if e != nil {
+		return nil, e
+	}
+	c, e := db.Collections(n)
+	if e != nil {
+		return nil, e
+	}
+	return util.JSON(map[string]interface{}{"collections": c})
 }
 
 func submissions(r *http.Request) ([]byte, error) {

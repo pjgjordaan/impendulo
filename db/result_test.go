@@ -30,11 +30,36 @@ import (
 	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/tool/javac"
+
 	"html/template"
+
 	"labix.org/v2/mgo/bson"
+
 	"reflect"
 	"testing"
 )
+
+func TestResultNames(t *testing.T) {
+	s := project.Submission{Id: bson.NewObjectId(), ProjectId: bson.NewObjectId()}
+	if e := Add(SUBMISSIONS, s); e != nil {
+		t.Error(e)
+	}
+	f0 := &project.File{Id: bson.NewObjectId(), Name: "Test", SubId: s.Id, Results: bson.M{"resulta-abb": "asda", "resulta-asb": "asda", "result-abb": "asda"}}
+	if e := Add(FILES, f0); e != nil {
+		t.Error(e)
+	}
+	f1 := &project.File{Id: bson.NewObjectId(), Name: "Test2", SubId: s.Id, Results: bson.M{"a": "b", "c": "d", "e": "f", "g": "h", "i": "j"}}
+	if e := Add(FILES, f1); e != nil {
+		t.Error(e)
+	}
+	f2 := &project.File{Id: bson.NewObjectId(), Name: "Test", SubId: s.Id, Results: bson.M{"wresulta-abb": "asda", "kresulta-asb": "asda", "tresult-abb": "asda"}}
+	if e := Add(FILES, f2); e != nil {
+		t.Error(e)
+	}
+	if _, e := ResultNames(s.Id, f0.Name); e != nil {
+		t.Error(e)
+	}
+}
 
 func TestResult(t *testing.T) {
 	Setup(TEST_CONN)

@@ -28,8 +28,11 @@ import (
 	"encoding/gob"
 	"encoding/xml"
 	"fmt"
+
 	"github.com/godfried/impendulo/tool"
+
 	"html/template"
+
 	"labix.org/v2/mgo/bson"
 )
 
@@ -211,45 +214,42 @@ func init() {
 }
 
 //NewReport
-func NewReport(id bson.ObjectId, data []byte) (res *Report, err error) {
-	var dummy *DummyReport
-	if err = xml.Unmarshal(data, &dummy); err != nil {
-		err = tool.NewXMLError(err, "findbugs/findbugsResult.go")
-		return
+func NewReport(id bson.ObjectId, data []byte) (*Report, error) {
+	var d *DummyReport
+	if e := xml.Unmarshal(data, &d); e != nil {
+		return nil, tool.NewXMLError(e, "findbugs/findbugsResult.go")
 	}
-	res = &Report{
+	r := &Report{
 		Id:          id,
-		Time:        dummy.Time,
-		Summary:     dummy.Summary,
-		Instances:   dummy.Instances,
+		Time:        d.Time,
+		Summary:     d.Summary,
+		Instances:   d.Instances,
 		CategoryMap: make(map[string]*BugCategory),
 		PatternMap:  make(map[string]*BugPattern),
 	}
-	for _, cat := range dummy.Categories {
-		res.CategoryMap[cat.Name] = cat
+	for _, c := range d.Categories {
+		r.CategoryMap[c.Name] = c
 	}
-	for _, pat := range dummy.Patterns {
-		res.PatternMap[pat.Type] = pat
+	for _, p := range d.Patterns {
+		r.PatternMap[p.Type] = p
 	}
-	for _, bug := range res.Instances {
-		bug.Id = bson.NewObjectId()
+	for _, b := range r.Instances {
+		b.Id = bson.NewObjectId()
 	}
-	return
+	return r, nil
 }
 
 //Success returns true if Findbugs found no bugs and false otherwise.
-func (this *Report) Success() bool {
-	return len(this.Instances) == 0
+func (r *Report) Success() bool {
+	return len(r.Instances) == 0
 }
 
 //String
-func (this *Report) String() string {
-	return fmt.Sprintf("Id: %q; Summary: %s",
-		this.Id, this.Summary)
+func (r *Report) String() string {
+	return fmt.Sprintf("Id: %q; Summary: %s", r.Id, r.Summary)
 }
 
 //String
-func (this *Summary) String() string {
-	return fmt.Sprintf("BugCount: %d; ClassCount: %d",
-		this.BugCount, this.ClassCount)
+func (r *Summary) String() string {
+	return fmt.Sprintf("BugCount: %d; ClassCount: %d", r.BugCount, r.ClassCount)
 }

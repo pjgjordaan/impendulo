@@ -50,109 +50,83 @@ type (
 
 //SetReport is used to change this result's report. This comes in handy
 //when putting data into/getting data out of GridFS
-func (this *Result) SetReport(report tool.Report) {
+func (r *Result) SetReport(report tool.Report) {
 	if report == nil {
-		this.Report = nil
+		r.Report = nil
 	} else {
-		this.Report = report.(*Report)
+		r.Report = report.(*Report)
 	}
 }
 
 //OnGridFS
-func (this *Result) OnGridFS() bool {
-	return this.GridFS
+func (r *Result) OnGridFS() bool {
+	return r.GridFS
 }
 
 //String
-func (this *Result) String() string {
-	return fmt.Sprintf("Id: %q; FileId: %q; TestName: %s; \n Report: %s",
-		this.Id, this.FileId, this.Name, this.Report)
+func (r *Result) String() string {
+	return fmt.Sprintf("Id: %q; FileId: %q; TestName: %s; \n Report: %s", r.Id, r.FileId, r.Name, r.Report)
 }
 
 //GetName
-func (this *Result) GetName() string {
-	return this.Name
+func (r *Result) GetName() string {
+	return r.Name
 }
 
 //GetId
-func (this *Result) GetId() bson.ObjectId {
-	return this.Id
+func (r *Result) GetId() bson.ObjectId {
+	return r.Id
 }
 
 //GetFileId
-func (this *Result) GetFileId() bson.ObjectId {
-	return this.FileId
+func (r *Result) GetFileId() bson.ObjectId {
+	return r.FileId
 }
 
 //Summary
-func (this *Result) Summary() *tool.Summary {
-	body := fmt.Sprintf("Bugs: %d", this.Report.Summary.BugCount)
+func (r *Result) Summary() *tool.Summary {
 	return &tool.Summary{
-		Name: this.GetName(),
-		Body: body,
+		Name: r.GetName(),
+		Body: fmt.Sprintf("Bugs: %d", r.Report.Summary.BugCount),
 	}
 }
 
 //GetReport
-func (this *Result) GetReport() tool.Report {
-	return this.Report
+func (r *Result) GetReport() tool.Report {
+	return r.Report
 }
 
 //ChartVals
-func (this *Result) ChartVals() []*tool.ChartVal {
+func (r *Result) ChartVals() []*tool.ChartVal {
 	return []*tool.ChartVal{
-		&tool.ChartVal{"All", float64(this.Report.Summary.BugCount), this.FileId},
-		&tool.ChartVal{"Priority 1", float64(this.Report.Summary.Priority1), this.FileId},
-		&tool.ChartVal{"Priority 2", float64(this.Report.Summary.Priority2), this.FileId},
-		&tool.ChartVal{"Priority 3", float64(this.Report.Summary.Priority3), this.FileId},
+		&tool.ChartVal{"All", float64(r.Report.Summary.BugCount), r.FileId},
+		&tool.ChartVal{"Priority 1", float64(r.Report.Summary.Priority1), r.FileId},
+		&tool.ChartVal{"Priority 2", float64(r.Report.Summary.Priority2), r.FileId},
+		&tool.ChartVal{"Priority 3", float64(r.Report.Summary.Priority3), r.FileId},
 	}
 }
 
-func (this *Result) Template() string {
+func (r *Result) Template() string {
 	return "findbugsresult"
 }
 
-/*
-func (this *Result) Bug(id string, index int) (bug *tool.Bug, err error) {
-	if index < 0 || index > len(this.Report.Instances) {
-		err = fmt.Errorf("Index %d out of bounds for Findbugs Bugs array.", index)
-		return
-	}
-	instance := this.Report.Instances[index]
-	if bId := instance.Id.Hex(); bId != id {
-		err = fmt.Errorf("Provided id %s does not Findbugs bug id %s.", id, bId)
-		return
-	}
-	content := []interface{}{
-		this.Report.CategoryMap[instance.Category].Description,
-		this.Report.PatternMap[instance.Type].Description,
-		"Priority: " + strconv.Itoa(instance.Priority) + ", " +
-			"Rank: " + strconv.Itoa(instance.Rank),
-	}
-	bug = tool.NewBug(this, id, content, instance.Line.Start, instance.Line.End)
-	return
-}
-*/
-
-func (this *Result) GetType() string {
-	return this.Type
+func (r *Result) GetType() string {
+	return r.Type
 }
 
 //NewResult
-func NewResult(fileId bson.ObjectId, data []byte) (res *Result, err error) {
+func NewResult(fileId bson.ObjectId, data []byte) (*Result, error) {
 	id := bson.NewObjectId()
-	report, err := NewReport(id, data)
-	if err != nil {
-		return
+	r, e := NewReport(id, data)
+	if e != nil {
+		return nil, e
 	}
-	gridFS := len(data) > tool.MAX_SIZE
-	res = &Result{
+	return &Result{
 		Id:     id,
 		FileId: fileId,
 		Name:   NAME,
-		GridFS: gridFS,
+		GridFS: len(data) > tool.MAX_SIZE,
 		Type:   NAME,
-		Report: report,
-	}
-	return
+		Report: r,
+	}, nil
 }

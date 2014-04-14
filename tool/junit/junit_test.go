@@ -29,6 +29,7 @@ import (
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
 	"os"
 	"path/filepath"
 	"testing"
@@ -42,43 +43,43 @@ func TestRun(t *testing.T) {
 	defer os.RemoveAll(location)
 	os.Mkdir(srcLocation, util.DPERM)
 	os.Mkdir(testLocation, util.DPERM)
-	testDir, err := config.JUNIT_TESTING.Path()
-	if err != nil {
-		t.Error(err)
+	testDir, e := config.JUNIT_TESTING.Path()
+	if e != nil {
+		t.Error(e)
 	}
-	err = util.Copy(location, testDir)
-	if err != nil {
-		t.Errorf("Could not copy directory %q", err)
+	if e = util.Copy(location, testDir); e != nil {
+		t.Errorf("Could not copy directory %q", e)
 	}
 	target := tool.NewTarget("Triangle.java", "triangle", location, tool.JAVA)
-	err = util.SaveFile(target.FilePath(), validFile)
-	if err != nil {
-		t.Errorf("Could not save file %q", err)
+	if e = util.SaveFile(target.FilePath(), validFile); e != nil {
+		t.Errorf("Could not save file %q", e)
 	}
-	dataBytes, err := util.ZipMap(dataMap)
-	if err != nil {
-		t.Errorf("Could not zip map %q", err)
+	dataBytes, e := util.ZipMap(dataMap)
+	if e != nil {
+		t.Errorf("Could not zip map %q", e)
 	}
-	test := NewTest(bson.NewObjectId(), "AllTests.java", "testing", DEFAULT, testBytes, dataBytes)
-	junit, err := New(test, location)
-	if err != nil {
-		t.Errorf("Expected success, got %q", err)
+	testTarget := tool.NewTarget("AllTests.java", "testing", filepath.Join(location, bson.NewObjectId().Hex()), tool.JAVA)
+	if e = util.SaveFile(testTarget.FilePath(), testBytes); e != nil {
+		t.Error(e)
 	}
-	_, err = junit.Run(bson.NewObjectId(), target)
-	if err != nil {
-		t.Errorf("Expected success, got %q", err)
+	if e = util.Unzip(testTarget.PackagePath(), dataBytes); e != nil {
+		t.Error(e)
 	}
-	err = util.SaveFile(target.FilePath(), invalidFile)
-	if err != nil {
-		t.Errorf("Could not save file %q", err)
+	j, e := New(testTarget, location)
+	if e != nil {
+		t.Errorf("Expected success, got %q", e)
 	}
-	_, err = junit.Run(bson.NewObjectId(), target)
-	if err == nil {
+	if _, e = j.Run(bson.NewObjectId(), target); e != nil {
+		t.Errorf("Expected success, got %q", e)
+	}
+	if e = util.SaveFile(target.FilePath(), invalidFile); e != nil {
+		t.Errorf("Could not save file %q", e)
+	}
+	if _, e = j.Run(bson.NewObjectId(), target); e == nil {
 		t.Errorf("Expected error.")
 	}
 	target = tool.NewTarget("File.java", "", location, tool.JAVA)
-	_, err = junit.Run(bson.NewObjectId(), target)
-	if err == nil {
+	if _, e = j.Run(bson.NewObjectId(), target); e == nil {
 		t.Error("Expected error")
 	}
 }

@@ -32,10 +32,9 @@ import (
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 
+	"os"
+
 	"net/http"
-	"path/filepath"
-	"strconv"
-	"time"
 )
 
 type (
@@ -74,6 +73,7 @@ func (d Downloader) CreateDownload() Handler {
 			return e
 		}
 		http.ServeFile(w, r, p)
+		os.Remove(p)
 		return nil
 	}
 }
@@ -84,24 +84,16 @@ func LoadSkeleton(r *http.Request) (string, error) {
 	if e != nil {
 		return "", e
 	}
-	b, e := util.BaseDir()
-	if e != nil {
-		return "", e
-	}
-	p := filepath.Join(b, "skeletons", id.String()+".zip")
-	//If the skeleton is saved for downloading we don't need to store it again.
-	if util.Exists(p) {
-		return p, nil
-	}
 	s, e := db.Skeleton(bson.M{db.ID: id}, nil)
 	if e != nil {
 		return "", e
 	}
 	//Save file to filesystem and return path to it.
-	if e = util.SaveFile(p, s.Data); e != nil {
+	n, e := util.SaveTemp(s.Data)
+	if e != nil {
 		return "", e
 	}
-	return p, nil
+	return n, nil
 }
 
 //ExportData
@@ -114,12 +106,8 @@ func ExportData(r *http.Request) (string, error) {
 	if e != nil {
 		return "", e
 	}
-	b, e := util.BaseDir()
+	p, e := mongo.ExportData(n, c)
 	if e != nil {
-		return "", e
-	}
-	p := filepath.Join(b, "exports", strconv.FormatInt(time.Now().Unix(), 10)+".zip")
-	if e = mongo.ExportData(p, n, c); e != nil {
 		return "", e
 	}
 	return p, nil

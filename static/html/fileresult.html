@@ -17,12 +17,12 @@
 	<a class="dropdown-toggle" data-toggle="dropdown" href="#">
 	  Analysis <span class="caret"></span>
 	</a>
-	{{$tools := analysisNames $pid .Type}}
+	{{$results := resultNames $sid $fileName}}
 	<ul class="dropdown-menu" role="menu">
-	  {{range $tools}}  
+	  {{range $results}}  
 	  <li>
-	    <a href="displayresult?result={{.}}&file={{$fileName}}">
-	      {{.}}
+	    <a href="displayresult?result={{.ID}}&file={{$fileName}}">
+	      {{.ID}}
 	    </a>
 	  </li>
 	  {{end}}

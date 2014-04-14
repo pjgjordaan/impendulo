@@ -49,91 +49,89 @@ type (
 )
 
 //SetReport
-func (this *Result) SetReport(report tool.Report) {
+func (r *Result) SetReport(report tool.Report) {
 	if report == nil {
-		this.Report = nil
+		r.Report = nil
 	} else {
-		this.Report = report.(*Report)
+		r.Report = report.(*Report)
 	}
 }
 
 //OnGridFS
-func (this *Result) OnGridFS() bool {
-	return this.GridFS
+func (r *Result) OnGridFS() bool {
+	return r.GridFS
 }
 
 //String
-func (this *Result) String() string {
+func (r *Result) String() string {
 	return fmt.Sprintf("Id: %q; FileId: %q; TestName: %s; \n Report: %s",
-		this.Id, this.FileId, this.TestName, this.Report)
+		r.Id, r.FileId, r.TestName, r.Report)
 }
 
 //GetName
-func (this *Result) GetName() string {
-	return this.TestName
+func (r *Result) GetName() string {
+	return r.TestName
 }
 
 //GetId
-func (this *Result) GetId() bson.ObjectId {
-	return this.Id
+func (r *Result) GetId() bson.ObjectId {
+	return r.Id
 }
 
 //GetFileId
-func (this *Result) GetFileId() bson.ObjectId {
-	return this.FileId
+func (r *Result) GetFileId() bson.ObjectId {
+	return r.FileId
 }
 
 //Summary
-func (this *Result) Summary() *tool.Summary {
+func (r *Result) Summary() *tool.Summary {
 	body := fmt.Sprintf("Tests: %d \n Failures: %d \n Errors: %d \n Time: %f",
-		this.Report.Tests, this.Report.Failures, this.Report.Errors, this.Report.Time)
+		r.Report.Tests, r.Report.Failures, r.Report.Errors, r.Report.Time)
 	return &tool.Summary{
-		Name: this.GetName(),
+		Name: r.GetName(),
 		Body: body,
 	}
 }
 
 //GetReport
-func (this *Result) GetReport() tool.Report {
-	return this.Report
+func (r *Result) GetReport() tool.Report {
+	return r.Report
 }
 
 //Success
-func (this *Result) Success() bool {
-	return this.Report != nil && this.Report.Success()
+func (r *Result) Success() bool {
+	return r.Report != nil && r.Report.Success()
 }
 
 //ChartVals
-func (this *Result) ChartVals() []*tool.ChartVal {
+func (r *Result) ChartVals() []*tool.ChartVal {
 	return []*tool.ChartVal{
-		&tool.ChartVal{"Failures", float64(this.Report.Failures), this.FileId},
-		&tool.ChartVal{"Errors", float64(this.Report.Errors), this.FileId},
+		&tool.ChartVal{"Failures", float64(r.Report.Failures), r.FileId},
+		&tool.ChartVal{"Errors", float64(r.Report.Errors), r.FileId},
 	}
 }
 
-func (this *Result) Template() string {
+func (r *Result) Template() string {
 	return "junitresult"
 }
 
-func (this *Result) GetType() string {
-	return this.Type
+func (r *Result) GetType() string {
+	return r.Type
 }
 
 //NewResult creates a new junit.Result from provided XML data.
-func NewResult(fileId bson.ObjectId, name string, data []byte) (res *Result, err error) {
+func NewResult(fileId bson.ObjectId, name string, data []byte) (*Result, error) {
 	id := bson.NewObjectId()
-	report, err := NewReport(id, data)
-	if err != nil {
-		return
+	r, e := NewReport(id, data)
+	if e != nil {
+		return nil, e
 	}
-	gridFS := len(data) > tool.MAX_SIZE
-	res = &Result{
+	return &Result{
 		Id:       id,
 		FileId:   fileId,
 		TestName: name,
-		GridFS:   gridFS,
+		GridFS:   len(data) > tool.MAX_SIZE,
 		Type:     NAME,
-		Report:   report,
-	}
-	return
+		Report:   r,
+	}, nil
 }

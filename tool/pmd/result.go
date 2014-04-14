@@ -50,89 +50,82 @@ type (
 
 //SetReport is used to change this result's report. This comes in handy
 //when putting data into/getting data out of GridFS
-func (this *Result) SetReport(report tool.Report) {
+func (r *Result) SetReport(report tool.Report) {
 	if report == nil {
-		this.Report = nil
+		r.Report = nil
 	} else {
-		this.Report = report.(*Report)
+		r.Report = report.(*Report)
 	}
 }
 
-func (this *Result) GetType() string {
-	return this.Type
+func (r *Result) GetType() string {
+	return r.Type
 }
 
 //OnGridFS
-func (this *Result) OnGridFS() bool {
-	return this.GridFS
+func (r *Result) OnGridFS() bool {
+	return r.GridFS
 }
 
 //GetName
-func (this *Result) GetName() string {
-	return this.Name
+func (r *Result) GetName() string {
+	return r.Name
 }
 
 //GetId
-func (this *Result) GetId() bson.ObjectId {
-	return this.Id
+func (r *Result) GetId() bson.ObjectId {
+	return r.Id
 }
 
 //GetFileId
-func (this *Result) GetFileId() bson.ObjectId {
-	return this.FileId
+func (r *Result) GetFileId() bson.ObjectId {
+	return r.FileId
 }
 
 //Summary consists of the number of errors found by PMD.
-func (this *Result) Summary() *tool.Summary {
-	body := fmt.Sprintf("Errors: %d", this.Report.Errors)
+func (r *Result) Summary() *tool.Summary {
 	return &tool.Summary{
-		Name: this.GetName(),
-		Body: body,
+		Name: r.GetName(),
+		Body: fmt.Sprintf("Errors: %d", r.Report.Errors),
 	}
 }
 
 //GetReport
-func (this *Result) GetReport() tool.Report {
-	return this.Report
+func (r *Result) GetReport() tool.Report {
+	return r.Report
 }
 
 //Success
-func (this *Result) Success() bool {
+func (r *Result) Success() bool {
 	return true
 }
 
 //ChartVals gets the number of errors found by PMD.
-func (this *Result) ChartVals() []*tool.ChartVal {
+func (r *Result) ChartVals() []*tool.ChartVal {
 	return []*tool.ChartVal{
-		&tool.ChartVal{"Errors", float64(this.Report.Errors), this.FileId},
+		&tool.ChartVal{"Errors", float64(r.Report.Errors), r.FileId},
 	}
 }
 
-//String
-func (this *Result) String() (ret string) {
-	if this.Report != nil {
-		ret = this.Report.String()
-	}
-	ret += this.Id.Hex()
-	return
-}
-
-func (this *Result) Template() string {
+func (r *Result) Template() string {
 	return "pmdresult"
 }
 
 //NewResult creates a new PMD Result.
 //Any error returned will be as a result of creating a PMD Report
 //from the XML in data.
-func NewResult(fileId bson.ObjectId, data []byte) (res *Result, err error) {
-	gridFS := len(data) > tool.MAX_SIZE
-	res = &Result{
-		Id:     bson.NewObjectId(),
+func NewResult(fileId bson.ObjectId, data []byte) (*Result, error) {
+	id := bson.NewObjectId()
+	r, e := NewReport(id, data)
+	if e != nil {
+		return nil, e
+	}
+	return &Result{
+		Id:     id,
 		FileId: fileId,
 		Name:   NAME,
-		GridFS: gridFS,
+		GridFS: len(data) > tool.MAX_SIZE,
 		Type:   NAME,
-	}
-	res.Report, err = NewReport(res.Id, data)
-	return
+		Report: r,
+	}, nil
 }

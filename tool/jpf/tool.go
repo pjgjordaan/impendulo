@@ -74,8 +74,8 @@ func New(cfg *Config, jpfDir string) (*Tool, error) {
 		return nil, e
 	}
 	//Save the config file in the same location.
-	jp := filepath.Join(jpfDir, "config.jpf")
-	if e = util.SaveFile(jp, cfg.Data); e != nil {
+	jp, e := util.SaveTemp(cfg.Data)
+	if e != nil {
 		return nil, e
 	}
 	//Setup classpath with the required JPF and Json jars.

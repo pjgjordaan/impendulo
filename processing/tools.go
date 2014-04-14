@@ -39,7 +39,6 @@ import (
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
-	"github.com/godfried/impendulo/tool/junit_user"
 	mk "github.com/godfried/impendulo/tool/make"
 	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/util"
@@ -53,7 +52,7 @@ const (
 func TestTools(p *TestProcessor, tf *project.File) ([]tool.Tool, error) {
 	switch tool.Language(p.project.Lang) {
 	case tool.JAVA:
-		return javaTestTools(p, tf), nil
+		return javaTestTools(p, tf)
 	case tool.C:
 		return cTestTools(p, tf), nil
 	}
@@ -65,33 +64,22 @@ func cTestTools(p *TestProcessor, tf *project.File) []tool.Tool {
 	return []tool.Tool{}
 }
 
-func javaTestTools(p *TestProcessor, tf *project.File) []tool.Tool {
-	a := make([]tool.Tool, 0, 10)
-	test := &junit.Test{
-		Id:      tf.Id,
-		Name:    tf.Name,
-		Package: tf.Package,
-		Test:    tf.Data,
+func javaTestTools(p *TestProcessor, tf *project.File) ([]tool.Tool, error) {
+	a := make([]tool.Tool, 0, 2)
+	target := tool.NewTarget(tf.Name, tf.Package, filepath.Join(p.toolDir, tf.Id.Hex()), tool.JAVA)
+	if e := util.SaveFile(target.FilePath(), tf.Data); e != nil {
+		return nil, e
 	}
-	var t tool.Tool
-	var e error
-	t, e = junit.New(test, p.toolDir)
+	ju, e := junit.New(target, p.toolDir)
 	if e != nil {
-		util.Log(e, LOG_TOOLS)
-	} else {
-		a = append(a, t)
+		return nil, e
 	}
-	t, e = Jacoco(p, test)
+	a = append(a, ju)
+	ja, e := jacoco.New(p.rootDir, p.srcDir, target)
 	if e != nil {
-		util.Log(e, LOG_TOOLS)
-		return a
+		return nil, e
 	}
-	return append(a, t)
-}
-
-func Jacoco(p *TestProcessor, test *junit.Test) (tool.Tool, error) {
-	t := tool.NewTarget(test.Name, test.Package, filepath.Join(p.toolDir, test.Id.Hex()), tool.JAVA)
-	return jacoco.New(p.rootDir, p.srcDir, t)
+	return append(a, ja), nil
 }
 
 //Tools retrieves the Impendulo tool suite for a Processor's language.
@@ -99,7 +87,7 @@ func Jacoco(p *TestProcessor, test *junit.Test) (tool.Tool, error) {
 func Tools(p *Processor) ([]tool.Tool, error) {
 	switch tool.Language(p.project.Lang) {
 	case tool.JAVA:
-		return javaTools(p), nil
+		return javaTools(p)
 	case tool.C:
 		return cTools(p), nil
 	}
@@ -112,23 +100,21 @@ func cTools(p *Processor) []tool.Tool {
 }
 
 //javaTools retrieves Impendulo's Java tool suite.
-func javaTools(p *Processor) []tool.Tool {
+func javaTools(p *Processor) ([]tool.Tool, error) {
 	a := make([]tool.Tool, 0, 10)
 	//Only add tools if they were created successfully
 	var t tool.Tool
 	var e error
 	t, e = checkstyle.New()
 	if e != nil {
-		util.Log(e, LOG_TOOLS)
-	} else {
-		a = append(a, t)
+		return nil, e
 	}
+	a = append(a, t)
 	t, e = findbugs.New()
 	if e != nil {
-		util.Log(e, LOG_TOOLS)
-	} else {
-		a = append(a, t)
+		return nil, e
 	}
+	a = append(a, t)
 	t, e = JPF(p)
 	if e != nil {
 		util.Log(e, LOG_TOOLS)
@@ -137,23 +123,14 @@ func javaTools(p *Processor) []tool.Tool {
 	}
 	t, e = PMD(p)
 	if e != nil {
-		util.Log(e, LOG_TOOLS)
-	} else {
-		a = append(a, t)
+		return nil, e
 	}
-	tests, e := JUnit(p)
+	a = append(a, t)
+	ts, e := junitTools(p)
 	if e != nil {
-		util.Log(e, LOG_TOOLS)
-	} else if len(tests) > 0 {
-		a = append(a, tests...)
+		return nil, e
 	}
-	tests, e = UserJUnit(p)
-	if e != nil {
-		util.Log(e, LOG_TOOLS)
-	} else if len(tests) > 0 {
-		a = append(a, tests...)
-	}
-	return a
+	return append(a, ts...), nil
 }
 
 //Compiler retrieves a compiler for a Processor's language.
@@ -200,9 +177,7 @@ func PMD(p *Processor) (tool.Tool, error) {
 	return pmd.New(r)
 }
 
-//JUnit creates a new JUnit tool instances for each available JUnit test for a given project.
-func JUnit(p *Processor) ([]tool.Tool, error) {
-	//First we need the project's JUnit tests.
+func junitTools(p *Processor) ([]tool.Tool, error) {
 	ts, e := db.JUnitTests(bson.M{db.PROJECTID: p.project.Id, db.TYPE: bson.M{db.NE: junit.USER}}, nil)
 	if e != nil {
 		return nil, e
@@ -211,22 +186,37 @@ func JUnit(p *Processor) ([]tool.Tool, error) {
 	if e != nil {
 		return nil, e
 	}
-	//Now we copy our test runner to the proccessor's tool directory.
 	if e = util.Copy(p.toolDir, d); e != nil {
 		return nil, e
 	}
-	js := make([]tool.Tool, 0, len(ts))
+	tools := make([]tool.Tool, 0, len(ts))
 	for _, t := range ts {
-		j, e := junit.New(t, p.toolDir)
-		if e != nil {
-			util.Log(e, LOG_TOOLS)
-		} else {
-			js = append(js, j)
+		//Save the test files to the submission's tool directory.
+		target := tool.NewTarget(t.Name, t.Package, filepath.Join(p.toolDir, t.Id.Hex()), tool.JAVA)
+		if e = util.SaveFile(target.FilePath(), t.Test); e != nil {
+			return nil, e
 		}
+		if len(t.Data) != 0 {
+			if e = util.Unzip(target.PackagePath(), t.Data); e != nil {
+				return nil, e
+			}
+		}
+		ja, e := jacoco.New(p.rootDir, p.srcDir, target)
+		if e != nil {
+			return nil, e
+		}
+		tools = append(tools, ja)
+		ju, e := junit.New(target, p.toolDir)
+		if e != nil {
+			return nil, e
+		}
+		tools = append(tools, ju)
 	}
-	return js, nil
+	return tools, nil
+
 }
 
+/*
 func UserJUnit(p *Processor) ([]tool.Tool, error) {
 	ts, e := db.JUnitTests(bson.M{db.PROJECTID: p.project.Id, db.TYPE: junit.USER}, nil)
 	if e != nil {
@@ -245,3 +235,4 @@ func UserJUnit(p *Processor) ([]tool.Tool, error) {
 	}
 	return js, nil
 }
+*/

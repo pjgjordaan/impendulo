@@ -51,27 +51,31 @@ type (
 //New creates a new instance of a PMD Tool.
 //Errors returned will be due to loading either the default
 //PMD rules or the PMD execution script.
-func New(rules *Rules) (tool *Tool, err error) {
+func New(rules *Rules) (*Tool, error) {
 	if rules == nil {
-		rules, err = DefaultRules(bson.NewObjectId())
-		if err != nil {
-			return
+		var e error
+		rules, e = DefaultRules(bson.NewObjectId())
+		if e != nil {
+			return nil, e
 		}
 	}
-	tool = &Tool{
-		rules: strings.Join(rules.RuleArray(), ","),
+	p, e := config.PMD.Path()
+	if e != nil {
+		return nil, e
 	}
-	tool.cmd, err = config.PMD.Path()
-	return
+	return &Tool{
+		cmd:   p,
+		rules: strings.Join(rules.RuleArray(), ","),
+	}, nil
 }
 
 //Lang is Java
-func (this *Tool) Lang() tool.Language {
+func (t *Tool) Lang() tool.Language {
 	return tool.JAVA
 }
 
 //Name is PMD
-func (this *Tool) Name() string {
+func (t *Tool) Name() string {
 	return NAME
 }
 

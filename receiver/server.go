@@ -67,8 +67,7 @@ func Run(p uint, s HandlerSpawner) {
 	}
 	defer l.Close()
 	for {
-		c, e := l.Accept()
-		if e != nil {
+		if c, e := l.Accept(); e != nil {
 			util.Log(fmt.Errorf("error %q accepting connection", e), LOG_SERVER)
 		} else {
 			//Spawn a handler for each new connection.

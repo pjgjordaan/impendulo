@@ -38,17 +38,22 @@ import (
 	"github.com/godfried/impendulo/tool/junit"
 	junit_user "github.com/godfried/impendulo/tool/junit_user/result"
 	"github.com/godfried/impendulo/tool/pmd"
+	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
-
-	"sort"
-	"strings"
 )
 
 type (
 	TypeHolder struct {
 		Type string "type"
 	}
+	MRID struct {
+		ID string "_id"
+	}
 )
+
+func (r *MRID) Name() string {
+	return r.ID
+}
 
 //CheckstyleResult retrieves a Result matching
 //the given interface from the active database.
@@ -324,27 +329,6 @@ func ChartResult(matcher, selector bson.M) (ret tool.ChartResult, err error) {
 	return
 }
 
-func ResultName(matcher bson.M) (name string, err error) {
-	session, err := Session()
-	if err != nil {
-		return
-	}
-	defer session.Close()
-	c := session.DB("").C(RESULTS)
-	var names []string
-	err = c.Find(matcher).
-		Select(bson.M{NAME: 1}).
-		Distinct(NAME, &names)
-	if err != nil {
-		err = &GetError{"result", err, matcher}
-	} else if len(names) == 0 {
-		err = fmt.Errorf("Could not retrieve result name.")
-	} else {
-		name = names[0]
-	}
-	return
-}
-
 //AddResult adds a new result to the active database.
 func AddResult(res tool.ToolResult, name string) (err error) {
 	if res == nil {
@@ -405,64 +389,33 @@ func ChartResults(fileId bson.ObjectId) (ret []tool.ChartResult, err error) {
 }
 
 //AllResultNames retrieves all result names for a given project.
-func AllResultNames(projectId bson.ObjectId) (ret []string, err error) {
-	ret, err = ToolResultNames(projectId)
-	if err != nil {
-		return
+func ResultNames(sid bson.ObjectId, fname string) ([]*MRID, error) {
+	mr := &mgo.MapReduce{
+		Map: `function() {
+	var results = {};
+	for (n in this.results) {
+		var res = n.split('-');
+		if(!(res[0] in results)){
+			results[res[0]] = true;
+                        emit(res[0], "");		
+                }
 	}
-	ret = append(ret, tool.CODE, diff.NAME, tool.SUMMARY)
-	sort.Strings(ret)
-	return
-}
-
-//ChartResultNames retrieves all result names for a given project.
-func ChartResultNames(projectId bson.ObjectId) (ret []string, err error) {
-	ret, err = ToolResultNames(projectId)
-	if err != nil {
-		return
+	
+};`,
+		Reduce: `function(n, vals) {
+		return n;
+};`,
 	}
-	ret = append(ret, tool.SUMMARY)
-	sort.Strings(ret)
-	return
-}
-
-func ToolResultNames(projectId bson.ObjectId) (ret []string, err error) {
-	p, err := Project(bson.M{ID: projectId}, bson.M{LANG: 1})
-	if err != nil {
-		return
+	s, e := Session()
+	if e != nil {
+		return nil, e
 	}
-	switch tool.Language(p.Lang) {
-	case tool.JAVA:
-		ret, err = JavaResultNames(projectId)
-	case tool.C:
-		ret, err = CResultNames(projectId)
+	defer s.Close()
+	var ns []*MRID
+	if _, e := s.DB("").C(FILES).Find(bson.M{SUBID: sid, NAME: fname}).
+		Select(bson.M{NAME: 1, RESULTS: 1}).MapReduce(mr, &ns); e != nil {
+		return nil, e
 	}
-	return
-}
-
-func JavaResultNames(projectId bson.ObjectId) (ret []string, err error) {
-	tests, err := JUnitTests(bson.M{PROJECTID: projectId}, bson.M{NAME: 1})
-	if err != nil {
-		return
-	}
-	ret = make([]string, len(tests))
-	for i, test := range tests {
-		ret[i] = strings.Split(test.Name, ".")[0]
-	}
-	ret = append(ret, checkstyle.NAME, findbugs.NAME, javac.NAME, jacoco.NAME)
-	_, jerr := JPFConfig(bson.M{PROJECTID: projectId}, bson.M{ID: 1})
-	if jerr == nil {
-		ret = append(ret, jpf.NAME)
-	}
-	_, perr := PMDRules(bson.M{PROJECTID: projectId}, bson.M{ID: 1})
-	if perr == nil {
-		ret = append(ret, pmd.NAME)
-	}
-	sort.Strings(ret)
-	return
-}
-
-func CResultNames(projectId bson.ObjectId) (ret []string, err error) {
-	ret = []string{gcc.NAME}
-	return
+	ns = append(ns, &MRID{ID: tool.CODE}, &MRID{ID: diff.NAME})
+	return ns, nil
 }

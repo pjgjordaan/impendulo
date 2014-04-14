@@ -26,10 +26,12 @@ package processing
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/util"
 	"github.com/streadway/amqp"
 	"labix.org/v2/mgo/bson"
+
 	"strconv"
 	"testing"
 	"time"

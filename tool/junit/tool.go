@@ -50,7 +50,7 @@ type (
 
 //New creates a new  instance of the JUnit Tool.
 //test is the JUnit Test to be run. dir is the location of the submission's tool directory.
-func New(test *Test, toolDir string) (*Tool, error) {
+func New(test *tool.Target, toolDir string) (*Tool, error) {
 	//Load jar locations
 	j, e := config.JUNIT.Path()
 	if e != nil {
@@ -64,21 +64,10 @@ func New(test *Test, toolDir string) (*Tool, error) {
 	if e != nil {
 		return nil, e
 	}
-	td := filepath.Join(toolDir, test.Id.Hex())
-	//Save the test files to the submission's tool directory.
-	t := tool.NewTarget(test.Name, test.Package, td, tool.JAVA)
-	if e = util.SaveFile(t.FilePath(), test.Test); e != nil {
-		return nil, e
-	}
-	if len(test.Data) != 0 {
-		if e = util.Unzip(t.PackagePath(), test.Data); e != nil {
-			return nil, e
-		}
-	}
 	return &Tool{
-		cp:           toolDir + ":" + t.Dir + ":" + j + ":" + aj + ":" + a,
-		dataLocation: filepath.Join(t.PackagePath(), "data"),
-		test:         t,
+		cp:           toolDir + ":" + test.Dir + ":" + j + ":" + aj + ":" + a,
+		dataLocation: filepath.Join(test.PackagePath(), "data"),
+		test:         test,
 		runner:       tool.NewTarget("TestRunner.java", "testing", toolDir, tool.JAVA),
 	}, nil
 }
@@ -89,7 +78,7 @@ func (t *Tool) Lang() tool.Language {
 }
 
 func (t *Tool) Name() string {
-	return t.test.Name
+	return NAME + ":" + t.test.Name
 }
 
 //Run runs a JUnit test on the provided Java source file. The source and test files are first

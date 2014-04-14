@@ -27,9 +27,11 @@ package pmd
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
 	"os"
 )
 
@@ -56,77 +58,78 @@ var (
 )
 
 //RuleArray extracts an array of pmd rule identifiers from a Rules struct.
-func (this *Rules) RuleArray() []string {
-	ret := make([]string, len(this.Rules))
+func (r *Rules) RuleArray() []string {
+	a := make([]string, len(r.Rules))
 	i := 0
-	for r := range this.Rules {
-		ret[i] = r
+	for rule := range r.Rules {
+		a[i] = rule
 		i++
 	}
-	return ret
+	return a
 }
 
 //String
-func (this *Rules) String() (ret string) {
-	ret = "Rules:"
-	for k, v := range this.Rules {
-		ret += fmt.Sprintf("\n\tRule %s Used %t", k, v)
+func (r *Rules) String() string {
+	s := "Rules:"
+	for k, v := range r.Rules {
+		s += fmt.Sprintf("\n\tRule %s Used %t", k, v)
 	}
-	return
+	return s
 }
 
 //NewRules creates a bew Rules struct from a set of rules for a given project.
 //Each rule in the set is checked against the available rules.
-func NewRules(projectId bson.ObjectId, rules map[string]bool) (ret *Rules, err error) {
-	valid, err := RuleSet()
-	if err != nil {
-		return
+func NewRules(projectId bson.ObjectId, rules map[string]bool) (*Rules, error) {
+	s, e := RuleSet()
+	if e != nil {
+		return nil, e
 	}
 	for r := range rules {
-		if _, ok := valid[r]; !ok {
+		if _, ok := s[r]; !ok {
 			delete(rules, r)
 		}
 	}
-	ret = &Rules{
+	return &Rules{
 		Id:        bson.NewObjectId(),
 		ProjectId: projectId,
 		Rules:     rules,
-	}
-	return
+	}, nil
 }
 
 //RuleSet loads the available rules from a json file which can be set
 //via the config file.
-func RuleSet() (ret map[string]*Rule, err error) {
+func RuleSet() (map[string]*Rule, error) {
 	if ruleSet != nil {
 		return ruleSet, nil
 	}
-	cfgPath, err := config.PMD_CFG.Path()
-	if err != nil {
-		return ruleSet, err
+	cp, e := config.PMD_CFG.Path()
+	if e != nil {
+		return nil, e
 	}
-	cfg, err := os.Open(cfgPath)
-	if err == nil {
-		data := util.ReadBytes(cfg)
-		err = json.Unmarshal(data, &ruleSet)
+	c, e := os.Open(cp)
+	if e != nil {
+		return nil, e
 	}
-	return ruleSet, err
+	if e = json.Unmarshal(util.ReadBytes(c), &ruleSet); e != nil {
+		return nil, e
+	}
+	return ruleSet, nil
 }
 
 //DefaultRules creates a default Rules struct from the available rules.
-func DefaultRules(projectId bson.ObjectId) (rules *Rules, err error) {
-	set, err := RuleSet()
-	if err != nil {
-		return
+func DefaultRules(projectId bson.ObjectId) (*Rules, error) {
+	s, e := RuleSet()
+	if e != nil {
+		return nil, e
 	}
-	rules, err = NewRules(projectId, make(map[string]bool))
-	if err != nil {
-		return
+	r, e := NewRules(projectId, make(map[string]bool))
+	if e != nil {
+		return nil, e
 	}
-	for k, rule := range set {
+	for k, rule := range s {
 		if rule.Default {
-			rules.Rules[k] = true
+			r.Rules[k] = true
 		}
 	}
-	return
+	return r, nil
 }

@@ -307,3 +307,22 @@ $(function () {
         e.stopPropagation();
     });
 });
+
+
+function loadCollections(dbList, collectionList){
+    var url = 'collections?db='+$('#'+dbList).val();
+    $.getJSON(url, function(data){
+	$('#'+collectionList).multiselect();
+	$('#'+collectionList).multiselect('destroy');
+	$('#'+collectionList).empty();
+	var items = data['collections'];
+	for(var i = 0; i < items.length; i++) {
+	    $('#'+collectionList).append('<option value="'+items[i]+'">'+items[i]+'</option>');
+	}
+	$('#'+collectionList).multiselect({
+	    noneSelectedText: "Choose collections to export",
+	    selectedText: "# collections selected to export"
+	});
+	$('#'+collectionList).multiselected = true;
+    });
+}

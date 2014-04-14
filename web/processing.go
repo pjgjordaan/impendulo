@@ -40,54 +40,49 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 )
 
 //ReadFormFile reads a file's name and data from a request form.
-func ReadFormFile(req *http.Request, name string) (fname string, data []byte, err error) {
-	file, header, err := req.FormFile(name)
-	if err != nil {
-		return
+func ReadFormFile(r *http.Request, n string) (string, []byte, error) {
+	f, h, e := r.FormFile(n)
+	if e != nil {
+		return "", nil, e
 	}
-	fname = header.Filename
-	data, err = ioutil.ReadAll(file)
-	return
+	d, e := ioutil.ReadAll(f)
+	if e != nil {
+		return "", nil, e
+	}
+	return h.Filename, d, nil
 }
 
 //GetInt retrieves an integer value from a request form.
-func GetInt(req *http.Request, name string) (found int, err error) {
-	iStr := req.FormValue(name)
-	found, err = strconv.Atoi(iStr)
-	return
+func GetInt(r *http.Request, n string) (int, error) {
+	return util.Int(r.FormValue(n))
 }
 
 //GetInt64 retrieves an integer value from a request form.
-func GetInt64(req *http.Request, name string) (found int64, err error) {
-	iStr := req.FormValue(name)
-	found, err = strconv.ParseInt(iStr, 10, 64)
-	return
+func GetInt64(r *http.Request, n string) (int64, error) {
+	return util.Int64(r.FormValue(n))
 }
 
 //GetStrings retrieves a string value from a request form.
-func GetStrings(req *http.Request, name string) (vals []string, err error) {
-	if req.Form == nil {
-		err = req.ParseForm()
-		if err != nil {
-			return
+func GetStrings(r *http.Request, n string) ([]string, error) {
+	if r.Form == nil {
+		if e := r.ParseForm(); e != nil {
+			return nil, e
 		}
 	}
-	vals = req.Form[name]
-	return
+	return r.Form[n], nil
 }
 
 //GetString retrieves a string value from a request form.
-func GetString(req *http.Request, name string) (val string, err error) {
-	val = req.FormValue(name)
-	if strings.TrimSpace(val) == "" {
-		err = fmt.Errorf("Invalid value for %s.", name)
+func GetString(r *http.Request, n string) (string, error) {
+	v := r.FormValue(n)
+	if strings.TrimSpace(v) == "" {
+		return "", fmt.Errorf("invalid value for %s", n)
 	}
-	return
+	return v, nil
 }
 
 //getIndex

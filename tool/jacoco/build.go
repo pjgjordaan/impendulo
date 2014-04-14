@@ -3,10 +3,9 @@ package jacoco
 import (
 	"encoding/gob"
 	"encoding/xml"
-	"fmt"
+
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/util"
 )
 
 type (
@@ -197,27 +196,15 @@ func init() {
 	gob.Register(new(Project))
 }
 
-func NewProject(name, srcDir, resDir string, test *tool.Target) (res *Project, err error) {
-	if !util.Exists(test.FilePath()) {
-		err = fmt.Errorf("Test %s does not exist.", test.FilePath())
-		return
+func NewProject(name, srcDir, resDir string, test *tool.Target) (*Project, error) {
+	var e error
+	var p *Project
+	if e = xml.Unmarshal([]byte(BUILD_TEMPLATE), &p); e != nil {
+		return nil, e
 	}
-	if !util.Exists(srcDir) {
-		err = fmt.Errorf("Source directory %s does not exist.", srcDir)
-		return
-	}
-	if util.Exists(resDir) {
-		err = fmt.Errorf("Results directory %s already exists.", resDir)
-		return
-	}
-	var project *Project
-	err = xml.Unmarshal([]byte(BUILD_TEMPLATE), &project)
-	if err != nil {
-		return
-	}
-	project.Namespace = "antlib:org.jacoco.ant"
-	project.Name = name
-	for _, t := range project.Targets {
+	p.Namespace = "antlib:org.jacoco.ant"
+	p.Name = name
+	for _, t := range p.Targets {
 		if t.ReportHolder != nil {
 			t.ReportActual = t.ReportHolder
 			t.ReportHolder = nil
@@ -226,27 +213,29 @@ func NewProject(name, srcDir, resDir string, test *tool.Target) (res *Project, e
 			t.InstrumentHolder = nil
 		}
 	}
-	for _, p := range project.Properties {
-		switch p.Name {
+	for _, pr := range p.Properties {
+		switch pr.Name {
 		case "title":
-			p.Value = name
+			pr.Value = name
 		case "usertest":
-			p.Value = test.Executable()
+			pr.Value = test.Executable()
 		case "jacoco":
-			p.Location, err = config.JACOCO_HOME.Path()
+			pr.Location, e = config.JACOCO_HOME.Path()
+			if e != nil {
+				return nil, e
+			}
 		case "junit":
-			p.Location, err = config.JUNIT.Path()
+			pr.Location, e = config.JUNIT.Path()
+			if e != nil {
+				return nil, e
+			}
 		case "src.dir":
-			p.Location = srcDir
+			pr.Location = srcDir
 		case "test.dir":
-			p.Location = test.Dir
+			pr.Location = test.Dir
 		case "result.dir":
-			p.Location = resDir
-		default:
+			pr.Location = resDir
 		}
 	}
-	if err == nil {
-		res = project
-	}
-	return
+	return p, nil
 }

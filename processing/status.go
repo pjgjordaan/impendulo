@@ -28,6 +28,7 @@ package processing
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/util"
 )
 
@@ -54,97 +55,92 @@ var (
 )
 
 //add adds the value of toAdd to this Status.
-func (this *Status) add(toAdd Status) {
-	this.Files += toAdd.Files
-	this.Submissions += toAdd.Submissions
+func (s *Status) add(toAdd Status) {
+	s.Files += toAdd.Files
+	s.Submissions += toAdd.Submissions
 }
 
 //MonitorStatus begins keeping track of Impendulo's current processing status.
-func MonitorStatus() (err error) {
+func MonitorStatus() error {
+	var e error
 	if monitor != nil {
-		err = monitor.Shutdown()
-		if err != nil {
-			return
+		if e = monitor.Shutdown(); e != nil {
+			return e
 		}
 	}
-	monitor, err = NewMonitor()
-	if err != nil {
-		return
+	if monitor, e = NewMonitor(); e != nil {
+		return e
 	}
 	go monitor.Monitor()
-	return
+	return nil
 }
 
 //NewMonitor
-func NewMonitor() (ret *Monitor, err error) {
-	ret = &Monitor{
-		statusChan: make(chan Status),
+func NewMonitor() (*Monitor, error) {
+	sc := make(chan Status)
+	c, e := NewChanger(sc)
+	if e != nil {
+		return nil, e
 	}
-	ret.changer, err = NewChanger(ret.statusChan)
-	if err != nil {
-		return
+	w, e := NewWaiter(sc)
+	if e != nil {
+		return nil, e
 	}
-	ret.waiter, err = NewWaiter(ret.statusChan)
-	if err != nil {
-		return
+	l, e := NewLoader(sc)
+	if e != nil {
+		return nil, e
 	}
-	ret.loader, err = NewLoader(ret.statusChan)
-	return
+	return &Monitor{changer: c, waiter: w, loader: l, statusChan: sc}, nil
 }
 
 //Monitor begins a new monitoring session for this Monitor.
 //It handles status updates and requests.
-func (this *Monitor) Monitor() {
-	handle := func(mh *MessageHandler) {
-		merr := mh.Handle()
-		if merr != nil {
-			util.Log(merr, mh.Shutdown())
+func (m *Monitor) Monitor() {
+	h := func(mh *MessageHandler) {
+		if e := mh.Handle(); e != nil {
+			util.Log(e, mh.Shutdown())
 		}
 	}
-	go handle(this.changer)
-	go handle(this.loader)
-	go handle(this.waiter)
-	var status *Status = new(Status)
-	for val := range this.statusChan {
-		switch val {
+	go h(m.changer)
+	go h(m.loader)
+	go h(m.waiter)
+	s := new(Status)
+	for v := range m.statusChan {
+		switch v {
 		case Status{}:
 			//A zeroed Status indicates a request for the current Status.
-			this.statusChan <- *status
+			m.statusChan <- *s
 		default:
-			status.add(val)
-			util.Log(fmt.Sprintf("Status updated with %v to %v.", val, *status))
+			s.add(v)
+			util.Log(fmt.Sprintf("Status updated with %v to %v.", v, *s))
 		}
 	}
 }
 
-func ShutdownMonitor() (err error) {
+func ShutdownMonitor() error {
 	if monitor == nil {
-		return
+		return nil
 	}
-	err = monitor.Shutdown()
-	if err == nil {
-		monitor = nil
+	if e := monitor.Shutdown(); e != nil {
+		return e
 	}
-	return
+	monitor = nil
+	return nil
 }
 
 //Shutdown stops this Monitor
-func (this *Monitor) Shutdown() (err error) {
-	close(this.statusChan)
-	err = this.shutdownHandlers()
-	return
+func (m *Monitor) Shutdown() error {
+	close(m.statusChan)
+	return m.shutdownHandlers()
 }
 
 //shutdownHandlers stops all the MesageHandlers used by this Monitor.
-func (this *Monitor) shutdownHandlers() (err error) {
-	err = this.waiter.Shutdown()
-	if err != nil {
-		return
+func (m *Monitor) shutdownHandlers() error {
+	if e := m.waiter.Shutdown(); e != nil {
+		return e
 	}
-	err = this.loader.Shutdown()
-	if err != nil {
-		return
+	if e := m.loader.Shutdown(); e != nil {
+		return e
 	}
-	err = this.changer.Shutdown()
-	return
+	return m.changer.Shutdown()
 }

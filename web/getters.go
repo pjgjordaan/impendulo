@@ -250,7 +250,7 @@ func _displayResult(r *http.Request, c *Context) (Args, error) {
 	if e != nil {
 		return nil, e
 	}
-	rs, e := analysisNames(c.Browse.Pid, c.Browse.Type)
+	rs, e := db.ResultNames(c.Browse.Sid, c.Browse.File)
 	if e != nil {
 		return nil, e
 	}
@@ -305,7 +305,7 @@ func _displayChildResult(r *http.Request, c *Context) (Args, error) {
 	if e != nil {
 		return nil, e
 	}
-	results, e := analysisNames(c.Browse.Pid, c.Browse.Type)
+	results, e := db.ResultNames(c.Browse.Pid, c.Browse.File)
 	if e != nil {
 		return nil, e
 	}

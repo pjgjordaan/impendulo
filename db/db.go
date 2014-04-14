@@ -201,6 +201,20 @@ func Count(n string, m interface{}) (int, error) {
 	return count, nil
 }
 
-func Collections() []string {
-	return []string{USERS, SUBMISSIONS, FILES, RESULTS, TESTS, PROJECTS, JPF, PMD}
+func Collections(db string) ([]string, error) {
+	s, e := mgo.Dial(ADDRESS + db)
+	if e != nil {
+		return nil, e
+	}
+	defer s.Close()
+	return s.DB("").CollectionNames()
+}
+
+func Databases() ([]string, error) {
+	s, e := mgo.Dial(ADDRESS)
+	if e != nil {
+		return nil, e
+	}
+	defer s.Close()
+	return s.DatabaseNames()
 }

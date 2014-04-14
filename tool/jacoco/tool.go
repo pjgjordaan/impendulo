@@ -107,10 +107,10 @@ func codeNode(d *html.Node) (*html.Node, error) {
 	return pre, nil
 }
 
-func (this *Tool) Name() string {
-	return NAME
+func (t *Tool) Name() string {
+	return NAME + ":" + t.test.Name
 }
 
-func (this *Tool) Lang() tool.Language {
+func (t *Tool) Lang() tool.Language {
 	return tool.JAVA
 }

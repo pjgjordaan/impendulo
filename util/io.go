@@ -31,6 +31,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -72,6 +73,17 @@ func ReadData(r io.Reader) ([]byte, error) {
 		b.Write(s)
 	}
 	return b.Bytes(), nil
+}
+
+func SaveTemp(d []byte) (string, error) {
+	f, e := ioutil.TempFile("", "")
+	if e != nil {
+		return "", e
+	}
+	if _, e = f.Write(d); e != nil {
+		return "", e
+	}
+	return f.Name(), nil
 }
 
 //SaveFile saves a file (given as a []byte) as n.
