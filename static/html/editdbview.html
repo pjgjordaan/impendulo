@@ -1,10 +1,224 @@
 {{define "view"}}
-{{$editing := .editing}}
-{{$data := editables}}
-<ul class="nav nav-pills">
-  {{range $data}}
-  <li {{if eq . $editing}} class="active"{{end}}><a href="editdbview?editing={{.}}">{{.}}</a></li>
-  {{end}}
-</ul>
-{{template "edit" .}}
+{{$users := users}}
+{{$projects := projects}}
+<div class="btn-group">
+<div id="projects" class="btn-group">
+  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+    Choose Project <span class="caret"></span>
+  </button>
+  <ul class="dropdown-menu" role="menu">
+    {{range $projects}}
+    <li><a href="#" projectid="{{.Id.Hex}}">{{.Name}}</a></li>
+    {{end}}
+  </ul>
+</div>
+<div id="users" class="btn-group">
+  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+    Choose User <span class="caret"></span>
+  </button>
+  <ul class="dropdown-menu" role="menu">
+    {{range $users}}
+    <li><a href="#" user="{{.}}">{{.}}</a></li>
+    {{end}}
+  </ul>
+</div>
+<div id="submissions" class="btn-group">
+  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+    Choose Submission <span class="caret"></span>
+  </button>
+  <ul class="dropdown-menu" role="menu">
+  </ul>
+</div>
+<div id="files" class="btn-group">
+  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+    Choose File <span class="caret"></span>
+  </button>
+  <ul class="dropdown-menu" role="menu">
+  </ul>
+</div>
+</div>
+<script type="text/javascript" language="javascript">
+  $('#projects a').click(function(){
+  loadproject($(this).attr('projectid'), 'project-id', 'project-name', 'project-user', 'project-lang', 'submissions');
+  return true;
+  });
+  $('#users a').click(function(){
+  hideEditing();
+  $('#user-panel').addClass('in');
+  loaduser($(this).attr('user'), 'user-id', 'user-name', 'user-perm');
+  return true;
+  });
+  window.onload = function()
+  {
+  loaduser({{index $users 0}}, 'user-id', 'user-name', 'user-perm');
+  loadproject({{(index $projects 0).Id.Hex}}, 'project-id', 'project-name', 'project-user', 'project-lang', 'submissions');
+  ;}
+</script>
+<div class="panel-group" id="accordion">
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+	<a data-toggle="collapse" data-parent="#accordion"
+	   href="#project-panel">
+	  Edit Project
+	</a>
+      </h4>
+    </div>
+    <div id="project-panel" class="panel-collapse collapse in">
+      <div class="panel-body">
+	<form class="form-horizontal" role="form" action="editproject" method="post">
+	  <div class="form-group">
+	    <label class="col-lg-offset-3 col-lg-2 control-label" for="project-name">Name</label>
+	    <div class="col-lg-3">
+	      <input type="text" class="form-control" name="project-name" id="project-name">      
+	    </div>
+	  </div>
+	  <div class="form-group">
+	    <label class="col-lg-offset-3 col-lg-2 control-label" for="project-user">User</label>
+	    <div class="col-lg-3">
+	      <select class="form-control" name="project-user" id="project-user">
+	      </select>
+	    </div>
+	  </div>
+	  <div class="form-group">
+	    <label class="col-lg-offset-3 col-lg-2 control-label" for="project-lang">Language</label>
+	    <div class="col-lg-3">
+	      <select class="form-control" name="project-lang" id="project-lang">
+	      </select>
+	    </div>
+	  </div>
+	  <div class="form-group">
+	    <div class="col-lg-offset-5 col-lg-3">
+	      <button type="submit" class="btn btn-default">
+		<span class="glyphicon glyphicon-upload"></span> Update
+	      </button>
+	    </div>
+	  </div>
+	  <input type="hidden" name="project-id" id="project-id">
+	</form>
+      </div>
+    </div>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+	<a data-toggle="collapse" data-parent="#accordion"
+	   href="#user-panel">
+	  Edit User
+	</a>
+      </h4>
+    </div>
+    <div id="user-panel" class="panel-collapse collapse">
+      <div class="panel-body">
+	<form class="form-horizontal" role="form" action="edituser" method="post">
+	  <div class="form-group">
+	    <label class="col-lg-offset-3 col-lg-2 control-label" for="user-name">Name</label>
+	    <div class="col-lg-3">
+	      <input type="text" class="form-control" name="user-name" id="user-name">      
+	    </div>
+	  </div>
+	  <div class="form-group">
+	    <label class="col-lg-offset-3 col-lg-2 control-label" for="user-perm">
+	      Access Permission
+	    </label>
+	    <div class="col-lg-3">
+	      <select class="form-control" name="user-perm" id="user-perm">
+	      </select>
+	    </div>
+	  </div>
+	  <div class="form-group">
+	    <div class="col-lg-offset-5 col-lg-3">
+	      <button type="submit" class="btn btn-default">
+		<span class="glyphicon glyphicon-upload"></span> Update
+	      </button>
+	    </div>
+	  </div>
+	  <input type="hidden" name="user-id" id="user-id">
+	</form>
+      </div>
+    </div>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+	<a data-toggle="collapse" data-parent="#accordion"
+	   href="#submission-panel">
+	  Edit Submission
+	</a>
+      </h4>
+    </div>
+    <div id="submission-panel" class="panel-collapse collapse">
+      <div class="panel-body">
+	<form class="form-horizontal" role="form" action="editsubmission" method="post">
+	  <div class="form-group">
+	    <label class="col-lg-offset-3 col-lg-2 control-label" for="submission-project">Project</label>
+	    <div class="col-lg-3">
+	      <select class="form-control" name="submission-project" id="submission-project">
+	      </select>
+	    </div>
+	  </div>
+	  <div class="form-group">
+	    <label class="col-lg-offset-3 col-lg-2 control-label" for="submission-user">User</label>
+	    <div class="col-lg-3">
+	      <select class="form-control" name="submission-user" id="submission-user">
+	      </select>
+	    </div>
+	  </div>
+	  <div class="form-group">
+	    <div class="col-lg-offset-5 col-lg-3">
+	      <button type="submit" class="btn btn-default">
+		<span class="glyphicon glyphicon-upload"></span> Update
+	      </button>
+	    </div>
+	  </div>
+	  <input type="hidden" name="submission-id" id="submission-id">
+	</form>
+      </div>
+    </div>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+	<a data-toggle="collapse" data-parent="#accordion"
+	   href="#file-panel">
+	  Edit File
+	</a>
+      </h4>
+    </div>
+    <div id="file-panel" class="panel-collapse collapse">
+      <div class="panel-body">
+	<form class="form-horizontal" role="form" action="editfile" method="post">
+	  <div class="form-group">
+	    <label class="col-lg-offset-3 col-lg-2 control-label" for="file-name">Name</label>
+	    <div class="col-lg-3">
+	      <input type="text" class="form-control" name="file-name" id="file-name">      
+	    </div>
+	  </div>
+	  <div class="form-group">
+	    <label class="col-lg-offset-3 col-lg-2 control-label" for="file-package">Package</label>
+	    <div class="col-lg-3">
+	      <input type="text" class="form-control" name="file-package" id="file-package">      
+	    </div>
+	  </div>
+	  <div class="form-group">
+	    <label class="col-lg-offset-3 col-lg-2 control-label" for="file-code">Code</label>
+	    <div class="col-lg-6">
+	      <textarea rows="15" cols="30" class="form-control"
+			name="file-code" id="file-code">      
+	      </textarea>
+	    </div>
+	  </div>
+	  <div class="form-group">
+	    <div class="col-lg-offset-5 col-lg-3">
+	      <button type="submit" class="btn btn-default">
+		<span class="glyphicon glyphicon-upload"></span> Update
+	      </button>
+	    </div>
+	  </div>
+	  <input type="hidden" name="file-id" id="file-id">
+	</form>
+      </div>
+    </div>
+  </div>
+</div>
 {{end}}

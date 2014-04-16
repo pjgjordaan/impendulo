@@ -46,14 +46,7 @@ type (
 	TypeHolder struct {
 		Type string "type"
 	}
-	MRID struct {
-		ID string "_id"
-	}
 )
-
-func (r *MRID) Name() string {
-	return r.ID
-}
 
 //CheckstyleResult retrieves a Result matching
 //the given interface from the active database.
@@ -389,21 +382,39 @@ func ChartResults(fileId bson.ObjectId) (ret []tool.ChartResult, err error) {
 }
 
 //AllResultNames retrieves all result names for a given project.
-func ResultNames(sid bson.ObjectId, fname string) ([]*MRID, error) {
+func ResultNames(sid bson.ObjectId, fname string) (map[string][]string, error) {
 	mr := &mgo.MapReduce{
 		Map: `function() {
 	var results = {};
 	for (n in this.results) {
-		var res = n.split('-');
-		if(!(res[0] in results)){
-			results[res[0]] = true;
-                        emit(res[0], "");		
+		var r = n.split('-')[0];
+		var o = {};
+                var sp = r.split(':');
+                o.type = sp[0];
+                o.name = sp.length >= 2 ? sp[1] : sp[0];
+                if(!(r in results)){
+			results[r] = true;
+                        emit("", o);		
                 }
 	}
 	
 };`,
 		Reduce: `function(n, vals) {
-		return n;
+var r = {};
+var added = {};
+for(i in vals){
+var t = vals[i].type;
+var n = vals[i].name;
+if((t+n) in added){
+continue;
+}
+added[t+n] = true;
+if(!(t in r)){
+r[t] = [];
+} 
+r[t].push(n);
+}		
+return r;
 };`,
 	}
 	s, e := Session()
@@ -411,11 +422,17 @@ func ResultNames(sid bson.ObjectId, fname string) ([]*MRID, error) {
 		return nil, e
 	}
 	defer s.Close()
-	var ns []*MRID
+	var ns []*struct {
+		Value map[string][]string "value"
+	}
 	if _, e := s.DB("").C(FILES).Find(bson.M{SUBID: sid, NAME: fname}).
 		Select(bson.M{NAME: 1, RESULTS: 1}).MapReduce(mr, &ns); e != nil {
 		return nil, e
+	} else if len(ns) == 0 {
+		return nil, fmt.Errorf("no results found")
 	}
-	ns = append(ns, &MRID{ID: tool.CODE}, &MRID{ID: diff.NAME})
-	return ns, nil
+	m := ns[0].Value
+	m[tool.CODE] = []string{tool.CODE}
+	m[diff.NAME] = []string{diff.NAME}
+	return m, nil
 }

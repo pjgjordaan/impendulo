@@ -57,20 +57,20 @@ func Users(m interface{}, sort ...string) ([]*user.User, error) {
 		q = q.Sort(sort...)
 	}
 	var u []*user.User
-	if e = q.Select(bson.M{user.ID: 1}).All(&u); e != nil {
+	if e = q.All(&u); e != nil {
 		return nil, &GetError{"users", e, m}
 	}
 	return u, nil
 }
 
-func UserNames(m interface{}) ([]string, error) {
+func Usernames(m interface{}) ([]string, error) {
 	s, e := Session()
 	if e != nil {
 		return nil, e
 	}
 	defer s.Close()
 	var n []string
-	if e = s.DB("").C(USERS).Find(m).Sort(NAME).Distinct(NAME, &n); e != nil {
+	if e = s.DB("").C(USERS).Find(m).Sort("_id").Distinct("_id", &n); e != nil {
 		return nil, &GetError{"users", e, m}
 	}
 	return n, nil

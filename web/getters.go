@@ -27,15 +27,12 @@ package web
 import (
 	"code.google.com/p/gorilla/pat"
 
-	"fmt"
-
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 
 	"net/http"
-	"strings"
 )
 
 type (
@@ -59,9 +56,7 @@ func Getters() map[string]Getter {
 //defaultGetters loads the default getters.
 func defaultGetters() map[string]Getter {
 	return map[string]Getter{
-		"configview": configView, "editdbview": editDBView,
-		"loadproject": loadProject, "loadsubmission": loadSubmission,
-		"loadfile": loadFile, "loaduser": loadUser,
+		"configview":    configView,
 		"displayresult": displayResult, "getfiles": getFiles, "displaychildresult": displayChildResult,
 		"getsubmissionschart": getSubmissionsChart, "getsubmissions": getSubmissions,
 	}
@@ -149,80 +144,6 @@ func getFiles(r *http.Request, c *Context) (Args, string, error) {
 		return nil, "Could not retrieve files.", e
 	}
 	return Args{"fileInfo": f, "templates": []string{"fileresult"}}, "", nil
-}
-
-//editDBView
-func editDBView(r *http.Request, c *Context) (Args, string, error) {
-	editing, e := GetString(r, "editing")
-	if e != nil {
-		editing = "Project"
-	}
-	t := []string{"editdbview", "edit" + strings.ToLower(editing)}
-	return Args{"editing": editing, "templates": t},
-		"", nil
-}
-
-func loadProject(r *http.Request, c *Context) (Args, string, error) {
-	pid, m, e := getProjectId(r)
-	if e != nil {
-		return nil, m, e
-	}
-	p, e := db.Project(bson.M{db.ID: pid}, nil)
-	if e != nil {
-		return nil, "Could not find project.", e
-	}
-	return Args{"editing": "Project", "project": p,
-		"templates": []string{"editdbview", "editproject"}}, "", nil
-}
-
-func loadUser(r *http.Request, c *Context) (Args, string, error) {
-	n, m, e := getUserId(r)
-	if e != nil {
-		return nil, m, e
-	}
-	u, e := db.User(n)
-	if e != nil {
-		return nil, fmt.Sprintf("Could not find user %s.", n), e
-	}
-	return Args{"editing": "User", "user": u, "templates": []string{"editdbview", "edituser"}}, "", nil
-}
-
-func loadSubmission(r *http.Request, c *Context) (Args, string, error) {
-	pid, m, e := getProjectId(r)
-	if e != nil {
-		return nil, m, e
-	}
-	sid, m, e := getSubId(r)
-	if e != nil {
-		return nil, m, e
-	}
-	s, e := db.Submission(bson.M{db.ID: sid}, nil)
-	if e != nil {
-		return nil, "Could not find submission.", e
-	}
-	return Args{"editing": "Submission", "projectId": pid, "submission": s,
-		"templates": []string{"editdbview", "editsubmission"}}, "", nil
-}
-
-func loadFile(r *http.Request, c *Context) (Args, string, error) {
-	pid, m, e := getProjectId(r)
-	if e != nil {
-		return nil, m, e
-	}
-	sid, m, e := getSubId(r)
-	if e != nil {
-		return nil, m, e
-	}
-	fid, m, e := getFileId(r)
-	if e != nil {
-		return nil, m, e
-	}
-	f, e := db.File(bson.M{db.ID: fid}, nil)
-	if e != nil {
-		return nil, "Could not find file.", e
-	}
-	return Args{"editing": "File", "projectId": pid, "submissionId": sid, "file": f,
-		"templates": []string{"editdbview", "editfile"}}, "", nil
 }
 
 //displayResult displays a tool's result.

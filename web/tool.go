@@ -48,6 +48,7 @@ import (
 	"labix.org/v2/mgo/bson"
 
 	"net/http"
+	"sort"
 	"strings"
 )
 
@@ -109,16 +110,13 @@ func tools(pid bson.ObjectId) ([]string, error) {
 		if _, e := db.JPFConfig(bson.M{db.PROJECTID: pid}, bson.M{db.ID: 1}); e == nil {
 			ts = append(ts, jpf.NAME)
 		}
-		if db.Contains(db.TESTS, bson.M{db.PROJECTID: pid, db.TYPE: junit.USER}) {
-			ts = append(ts, jacoco.NAME)
-		}
-		js, e := db.JUnitTests(bson.M{db.PROJECTID: pid}, bson.M{db.NAME: 1})
-		if e == nil {
+		if js, e := db.JUnitTests(bson.M{db.PROJECTID: pid}, bson.M{db.NAME: 1}); e == nil {
 			for _, j := range js {
 				n, _ := util.Extension(j.Name)
-				ts = append(ts, n)
+				ts = append(ts, jacoco.NAME+" -> "+n, junit.NAME+" -> "+n)
 			}
 		}
+		sort.Strings(ts)
 		return ts, nil
 	case tool.C:
 		return []string{mk.NAME, gcc.NAME}, nil
@@ -306,6 +304,8 @@ func RunTools(r *http.Request, c *Context) (string, error) {
 	if e != nil {
 		return "Could not read tool.", e
 	}
+	all, e := tools(pid)
+	allTools := e == nil && len(all) == len(ts)
 	us, e := GetStrings(r, "users")
 	if e != nil {
 		return "Could not read tool.", e
@@ -323,7 +323,7 @@ func RunTools(r *http.Request, c *Context) (string, error) {
 			bt = append(bt, t)
 		}
 	}
-	redoSubmissions(ss, bt, ct, r.FormValue("runempty-check") != "true")
+	redoSubmissions(ss, bt, ct, r.FormValue("runempty-check") != "true", allTools)
 	return "Successfully started running tools on submissions.", nil
 }
 
@@ -331,7 +331,7 @@ func isChildTool(n string, pid bson.ObjectId) bool {
 	return n == jacoco.NAME || db.Contains(db.TESTS, bson.M{db.PROJECTID: pid, db.NAME: n})
 }
 
-func redoSubmissions(submissions []*project.Submission, tools, childTools []string, runAll bool) {
+func redoSubmissions(submissions []*project.Submission, tools, childTools []string, allFiles, allTools bool) {
 	for _, s := range submissions {
 		var srcs []*project.File
 		var e error
@@ -347,9 +347,13 @@ func redoSubmissions(submissions []*project.Submission, tools, childTools []stri
 			continue
 		}
 		for _, f := range fs {
-			runTools(f, tools, runAll)
-			if f.Type == project.TEST && len(childTools) > 0 {
-				runChildTools(f, srcs, childTools, runAll)
+			if allTools {
+				runAllTools(f, allFiles)
+			} else {
+				runTools(f, tools, allFiles)
+				if f.Type == project.TEST && len(childTools) > 0 {
+					runChildTools(f, srcs, childTools, allFiles)
+				}
 			}
 		}
 		if e = processing.RedoSubmission(s.Id); e != nil {
@@ -358,14 +362,33 @@ func redoSubmissions(submissions []*project.Submission, tools, childTools []stri
 	}
 }
 
-func runTools(f *project.File, ts []string, runAll bool) {
+func runAllTools(f *project.File, allFiles bool) {
+	for r, s := range f.Results {
+		rid, isId := s.(bson.ObjectId)
+		if !allFiles && isId {
+			continue
+		}
+		delete(f.Results, r)
+		if !isId {
+			continue
+		}
+		if e := db.RemoveById(db.RESULTS, rid); e != nil {
+			util.Log(e)
+		}
+	}
+	if e := db.Update(db.FILES, bson.M{db.ID: f.Id}, bson.M{db.SET: bson.M{db.RESULTS: f.Results}}); e != nil {
+		util.Log(e)
+	}
+}
+
+func runTools(f *project.File, ts []string, allFiles bool) {
 	for _, t := range ts {
 		v, ok := f.Results[t]
 		if !ok {
 			continue
 		}
 		rid, isId := v.(bson.ObjectId)
-		if !runAll && isId {
+		if !allFiles && isId {
 			continue
 		}
 		delete(f.Results, t)
@@ -381,7 +404,7 @@ func runTools(f *project.File, ts []string, runAll bool) {
 	}
 }
 
-func runChildTools(test *project.File, srcs []*project.File, childTools []string, runAll bool) {
+func runChildTools(test *project.File, srcs []*project.File, childTools []string, allFiles bool) {
 	for _, s := range srcs {
 		for _, t := range childTools {
 			k := t + "-" + s.Id.Hex()
@@ -390,7 +413,7 @@ func runChildTools(test *project.File, srcs []*project.File, childTools []string
 				continue
 			}
 			rid, isId := v.(bson.ObjectId)
-			if !runAll && isId {
+			if !allFiles && isId {
 				continue
 			}
 			delete(test.Results, k)

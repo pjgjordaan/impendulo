@@ -14,17 +14,32 @@
     <h5>{{.Count}} Snapshots</h5>
     <ul class="list-inline">
       <li class="dropdown">
-	<a class="dropdown-toggle" data-toggle="dropdown" href="#">
+	<button class="btn btn-primary dropdown-toggle" data-toggle="dropdown" href="#">
 	  Analysis <span class="caret"></span>
-	</a>
+	</button>
 	{{$results := resultNames $sid $fileName}}
 	<ul class="dropdown-menu" role="menu">
-	  {{range $results}}  
+	  {{range $k, $v := $results}}  
+	  {{if eq (index $v 0) $k}}
 	  <li>
-	    <a href="displayresult?result={{.ID}}&file={{$fileName}}">
-	      {{.ID}}
+	    <a href="displayresult?result={{$k}}&file={{$fileName}}">
+	      {{$k}}
 	    </a>
 	  </li>
+	  {{else}}
+	  <li class="dropdown-submenu">
+	    <a tabindex="-1" href="#">{{$k}}</a>
+	    <ul class="dropdown-menu" role="menu">
+	      {{range $v}}  
+	      <li>
+		<a href="displayresult?result={{$k}}:{{.}}&file={{$fileName}}">
+		  {{.}}
+		</a>
+	      </li>
+	      {{end}}
+	    </ul>
+	  </li>
+	  {{end}}
 	  {{end}}
 	</ul>
       </li>

@@ -9,6 +9,8 @@ import (
 
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 
@@ -30,12 +32,49 @@ func (a AJAX) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func GenerateAJAX(r *pat.Router) {
 	fs := map[string]AJAX{
-		"chart": getChart, "tools": getTools, "users": getUsers, "collections": collections,
-		"skeletons": getSkeletons, "code": getCode, "submissions": submissions,
+		"chart": getChart, "usernames": getUsernames, "collections": collections,
+		"skeletons": getSkeletons, "submissions": submissions,
+		"langs": getLangs, "projects": getProjects, "files": ajaxFiles, "tools": ajaxTools,
+		"code": ajaxCode, "users": ajaxUsers, "permissions": ajaxPerms,
 	}
 	for n, f := range fs {
 		r.Add("GET", "/"+n, f)
 	}
+}
+
+func ajaxPerms(r *http.Request) ([]byte, error) {
+	return util.JSON(map[string]interface{}{"permissions": user.PermissionInfos()})
+}
+
+func ajaxUsers(r *http.Request) ([]byte, error) {
+	m := bson.M{}
+	if n, e := GetString(r, "name"); e == nil {
+		m[db.ID] = n
+	}
+	u, e := db.Users(m)
+	if e != nil {
+		return nil, e
+	}
+	return util.JSON(map[string]interface{}{"users": u})
+}
+
+func ajaxCode(r *http.Request) ([]byte, error) {
+	m := bson.M{}
+	if rid, e := util.ReadId(r.FormValue("resultid")); e == nil {
+		tr, e := db.ToolResult(bson.M{db.ID: rid}, bson.M{db.FILEID: 1})
+		if e != nil {
+			return nil, e
+		}
+		m[db.ID] = tr.GetFileId()
+	}
+	if id, e := util.ReadId(r.FormValue("id")); e == nil {
+		m[db.ID] = id
+	}
+	f, e := db.File(m, bson.M{db.DATA: 1})
+	if e != nil {
+		return nil, e
+	}
+	return util.JSON(map[string]interface{}{"code": string(f.Data)})
 }
 
 func collections(r *http.Request) ([]byte, error) {
@@ -50,31 +89,19 @@ func collections(r *http.Request) ([]byte, error) {
 	return util.JSON(map[string]interface{}{"collections": c})
 }
 
-func submissions(r *http.Request) ([]byte, error) {
-	pid, _, e := getProjectId(r)
+func getProjects(r *http.Request) ([]byte, error) {
+	m := bson.M{}
+	if pid, e := util.ReadId(r.FormValue("id")); e == nil {
+		m[db.ID] = pid
+	}
+	p, e := db.Projects(m, nil)
 	if e != nil {
 		return nil, e
 	}
-	s, e := db.Submissions(bson.M{db.PROJECTID: pid}, nil)
-	if e != nil {
-		return nil, e
-	}
-	return util.JSON(map[string]interface{}{"submissions": s})
+	return util.JSON(map[string]interface{}{"projects": p})
 }
 
-func getUsers(r *http.Request) ([]byte, error) {
-	pid, _, e := getProjectId(r)
-	if e != nil {
-		return nil, e
-	}
-	u, e := users(pid)
-	if e != nil {
-		return nil, e
-	}
-	return util.JSON(map[string]interface{}{"users": u})
-}
-
-func getTools(r *http.Request) ([]byte, error) {
+func ajaxTools(r *http.Request) ([]byte, error) {
 	pid, _, e := getProjectId(r)
 	if e != nil {
 		return nil, e
@@ -86,20 +113,83 @@ func getTools(r *http.Request) ([]byte, error) {
 	return util.JSON(map[string]interface{}{"tools": t})
 }
 
-func getCode(r *http.Request) ([]byte, error) {
-	rid, _, e := getId(r, "resultid", "result")
+func ajaxFiles(r *http.Request) ([]byte, error) {
+	m := bson.M{}
+	if sid, e := util.ReadId(r.FormValue("subid")); e == nil {
+		m[db.SUBID] = sid
+	}
+	if id, e := util.ReadId(r.FormValue("id")); e == nil {
+		m[db.ID] = id
+	}
+	format, _ := GetString(r, "format")
+	var f interface{}
+	var e error
+	if format == "nested" {
+		f, e = nestedFiles(m)
+	} else {
+		f, e = db.Files(m, bson.M{db.DATA: 0}, db.TIME)
+	}
 	if e != nil {
 		return nil, e
 	}
-	tr, e := db.ToolResult(bson.M{db.ID: rid}, bson.M{db.FILEID: 1})
+	return util.JSON(map[string]interface{}{"files": f})
+}
+
+func nestedFiles(m bson.M) (map[project.Type]map[string][]*project.File, error) {
+	ts := []project.Type{project.SRC, project.LAUNCH, project.ARCHIVE, project.TEST}
+	ns, e := db.FileNames(m)
 	if e != nil {
 		return nil, e
 	}
-	f, e := db.File(bson.M{db.ID: tr.GetFileId()}, nil)
+	fm := make(map[project.Type]map[string][]*project.File)
+	for _, t := range ts {
+		nm := make(map[string][]*project.File)
+		m[db.TYPE] = t
+		for _, n := range ns {
+			m[db.NAME] = n
+			fs, e := db.Files(m, bson.M{db.DATA: 0}, db.TIME)
+			if e == nil && len(fs) > 0 {
+				nm[n] = fs
+			}
+		}
+		if len(nm) > 0 {
+			fm[t] = nm
+		}
+	}
+	return fm, nil
+}
+
+func submissions(r *http.Request) ([]byte, error) {
+	m := bson.M{}
+	if sid, e := util.ReadId(r.FormValue("id")); e == nil {
+		m[db.ID] = sid
+	}
+	if pid, e := util.ReadId(r.FormValue("projectid")); e == nil {
+		m[db.PROJECTID] = pid
+	}
+	s, e := db.Submissions(m, nil)
 	if e != nil {
 		return nil, e
 	}
-	return util.JSON(map[string]interface{}{"code": string(f.Data)})
+	return util.JSON(map[string]interface{}{"submissions": s})
+}
+
+func getUsernames(r *http.Request) ([]byte, error) {
+	pid, e := util.ReadId(r.FormValue("projectid"))
+	var u []string
+	if e != nil {
+		u, e = db.Usernames(nil)
+	} else {
+		u, e = projectUsernames(pid)
+	}
+	if e != nil {
+		return nil, e
+	}
+	return util.JSON(map[string]interface{}{"usernames": u})
+}
+
+func getLangs(r *http.Request) ([]byte, error) {
+	return util.JSON(map[string]interface{}{"langs": []tool.Language{tool.JAVA, tool.C}})
 }
 
 func getSkeletons(r *http.Request) ([]byte, error) {

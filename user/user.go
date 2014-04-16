@@ -37,7 +37,11 @@ import (
 )
 
 type (
-	Permission int
+	Permission     int
+	PermissionInfo struct {
+		Access Permission
+		Name   string
+	}
 
 	//User represents a user within the Impendulo system.
 	User struct {
@@ -66,8 +70,8 @@ var (
 )
 
 //String
-func (this *User) String() string {
-	return "Type: user.User; Name: " + this.Name
+func (u *User) String() string {
+	return "Type: user.User; Name: " + u.Name + "; Permission: " + u.Access.Name()
 }
 
 //New creates a new user with file submission permissions.
@@ -129,4 +133,13 @@ func Permissions() []Permission {
 		perms = []Permission{NONE, STUDENT, TEACHER, ADMIN}
 	}
 	return perms
+}
+
+func PermissionInfos() []*PermissionInfo {
+	ps := Permissions()
+	infos := make([]*PermissionInfo, len(ps))
+	for i, p := range ps {
+		infos[i] = &PermissionInfo{p, p.Name()}
+	}
+	return infos
 }

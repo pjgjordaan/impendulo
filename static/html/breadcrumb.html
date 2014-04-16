@@ -58,7 +58,7 @@
   {{$sid := .ctx.Browse.Sid}}
   <li><a href="{{getFiles .ctx.Browse.Sid}}">{{$uid}}'s
       {{$project}} Submission</a></li>
-  {{$resultName := .ctx.Browse.Result}}
+  {{$resultName := .ctx.Browse.FormatResult}}
   {{$fileName := .ctx.Browse.File}}
   {{$results := .results}}
   {{if .ctx.Browse.Level.Is "analysis"}}
@@ -69,12 +69,27 @@
       {{$resultName}} <span class="caret"></span>
     </a>
     <ul class="dropdown-menu" role="menu">
-      {{range $results}}  
+      {{range $k, $v := $results}}  
+      {{if eq (index $v 0) $k}}
       <li>
-	<a href="displayresult?result={{.ID}}">
-	  {{.ID}}
+	<a href="displayresult?result={{$k}}">
+	  {{$k}}
 	</a>
       </li>
+      {{else}}
+      <li class="dropdown-submenu">
+	<a tabindex="-1" href="#">{{$k}}</a>
+	<ul class="dropdown-menu" role="menu">
+	  {{range $v}}  
+	  <li>
+	    <a href="displayresult?result={{$k}}:{{.}}">
+	      {{.}}
+	    </a>
+	  </li>
+	  {{end}}
+	</ul>
+      </li>
+      {{end}}
       {{end}}
     </ul>
   </li>

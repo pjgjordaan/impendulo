@@ -285,7 +285,7 @@ func childFile(sid bson.ObjectId, n string) (*project.File, error) {
 	}
 }
 
-func users(pid bson.ObjectId) ([]string, error) {
+func projectUsernames(pid bson.ObjectId) ([]string, error) {
 	ss, e := db.Submissions(bson.M{db.PROJECTID: pid}, nil)
 	if e != nil {
 		return nil, e

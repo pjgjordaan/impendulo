@@ -91,8 +91,8 @@ var (
 		"langProjects": func(l string) ([]*project.Project, error) {
 			return db.Projects(bson.M{db.LANG: l}, nil, db.NAME)
 		},
-		"resultNames":           func(sid bson.ObjectId, n string) ([]*db.MRID, error) { return db.ResultNames(sid, n) },
-		"users":                 func() ([]*user.User, error) { return db.Users(nil, user.ID) },
+		"resultNames":           func(sid bson.ObjectId, n string) (map[string][]string, error) { return db.ResultNames(sid, n) },
+		"users":                 func() ([]string, error) { return db.Usernames(nil) },
 		"skeletons":             skeletons,
 		"getFiles":              func(sid bson.ObjectId) string { return fmt.Sprintf("getfiles?subid=%s", sid.Hex()) },
 		"getUserChart":          func(u string) string { return fmt.Sprintf("getsubmissionschart?userid=%s", u) },
@@ -101,7 +101,7 @@ var (
 		"getProjectSubmissions": func(pid bson.ObjectId) string { return fmt.Sprintf("getsubmissions?projectid=%s", pid.Hex()) },
 		"overviewChart":         overviewChart,
 		"typeCounts":            TypeCounts,
-		"editables":             func() []string { return []string{"Project", "User", "Submission", "File"} },
+		"editables":             func() []string { return []string{"Project", "User"} },
 		"permissions":           user.Permissions,
 		"file":                  func(id bson.ObjectId) (*project.File, error) { return db.File(bson.M{db.ID: id}, nil) },
 		"toTitle":               util.Title,

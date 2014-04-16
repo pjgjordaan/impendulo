@@ -154,37 +154,205 @@ function addSkeletons(src, dest, skeletonMap){
 }
 
 function populate(src, toolDest, userDest){
-    addTools(src, toolDest);
-    addUsers(src, userDest);
+    ajaxSelect(src, toolDest, 'tools?projectid=', 'tools');
+    ajaxSelect(src, userDest, 'usernames?projectid=', 'usernames');
 }
 
 function ajaxSelect(src, dest, url, name){
     var srcList = document.getElementById(src);
     var val = srcList.options[srcList.selectedIndex].value;
     $.getJSON(url+val, function(data){   
-	    $('#'+dest).multiselect();
-	    $('#'+dest).multiselect('destroy');
-	    var destList = document.getElementById(dest);
-	    destList.options.length = 0;
-	    var items = data[name];
-	    for(var i = 0; i < items.length; i++) {
-		var option = document.createElement('option');
-		option.value = option.text = items[i];
-		destList.add(option);
-	    }
-	    $('#'+dest).multiselect();
-	    $('#'+dest).multiselected = true;
+	$('#'+dest).multiselect();
+	$('#'+dest).multiselect('destroy');
+	$('#'+dest).empty();
+	var items = data[name];
+	for(var i = 0; i < items.length; i++) {
+	    $('#'+dest).append('<option value="'+items[i]+'">'+items[i]+'</option>');
+	}
+	$('#'+dest).multiselect();
+	$('#'+dest).multiselected = true;
     });	 
 }
 
-function addTools(src, dest){
-    ajaxSelect(src, dest, 'tools?projectid=', 'tools');
-}
- 
-function addUsers(src, dest){
-   ajaxSelect(src, dest, 'users?projectid=', 'users');
+function hideEditing(){
+    $('#project-panel').removeClass('in');
+    $('#user-panel').removeClass('in');
+    $('#submission-panel').removeClass('in');
+    $('#file-panel').removeClass('in');
 }
 
+function loadproject(id, idDest, nameDest, userDest, langDest, subDest){
+    hideEditing();
+    $('#project-panel').addClass('in');
+    $.getJSON("projects?id="+id, function(data){   
+	var p = data["projects"][0];
+	$('#'+idDest).val(p.Id) ;
+	$('#'+nameDest).val(p.Name) ;
+	$.getJSON("usernames", function(udata){   
+	    $('#'+userDest).empty();
+	    var users = udata['usernames'];
+	    if(not(users)){
+		return;
+	    }
+	    for(var i = 0; i < users.length; i++) {
+		if(users[i] === p.User){
+		    $('#'+userDest).append('<option value="'+users[i]+'" selected>'+users[i]+'</option>');
+		}else{
+		    $('#'+userDest).append('<option value="'+users[i]+'">'+users[i]+'</option>');
+		}
+	    }
+	});	 
+	$.getJSON("langs", function(ldata){   
+	    $('#'+langDest).empty();
+	    var langs = ldata['langs'];
+	    if(not(langs)){
+		return;
+	    }
+	    for(var i = 0; i < langs.length; i++) {
+		if(langs[i] === p.Lang){
+		    $('#'+langDest).append('<option value="'+langs[i]+'" selected>'+langs[i]+'</option>');
+		}else{
+		    $('#'+langDest).append('<option value="'+langs[i]+'">'+langs[i]+'</option>');
+		}
+	    }
+	});	 
+	$.getJSON("submissions?projectid="+p.Id, function(sdata){   
+	    $('#'+subDest+' > ul').empty();
+	    var subs = sdata['submissions'];
+	    if(not(subs)){
+		$('#files > ul').empty();
+		$('#file-name').empty();
+		$('#file-package').empty();
+		$('#submission-project').empty();
+		$('#submission-user').empty();
+		return;
+	    }
+	    for(var i = 0; i < subs.length; i++) {	  
+		$('#'+subDest+' > ul').append('<li><a href="#" subid="'+subs[i].Id+'">'+subs[i].User+' '+new Date(subs[i].Time).toLocaleString()+'</a></li>');
+	    }
+	    $('#'+subDest+' a').click(function(){
+		loadsubmission($(this).attr('subid'), 'submission-id', 'submission-project', 'submission-user', 'files');
+		hideEditing();
+		$('#submission-panel').addClass('in');
+		return true;
+	    });
+	    loadsubmission(subs[0].Id, 'submission-id', 'submission-project', 'submission-user', 'files');
+	});	 
+    });
+}
+
+function not(v){
+    return v === null || v === undefined || v.length === 0; 
+}
+
+
+function loadsubmission(id, idDest, projectDest, userDest, fileDest){
+    $.getJSON("submissions?id="+id, function(data){   
+	var s = data["submissions"][0];
+	$('#'+idDest).val(s.Id) ;
+	$.getJSON("projects", function(pdata){   
+	    $('#'+projectDest).empty();
+	    var projects = pdata['projects'];
+	    if(not(projects)){
+		return;
+	    }
+	    for(var i = 0; i < projects.length; i++) {
+		if(projects[i].Id === s.ProjectId){
+		    $('#'+projectDest).append('<option value="'+projects[i].Id+'" selected>'+projects[i].Name+'</option>');
+		}else{
+		    $('#'+projectDest).append('<option value="'+projects[i].Id+'">'+projects[i].Name+'</option>');
+		}
+	    }
+	});	 
+	$.getJSON("usernames", function(udata){   
+	    $('#'+userDest).empty();
+	    var users = udata['usernames'];
+	    if(not(users)){
+		return;
+	    }
+	    for(var i = 0; i < users.length; i++) {
+		if(users[i] === s.User){
+		    $('#'+userDest).append('<option value="'+users[i]+'" selected>'+users[i]+'</option>');
+		}else{
+		    $('#'+userDest).append('<option value="'+users[i]+'">'+users[i]+'</option>');
+		}
+	    }
+	});	 
+	$.getJSON('files?subid='+s.Id +'&format=nested', function(fdata){   
+	    $('#'+fileDest+' > ul').empty();
+	    var files = fdata['files'];
+	    if(not(files)){
+		$('#file-name').empty();
+		$('#file-package').empty();
+		return;
+	    }
+	    var fid = "";
+	    var c = 0;
+	    for(t in files) {
+		var tid = 'type-subdropdown-'+(c++).toString();
+		$('#'+fileDest+' > ul').append('<li class="dropdown-submenu"><a tabindex="-1" href="#">'+t+'</a><ul id="'+tid+'" class="dropdown-menu" role="menu"></ul></li>');
+		for(n in files[t]){
+		    var nid = 'name-subdropdown-'+(c++).toString();
+		    $('#'+fileDest+' #'+tid).append('<li class="dropdown-submenu"><a tabindex="-1" href="#">'+n+'</a><ul id="'+nid+'" class="dropdown-menu" role="menu"></ul></li>'); 
+		    for(i in files[t][n]){
+			if(i == 0){
+			    fid = files[t][n][i].Id;
+			}
+			$('#'+fileDest+' #'+nid).append('<li><a class="a-file" href="#" fileid="'+files[t][n][i].Id+'">'+new Date(files[t][n][i].Time).toLocaleString()+'</a></li>');
+	 	    }
+		}
+	    }
+	    $('#'+fileDest+' .a-file').click(function(){
+		loadfiles($(this).attr('fileid'), 'file-id', 'file-name', 'file-package', 'file-code');
+		hideEditing();
+		$('#file-panel').addClass('in');
+		return true;
+	    });
+	    loadfiles(fid, 'file-id', 'file-name', 'file-package', 'file-code');
+	});	 	 	 
+    });
+}
+
+function loaduser(id, idDest, nameDest, permDest){
+    $.getJSON("users?name="+id, function(data){   
+	var u = data["users"][0];
+	$('#'+nameDest).val(u.Name);
+	$('#'+idDest).val(u.Name);
+	$.getJSON("permissions", function(pdata){   
+	    $('#'+permDest).empty();
+	    var perms = pdata['permissions'];
+	    if(not(perms)){
+		return;
+	    }
+	    for(var i = 0; i < perms.length; i++) {
+		if(perms[i].Access === u.Access){
+		    $('#'+permDest).append('<option value="'+perms[i].Access.toString()+'" selected>'+perms[i].Name+'</option>');
+		}else{
+		    $('#'+permDest).append('<option value="'+perms[i].Access.toString()+'">'+perms[i].Name+'</option>');
+		}
+	    }
+	});
+    });
+}
+
+function loadfiles(id, idDest, nameDest, pkgDest, codeDest){
+    $.getJSON("files?id="+id, function(data){   
+	var f = data["files"][0];
+	$('#'+idDest).val(f.Id);
+	$('#'+nameDest).val(f.Name);
+	if(f.Type !== 'src' && f.Type !== 'test'){
+	    $('#'+pkgDest).val('');
+	    $('#'+codeDest).html('');	 	    
+	    $('#'+pkgDest).hide();
+	    $('#'+codeDest).hide();
+	    return;
+	}
+	$('#'+pkgDest).val(f.Package);
+	$.getJSON("code?id="+id, function(cdata){   
+	    $('#'+codeDest).html(cdata["code"]);	 	 
+	});
+    });
+}
 
 function addPopover(dest, src){
     $('body').on('click', function (e) {

@@ -178,6 +178,13 @@ func (b *Browse) Src() (string, error) {
 	return "", errors.New("no source file available")
 }
 
+func (b *Browse) FormatResult() string {
+	if i := strings.Index(b.Result, ":"); i > 0 {
+		return b.Result[:i] + " -> " + b.Result[i+1:]
+	}
+	return b.Result
+}
+
 func (b *Browse) Test() (string, error) {
 	if b.Type == project.TEST && b.File != "" {
 		return b.File, nil

@@ -39,7 +39,6 @@ import (
 	"labix.org/v2/mgo/bson"
 
 	"net/http"
-	"strings"
 )
 
 type (
@@ -255,28 +254,28 @@ func DeleteResults(r *http.Request, c *Context) (string, error) {
 
 //EditProject is used to modify a project's metadata.
 func EditProject(r *http.Request, c *Context) (string, error) {
-	pid, m, e := getProjectId(r)
+	pid, e := util.ReadId(r.FormValue("project-id"))
 	if e != nil {
-		return m, e
+		return "Could not read project id.", e
 	}
-	n, e := GetString(r, "projectname")
+	n, e := GetString(r, "project-name")
 	if e != nil {
 		return "Could not read project name.", e
 	}
-	u, m, e := getUserId(r)
+	u, e := GetString(r, "project-user")
 	if e != nil {
-		return m, e
+		return "Could not read user.", e
 	}
 	if !db.Contains(db.USERS, bson.M{db.ID: u}) {
-		e = fmt.Errorf("Invalid user %s.", u)
+		e = fmt.Errorf("invalid user %s", u)
 		return e.Error(), e
 	}
-	l, e := GetString(r, "lang")
+	l, e := GetString(r, "project-lang")
 	if e != nil {
 		return "Could not read language.", e
 	}
 	if !tool.Supported(tool.Language(l)) {
-		e = fmt.Errorf("Unsupported language %s.", l)
+		e = fmt.Errorf("unsupported language %s", l)
 		return e.Error(), e
 	}
 	if e = db.Update(db.PROJECTS, bson.M{db.ID: pid}, bson.M{db.SET: bson.M{db.NAME: n, db.USER: u, db.LANG: l}}); e != nil {
@@ -287,21 +286,21 @@ func EditProject(r *http.Request, c *Context) (string, error) {
 
 //EditSubmission
 func EditSubmission(r *http.Request, c *Context) (string, error) {
-	sid, m, e := getSubId(r)
+	sid, e := util.ReadId(r.FormValue("submission-id"))
 	if e != nil {
-		return m, e
+		return "Could not read submission id.", e
 	}
-	pid, m, e := getProjectId(r)
+	pid, e := util.ReadId(r.FormValue("submission-project"))
 	if e != nil {
-		return m, e
+		return "Could not read project.", e
 	}
 	if !db.Contains(db.PROJECTS, bson.M{db.ID: pid}) {
 		e = fmt.Errorf("invalid project %s", pid.Hex())
 		return e.Error(), e
 	}
-	u, m, e := getUserId(r)
+	u, e := GetString(r, "submission-user")
 	if e != nil {
-		return m, e
+		return "Could not read user.", e
 	}
 	if !db.Contains(db.USERS, bson.M{db.ID: u}) {
 		e = fmt.Errorf("invalid user %s", u)
@@ -315,27 +314,19 @@ func EditSubmission(r *http.Request, c *Context) (string, error) {
 
 //EditFile
 func EditFile(r *http.Request, c *Context) (string, error) {
-	fid, m, e := getFileId(r)
+	fid, e := util.ReadId(r.FormValue("file-id"))
 	if e != nil {
-		return m, e
+		return "Could not read file id.", e
 	}
-	sid, m, e := getSubId(r)
-	if e != nil {
-		return m, e
-	}
-	if !db.Contains(db.SUBMISSIONS, bson.M{db.ID: sid}) {
-		e = fmt.Errorf("invalid submission %s.", sid.Hex())
-		return e.Error(), e
-	}
-	n, e := GetString(r, "filename")
+	n, e := GetString(r, "file-name")
 	if e != nil {
 		return "Could not read file name.", e
 	}
-	p, e := GetString(r, "package")
+	p, e := GetString(r, "file-package")
 	if e != nil {
 		return "Could not read package.", e
 	}
-	if e = db.Update(db.FILES, bson.M{db.ID: fid}, bson.M{db.SET: bson.M{db.SUBID: sid, db.NAME: n, db.PKG: p}}); e != nil {
+	if e = db.Update(db.FILES, bson.M{db.ID: fid}, bson.M{db.SET: bson.M{db.NAME: n, db.PKG: p}}); e != nil {
 		return "Could not edit file.", e
 	}
 	return "Successfully edited file.", nil
@@ -417,34 +408,30 @@ func Logout(r *http.Request, c *Context) (string, error) {
 
 //EditUser
 func EditUser(r *http.Request, c *Context) (string, error) {
-	on, e := GetString(r, "oldname")
+	id, e := GetString(r, "user-id")
 	if e != nil {
 		return "Could not read old username.", e
 	}
-	nn, e := GetString(r, "newname")
+	n, e := GetString(r, "user-name")
 	if e != nil {
 		return "Could not read new username.", e
 	}
-	a, e := GetInt(r, "access")
+	a, e := GetInt(r, "user-perm")
 	if e != nil {
 		return "Could not read user access level.", e
 	}
 	if !user.ValidPermission(a) {
-		e = fmt.Errorf("Invalid user access level %d.", a)
+		e = fmt.Errorf("invalid user access level %d", a)
 		return e.Error(), e
 	}
-	if on != nn {
-		if e = db.RenameUser(on, nn); e != nil {
-			return fmt.Sprintf("Could not rename user %s to %s.", on, nn), e
+	if id != n {
+		if e = db.RenameUser(id, n); e != nil {
+			return fmt.Sprintf("could not rename user %s to %s.", id, n), e
 		}
 	}
-	if e = db.Update(db.USERS, bson.M{db.ID: nn}, bson.M{db.SET: bson.M{user.ACCESS: a}}); e != nil {
+	if e = db.Update(db.USERS, bson.M{db.ID: n}, bson.M{db.SET: bson.M{user.ACCESS: a}}); e != nil {
 		return "Could not edit user.", e
 	}
-	//Ugly hack should change this.
-	rf := r.Header.Get("Referer")
-	rf = rf[:strings.LastIndex(rf, "/")+1] + "editdbview?editing=User"
-	r.Header.Set("Referer", rf)
 	return "Successfully edited user.", nil
 
 }

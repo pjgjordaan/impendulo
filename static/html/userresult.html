@@ -16,25 +16,25 @@
   <tbody data-provides="rowlink" >
      {{$users := users}}
      {{range $users}}
-     {{$counts := typeCounts .Name}}
+     {{$counts := typeCounts .}}
      <tr>
        <td>
-	 <a class="rowlink" href="{{getUserSubmissions .Name}}">
-	   {{.Name}}
+	 <a class="rowlink" href="{{getUserSubmissions .}}">
+	   {{.}}
 	 </a>
        </td>
        <td>
-	 <a class="rowlink" href="{{getUserSubmissions .Name}}">
+	 <a class="rowlink" href="{{getUserSubmissions .}}">
 	   {{index $counts 0}}
 	 </a>
        </td>
        <td>
-	 <a class="rowlink" href="{{getUserSubmissions .Name}}">
+	 <a class="rowlink" href="{{getUserSubmissions .}}">
 	   {{index $counts 1}}
 	 </a>
        </td>
        <td>
-	 <a class="rowlink" href="{{getUserSubmissions .Name}}">
+	 <a class="rowlink" href="{{getUserSubmissions .}}">
 	   {{index $counts 2}}
 	 </a>
        </td>
