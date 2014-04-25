@@ -113,7 +113,7 @@ func tools(pid bson.ObjectId) ([]string, error) {
 		if js, e := db.JUnitTests(bson.M{db.PROJECTID: pid}, bson.M{db.NAME: 1}); e == nil {
 			for _, j := range js {
 				n, _ := util.Extension(j.Name)
-				ts = append(ts, jacoco.NAME+" -> "+n, junit.NAME+" -> "+n)
+				ts = append(ts, jacoco.NAME+" \u2192 "+n, junit.NAME+" \u2192 "+n)
 			}
 		}
 		sort.Strings(ts)
@@ -336,12 +336,12 @@ func redoSubmissions(submissions []*project.Submission, tools, childTools []stri
 		var srcs []*project.File
 		var e error
 		if len(childTools) > 0 {
-			srcs, e = db.Files(bson.M{db.SUBID: s.Id, db.TYPE: project.SRC}, bson.M{db.ID: 1})
+			srcs, e = db.Files(bson.M{db.SUBID: s.Id, db.TYPE: project.SRC}, bson.M{db.ID: 1}, 0)
 			if e != nil {
 				util.Log(e)
 			}
 		}
-		fs, e := db.Files(bson.M{db.SUBID: s.Id}, bson.M{db.DATA: 0})
+		fs, e := db.Files(bson.M{db.SUBID: s.Id}, bson.M{db.DATA: 0}, 0)
 		if e != nil {
 			util.Log(e)
 			continue
@@ -431,7 +431,7 @@ func runChildTools(test *project.File, srcs []*project.File, childTools []string
 }
 
 //GetResult retrieves a DisplayResult for a given file and result name.
-func GetResult(name string, fileId bson.ObjectId) (tool.DisplayResult, error) {
+func GetResult(rd *ResultDesc, fileId bson.ObjectId) (tool.DisplayResult, error) {
 	m := bson.M{db.ID: fileId}
 	f, err := db.File(m, nil)
 	if err != nil {
@@ -441,7 +441,7 @@ func GetResult(name string, fileId bson.ObjectId) (tool.DisplayResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	switch name {
+	switch rd.Type {
 	case tool.CODE:
 		p, err := db.Project(bson.M{db.ID: s.ProjectId}, nil)
 		if err != nil {
@@ -462,14 +462,9 @@ func GetResult(name string, fileId bson.ObjectId) (tool.DisplayResult, error) {
 		}
 		return r, nil
 	default:
-		ival, ok := f.Results[name]
+		ival, ok := f.Results[rd.Raw()]
 		if !ok {
-			if strings.HasPrefix(junit.NAME, name) {
-				name = "unit tests"
-			} else if strings.HasPrefix(jacoco.NAME, name) {
-				name = "jacoco test coverage"
-			}
-			return tool.NewErrorResult(tool.NORESULT, name), nil
+			return tool.NewErrorResult(tool.NORESULT, rd.Format()), nil
 		}
 		switch v := ival.(type) {
 		case bson.ObjectId:
@@ -477,34 +472,34 @@ func GetResult(name string, fileId bson.ObjectId) (tool.DisplayResult, error) {
 			return db.DisplayResult(bson.M{db.ID: v}, nil)
 		case string:
 			//Error, so create new error result.
-			return tool.NewErrorResult(v, name), nil
+			return tool.NewErrorResult(v, rd.Format()), nil
 		}
 	}
-	return tool.NewErrorResult(tool.NORESULT, name), nil
+	return tool.NewErrorResult(tool.NORESULT, rd.Format()), nil
 }
 
-func GetChildResult(toolName, suffix string, fileId bson.ObjectId) (tool.DisplayResult, error) {
-	var n string
-	switch toolName {
-	case junit.NAME:
-		f, e := db.File(bson.M{db.ID: fileId}, nil)
-		if e != nil {
-			return nil, e
-		}
-		n, _ = util.Extension(f.Name)
-	case jacoco.NAME:
-		n = jacoco.NAME
-	default:
-		return nil, fmt.Errorf("unsupported tool %s", toolName)
+/*
+func getUserTestResult(k string, sid bson.ObjectId) (tool.DisplayResult, error) {
+	fs, e := db.Files(bson.M{db.TYPE: project.TEST, db.SUBID: sid, db.RESULTS + "." + k: bson.M{db.EXISTS: true}, db.RESULTS + "." + k: bson.M{db.ISTYPE: 7}}, bson.M{db.DATA: 0}, 1, db.TIME)
+	if e != nil || len(fs) == 0 {
+		return tool.NewErrorResult(tool.NORESULT, strings.Split(k, "-")[0]), nil
 	}
-	n += "-" + suffix
+	rid, e := util.GetId(fs[0].Results, k)
+	if e != nil {
+		return nil, e
+	}
+	return db.DisplayResult(bson.M{db.ID: rid}, nil)
+}
+
+func GetChildResult(key string, fileId bson.ObjectId) (tool.DisplayResult, error) {
 	f, e := db.File(bson.M{db.ID: fileId}, nil)
 	if e != nil {
 		return nil, e
 	}
-	i, ok := f.Results[n]
+	t := strings.Split(key, ":")[0]
+	i, ok := f.Results[key]
 	if !ok {
-		return tool.NewErrorResult(tool.NORESULT, toolName), nil
+		return tool.NewErrorResult(tool.NORESULT, t), nil
 	}
 	switch v := i.(type) {
 	case bson.ObjectId:
@@ -512,7 +507,16 @@ func GetChildResult(toolName, suffix string, fileId bson.ObjectId) (tool.Display
 		return db.DisplayResult(bson.M{db.ID: v}, nil)
 	case string:
 		//Error, so create new error result.
-		return tool.NewErrorResult(v, toolName), nil
+		return tool.NewErrorResult(v, t), nil
 	}
-	return tool.NewErrorResult(tool.NORESULT, toolName), nil
+	return tool.NewErrorResult(tool.NORESULT, t), nil
+}
+*/
+func validId(rs ...interface{}) (string, error) {
+	for _, i := range rs {
+		if r, ok := i.(tool.ToolResult); ok {
+			return r.GetId().Hex(), nil
+		}
+	}
+	return "", fmt.Errorf("no valid result found")
 }

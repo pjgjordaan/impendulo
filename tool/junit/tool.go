@@ -45,12 +45,13 @@ type (
 		cp, name     string
 		dataLocation string
 		test, runner *tool.Target
+		testId       bson.ObjectId
 	}
 )
 
 //New creates a new  instance of the JUnit Tool.
 //test is the JUnit Test to be run. dir is the location of the submission's tool directory.
-func New(test *tool.Target, toolDir string) (*Tool, error) {
+func New(test *tool.Target, toolDir string, testId bson.ObjectId) (*Tool, error) {
 	//Load jar locations
 	j, e := config.JUNIT.Path()
 	if e != nil {
@@ -69,6 +70,7 @@ func New(test *tool.Target, toolDir string) (*Tool, error) {
 		dataLocation: filepath.Join(test.PackagePath(), "data"),
 		test:         test,
 		runner:       tool.NewTarget("TestRunner.java", "testing", toolDir, tool.JAVA),
+		testId:       testId,
 	}, nil
 }
 
@@ -114,7 +116,7 @@ func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, 
 	r, re := tool.RunCommand(a, nil)
 	rf, e := os.Open(of)
 	if e == nil {
-		nr, e := NewResult(fileId, t.test.Name, util.ReadBytes(rf))
+		nr, e := NewResult(fileId, t.testId, t.test.Name, util.ReadBytes(rf))
 		if e != nil {
 			if re != nil {
 				e = re

@@ -20,7 +20,7 @@
 	{{$results := resultNames $sid $fileName}}
 	<ul class="dropdown-menu" role="menu">
 	  {{range $k, $v := $results}}  
-	  {{if eq (index $v 0) $k}}
+	  {{if emptyM $v}}
 	  <li>
 	    <a href="displayresult?result={{$k}}&file={{$fileName}}">
 	      {{$k}}
@@ -30,12 +30,28 @@
 	  <li class="dropdown-submenu">
 	    <a tabindex="-1" href="#">{{$k}}</a>
 	    <ul class="dropdown-menu" role="menu">
-	      {{range $v}}  
+	      {{range $k2, $v2 := $v}}  
+	      {{if emptyS $v2}}
 	      <li>
-		<a href="displayresult?result={{$k}}:{{.}}&file={{$fileName}}">
-		  {{.}}
+		<a href="displayresult?result={{$k}}:{{$k2}}&file={{$fileName}}">
+		  {{$k2}}
 		</a>
 	      </li>
+	      {{else}}
+	      <li class="dropdown-submenu">
+		<a tabindex="-1" href="#">{{$k2}}</a>
+		<ul class="dropdown-menu" role="menu">
+		  {{$files := sortFiles $v2}}
+		  {{range $files}}
+		  <li>
+		    <a href="displayresult?result={{$k}}:{{$k2}}-{{.Id.Hex}}&file={{$fileName}}">
+		      {{date .Time}}
+		    </a>
+		  </li>
+	      	  {{end}}
+		</ul>
+	      </li>
+	      {{end}}
 	      {{end}}
 	    </ul>
 	  </li>

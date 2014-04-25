@@ -26,7 +26,7 @@ function movevalue(srcParentId, destParentId, src) {
     var dest = document.createElement('option');
     dest.innerHTML = src.innerHTML;
     dest.setAttribute('value', src.value);
-    dest.setAttribute('onclick', "movevalue('"+destParentId+"', '"+srcParentId+"', this)");
+    dest.setAttribute('onclick', 'movevalue("'+destParentId+'", "'+srcParentId+'", this)');
     var destParent = document.getElementById(destParentId);
     var srcParent = document.getElementById(srcParentId);
     srcParent.removeChild(src);
@@ -58,11 +58,11 @@ function replacevalue(srcParentID, destID, src) {
 	var newChild = document.createElement('option');
 	newChild.innerHTML = dest.value;
 	newChild.setAttribute('value', dest.value);
-	newChild.setAttribute('onclick', "replacevalue('"+srcParentID+"', '"+destID+"', this)");
+	newChild.setAttribute('onclick', 'replacevalue("'+srcParentID+'", "'+destID+'", this)');
     	srcParent.appendChild(newChild);
     }
     dest.setAttribute('value', src.value);
-    dest.setAttribute('onclick', "movevalueback('"+srcParentID+"', this)");
+    dest.setAttribute('onclick', 'movevalueback("'+srcParentID+'", this)');
     srcParent.removeChild(src);
 }
 
@@ -70,7 +70,7 @@ function movevalueback(destParent, src) {
     var dest = document.createElement('option');
     dest.innerHTML = src.value;
     dest.setAttribute('value', src.value);
-    dest.setAttribute('onclick', "replacevalue('"+destParent+"', '"+src.getAttribute("id")+"', this)");
+    dest.setAttribute('onclick', 'replacevalue("'+destParent+'", "'+src.getAttribute('id')+'", this)');
     document.getElementById(destParent).appendChild(dest);
     src.setAttribute('value', '');
 }
@@ -89,8 +89,8 @@ function movedescriptionvalue(srcParent, destParent, srcId) {
     dest.setAttribute('ruleid', id);
     dest.setAttribute('rulename', name);
     dest.setAttribute('ruledescription', description);
-    dest.setAttribute('onclick', "showdescription('"+description+"')");
-    dest.setAttribute('ondblclick', "addalert('"+destParent+"', '"+srcParent+"', this)");
+    dest.setAttribute('onclick', 'showdescription("'+description+'")');
+    dest.setAttribute('ondblclick', 'addalert("'+destParent+'", "'+srcParent+'", this)');
     document.getElementById(destParent).appendChild(dest);
     document.getElementById(srcParent).removeChild(src);
 }
@@ -100,7 +100,7 @@ function addalert(srcParent, destParent, src) {
     var name = src.getAttribute('rulename');
     var description = src.getAttribute('ruledescription');
     var dest = document.createElement('div');
-    dest.setAttribute("class", 'alert alert-dismissable alert-list');
+    dest.setAttribute('class', 'alert alert-dismissable alert-list');
     dest.setAttribute('id', id);
     dest.setAttribute('ruleid', id);
     dest.setAttribute('rulename', name);
@@ -110,7 +110,7 @@ function addalert(srcParent, destParent, src) {
     destButton.setAttribute('type', 'button');
     destButton.setAttribute('data-dismiss', 'alert');
     destButton.setAttribute('aria-hidden', 'true');
-    destButton.setAttribute('onclick', "movedescriptionvalue('"+destParent+"','"+srcParent+"', '"+id+"')");
+    destButton.setAttribute('onclick', 'movedescriptionvalue("'+destParent+'","'+srcParent+'", "'+id+'")');
     destButton.innerHTML = '&times;';
     var destName = document.createElement('strong');
     destName.innerHTML = name+': ';
@@ -184,11 +184,11 @@ function hideEditing(){
 function loadproject(id, idDest, nameDest, userDest, langDest, subDest){
     hideEditing();
     $('#project-panel').addClass('in');
-    $.getJSON("projects?id="+id, function(data){   
-	var p = data["projects"][0];
+    $.getJSON('projects?id='+id, function(data){   
+	var p = data['projects'][0];
 	$('#'+idDest).val(p.Id) ;
 	$('#'+nameDest).val(p.Name) ;
-	$.getJSON("usernames", function(udata){   
+	$.getJSON('usernames', function(udata){   
 	    $('#'+userDest).empty();
 	    var users = udata['usernames'];
 	    if(not(users)){
@@ -202,7 +202,7 @@ function loadproject(id, idDest, nameDest, userDest, langDest, subDest){
 		}
 	    }
 	});	 
-	$.getJSON("langs", function(ldata){   
+	$.getJSON('langs', function(ldata){   
 	    $('#'+langDest).empty();
 	    var langs = ldata['langs'];
 	    if(not(langs)){
@@ -216,7 +216,7 @@ function loadproject(id, idDest, nameDest, userDest, langDest, subDest){
 		}
 	    }
 	});	 
-	$.getJSON("submissions?projectid="+p.Id, function(sdata){   
+	$.getJSON('submissions?projectid='+p.Id, function(sdata){   
 	    $('#'+subDest+' > ul').empty();
 	    var subs = sdata['submissions'];
 	    if(not(subs)){
@@ -247,10 +247,10 @@ function not(v){
 
 
 function loadsubmission(id, idDest, projectDest, userDest, fileDest){
-    $.getJSON("submissions?id="+id, function(data){   
-	var s = data["submissions"][0];
+    $.getJSON('submissions?id='+id, function(data){   
+	var s = data['submissions'][0];
 	$('#'+idDest).val(s.Id) ;
-	$.getJSON("projects", function(pdata){   
+	$.getJSON('projects', function(pdata){   
 	    $('#'+projectDest).empty();
 	    var projects = pdata['projects'];
 	    if(not(projects)){
@@ -264,7 +264,7 @@ function loadsubmission(id, idDest, projectDest, userDest, fileDest){
 		}
 	    }
 	});	 
-	$.getJSON("usernames", function(udata){   
+	$.getJSON('usernames', function(udata){   
 	    $('#'+userDest).empty();
 	    var users = udata['usernames'];
 	    if(not(users)){
@@ -286,7 +286,7 @@ function loadsubmission(id, idDest, projectDest, userDest, fileDest){
 		$('#file-package').empty();
 		return;
 	    }
-	    var fid = "";
+	    var fid = '';
 	    var c = 0;
 	    for(t in files) {
 		var tid = 'type-subdropdown-'+(c++).toString();
@@ -314,11 +314,11 @@ function loadsubmission(id, idDest, projectDest, userDest, fileDest){
 }
 
 function loaduser(id, idDest, nameDest, permDest){
-    $.getJSON("users?name="+id, function(data){   
-	var u = data["users"][0];
+    $.getJSON('users?name='+id, function(data){   
+	var u = data['users'][0];
 	$('#'+nameDest).val(u.Name);
 	$('#'+idDest).val(u.Name);
-	$.getJSON("permissions", function(pdata){   
+	$.getJSON('permissions', function(pdata){   
 	    $('#'+permDest).empty();
 	    var perms = pdata['permissions'];
 	    if(not(perms)){
@@ -336,8 +336,8 @@ function loaduser(id, idDest, nameDest, permDest){
 }
 
 function loadfiles(id, idDest, nameDest, pkgDest, codeDest){
-    $.getJSON("files?id="+id, function(data){   
-	var f = data["files"][0];
+    $.getJSON('files?id='+id, function(data){   
+	var f = data['files'][0];
 	$('#'+idDest).val(f.Id);
 	$('#'+nameDest).val(f.Name);
 	if(f.Type !== 'src' && f.Type !== 'test'){
@@ -348,8 +348,8 @@ function loadfiles(id, idDest, nameDest, pkgDest, codeDest){
 	    return;
 	}
 	$('#'+pkgDest).val(f.Package);
-	$.getJSON("code?id="+id, function(cdata){   
-	    $('#'+codeDest).html(cdata["code"]);	 	 
+	$.getJSON('code?id='+id, function(cdata){   
+	    $('#'+codeDest).html(cdata['code']);	 	 
 	});
     });
 }
@@ -392,8 +392,8 @@ function addCodeModal(dest, resultId, bug, start, end){
 		h += i + ',';
 	    }
 	    h = h + end + '];'
-	    var preClass = "'brush: java; "+h+"'";
-	    jQuery("<div id="+id+" class='modal fade' tabindex='-1' role='dialog' aria-labelledby='"+id+"label' aria-hidden='true'><div class='modal-dialog'><div class='modal-content'><div class='modal-header'><button type='button' class='close' data-dismiss='modal' aria-hidden='true'>&times;</button><h4 class='modal-title' id='"+id+"label'>"+bug.title+" <br><small>"+bug.content+"</small></h4></div><div class='modal-body'><pre class="+preClass+">"+data.code+"</pre></div></div></div></div>").appendTo('body');
+	    var preClass = '"brush: java; '+h+'"';
+	    jQuery('<div id="'+id+'" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="'+id+'label" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="'+id+'label">'+bug.title+'<br><small>'+bug.content+'</small></h4></div><div class="modal-body"><pre class="'+preClass+'">'+data.code+'</pre></div></div></div></div>').appendTo('body');
 	    SyntaxHighlighter.defaults['toolbar'] = false;
 	    SyntaxHighlighter.defaults['class-name'] = 'error';
 	    SyntaxHighlighter.highlight(); 
@@ -439,25 +439,27 @@ function ajaxChart(vals){
 }
 
 
-function addSubmissions(pid, dest){
+function addComparables(rid, pid, dest){
+    $('#'+dest).multiselect();
+    $('#'+dest).multiselect('destroy');
+    $('#'+dest).empty();
     var url = 'submissions?projectid='+pid;
     $.getJSON(url, function(data){
-	$('#'+dest).multiselect();
-	$('#'+dest).multiselect('destroy');
-	var destList = document.getElementById(dest);
-	destList.options.length = 0;
 	var items = data['submissions'];
 	for(var i = 0; i < items.length; i++) {
-	    var option = document.createElement('option');
-	    option.value = items[i].Id;
-	    option.text = ' ' + items[i].User + ' - ' + new Date(items[i].Time).toLocaleString();
-	    destList.add(option);
+	    $('#'+dest).append('<option value="'+items[i].Id+'">'+items[i].User+ ' - ' + new Date(items[i].Time).toLocaleString()+'</option>');
 	}
-	$('#'+dest).multiselect({
-	    noneSelectedText: "Compare submissions",
-	    selectedText: "# submissions selected to compare"
+	$.getJSON('comparables?id='+rid, function(cdata){
+	    var comp = cdata['comparables'];
+	    for(var i = 0; i < comp.length; i++) {
+		$('#'+dest).append('<option value="'+comp[i].Id+'">'+comp[i].Name+'</option>');
+	    }
+	    $('#'+dest).multiselect({
+		noneSelectedText: 'Compare results',
+		selectedText: '# selected to compare'
+	    });
+	    $('#'+dest).multiselected = true;
 	});
-	$('#'+dest).multiselected = true;
     });
 }
 
@@ -465,7 +467,7 @@ $(function () {
     $('.tree li:has(ul)').addClass('parent_li').find(' > span').attr('title', 'Collapse this branch');
     $('.tree li.parent_li > span').on('click', function (e) {
         var children = $(this).parent('li.parent_li').find(' > ul > li');
-        if (children.is(":visible")) {
+        if (children.is(':visible')) {
             children.hide('fast');
             $(this).attr('title', 'Expand this branch').find(' > i').addClass('icon-plus-sign').removeClass('icon-minus-sign');
         } else {
@@ -488,8 +490,8 @@ function loadCollections(dbList, collectionList){
 	    $('#'+collectionList).append('<option value="'+items[i]+'">'+items[i]+'</option>');
 	}
 	$('#'+collectionList).multiselect({
-	    noneSelectedText: "Choose collections to export",
-	    selectedText: "# collections selected to export"
+	    noneSelectedText: 'Choose collections to export',
+	    selectedText: '# collections selected to export'
 	});
 	$('#'+collectionList).multiselected = true;
     });

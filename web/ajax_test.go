@@ -1,16 +1,6 @@
 package web
 
-import (
-	"fmt"
-
-	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool/jacoco"
-	"labix.org/v2/mgo/bson"
-
-	"testing"
-)
-
+/*
 type (
 	triple struct {
 		p    float64
@@ -41,12 +31,10 @@ func testDetermineTest(p float64, i, n int) error {
 		Name:  "Testee",
 		Time:  s.Time + 25,
 	}
-	if e := db.Add(db.FILES, cf); e != nil {
-		return e
-	}
 	r := &jacoco.Result{
-		Id:   bson.NewObjectId(),
-		Type: jacoco.NAME,
+		Id:     bson.NewObjectId(),
+		Type:   jacoco.NAME,
+		FileId: cf.Id,
 	}
 	fs := make([]*project.File, n)
 	for j := 0; j < n; j++ {
@@ -56,14 +44,15 @@ func testDetermineTest(p float64, i, n int) error {
 			Name:  "Test",
 			Time:  s.Time + int64((i+12)*23),
 		}
-		if j == i {
-			fs[j].Results = bson.M{r.Type + "-" + cf.Id.Hex(): r.Id}
-		}
 		if e := db.Add(db.FILES, fs[j]); e != nil {
 			return e
 		}
 	}
-	r.FileId = fs[i].Id
+	cf.Results = bson.M{r.Type + "-" + fs[i].Id.Hex(): r.Id}
+	if e := db.Add(db.FILES, cf); e != nil {
+		return e
+	}
+	r.TestId = fs[i].Id
 	if e := db.Add(db.RESULTS, r); e != nil {
 		return e
 	}
@@ -103,7 +92,7 @@ func testDetermineSrc(p float64, i, n int) error {
 	r := &jacoco.Result{
 		Id:     bson.NewObjectId(),
 		Type:   jacoco.NAME,
-		FileId: cf.Id,
+		TestId: cf.Id,
 	}
 	fs := make([]*project.File, n)
 	for j := 0; j < n; j++ {
@@ -113,11 +102,14 @@ func testDetermineSrc(p float64, i, n int) error {
 			Name:  "Testee",
 			Time:  s.Time + int64((i+12)*23),
 		}
+		if i == j {
+			fs[j].Results = bson.M{r.Type + "-" + cf.Id.Hex(): r.Id}
+		}
 		if e := db.Add(db.FILES, fs[j]); e != nil {
 			return e
 		}
 	}
-	cf.Results = bson.M{r.Type + "-" + fs[i].Id.Hex(): r.Id}
+	r.FileId = fs[i].Id
 	if e := db.Add(db.FILES, cf); e != nil {
 		return e
 	}
@@ -133,3 +125,4 @@ func testDetermineSrc(p float64, i, n int) error {
 	}
 	return nil
 }
+*/

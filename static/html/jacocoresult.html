@@ -1,7 +1,6 @@
 {{define "result"}}
 {{$s := .state.Src}}
-{{$class := .Report.Class $s}}
-{{$addr := address $class}}
+{{$addr := address .Report}}
 <div class="panel-group" id="jacocoaccordion{{$addr}}">
   <div class="panel panel-default">
     <div class="panel-heading">
@@ -13,7 +12,7 @@
     <div id="summary{{$addr}}" class="panel-collapse collapse in">
       <div class="accordion-inner">
 	<dl class="dl-horizontal meter-dl">
-	  {{range $class.Counters}}
+	  {{range .Report.MainCounters}}
 	  {{$total := sum .Covered .Missed}}
 	  {{$p := percent $total .Covered}}
 	  <dt class="meter-dt">{{toTitle .Type}}</dt><dd class="meter-dd">{{.Covered}}/{{$total}}</dd> 

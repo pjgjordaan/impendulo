@@ -27,14 +27,14 @@
   chartParams.user = {{.ctx.Browse.Uid}};
   chartParams.currentTime = {{chartTime (index .files .ctx.Browse.Current)}};
   chartParams.nextTime = {{chartTime (index .files .ctx.Browse.Next)}};
-  chartParams.src = 'submissions';
+  chartParams.src = 'comparables';
 </script>
 <div class="row">
   <div class="col-md-3">
   </div>
   <div class="col-md-6">
     <h4 class="text-center code-popover-h" >
-      <small>tool</small> {{.ctx.Browse.Result}}
+      <small>tool</small> {{.ctx.Browse.FormatResult}}
       <a href="#code_wrapper" id="codepopoverlink">
 	{{$fileName}}
       </a>
@@ -52,8 +52,8 @@
     {{if $showChart}}
     <form class="form-inline centered" role="form" onsubmit="return ajaxChart(chartParams)">
       <div class="form-group">
-	<label class="sr-only" for="submissions">Submissions</label>
-	<select class="form-control select-inline" name="submissions" id="submissions" multiple>
+	<label class="sr-only" for="comparables">Comparables</label>
+	<select class="form-control select-inline" name="comparables" id="comparables" multiple>
 	</select>
       </div>
       <button type="submit" class="btn btn-default">
@@ -61,10 +61,10 @@
       </button>
     </form>
     <script type="text/javascript" language="javascript">
-      $('#submissions').multiselect();
+      $('#comparables').multiselect();
       window.onload = function()
       {
-      addSubmissions({{.ctx.Browse.Pid.Hex}}, 'submissions');
+      addComparables({{validId $currentResult $nextResult}}, {{.ctx.Browse.Pid.Hex}}, 'comparables');
       ;}
     </script>
     {{end}}

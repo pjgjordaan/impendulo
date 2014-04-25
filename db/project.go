@@ -60,13 +60,13 @@ func File(m, sl interface{}) (*project.File, error) {
 }
 
 //Files retrieves files matching m from the active database.
-func Files(m, sl interface{}, sort ...string) ([]*project.File, error) {
+func Files(m, sl interface{}, limit int, sort ...string) ([]*project.File, error) {
 	s, e := Session()
 	if e != nil {
 		return nil, e
 	}
 	defer s.Close()
-	q := s.DB("").C(FILES).Find(m)
+	q := s.DB("").C(FILES).Find(m).Limit(limit)
 	if len(sort) > 0 {
 		q = q.Sort(sort...)
 	}
@@ -231,7 +231,7 @@ func RemoveFileById(id interface{}) error {
 //RemoveSubmissionById removes a submission matching
 //the given id from the active database.
 func RemoveSubmissionById(id interface{}) error {
-	fs, e := Files(bson.M{SUBID: id}, bson.M{ID: 1})
+	fs, e := Files(bson.M{SUBID: id}, bson.M{ID: 1}, 0)
 	if e != nil {
 		return e
 	}
@@ -283,7 +283,7 @@ func RemoveProjectById(id interface{}) error {
 }
 
 func LastFile(m, sl interface{}) (*project.File, error) {
-	fs, e := Files(m, sl, "-"+TIME)
+	fs, e := Files(m, sl, 0, "-"+TIME)
 	if e != nil {
 		return nil, e
 	}
@@ -344,7 +344,7 @@ func UpdateStatus(s *project.Submission) error {
 }
 
 func timeFile(sub *project.Submission) (*project.File, error) {
-	fs, e := Files(bson.M{SUBID: sub.Id}, bson.M{TIME: 1}, TIME)
+	fs, e := Files(bson.M{SUBID: sub.Id}, bson.M{TIME: 1}, 0, TIME)
 	if e != nil {
 		return nil, e
 	}

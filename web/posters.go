@@ -229,7 +229,7 @@ func DeleteResults(r *http.Request, c *Context) (string, error) {
 		return "Could not retrieve submissions.", e
 	}
 	for _, s := range ss {
-		fs, e := db.Files(bson.M{db.SUBID: s.Id}, bson.M{db.DATA: 0})
+		fs, e := db.Files(bson.M{db.SUBID: s.Id}, bson.M{db.DATA: 0}, 0)
 		if e != nil {
 			util.Log(e)
 			continue

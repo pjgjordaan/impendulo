@@ -41,6 +41,7 @@ type (
 	Result struct {
 		Id       bson.ObjectId "_id"
 		FileId   bson.ObjectId "fileid"
+		TestId   bson.ObjectId "testid"
 		TestName string        "name"
 		Report   *Report       "report"
 		GridFS   bool          "gridfs"
@@ -83,6 +84,10 @@ func (r *Result) GetFileId() bson.ObjectId {
 	return r.FileId
 }
 
+func (r *Result) GetTestId() bson.ObjectId {
+	return r.TestId
+}
+
 //Summary
 func (r *Result) Summary() *tool.Summary {
 	body := fmt.Sprintf("Tests: %d \n Failures: %d \n Errors: %d \n Time: %f",
@@ -120,7 +125,7 @@ func (r *Result) GetType() string {
 }
 
 //NewResult creates a new junit.Result from provided XML data.
-func NewResult(fileId bson.ObjectId, name string, data []byte) (*Result, error) {
+func NewResult(fileId, testId bson.ObjectId, name string, data []byte) (*Result, error) {
 	id := bson.NewObjectId()
 	r, e := NewReport(id, data)
 	if e != nil {
@@ -129,6 +134,7 @@ func NewResult(fileId bson.ObjectId, name string, data []byte) (*Result, error) 
 	return &Result{
 		Id:       id,
 		FileId:   fileId,
+		TestId:   testId,
 		TestName: name,
 		GridFS:   len(data) > tool.MAX_SIZE,
 		Type:     NAME,

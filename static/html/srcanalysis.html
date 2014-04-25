@@ -1,24 +1,24 @@
 {{define "analysis"}}
-{{$resultName := .ctx.Browse.Result}}
+{{$rd := .ctx.Browse.Result}}
 {{$fileName := .ctx.Browse.File}}
 <h4 class="text-center">
-  <small>tool</small> {{$resultName}}
+  <small>tool</small> {{$rd.Format}}
 </h4>
 {{if hasChart .currentResult .nextResult}}
 <script>
   var chartParams = {};
   chartParams.subID = {{.ctx.Browse.Sid.Hex}};
   chartParams.file = {{$fileName}};
-  chartParams.result = {{.ctx.Browse.Result}};
+  chartParams.result = {{$rd.Raw}};
   chartParams.user = {{.ctx.Browse.Uid}};
   chartParams.currentTime = {{chartTime (index .files .ctx.Browse.Current)}};
   chartParams.nextTime = {{chartTime (index .files .ctx.Browse.Next)}};
-  chartParams.src = 'submissions';
+  chartParams.src = 'comparables';
 </script>
 <form class="form-inline centered" role="form" onsubmit="return ajaxChart(chartParams)">
   <div class="form-group">
-    <label class="sr-only" for="submissions">Submissions</label>
-    <select class="form-control select-inline" name="submissions" id="submissions" multiple>
+    <label class="sr-only" for="comparables">Submissions</label>
+    <select class="form-control select-inline" name="comparables" id="comparables" multiple>
     </select>
   </div>
   <button type="submit" class="btn btn-default">
@@ -26,10 +26,10 @@
   </button>
 </form>
 <script type="text/javascript" language="javascript">
-  $('#submissions').multiselect();
+  $('#comparables').multiselect();
   window.onload = function()
-  {
-  addSubmissions({{.ctx.Browse.Pid.Hex}}, 'submissions');
+  { 
+  addComparables({{validId .currentResult .nextResult}}, {{.ctx.Browse.Pid.Hex}}, 'comparables');
   ;}
 </script>
 <div id="chartHolder">
@@ -38,7 +38,7 @@
   ajaxChart(chartParams);
 </script>
 {{end}}
-{{if (eq $resultName "Diff")}}
+{{if (eq $rd.Type "Diff")}}
 {{$data := .currentResult.Create .nextResult}}
 {{template "result"  $data}}
 {{else}}
@@ -78,7 +78,7 @@
 </div>
 {{end}}
 {{end}}
-{{if (eq $resultName "Code")}}
+{{if (eq $rd.Type "Code")}}
 <script>
   highlight();
 </script>

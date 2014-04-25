@@ -1,7 +1,6 @@
 {{define "pager"}}
 {{$current := .ctx.Browse.Current}}
 {{$next := .ctx.Browse.Next}}
-{{$resultName := .ctx.Browse.Result}}
 {{$fileName := .ctx.Browse.File}}
 {{$sliced := slice .files $current}}
 {{$adjustment := adjustment .files $current}}

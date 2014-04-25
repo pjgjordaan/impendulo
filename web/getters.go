@@ -57,7 +57,7 @@ func Getters() map[string]Getter {
 func defaultGetters() map[string]Getter {
 	return map[string]Getter{
 		"configview":    configView,
-		"displayresult": displayResult, "getfiles": getFiles, "displaychildresult": displayChildResult,
+		"displayresult": displayResult, "getfiles": getFiles,
 		"getsubmissionschart": getSubmissionsChart, "getsubmissions": getSubmissions,
 	}
 }
@@ -160,9 +160,6 @@ func _displayResult(r *http.Request, c *Context) (Args, error) {
 	if e != nil {
 		return nil, e
 	}
-	if c.Browse.childResult() {
-		return _displayChildResult(r, c)
-	}
 	fs, e := Snapshots(c.Browse.Sid, c.Browse.File, c.Browse.Type)
 	if e != nil {
 		return nil, e
@@ -199,6 +196,7 @@ func _displayResult(r *http.Request, c *Context) (Args, error) {
 	}, nil
 }
 
+/*
 func displayChildResult(r *http.Request, c *Context) (Args, string, error) {
 	a, e := _displayChildResult(r, c)
 	if e != nil {
@@ -226,7 +224,7 @@ func _displayChildResult(r *http.Request, c *Context) (Args, error) {
 	if e != nil {
 		return nil, e
 	}
-	results, e := db.ResultNames(c.Browse.Pid, c.Browse.File)
+	results, e := db.ResultNames(c.Browse.Sid, c.Browse.File)
 	if e != nil {
 		return nil, e
 	}
@@ -242,25 +240,25 @@ func _displayChildResult(r *http.Request, c *Context) (Args, error) {
 	if e != nil {
 		return nil, e
 	}
-	var hc, hn string
+	var sc, sn string
 	var ic, in bson.ObjectId
 	switch c.Browse.ChildType {
 	case project.SRC:
 		ic = currentFile.Id
 		in = nextFile.Id
-		hc = currentChild.Id.Hex()
-		hn = currentChild.Id.Hex()
+		sc = currentChild.Id.Hex()
+		sn = currentChild.Id.Hex()
 	case project.TEST:
 		ic = currentChild.Id
 		in = currentChild.Id
-		hc = currentFile.Id.Hex()
-		hn = nextFile.Id.Hex()
+		sc = currentFile.Id.Hex()
+		sn = nextFile.Id.Hex()
 	}
-	currentChildResult, e := GetChildResult(c.Browse.Result, hc, ic)
+	currentChildResult, e := GetChildResult(c.Browse.Result+"-"+sc, ic)
 	if e != nil {
 		return nil, e
 	}
-	nextChildResult, e := GetChildResult(c.Browse.Result, hn, in)
+	nextChildResult, e := GetChildResult(c.Browse.Result+"-"+sn, in)
 	if e != nil {
 		return nil, e
 	}
@@ -276,6 +274,7 @@ func _displayChildResult(r *http.Request, c *Context) (Args, error) {
 		"nextChildResult": nextChildResult, "templates": t,
 	}, nil
 }
+*/
 
 //getSubmissionsChart displays a chart of submissions.
 func getSubmissionsChart(r *http.Request, c *Context) (Args, string, error) {

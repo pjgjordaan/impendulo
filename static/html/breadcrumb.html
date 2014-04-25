@@ -58,7 +58,7 @@
   {{$sid := .ctx.Browse.Sid}}
   <li><a href="{{getFiles .ctx.Browse.Sid}}">{{$uid}}'s
       {{$project}} Submission</a></li>
-  {{$resultName := .ctx.Browse.FormatResult}}
+  {{$resultName := .ctx.Browse.Result.Format}}
   {{$fileName := .ctx.Browse.File}}
   {{$results := .results}}
   {{if .ctx.Browse.Level.Is "analysis"}}
@@ -70,7 +70,7 @@
     </a>
     <ul class="dropdown-menu" role="menu">
       {{range $k, $v := $results}}  
-      {{if eq (index $v 0) $k}}
+      {{if emptyM $v}}
       <li>
 	<a href="displayresult?result={{$k}}">
 	  {{$k}}
@@ -80,12 +80,28 @@
       <li class="dropdown-submenu">
 	<a tabindex="-1" href="#">{{$k}}</a>
 	<ul class="dropdown-menu" role="menu">
-	  {{range $v}}  
+	  {{range $k2, $v2 := $v}}
+	  {{if emptyS $v2}}
 	  <li>
-	    <a href="displayresult?result={{$k}}:{{.}}">
-	      {{.}}
+	    <a href="displayresult?result={{$k}}:{{$k2}}">
+	      {{$k2}}
 	    </a>
 	  </li>
+	  {{else}}
+	  <li class="dropdown-submenu">
+	    <a tabindex="-1" href="#">{{$k2}}</a>
+	    <ul class="dropdown-menu" role="menu">
+	      {{$files := sortFiles $v2}}
+	      {{range $files}}
+	      <li>
+		<a href="displayresult?result={{$k}}:{{$k2}}-{{.Id.Hex}}">
+		  {{date .Time}}
+		</a>
+	      </li>
+	      {{end}}
+	    </ul>
+	  </li>   
+	  {{end}}
 	  {{end}}
 	</ul>
       </li>

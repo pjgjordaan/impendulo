@@ -36,6 +36,7 @@ type (
 	Result struct {
 		Id       bson.ObjectId "_id"
 		FileId   bson.ObjectId "fileid"
+		TestId   bson.ObjectId "testid"
 		TestName string        "name"
 		Report   *Report       "report"
 		GridFS   bool          "gridfs"
@@ -59,7 +60,7 @@ func (r *Result) OnGridFS() bool {
 
 //GetName
 func (r *Result) GetName() string {
-	return NAME
+	return r.TestName
 }
 
 //GetId
@@ -70,6 +71,10 @@ func (r *Result) GetId() bson.ObjectId {
 //GetFileId
 func (r *Result) GetFileId() bson.ObjectId {
 	return r.FileId
+}
+
+func (r *Result) GetTestId() bson.ObjectId {
+	return r.TestId
 }
 
 //Summary
@@ -99,22 +104,23 @@ func (r *Result) GetType() string {
 //ChartVals
 func (r *Result) ChartVals() []*tool.ChartVal {
 	v := make([]*tool.ChartVal, len(r.Report.Counters))
-	for i, c := range r.Report.Counters {
+	for i, c := range r.Report.MainCounters {
 		p := util.Round(float64(c.Covered)/float64(c.Covered+c.Missed)*100.0, 2)
 		v[i] = &tool.ChartVal{util.Title(c.Type) + " Coverage", p, r.FileId}
 	}
 	return v
 }
 
-func NewResult(fileId bson.ObjectId, name string, xml, html []byte) (*Result, error) {
+func NewResult(fileId, testId bson.ObjectId, name string, xml, html []byte, target *tool.Target) (*Result, error) {
 	id := bson.NewObjectId()
-	r, e := NewReport(id, xml, html)
+	r, e := NewReport(id, xml, html, target)
 	if e != nil {
 		return nil, e
 	}
 	return &Result{
 		Id:       id,
 		FileId:   fileId,
+		TestId:   testId,
 		TestName: name,
 		GridFS:   len(xml)+len(html) > tool.MAX_SIZE,
 		Report:   r,

@@ -70,12 +70,12 @@ func javaTestTools(p *TestProcessor, tf *project.File) ([]tool.Tool, error) {
 	if e := util.SaveFile(target.FilePath(), tf.Data); e != nil {
 		return nil, e
 	}
-	ju, e := junit.New(target, p.toolDir)
+	ju, e := junit.New(target, p.toolDir, tf.Id)
 	if e != nil {
 		return nil, e
 	}
 	a = append(a, ju)
-	ja, e := jacoco.New(p.rootDir, p.srcDir, target)
+	ja, e := jacoco.New(p.rootDir, p.srcDir, target, tf.Id)
 	if e != nil {
 		return nil, e
 	}
@@ -201,12 +201,12 @@ func junitTools(p *Processor) ([]tool.Tool, error) {
 				return nil, e
 			}
 		}
-		ja, e := jacoco.New(p.rootDir, p.srcDir, target)
+		ja, e := jacoco.New(p.rootDir, p.srcDir, target, t.Id)
 		if e != nil {
 			return nil, e
 		}
 		tools = append(tools, ja)
-		ju, e := junit.New(target, p.toolDir)
+		ju, e := junit.New(target, p.toolDir, t.Id)
 		if e != nil {
 			return nil, e
 		}
@@ -215,24 +215,3 @@ func junitTools(p *Processor) ([]tool.Tool, error) {
 	return tools, nil
 
 }
-
-/*
-func UserJUnit(p *Processor) ([]tool.Tool, error) {
-	ts, e := db.JUnitTests(bson.M{db.PROJECTID: p.project.Id, db.TYPE: junit.USER}, nil)
-	if e != nil {
-		return nil, e
-	}
-	d, e := config.JUNIT_TESTING.Path()
-	if e != nil {
-		return nil, e
-	}
-	if e = util.Copy(p.toolDir, d); e != nil {
-		return nil, e
-	}
-	js := make([]tool.Tool, 0, len(ts))
-	for _, t := range ts {
-		js = append(js, junit_user.New(t, p.toolDir))
-	}
-	return js, nil
-}
-*/

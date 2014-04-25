@@ -50,6 +50,7 @@ const (
 	NE     = "$ne"
 	NIN    = "$nin"
 	EXISTS = "$exists"
+	ISTYPE = "$type"
 	//Mongodb connection and db names
 	ADDRESS      = "mongodb://localhost/"
 	DEFAULT_DB   = "impendulo"

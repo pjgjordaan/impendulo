@@ -65,7 +65,7 @@ func TestRun(t *testing.T) {
 	if e = util.Unzip(testTarget.PackagePath(), dataBytes); e != nil {
 		t.Error(e)
 	}
-	j, e := New(testTarget, location)
+	j, e := New(testTarget, location, bson.NewObjectId())
 	if e != nil {
 		t.Errorf("Expected success, got %q", e)
 	}
@@ -209,7 +209,7 @@ public class AllTests {
 
 	public static Test suite() {
 		String location = System.getProperty("data.location");
-		if (location == null || !new File(location).exists()) {
+                if (location == null || !new File(location).exists()) {
 			location = "src" + File.separator + "testing" + File.separator
 					+ "data";
 		}

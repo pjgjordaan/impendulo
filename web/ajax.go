@@ -3,13 +3,15 @@ package web
 import (
 	"code.google.com/p/gorilla/pat"
 
-	"errors"
+	"strings"
 
 	"fmt"
 
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/jacoco"
+	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
@@ -35,11 +37,50 @@ func GenerateAJAX(r *pat.Router) {
 		"chart": getChart, "usernames": getUsernames, "collections": collections,
 		"skeletons": getSkeletons, "submissions": submissions,
 		"langs": getLangs, "projects": getProjects, "files": ajaxFiles, "tools": ajaxTools,
-		"code": ajaxCode, "users": ajaxUsers, "permissions": ajaxPerms,
+		"code": ajaxCode, "users": ajaxUsers, "permissions": ajaxPerms, "comparables": ajaxComparables,
 	}
 	for n, f := range fs {
 		r.Add("GET", "/"+n, f)
 	}
+}
+
+func ajaxComparables(r *http.Request) ([]byte, error) {
+	id, e := util.ReadId(r.FormValue("id"))
+	if e != nil {
+		return nil, e
+	}
+	tr, e := db.ToolResult(bson.M{db.ID: id}, nil)
+	if e != nil {
+		return nil, e
+	}
+	type c struct {
+		Id, Name string
+	}
+	var cmp []*c
+	switch tr.GetType() {
+	case jacoco.NAME, junit.NAME:
+		f, e := db.File(bson.M{db.ID: tr.GetFileId()}, bson.M{db.SUBID: 1})
+		if e != nil {
+			return nil, e
+		}
+		s, e := db.Submission(bson.M{db.ID: f.SubId}, bson.M{db.PROJECTID: 1})
+		if e != nil {
+			return nil, e
+		}
+		ts, e := db.JUnitTests(bson.M{db.PROJECTID: s.ProjectId}, bson.M{db.NAME: 1, db.TYPE: 1})
+		if e != nil {
+			return nil, e
+		}
+		cmp = make([]*c, 0, len(ts))
+		for _, t := range ts {
+			n, _ := util.Extension(t.Name)
+			if n == tr.GetName() {
+				continue
+			}
+			cmp = append(cmp, &c{tr.GetType() + ":" + n, tr.GetType() + " \u2192 " + n})
+		}
+	}
+	return util.JSON(map[string]interface{}{"comparables": cmp})
 }
 
 func ajaxPerms(r *http.Request) ([]byte, error) {
@@ -127,7 +168,7 @@ func ajaxFiles(r *http.Request) ([]byte, error) {
 	if format == "nested" {
 		f, e = nestedFiles(m)
 	} else {
-		f, e = db.Files(m, bson.M{db.DATA: 0}, db.TIME)
+		f, e = db.Files(m, bson.M{db.DATA: 0}, 0, db.TIME)
 	}
 	if e != nil {
 		return nil, e
@@ -147,7 +188,7 @@ func nestedFiles(m bson.M) (map[project.Type]map[string][]*project.File, error) 
 		m[db.TYPE] = t
 		for _, n := range ns {
 			m[db.NAME] = n
-			fs, e := db.Files(m, bson.M{db.DATA: 0}, db.TIME)
+			fs, e := db.Files(m, bson.M{db.DATA: 0}, 0, db.TIME)
 			if e == nil && len(fs) > 0 {
 				nm[n] = fs
 			}
@@ -227,41 +268,86 @@ func getChart(r *http.Request) ([]byte, error) {
 	if e != nil {
 		return nil, e
 	}
-	if f, e := GetStrings(r, "testfileid"); e == nil && len(f) == 1 {
-		fid, e := util.ReadId(f[0])
-		if e != nil {
-			return nil, e
-		} else {
-			return srcViewChart(fid, rs[0], subs)
+	/*	if f, e := GetStrings(r, "testfileid"); e == nil && len(f) == 1 {
+			fid, e := util.ReadId(f[0])
+			if e != nil {
+				return nil, e
+			} else {
+				return srcViewChart(fid, rs[0], subs)
+			}
 		}
-	}
-	if f, e := GetStrings(r, "srcfileid"); e == nil && len(f) == 1 {
-		fid, e := util.ReadId(f[0])
-		if e != nil {
-			return nil, e
-		} else {
-			return testViewChart(fid, rs[0], ns[0], subs)
-		}
-	}
+		if f, e := GetStrings(r, "srcfileid"); e == nil && len(f) == 1 {
+			fid, e := util.ReadId(f[0])
+			if e != nil {
+				return nil, e
+			} else {
+				return testViewChart(fid, rs[0], ns[0], subs)
+			}
+		}*/
 	var d ChartData
-	for _, s := range subs {
+	var first bson.ObjectId
+	for i, s := range subs {
+		r := rs[0]
+		m := bson.M{db.NAME: ns[0]}
 		id, e := util.ReadId(s)
 		if e != nil {
-			return nil, e
+			id = first
+			if !strings.Contains(s, ":") {
+				m[db.NAME] = s
+			} else {
+				r = s
+			}
 		}
-		fs, e := db.Files(bson.M{db.SUBID: id, db.NAME: ns[0]}, bson.M{db.DATA: 0}, db.TIME)
+		if i == 0 {
+			first = id
+		}
+		if strings.Contains(r, ":") && db.Contains(db.FILES, bson.M{db.TYPE: project.TEST, db.NAME: strings.Split(r, ":")[1] + ".java", db.SUBID: id}) {
+			c, e := userTestChart(id, r)
+			if e != nil {
+				return nil, e
+			}
+			d = append(d, c...)
+			continue
+		}
+		m[db.SUBID] = id
+		fs, e := db.Files(m, bson.M{db.DATA: 0}, 0, db.TIME)
 		if e != nil {
 			return nil, e
 		}
-		c, e := LoadChart(rs[0], fs)
+		c, e := LoadChart(r, fs)
 		if e != nil {
 			return nil, e
 		}
 		d = append(d, c...)
 	}
+	lkeys := make(map[string]bool)
+	for _, m := range d {
+		for k, v := range m {
+			s, ok := v.(string)
+			if k == "key" && ok && !lkeys[s] {
+				lkeys[s] = true
+			}
+		}
+	}
 	return util.JSON(map[string]interface{}{"chart": d})
 }
 
+func userTestChart(sid bson.ObjectId, n string) (ChartData, error) {
+	ts, e := db.Files(bson.M{db.SUBID: sid, db.NAME: strings.Split(n, ":")[1] + ".java", db.TYPE: project.TEST}, bson.M{db.DATA: 0}, 0, db.TIME)
+	if e != nil {
+		return nil, e
+	}
+	for _, t := range ts {
+		for k, _ := range t.Results {
+			if strings.HasPrefix(k, n) {
+				return LoadChart(strings.Split(n, ":")[0], []*project.File{t})
+			}
+		}
+	}
+	return nil, fmt.Errorf("no results found for %s", n)
+}
+
+/*
 func srcViewChart(fid bson.ObjectId, result string, subs []string) ([]byte, error) {
 	cf, e := db.File(bson.M{db.ID: fid}, bson.M{db.DATA: 0})
 	if e != nil {
@@ -274,7 +360,7 @@ func srcViewChart(fid bson.ObjectId, result string, subs []string) ([]byte, erro
 	if len(subs) == 1 {
 		return util.JSON(map[string]interface{}{"chart": c})
 	}
-	fs, e := db.Files(bson.M{db.SUBID: cf.SubId, db.NAME: cf.Name}, bson.M{db.ID: 1}, db.TIME)
+	fs, e := db.Files(bson.M{db.SUBID: cf.SubId, db.NAME: cf.Name}, bson.M{db.ID: 1}, 0, db.TIME)
 	if e != nil {
 		return nil, e
 	}
@@ -296,7 +382,7 @@ func srcViewChart(fid bson.ObjectId, result string, subs []string) ([]byte, erro
 		if sid == cf.SubId {
 			continue
 		}
-		fs, e := db.Files(bson.M{db.SUBID: sid, db.NAME: cf.Name}, bson.M{db.DATA: 0}, db.TIME)
+		fs, e := db.Files(bson.M{db.SUBID: sid, db.NAME: cf.Name}, bson.M{db.DATA: 0}, 0, db.TIME)
 		if e != nil || len(fs) == 0 {
 			continue
 		}
@@ -319,7 +405,7 @@ func testViewChart(fid bson.ObjectId, result, test string, subs []string) ([]byt
 	if e != nil {
 		return nil, e
 	}
-	fs, e := db.Files(bson.M{db.SUBID: src.SubId, db.NAME: test}, bson.M{db.DATA: 0}, db.TIME)
+	fs, e := db.Files(bson.M{db.SUBID: src.SubId, db.NAME: test}, bson.M{db.DATA: 0}, 0, db.TIME)
 	if e != nil {
 		return nil, e
 	}
@@ -330,7 +416,7 @@ func testViewChart(fid bson.ObjectId, result, test string, subs []string) ([]byt
 	if len(subs) == 1 {
 		return util.JSON(map[string]interface{}{"chart": c})
 	}
-	srcs, e := db.Files(bson.M{db.SUBID: src.SubId, db.NAME: src.Name}, bson.M{db.ID: 1}, db.TIME)
+	srcs, e := db.Files(bson.M{db.SUBID: src.SubId, db.NAME: src.Name}, bson.M{db.ID: 1}, 0, db.TIME)
 	if e != nil {
 		return nil, e
 	}
@@ -352,11 +438,11 @@ func testViewChart(fid bson.ObjectId, result, test string, subs []string) ([]byt
 		if sid == src.SubId {
 			continue
 		}
-		fs, e := db.Files(bson.M{db.SUBID: sid, db.NAME: test}, bson.M{db.DATA: 0}, db.TIME)
+		fs, e := db.Files(bson.M{db.SUBID: sid, db.NAME: test}, bson.M{db.DATA: 0}, 0, db.TIME)
 		if e != nil || len(fs) == 0 {
 			continue
 		}
-		srcs, e := db.Files(bson.M{db.SUBID: sid, db.NAME: src.Name}, bson.M{db.ID: 1}, db.TIME)
+		srcs, e := db.Files(bson.M{db.SUBID: sid, db.NAME: src.Name}, bson.M{db.ID: 1}, 0, db.TIME)
 		if e != nil || len(srcs) == 0 {
 			continue
 		}
@@ -415,3 +501,4 @@ func determineTest(fs []*project.File, r string, p float64) (*project.File, erro
 	}
 	return nil, errors.New("no result file found")
 }
+*/

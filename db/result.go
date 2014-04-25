@@ -323,40 +323,33 @@ func ChartResult(matcher, selector bson.M) (ret tool.ChartResult, err error) {
 }
 
 //AddResult adds a new result to the active database.
-func AddResult(res tool.ToolResult, name string) (err error) {
-	if res == nil {
-		err = fmt.Errorf("Result is nil. In db/result.go.")
-		return
+func AddResult(r tool.ToolResult, n string) error {
+	if r == nil {
+		return fmt.Errorf("Result is nil. In db/result.go.")
 	}
-	err = AddFileResult(res.GetFileId(), name, res.GetId())
-	if err != nil {
-		return
+	if e := AddFileResult(r.GetFileId(), n, r.GetId()); e != nil {
+		return e
 	}
-	if res.OnGridFS() {
-		err = AddGridFile(res.GetId(), res.GetReport())
-		if err != nil {
-			return
+	if r.OnGridFS() {
+		if e := AddGridFile(r.GetId(), r.GetReport()); e != nil {
+			return e
 		}
-		res.SetReport(nil)
+		r.SetReport(nil)
 	}
-	session, err := Session()
-	if err != nil {
-		return
+	s, e := Session()
+	if e != nil {
+		return e
 	}
-	defer session.Close()
-	col := session.DB("").C(RESULTS)
-	err = col.Insert(res)
-	if err != nil {
-		err = &AddError{res.GetName(), err}
+	defer s.Close()
+	if e = s.DB("").C(RESULTS).Insert(r); e != nil {
+		return &AddError{r.GetName(), e}
 	}
-	return
+	return nil
 }
 
 //AddFileResult adds or updates a result in a file's results.
 func AddFileResult(fileId bson.ObjectId, name string, value interface{}) error {
-	matcher := bson.M{ID: fileId}
-	change := bson.M{SET: bson.M{RESULTS + "." + name: value}}
-	return Update(FILES, matcher, change)
+	return Update(FILES, bson.M{ID: fileId}, bson.M{SET: bson.M{RESULTS + "." + name: value}})
 }
 
 //ChartResults retrieves all tool.DisplayResults matching
@@ -382,39 +375,50 @@ func ChartResults(fileId bson.ObjectId) (ret []tool.ChartResult, err error) {
 }
 
 //AllResultNames retrieves all result names for a given project.
-func ResultNames(sid bson.ObjectId, fname string) (map[string][]string, error) {
+func ResultNames(sid bson.ObjectId, fname string) (map[string]map[string][]interface{}, error) {
 	mr := &mgo.MapReduce{
 		Map: `function() {
 	var results = {};
 	for (n in this.results) {
-		var r = n.split('-')[0];
+		var sa = n.split('-');
 		var o = {};
-                var sp = r.split(':');
-                o.type = sp[0];
-                o.name = sp.length >= 2 ? sp[1] : sp[0];
-                if(!(r in results)){
-			results[r] = true;
+                var sb = sa[0].split(':');
+                o.type = sb[0];
+                o.name = sb.length >= 2 ? sb[1] : "";
+                o.id = sa.length >= 2 ? sa[1] : "";                 
+                if(!(n in results)){
+			results[n] = true;
                         emit("", o);		
                 }
 	}
 	
 };`,
 		Reduce: `function(n, vals) {
-var r = {};
-var added = {};
-for(i in vals){
-var t = vals[i].type;
-var n = vals[i].name;
-if((t+n) in added){
-continue;
-}
-added[t+n] = true;
-if(!(t in r)){
-r[t] = [];
-} 
-r[t].push(n);
-}		
-return r;
+        var r = {};
+        var added = {};
+        for(i in vals){
+            if(vals[i] in added){
+                continue;
+            }
+            added[t+n] = true;
+            var t = vals[i].type;
+            var n = vals[i].name;
+            var id = vals[i].id;
+            if(!(t in r)){
+                r[t] = {};
+            } 
+            if(n == ""){
+                continue;
+            }
+            if(!(n in r[t])){
+                r[t][n] = [];
+            } 
+            if(id == ""){
+                continue;
+            }
+            r[t][n].push(id);
+       }		
+       return r;
 };`,
 	}
 	s, e := Session()
@@ -423,7 +427,7 @@ return r;
 	}
 	defer s.Close()
 	var ns []*struct {
-		Value map[string][]string "value"
+		Value map[string]map[string][]interface{} "value"
 	}
 	if _, e := s.DB("").C(FILES).Find(bson.M{SUBID: sid, NAME: fname}).
 		Select(bson.M{NAME: 1, RESULTS: 1}).MapReduce(mr, &ns); e != nil {
@@ -432,7 +436,7 @@ return r;
 		return nil, fmt.Errorf("no results found")
 	}
 	m := ns[0].Value
-	m[tool.CODE] = []string{tool.CODE}
-	m[diff.NAME] = []string{diff.NAME}
+	m[tool.CODE] = map[string][]interface{}{}
+	m[diff.NAME] = map[string][]interface{}{}
 	return m, nil
 }

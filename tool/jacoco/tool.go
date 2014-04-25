@@ -21,6 +21,7 @@ type (
 	Tool struct {
 		buildPath, resPath string
 		test               *tool.Target
+		testId             bson.ObjectId
 	}
 )
 
@@ -28,7 +29,7 @@ const (
 	NAME = "Jacoco"
 )
 
-func New(baseDir, srcDir string, test *tool.Target) (tool.Tool, error) {
+func New(baseDir, srcDir string, test *tool.Target, testId bson.ObjectId) (tool.Tool, error) {
 	rd := filepath.Join(baseDir, "target")
 	p, e := NewProject("Jacoco Coverage", srcDir, rd, test)
 	if e != nil {
@@ -46,12 +47,12 @@ func New(baseDir, srcDir string, test *tool.Target) (tool.Tool, error) {
 		buildPath: bp,
 		resPath:   rd,
 		test:      test,
+		testId:    testId,
 	}, nil
 }
 
 func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
-	_, e := tool.RunCommand([]string{"ant", "-f", t.buildPath}, nil)
-	if e != nil {
+	if _, e := tool.RunCommand([]string{"ant", "-f", t.buildPath}, nil); e != nil {
 		return nil, e
 	}
 	xp := filepath.Join(t.resPath, "report", "report.xml")
@@ -79,7 +80,7 @@ func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, 
 	if e != nil {
 		return nil, e
 	}
-	return NewResult(fileId, t.test.Name, util.ReadBytes(xf), c.Bytes())
+	return NewResult(fileId, t.testId, t.test.Name, util.ReadBytes(xf), c.Bytes(), target)
 }
 
 func codeNode(d *html.Node) (*html.Node, error) {

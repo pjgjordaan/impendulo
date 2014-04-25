@@ -204,7 +204,7 @@ func getCredentials(r *http.Request) (u, p, m string, e error) {
 
 //Snapshots retrieves snapshots of a given file in a submission.
 func Snapshots(sid bson.ObjectId, n string, t project.Type) ([]*project.File, error) {
-	fs, e := db.Files(bson.M{db.SUBID: sid, db.NAME: n, db.TYPE: t}, bson.M{db.DATA: 0}, db.TIME)
+	fs, e := db.Files(bson.M{db.SUBID: sid, db.NAME: n, db.TYPE: t}, bson.M{db.DATA: 0}, 0, db.TIME)
 	if e != nil {
 		return nil, e
 	}
@@ -233,7 +233,7 @@ func projectName(i interface{}) (string, error) {
 }
 
 func childFile(sid bson.ObjectId, n string) (*project.File, error) {
-	pfs, e := db.Files(bson.M{db.SUBID: sid, db.NAME: n}, bson.M{db.DATA: 0})
+	pfs, e := db.Files(bson.M{db.SUBID: sid, db.NAME: n}, bson.M{db.DATA: 0}, 0)
 	if e != nil {
 		return nil, e
 	}

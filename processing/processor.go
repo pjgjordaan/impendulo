@@ -55,7 +55,6 @@ type (
 		sub      *project.Submission
 		project  *project.Project
 		id       bson.ObjectId
-		results  bson.M
 		rootDir  string
 		srcDir   string
 		toolDir  string
@@ -178,7 +177,7 @@ func (p *Processor) ProcessTest(test *project.File) error {
 	if e != nil {
 		return e
 	}
-	fs, e := db.Files(bson.M{db.SUBID: test.SubId, db.TYPE: project.SRC}, bson.M{db.ID: 1})
+	fs, e := db.Files(bson.M{db.SUBID: test.SubId, db.TYPE: project.SRC}, bson.M{db.ID: 1}, 0)
 	if e != nil {
 		return e
 	}
@@ -206,7 +205,7 @@ func (p *Processor) ProcessArchive(a *project.File) error {
 	if e = db.RemoveFileById(a.Id); e != nil {
 		util.Log(e, LOG_PROCESSOR)
 	}
-	fs, e := db.Files(bson.M{db.SUBID: p.sub.Id}, bson.M{db.TIME: 1, db.ID: 1}, db.TIME)
+	fs, e := db.Files(bson.M{db.SUBID: p.sub.Id}, bson.M{db.TIME: 1, db.ID: 1}, 0, db.TIME)
 	if e != nil {
 		return e
 	}
@@ -303,7 +302,6 @@ func NewTestProcessor(tf *project.File, p *Processor) (*TestProcessor, error) {
 		sub:      p.sub,
 		project:  p.project,
 		id:       tf.Id,
-		results:  tf.Results,
 		rootDir:  d,
 		srcDir:   srcDir,
 		toolDir:  td,
@@ -337,21 +335,21 @@ func (tp *TestProcessor) Process(fid bson.ObjectId) error {
 }
 
 func (tp *TestProcessor) Run(t tool.Tool, f *project.File, target *tool.Target) error {
-	n := t.Name() + "-" + f.Id.Hex()
-	if _, ok := tp.results[n]; ok {
+	n := t.Name() + "-" + tp.id.Hex()
+	if _, ok := f.Results[n]; ok {
 		return nil
 	}
-	r, e := t.Run(tp.id, target)
+	r, e := t.Run(f.Id, target)
 	if e != nil {
 		util.Log(e, LOG_PROCESSOR)
 		//Report any errors and store timeouts.
 		if tool.IsTimeout(e) {
-			return db.AddFileResult(tp.id, n, tool.TIMEOUT)
+			return db.AddFileResult(f.Id, n, tool.TIMEOUT)
 		} else {
-			return db.AddFileResult(tp.id, n, tool.ERROR)
+			return db.AddFileResult(f.Id, n, tool.ERROR)
 		}
 	} else if r != nil {
 		return db.AddResult(r, n)
 	}
-	return db.AddFileResult(tp.id, n, tool.NORESULT)
+	return db.AddFileResult(f.Id, n, tool.NORESULT)
 }

@@ -81,7 +81,7 @@ function timeChart(chartData) {
     var unique = getUnique(chartData);
     var names = unique
 	.map(function(d){
-	    return d.key;
+	    return getKey(d);
 	});
     getColour = d3.scale.ordinal()
 	.range(COLOURS) 
@@ -228,7 +228,7 @@ function timeChart(chartData) {
 	.attr('transform', 'translate(' + m[3] + ',' + m[0] + ')')
 	.call(zoom);
 
-    $('#chart').append('<div id="chart-tooltip" class="tooltip"></div>');
+    $('#chart').append('<div id="chart-tooltip" ></div>');
 
     chart.append('svg:rect')
 	.attr('width', w)
@@ -332,15 +332,15 @@ function timeChart(chartData) {
 	.on('mouseout', hideTooltip);
 
     
- var legendData = d3.nest()
+    var legendData = d3.nest()
 	.key(function(d){
-	    return d.subId;
+	    return d.groupid;
 	})
 	.entries(unique);
     var legendTree = [];
     for(var i = 0; i < legendData.length; i ++){
 	var e = {
-	    id: 'submission' + legendData[i].values[0].subId,
+	    id: 'group' + legendData[i].values[0].groupid,
 	    text: legendData[i].values[0].user,
 	    state:{
 		opened: true
@@ -349,7 +349,7 @@ function timeChart(chartData) {
 	}
 	for(var j = 0; j < legendData[i].values.length; j ++){
 	    var n = legendData[i].values[j].name;
-	    var k = trimSpace(legendData[i].values[j].key);
+	    var k = getKey(legendData[i].values[j]);
 	    var c = {
 		id: k,  
 		text: n
@@ -387,9 +387,9 @@ function configureVisibility(legendData, initialToggle) {
     }
 }
 function configureParent(parent){
-    var id = 'submission' + parent.values[0].subId;
+    var id = 'group' + parent.values[0].groupid;
     $('#'+id).on('click', function(e, data){
-	if(e.target.parentElement.parentElement.getAttribute('id') !== id){
+	if(e.target.parentElement.getAttribute('id') !== id && e.target.parentElement.parentElement.getAttribute('id') !== id){
 	    return;
 	}
 	var current = d3.select(this).attr('status');
@@ -415,10 +415,10 @@ function configureParent(parent){
 }	
 
 function configureChildren(parent, initialToggle){
-    var pid = 'submission' + parent.values[0].subId;
+    var pid = 'group' + parent.values[0].groupid;
     var status = 0;
     for(var j = 0; j < parent.values.length; j ++){
-	var k = trimSpace(parent.values[j].key);
+	var k = getKey(parent.values[j]);
 	$('#'+k).children('.jstree-wholerow').css('background-color', getColour(k));
 	$('#'+k).on('click', function(e, data){
 	    var id = d3.select(this).attr('id');
@@ -507,13 +507,12 @@ function showTooltip(d){
 	.text(text + ' Time: ' + xVal+ 's');
     tooltip
 	.transition()
-        .duration(500)	
+        .duration(0)	
 	.ease('linear')
 	.style('display', 'inline');
 }
 
-function star(x, y, scale)
-{
+function star(x, y, scale){
     scale = scale || 1;
     var innerRadius = 2 * scale;
     var outerRadius = 10 * scale;
@@ -615,11 +614,7 @@ function active(d){
     if(d.user !== CURRENT_USER){
 	return false;
     }
-//    if (CURRENT_TIME === -1 || NEXT_TIME === -1){
-	return getX(d) === CURRENT_TIME || getX(d) === NEXT_TIME;
-  //  } else{
-//	return getX(d) >= CURRENT_TIME && getX(d) <= NEXT_TIME;
-  //  }
+    return getX(d) === CURRENT_TIME || getX(d) === NEXT_TIME;
 }
 
 function shadeColor(color, percent) {   

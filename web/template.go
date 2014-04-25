@@ -45,6 +45,7 @@ import (
 
 	"net/url"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -91,7 +92,9 @@ var (
 		"langProjects": func(l string) ([]*project.Project, error) {
 			return db.Projects(bson.M{db.LANG: l}, nil, db.NAME)
 		},
-		"resultNames":           func(sid bson.ObjectId, n string) (map[string][]string, error) { return db.ResultNames(sid, n) },
+		"resultNames": func(sid bson.ObjectId, n string) (map[string]map[string][]interface{}, error) {
+			return db.ResultNames(sid, n)
+		},
 		"users":                 func() ([]string, error) { return db.Usernames(nil) },
 		"skeletons":             skeletons,
 		"getFiles":              func(sid bson.ObjectId) string { return fmt.Sprintf("getfiles?subid=%s", sid.Hex()) },
@@ -107,6 +110,14 @@ var (
 		"toTitle":               util.Title,
 		"addSpaces":             func(s string) string { return strings.Join(util.SplitTitles(s), " ") },
 		"chartTime":             chartTime,
+		"validId":               validId,
+		"emptyM": func(m map[string][]interface{}) bool {
+			return len(m) == 0
+		},
+		"emptyS": func(s []interface{}) bool {
+			return len(s) == 0
+		},
+		"sortFiles": sortFiles,
 	}
 	templateDir   string
 	baseTemplates []string
@@ -115,6 +126,35 @@ var (
 const (
 	PAGER_SIZE = 10
 )
+
+func sortFiles(ids []interface{}) ([]*project.File, error) {
+	fs := make([]*project.File, len(ids))
+	for i, s := range ids {
+		id, e := util.ReadId(s)
+		if e != nil {
+			return nil, e
+		}
+		if fs[i], e = db.File(bson.M{db.ID: id}, bson.M{db.TIME: 1}); e != nil {
+			return nil, e
+		}
+	}
+	sort.Sort(files(fs))
+	return fs, nil
+}
+
+type files []*project.File
+
+func (f files) Less(i, j int) bool {
+	return f[i].Time >= f[j].Time
+}
+
+func (f files) Swap(i, j int) {
+	f[i], f[j] = f[j], f[i]
+}
+
+func (f files) Len() int {
+	return len(f)
+}
 
 func chartTime(f *project.File) (float64, error) {
 	s, e := db.Submission(bson.M{db.ID: f.SubId}, nil)
@@ -149,7 +189,7 @@ func projectSubmissions(pid bson.ObjectId) ([]*project.Submission, error) {
 }
 
 func submissionFiles(sid bson.ObjectId) ([]*project.File, error) {
-	return db.Files(bson.M{db.SUBID: sid}, nil, "-"+db.TIME)
+	return db.Files(bson.M{db.SUBID: sid}, nil, 0, "-"+db.TIME)
 }
 
 //isError checks whether a result is an ErrorResult.

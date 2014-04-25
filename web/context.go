@@ -33,8 +33,6 @@ import (
 
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool/jacoco"
-	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 
@@ -53,14 +51,20 @@ type (
 
 	//Browse is used to keep track of the user's browsing.
 	Browse struct {
-		IsUser                     bool
-		Pid, Sid                   bson.ObjectId
-		Uid, File, Result, View    string
-		ChildFile                  string
-		Current, Next              int
-		CurrentChild, DisplayCount int
-		Level                      Level
-		Type, ChildType            project.Type
+		IsUser          bool
+		Pid, Sid        bson.ObjectId
+		Uid, File, View string
+		//ChildFile                  string
+		Current, Next int
+		DisplayCount  int
+		Level         Level
+		Type          project.Type
+		Result        *ResultDesc
+	}
+	ResultDesc struct {
+		Type   string
+		Name   string
+		FileID bson.ObjectId
 	}
 	Level  int
 	Setter func(*http.Request) error
@@ -157,7 +161,6 @@ func LoadContext(s *sessions.Session) *Context {
 		c.Browse.DisplayCount = 10
 		c.Browse.Current = 0
 		c.Browse.Next = 0
-		c.Browse.CurrentChild = 0
 	}
 	u, e := c.Username()
 	if e != nil {
@@ -172,38 +175,24 @@ func LoadContext(s *sessions.Session) *Context {
 func (b *Browse) Src() (string, error) {
 	if b.Type == project.SRC && b.File != "" {
 		return b.File, nil
-	} else if b.ChildType == project.SRC && b.ChildFile != "" {
-		return b.ChildFile, nil
 	}
 	return "", errors.New("no source file available")
-}
-
-func (b *Browse) FormatResult() string {
-	if i := strings.Index(b.Result, ":"); i > 0 {
-		return b.Result[:i] + " -> " + b.Result[i+1:]
-	}
-	return b.Result
 }
 
 func (b *Browse) Test() (string, error) {
 	if b.Type == project.TEST && b.File != "" {
 		return b.File, nil
-	} else if b.ChildType == project.TEST && b.ChildFile != "" {
-		return b.ChildFile, nil
 	}
 	return "", errors.New("no source file available")
 }
 
 func (b *Browse) ClearSubmission() {
 	b.File = ""
-	b.ChildFile = ""
-	b.Result = ""
+	b.Result = &ResultDesc{}
 	b.Current = 0
 	b.Next = 0
-	b.CurrentChild = 0
 	b.DisplayCount = 10
 	b.Type = project.SRC
-	b.ChildType = project.SRC
 }
 
 func (b *Browse) SetDisplayCount(r *http.Request) error {
@@ -253,12 +242,11 @@ func (b *Browse) SetPid(r *http.Request) error {
 }
 
 func (b *Browse) SetResult(r *http.Request) error {
-	res, e := GetString(r, "result")
+	s, e := GetString(r, "result")
 	if e != nil {
 		return nil
 	}
-	b.Result = res
-	return nil
+	return b.Result.Set(s)
 }
 
 func (b *Browse) SetFile(r *http.Request) error {
@@ -319,46 +307,20 @@ func (b *Browse) SetFileIndices(r *http.Request) error {
 	if e != nil {
 		return e
 	}
-
 	if e = b.setIndices(r, fs); e != nil {
 		return b.setTimeIndices(r, fs)
 	}
 	return nil
 }
 
-func (b *Browse) SetChild(r *http.Request) error {
-	if b.ChildFile == "" {
-		f, e := childFile(b.Sid, b.File)
-		if e != nil {
-			util.Log(e)
-			return nil
-		}
-		b.ChildFile = f.Name
-		b.ChildType = f.Type
-		b.CurrentChild = 0
-	}
-	fs, e := Snapshots(b.Sid, b.ChildFile, b.ChildType)
-	if e != nil {
-		return e
-	}
-	if i, e := getIndex(r, "currentchild", len(fs)-1); e == nil {
-		b.CurrentChild = i
-	}
-	return nil
-}
-
 func (b *Browse) Update(r *http.Request) error {
-	setters := []Setter{b.SetPid, b.SetUid, b.SetSid, b.SetResult, b.SetFile, b.SetFileIndices, b.SetDisplayCount, b.SetChild}
+	setters := []Setter{b.SetPid, b.SetUid, b.SetSid, b.SetResult, b.SetFile, b.SetFileIndices, b.SetDisplayCount}
 	for _, s := range setters {
 		if e := s(r); e != nil {
 			return e
 		}
 	}
 	return nil
-}
-
-func (b *Browse) childResult() bool {
-	return (b.Type == project.TEST && (b.Result == junit.NAME || b.Result == jacoco.NAME)) || (b.Type == project.SRC && b.Result == jacoco.NAME)
 }
 
 func (b *Browse) SetLevel(route string) {
@@ -402,4 +364,52 @@ func (l Level) Is(level string) bool {
 	default:
 		return false
 	}
+}
+
+func (r *ResultDesc) Set(s string) error {
+	r.Type = ""
+	r.Name = ""
+	r.FileID = ""
+	sp := strings.Split(s, "-")
+	if len(sp) > 1 {
+		id, e := util.ReadId(sp[1])
+		if e != nil {
+			return e
+		}
+		r.FileID = id
+	}
+	sp = strings.Split(sp[0], ":")
+	if len(sp) > 1 {
+		r.Name = sp[1]
+	}
+	r.Type = sp[0]
+	return nil
+}
+
+func (r *ResultDesc) Format() string {
+	s := r.Type
+	if r.Name == "" {
+		return s
+	}
+	s += " \u2192 " + r.Name
+	if r.FileID == "" {
+		return s
+	}
+	f, e := db.File(bson.M{db.ID: r.FileID}, bson.M{db.TIME: 1})
+	if e != nil {
+		return s + " \u2192 No File Found"
+	}
+	return s + " \u2192 " + util.Date(f.Time)
+}
+
+func (r *ResultDesc) Raw() string {
+	s := r.Type
+	if r.Name == "" {
+		return r.Type
+	}
+	s += ":" + r.Name
+	if r.FileID == "" {
+		return s
+	}
+	return s + "-" + r.FileID.Hex()
 }

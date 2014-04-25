@@ -296,7 +296,7 @@ func (r *Redoer) Consume(d amqp.Delivery, ch amqp.Channel) error {
 	if e != nil {
 		return e
 	}
-	fs, e := db.Files(bson.M{db.SUBID: sid}, bson.M{db.DATA: 0}, db.TIME)
+	fs, e := db.Files(bson.M{db.SUBID: sid}, bson.M{db.DATA: 0}, 0, db.TIME)
 	if e != nil {
 		return e
 	}

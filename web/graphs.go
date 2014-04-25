@@ -27,7 +27,6 @@ package web
 import (
 	"errors"
 	"fmt"
-
 	"sort"
 	"strings"
 
@@ -35,6 +34,7 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/jacoco"
+	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 )
@@ -42,10 +42,10 @@ import (
 type (
 	//Chart represents the x and y values used to draw the charts.
 	Chart struct {
-		start int64
-		user  string
-		subId string
-		Data  ChartData
+		user, id, result string
+		start            int64
+		keys             map[string]string
+		Data             ChartData
 	}
 
 	ChartData []map[string]interface{}
@@ -53,13 +53,20 @@ type (
 
 func LoadChart(resultName string, files []*project.File) (ChartData, error) {
 	if len(files) == 0 {
-		return nil, errors.New("No files to load chart for.")
+		return nil, errors.New("no files to load chart for")
 	}
 	s, e := db.Submission(bson.M{db.ID: files[0].SubId}, nil)
 	if e != nil {
 		return nil, e
 	}
-	c := NewChart(s)
+	n := resultName
+	if n == jacoco.NAME || n == junit.NAME {
+		fn, _ := util.Extension(files[0].Name)
+		n += " \u2192 " + fn
+	} else {
+		n = strings.Replace(n, ":", " \u2192 ", -1)
+	}
+	c := NewChart(s, n)
 	for _, f := range files {
 		f, e = db.File(bson.M{db.ID: f.Id}, nil)
 		if e != nil {
@@ -68,7 +75,7 @@ func LoadChart(resultName string, files []*project.File) (ChartData, error) {
 		switch resultName {
 		case tool.SUMMARY:
 			addAll(c, f)
-		case jacoco.NAME:
+		case jacoco.NAME, junit.NAME:
 			addSpecial(c, f, resultName)
 		default:
 			addSingle(c, f, resultName)
@@ -79,7 +86,7 @@ func LoadChart(resultName string, files []*project.File) (ChartData, error) {
 		util.Log(e)
 		return c.Data, nil
 	}
-	ls, e := db.Files(bson.M{db.SUBID: f.SubId, db.TYPE: project.LAUNCH}, nil, db.TIME)
+	ls, e := db.Files(bson.M{db.SUBID: f.SubId, db.TYPE: project.LAUNCH}, nil, 0, db.TIME)
 	if e != nil {
 		util.Log(e)
 		return c.Data, nil
@@ -257,14 +264,23 @@ func (c *Chart) Add(t int64, vs []*tool.ChartVal) {
 		return
 	}
 	x := util.Round(float64(t-c.start)/1000.0, 2)
-	for _, v := range vs {
+	for i, v := range vs {
 		p := map[string]interface{}{
-			"x": x, "y": v.Y, "key": v.Name + " " + c.subId,
-			"name": v.Name, "subId": c.subId, "user": c.user,
-			"created": c.start, "time": t,
+			"x": x, "y": v.Y, "key": c.Key(v.Name),
+			"name": v.Name, "groupid": c.id, "user": c.user + " \u2192 " + c.result,
+			"created": c.start, "time": t, "pos": i,
 		}
 		c.Data = append(c.Data, p)
 	}
+}
+
+func (c *Chart) Key(n string) string {
+	k, ok := c.keys[n]
+	if ok {
+		return k
+	}
+	c.keys[n] = bson.NewObjectId().Hex()
+	return c.keys[n]
 }
 
 func (c *Chart) Len() int {
@@ -274,24 +290,37 @@ func (c *Chart) Swap(i, j int) {
 	c.Data[i], c.Data[j] = c.Data[j], c.Data[i]
 }
 func (c *Chart) Less(i, j int) bool {
-	xi, ok := c.Data[i]["x"].(float64)
+	if c.Data[i]["time"] == c.Data[j]["time"] {
+		pi, ok := c.Data[i]["pos"].(int)
+		if !ok {
+			return false
+		}
+		pj, ok := c.Data[j]["pos"].(int)
+		if !ok {
+			return false
+		}
+		return pi <= pj
+	}
+	ti, ok := c.Data[i]["time"].(int64)
 	if !ok {
 		return false
 	}
-	xj, ok := c.Data[j]["x"].(float64)
+	tj, ok := c.Data[j]["time"].(int64)
 	if !ok {
 		return true
 	}
-	return xi < xj
+	return ti <= tj
 }
 
 //NewChart initialises new chart data.
-func NewChart(s *project.Submission) *Chart {
+func NewChart(s *project.Submission, result string) *Chart {
 	return &Chart{
-		start: s.Time,
-		user:  s.User,
-		subId: s.Id.Hex(),
-		Data:  NewChartData(),
+		keys:   make(map[string]string),
+		user:   s.User,
+		id:     bson.NewObjectId().Hex(),
+		result: strings.Split(result, "-")[0],
+		start:  s.Time,
+		Data:   NewChartData(),
 	}
 }
 

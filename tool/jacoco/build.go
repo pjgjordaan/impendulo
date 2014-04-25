@@ -3,6 +3,7 @@ package jacoco
 import (
 	"encoding/gob"
 	"encoding/xml"
+	"path/filepath"
 
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
@@ -75,6 +76,7 @@ type (
 		Tests       []*Test     `xml:"test"`
 		Classpath   *Classpath  `xml:"classpath"`
 		SysProperty SysProperty `xml:"sysproperty"`
+		JVMArg      JVMArg      `xml:"jvmarg"`
 	}
 	JacocoReport struct {
 		ExecutionData *ExecutionData `xml:"executiondata"`
@@ -112,13 +114,17 @@ type (
 		Dir      string `xml:"dir,attr"`
 		Includes string `xml:"includes,attr"`
 	}
+	JVMArg struct {
+		Value string `xml:"value,attr"`
+	}
 )
 
 const (
 	BUILD_TEMPLATE = `<project name="" default="rebuild">
 	<description>
 	</description>
-	<property name="title" value="" />
+	<property name="data" value=""/>
+        <property name="title" value="" />
 	<property name="usertest" value="" />
 	<property name="jacoco" location="" />
 	<property name="junit" location="" />
@@ -144,29 +150,30 @@ const (
 		  <javac classpath="${junit}" srcdir="${src.dir}" destdir="${result.src.classes.dir}" debug="true" includeantruntime="false" />
 	</target>
 	<target name="compile_test" depends="compile_src">
-		<mkdir dir="${result.test.classes.dir}" />
+                <mkdir dir="${result.test.classes.dir}" />
 		<javac classpath="${junit}:${result.src.classes.dir}" srcdir="${test.dir}" destdir="${result.test.classes.dir}" debug="true" includeantruntime="false" />
 	</target>
 	<target name="instrument_src" depends="compile_test">
-		<instrument destdir="${result.src.classes.instr.dir}">
-			<fileset dir="${result.src.classes.dir}" includes="**/*.class" />
+                <instrument destdir="${result.src.classes.instr.dir}">
+                        <fileset dir="${result.src.classes.dir}" includes="**/*.class" />
 		</instrument>
 	</target>
 	<target name="instrument_test" depends="compile_test">
 		<instrument destdir="${result.test.classes.instr.dir}">
-			<fileset dir="${result.test.classes.dir}" includes="**/*.class" />
+		        <fileset dir="${result.test.classes.dir}" includes="**/*.class" />
 		</instrument>
 	</target>
 	<target name="test" depends="instrument_src,instrument_test">
 		<junit fork="true" forkmode="once">
-			<test name="${usertest}" />
+                        <test name="${usertest}" />
 			<classpath>
 				<pathelement path="${jacoco}/lib/jacocoagent.jar" />
 				<pathelement path="${result.test.classes.instr.dir}" />
 				<pathelement path="${result.src.classes.instr.dir}" />
 				<pathelement path="${junit}" />
 			</classpath>
-			<sysproperty key="jacoco-agent.destfile" file="${result.exec.file}" />
+                        <sysproperty key="jacoco-agent.destfile" file="${result.exec.file}" />
+			<jvmarg value="-Ddata.location=${data}"/>	
 		</junit>
 	</target>
 	<target name="report" depends="test">
@@ -215,6 +222,8 @@ func NewProject(name, srcDir, resDir string, test *tool.Target) (*Project, error
 	}
 	for _, pr := range p.Properties {
 		switch pr.Name {
+		case "data":
+			pr.Value = filepath.Join(test.PackagePath(), "data")
 		case "title":
 			pr.Value = name
 		case "usertest":
