@@ -39,12 +39,12 @@ type (
 	//Result is a tool.ToolResult and a tool.DisplayResult.
 	//It is used to store the output of running Findbugs.
 	Result struct {
-		Id     bson.ObjectId "_id"
-		FileId bson.ObjectId "fileid"
-		Name   string        "name"
-		Report *Report       "report"
-		GridFS bool          "gridfs"
-		Type   string        "type"
+		Id     bson.ObjectId `bson:"_id"`
+		FileId bson.ObjectId `bson:"fileid"`
+		Name   string        `bson:"name"`
+		Report *Report       `bson:"report"`
+		GridFS bool          `bson:"gridfs"`
+		Type   string        `bson:"type"`
 	}
 )
 
@@ -99,10 +99,10 @@ func (r *Result) GetReport() tool.Report {
 //ChartVals
 func (r *Result) ChartVals() []*tool.ChartVal {
 	return []*tool.ChartVal{
-		&tool.ChartVal{"All", float64(r.Report.Summary.BugCount), r.FileId},
-		&tool.ChartVal{"Priority 1", float64(r.Report.Summary.Priority1), r.FileId},
-		&tool.ChartVal{"Priority 2", float64(r.Report.Summary.Priority2), r.FileId},
-		&tool.ChartVal{"Priority 3", float64(r.Report.Summary.Priority3), r.FileId},
+		&tool.ChartVal{Name: "All", Y: float64(r.Report.Summary.BugCount), FileId: r.FileId},
+		&tool.ChartVal{Name: "Priority 1", Y: float64(r.Report.Summary.Priority1), FileId: r.FileId},
+		&tool.ChartVal{Name: "Priority 2", Y: float64(r.Report.Summary.Priority2), FileId: r.FileId},
+		&tool.ChartVal{Name: "Priority 3", Y: float64(r.Report.Summary.Priority3), FileId: r.FileId},
 	}
 }
 

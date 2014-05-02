@@ -29,6 +29,8 @@ import (
 	"fmt"
 
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/util/convert"
+	"github.com/godfried/impendulo/util/errors"
 	"labix.org/v2/mgo/bson"
 
 	"reflect"
@@ -40,14 +42,14 @@ type (
 	Type string
 	//File stores a single file's data from a submission.
 	File struct {
-		Id      bson.ObjectId "_id"
-		SubId   bson.ObjectId "subid"
-		Name    string        "name"
-		Package string        "package"
-		Type    Type          "type"
-		Time    int64         "time"
-		Data    []byte        "data"
-		Results bson.M        "results"
+		Id      bson.ObjectId `bson:"_id"`
+		SubId   bson.ObjectId `bson:"subid"`
+		Name    string        `bson:"name"`
+		Package string        `bson:"package"`
+		Type    Type          `bson:"type"`
+		Time    int64         `bson:"time"`
+		Data    []byte        `bson:"data"`
+		Results bson.M        `bson:"results"`
 	}
 )
 
@@ -86,19 +88,19 @@ func (f *File) CanProcess() bool {
 
 //NewFile
 func NewFile(sid bson.ObjectId, m map[string]interface{}, d []byte) (*File, error) {
-	tp, e := util.GetString(m, TYPE)
-	if e != nil && util.IsCastError(e) {
+	tp, e := convert.GetString(m, TYPE)
+	if e != nil && errors.IsCastError(e) {
 		return nil, e
 	}
-	n, e := util.GetString(m, NAME)
+	n, e := convert.GetString(m, NAME)
 	if e != nil {
 		return nil, e
 	}
-	p, e := util.GetString(m, PKG)
+	p, e := convert.GetString(m, PKG)
 	if e != nil {
 		return nil, e
 	}
-	t, e := util.GetInt64(m, TIME)
+	t, e := convert.GetInt64(m, TIME)
 	if e != nil {
 		return nil, e
 	}

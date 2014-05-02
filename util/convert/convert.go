@@ -22,36 +22,38 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package util
+package convert
 
 import (
 	"fmt"
+
+	"github.com/godfried/impendulo/util/errors"
 
 	"labix.org/v2/mgo/bson"
 
 	"strconv"
 )
 
-//ReadId tries to read a bson.ObjectId from a string.
-func ReadId(i interface{}) (bson.ObjectId, error) {
+//Id tries to read a bson.ObjectId from a string.
+func Id(i interface{}) (bson.ObjectId, error) {
 	switch v := i.(type) {
 	case bson.ObjectId:
 		return v, nil
 	case string:
 		if !bson.IsObjectIdHex(v) {
-			return "", &CastError{"bson.ObjectId", v}
+			return "", errors.NewCast("bson.ObjectId", v)
 		} else {
 			return bson.ObjectIdHex(v), nil
 		}
 	}
-	return "", &CastError{"id", i}
+	return "", errors.NewCast("id", i)
 }
 
 //GetString converts a value in a map to a string.
 func GetString(m map[string]interface{}, k string) (string, error) {
 	i, ok := m[k]
 	if !ok {
-		return "", &MissingError{k}
+		return "", errors.NewMissing(k)
 	}
 	switch v := i.(type) {
 	case string:
@@ -64,7 +66,7 @@ func GetString(m map[string]interface{}, k string) (string, error) {
 func GetInt(m map[string]interface{}, k string) (int, error) {
 	i, ok := m[k]
 	if !ok {
-		return 0, &MissingError{k}
+		return 0, errors.NewMissing(k)
 	}
 	return Int(i)
 }
@@ -73,7 +75,7 @@ func GetInt(m map[string]interface{}, k string) (int, error) {
 func GetInt64(m map[string]interface{}, k string) (int64, error) {
 	i, ok := m[k]
 	if !ok {
-		return 0, &MissingError{k}
+		return 0, errors.NewMissing(k)
 	}
 	return Int64(i)
 }
@@ -103,7 +105,7 @@ func Int(i interface{}) (int, error) {
 	case string:
 		return strconv.Atoi(v)
 	}
-	return 0, &CastError{"int", i}
+	return 0, errors.NewCast("int", i)
 }
 
 func Int64(i interface{}) (int64, error) {
@@ -131,7 +133,7 @@ func Int64(i interface{}) (int64, error) {
 	case string:
 		return strconv.ParseInt(v, 10, 64)
 	}
-	return 0, &CastError{"int64", i}
+	return 0, errors.NewCast("int64", i)
 }
 
 func Float64(i interface{}) (float64, error) {
@@ -159,23 +161,23 @@ func Float64(i interface{}) (float64, error) {
 	case string:
 		return strconv.ParseFloat(v, 64)
 	}
-	return 0.0, &CastError{"float64", i}
+	return 0.0, errors.NewCast("float64", i)
 }
 
 //GetId converts a value in a map to a bson.ObjectId.
 func GetId(m map[string]interface{}, k string) (bson.ObjectId, error) {
 	i, ok := m[k]
 	if !ok {
-		return "", &MissingError{k}
+		return "", errors.NewMissing(k)
 	}
-	return ReadId(i)
+	return Id(i)
 }
 
 //GetM converts a value in a map to a bson.M.
 func GetM(m map[string]interface{}, k string) (bson.M, error) {
 	i, ok := m[k]
 	if !ok {
-		return nil, &MissingError{k}
+		return nil, errors.NewMissing(k)
 	}
 	switch v := i.(type) {
 	case bson.M:
@@ -183,49 +185,49 @@ func GetM(m map[string]interface{}, k string) (bson.M, error) {
 	case map[string]interface{}:
 		return bson.M(v), nil
 	}
-	return nil, &CastError{"bson.M", i}
+	return nil, errors.NewCast("bson.M", i)
 }
 
 //GetBytes converts a value in a map to a []byte.
 func GetBytes(m map[string]interface{}, k string) ([]byte, error) {
 	i, ok := m[k]
 	if !ok {
-		return nil, &MissingError{k}
+		return nil, errors.NewMissing(k)
 	}
-	return toBytes(i)
+	return Bytes(i)
 }
 
 //GetStrings converts a value in a map to a []string.
 func GetStrings(m map[string]interface{}, k string) ([]string, error) {
 	i, ok := m[k]
 	if !ok {
-		return nil, &MissingError{k}
+		return nil, errors.NewMissing(k)
 	}
-	return toStrings(i)
+	return Strings(i)
 }
 
-//toBytes converts an interface to a []byte.
-func toBytes(i interface{}) ([]byte, error) {
+//Bytes converts an interface to a []byte.
+func Bytes(i interface{}) ([]byte, error) {
 	v, ok := i.([]byte)
 	if !ok {
-		return nil, &CastError{"[]byte", i}
+		return nil, errors.NewCast("[]byte", i)
 	}
 	return v, nil
 }
 
-//toStrings converts an interface to a []string.
-func toStrings(i interface{}) ([]string, error) {
+//Strings converts an interface to a []string.
+func Strings(i interface{}) ([]string, error) {
 	v, ok := i.([]string)
 	if !ok {
 		a, ok := i.([]interface{})
 		if !ok {
-			return nil, &CastError{"[]string", i}
+			return nil, errors.NewCast("[]string", i)
 		}
 		v = make([]string, len(a))
 		for j, i := range a {
 			s, ok := i.(string)
 			if !ok {
-				return nil, &CastError{"string", i}
+				return nil, errors.NewCast("string", i)
 			}
 			v[j] = s
 		}
@@ -233,8 +235,8 @@ func toStrings(i interface{}) ([]string, error) {
 	return v, nil
 }
 
-//ToSet converts an array to a set.
-func ToSet(vals []string) map[string]bool {
+//Set converts an array to a set.
+func Set(vals []string) map[string]bool {
 	s := make(map[string]bool)
 	for _, v := range vals {
 		s[v] = true

@@ -28,8 +28,10 @@ import (
 	"encoding/gob"
 	"encoding/xml"
 	"fmt"
+
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
+
 	"sort"
 	"strings"
 )
@@ -98,7 +100,7 @@ func (this *Report) Success() bool {
 //String
 func (this *Report) String() string {
 	return fmt.Sprintf("Id: %q; Success: %t; Tests: %d; Errors: %d; Failures: %d; Name: %s; \n Results: %s",
-		this.Id, this.Success, this.Tests, this.Errors, this.Failures, this.Name, this.Results)
+		this.Id, this.Success(), this.Tests, this.Errors, this.Failures, this.Name, this.Results)
 }
 
 //GetResults

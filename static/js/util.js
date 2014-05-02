@@ -102,9 +102,9 @@ function addalert(srcParent, destParent, src) {
     var dest = document.createElement('div');
     dest.setAttribute('class', 'alert alert-dismissable alert-list');
     dest.setAttribute('id', id);
-    dest.setAttribute('ruleid', id);
-    dest.setAttribute('rulename', name);
-    dest.setAttribute('ruledescription', description);
+    dest.setAttribute('rule-id', id);
+    dest.setAttribute('rule-name', name);
+    dest.setAttribute('rule-description', description);
     var destButton = document.createElement('button');
     destButton.setAttribute('class', 'close');
     destButton.setAttribute('type', 'button');
@@ -119,7 +119,7 @@ function addalert(srcParent, destParent, src) {
     destDescription.innerHTML = description;
     var destAnchor = document.createElement('input');
     destAnchor.setAttribute('type', 'hidden');
-    destAnchor.setAttribute('name', 'ruleid');
+    destAnchor.setAttribute('name', 'rule-id');
     destAnchor.setAttribute('value', id);
     dest.appendChild(destButton);
     dest.appendChild(destName);
@@ -138,7 +138,7 @@ function highlight(){
 function addSkeletons(src, dest, skeletonMap){
     var srcList = document.getElementById(src);
     var id = srcList.options[srcList.selectedIndex].value;
-    $.getJSON('skeletons?projectid='+id, function(data){   
+    $.getJSON('skeletons?project-id='+id, function(data){   
 	var destList = document.getElementById(dest);
 	destList.options.length = 0;
 	if (data.skeletons === null || data.skeletons.length === 0){
@@ -154,8 +154,8 @@ function addSkeletons(src, dest, skeletonMap){
 }
 
 function populate(src, toolDest, userDest){
-    ajaxSelect(src, toolDest, 'tools?projectid=', 'tools');
-    ajaxSelect(src, userDest, 'usernames?projectid=', 'usernames');
+    ajaxSelect(src, toolDest, 'tools?project-id=', 'tools');
+    ajaxSelect(src, userDest, 'usernames?project-id=', 'usernames');
 }
 
 function ajaxSelect(src, dest, url, name){
@@ -216,7 +216,7 @@ function loadproject(id, idDest, nameDest, userDest, langDest, subDest){
 		}
 	    }
 	});	 
-	$.getJSON('submissions?projectid='+p.Id, function(sdata){   
+	$.getJSON('submissions?project-id='+p.Id, function(sdata){   
 	    $('#'+subDest+' > ul').empty();
 	    var subs = sdata['submissions'];
 	    if(not(subs)){
@@ -278,7 +278,7 @@ function loadsubmission(id, idDest, projectDest, userDest, fileDest){
 		}
 	    }
 	});	 
-	$.getJSON('files?subid='+s.Id +'&format=nested', function(fdata){   
+	$.getJSON('files?submission-id='+s.Id +'&format=nested', function(fdata){   
 	    $('#'+fileDest+' > ul').empty();
 	    var files = fdata['files'];
 	    if(not(files)){
@@ -410,7 +410,7 @@ function addCodeModal(dest, resultId, bug, start, end){
 	    });
 	    return false;
 	}
-	$.getJSON('code?resultid='+resultId, function(data){
+	$.getJSON('code?result-id='+resultId, function(data){
 	    var h = 'highlight: [';
 	    for(var i = start; i < end; i ++){
 		h += i + ',';
@@ -473,7 +473,7 @@ function addComparables(rid, pid, dest){
 	for(var i = 0; i < comp.length; i++) {
 	    $('#'+dest).append('<option value="'+comp[i].Id+'">'+comp[i].Name+'</option>');
 	}
-	$.getJSON('submissions?projectid='+pid, function(data){
+	$.getJSON('submissions?project-id='+pid, function(data){
 	    var items = data['submissions'];
 	    for(var i = 0; i < items.length; i++) {
 		$('#'+dest).append('<option value="'+items[i].Id+'">'+items[i].User+ ' - ' + new Date(items[i].Time).toLocaleString()+'</option>');

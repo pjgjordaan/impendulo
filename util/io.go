@@ -30,6 +30,9 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+
+	"github.com/godfried/impendulo/util/errors"
+
 	"io"
 	"io/ioutil"
 	"os"
@@ -65,7 +68,7 @@ func ReadData(r io.Reader) ([]byte, error) {
 		if e == io.EOF {
 			busy = false
 		} else if e != nil {
-			return nil, &UtilError{r, "reading from", e}
+			return nil, errors.NewUtil(r, "reading from", e)
 		} else if bytes.HasSuffix(s, t) {
 			s = s[:len(s)-len(t)]
 			busy = false
@@ -89,14 +92,14 @@ func SaveTemp(d []byte) (string, error) {
 //SaveFile saves a file (given as a []byte) as n.
 func SaveFile(n string, d []byte) error {
 	if e := os.MkdirAll(filepath.Dir(n), DPERM); e != nil {
-		return &UtilError{n, "creating", e}
+		return errors.NewUtil(n, "creating", e)
 	}
 	f, e := os.Create(n)
 	if e != nil {
-		return &UtilError{n, "creating", e}
+		return errors.NewUtil(n, "creating", e)
 	}
 	if _, e = f.Write(d); e != nil {
-		return &UtilError{n, "writing to", e}
+		return errors.NewUtil(n, "writing to", e)
 	}
 	return nil
 }

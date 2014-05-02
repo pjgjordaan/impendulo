@@ -34,12 +34,12 @@ import (
 type (
 	//Submission is used for individual project submissions
 	Submission struct {
-		Id        bson.ObjectId "_id"
-		ProjectId bson.ObjectId "projectid"
-		User      string        "user"
-		Mode      string        "mode"
-		Time      int64         "time"
-		Status    Status        "status"
+		Id        bson.ObjectId `bson:"_id"`
+		ProjectId bson.ObjectId `bson:"projectid"`
+		User      string        `bson:"user"`
+		Mode      string        `bson:"mode"`
+		Time      int64         `bson:"time"`
+		Status    Status        `bson:"status"`
 	}
 	Status int
 )

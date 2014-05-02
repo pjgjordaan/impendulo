@@ -36,7 +36,6 @@ import (
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
-	junit_user "github.com/godfried/impendulo/tool/junit_user/result"
 	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo"
@@ -45,7 +44,7 @@ import (
 
 type (
 	TypeHolder struct {
-		Type string "type"
+		Type string `bson:"type"`
 	}
 )
 
@@ -161,23 +160,6 @@ func JacocoResult(matcher, selector bson.M) (ret *jacoco.Result, err error) {
 	return
 }
 
-func JUnitUserResult(matcher, selector bson.M) (ret *junit_user.Result, err error) {
-	session, err := Session()
-	if err != nil {
-		return
-	}
-	defer session.Close()
-	c := session.DB("").C(RESULTS)
-	matcher[TYPE] = junit_user.NAME
-	err = c.Find(matcher).Select(selector).One(&ret)
-	if err != nil {
-		err = &GetError{"result", err, matcher}
-	} else if HasGridFile(ret, selector) {
-		err = GridFile(ret.GetId(), &ret.Report)
-	}
-	return
-}
-
 //JavacResult retrieves a JavacResult matching
 //the given interface from the active database.
 func JavacResult(matcher, selector bson.M) (ret *javac.Result, err error) {
@@ -253,8 +235,6 @@ func ToolResult(matcher, selector bson.M) (ret tool.ToolResult, err error) {
 		ret, err = JacocoResult(matcher, selector)
 	case junit.NAME:
 		ret, err = JUnitResult(matcher, selector)
-	case junit_user.NAME:
-		ret, err = JUnitUserResult(matcher, selector)
 	default:
 		err = fmt.Errorf("Unsupported result type %s.", tipe)
 	}
@@ -285,8 +265,6 @@ func DisplayResult(matcher, selector bson.M) (ret tool.DisplayResult, err error)
 		ret, err = JacocoResult(matcher, selector)
 	case junit.NAME:
 		ret, err = JUnitResult(matcher, selector)
-	case junit_user.NAME:
-		ret, err = JUnitUserResult(matcher, selector)
 	default:
 		err = fmt.Errorf("Unsupported result type %s.", tipe)
 	}
@@ -315,8 +293,6 @@ func ChartResult(matcher, selector bson.M) (ret tool.ChartResult, err error) {
 		ret, err = JUnitResult(matcher, selector)
 	case jacoco.NAME:
 		ret, err = JacocoResult(matcher, selector)
-	case junit_user.NAME:
-		ret, err = JUnitUserResult(matcher, selector)
 	default:
 		err = fmt.Errorf("Unsupported result type %s.", tipe)
 	}
@@ -428,7 +404,7 @@ func ResultNames(sid bson.ObjectId, fname string) (map[string]map[string][]inter
 	}
 	defer s.Close()
 	var ns []*struct {
-		Value map[string]map[string][]interface{} "value"
+		Value map[string]map[string][]interface{} `bson:"value"`
 	}
 	if _, e := s.DB("").C(FILES).Find(bson.M{SUBID: sid, NAME: fname}).
 		Select(bson.M{NAME: 1, RESULTS: 1}).MapReduce(mr, &ns); e != nil {

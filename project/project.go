@@ -35,11 +35,11 @@ import (
 type (
 	//Project represents a Impendulo project.
 	Project struct {
-		Id   bson.ObjectId "_id"
-		Name string        "name"
-		User string        "user"
-		Lang string        "lang"
-		Time int64         "time"
+		Id   bson.ObjectId `bson:"_id"`
+		Name string        `bson:"name"`
+		User string        `bson:"user"`
+		Lang string        `bson:"lang"`
+		Time int64         `bson:"time"`
 	}
 )
 

@@ -37,6 +37,7 @@ import (
 	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/util/convert"
 
 	"html"
 	"html/template"
@@ -125,7 +126,7 @@ const (
 func sortFiles(ids []interface{}) ([]*project.File, error) {
 	fs := make([]*project.File, len(ids))
 	for i, s := range ids {
-		id, e := util.ReadId(s)
+		id, e := convert.Id(s)
 		if e != nil {
 			return nil, e
 		}
@@ -261,7 +262,7 @@ func submissionCount(id interface{}) (int, error) {
 func sum(vals ...interface{}) (int, error) {
 	s := 0
 	for _, i := range vals {
-		v, e := util.Int(i)
+		v, e := convert.Int(i)
 		if e != nil {
 			return 0, e
 		}
@@ -271,11 +272,11 @@ func sum(vals ...interface{}) (int, error) {
 }
 
 func percent(a, b interface{}) (float64, error) {
-	c, e := util.Float64(a)
+	c, e := convert.Float64(a)
 	if e != nil {
 		return 0.0, e
 	}
-	d, e := util.Float64(b)
+	d, e := convert.Float64(b)
 	if e != nil {
 		return 0.0, e
 	}
@@ -283,11 +284,11 @@ func percent(a, b interface{}) (float64, error) {
 }
 
 func round(i, ip interface{}) (float64, error) {
-	x, e := util.Float64(i)
+	x, e := convert.Float64(i)
 	if e != nil {
 		return 0.0, e
 	}
-	p, e := util.Int(ip)
+	p, e := convert.Int(ip)
 	if e != nil {
 		return 0.0, e
 	}

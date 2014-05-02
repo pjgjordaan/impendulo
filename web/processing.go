@@ -31,6 +31,7 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/util/convert"
 
 	"io/ioutil"
 
@@ -54,16 +55,6 @@ func ReadFormFile(r *http.Request, n string) (string, []byte, error) {
 		return "", nil, e
 	}
 	return h.Filename, d, nil
-}
-
-//GetInt retrieves an integer value from a request form.
-func GetInt(r *http.Request, n string) (int, error) {
-	return util.Int(r.FormValue(n))
-}
-
-//GetInt64 retrieves an integer value from a request form.
-func GetInt64(r *http.Request, n string) (int64, error) {
-	return util.Int64(r.FormValue(n))
 }
 
 //GetStrings retrieves a string value from a request form.
@@ -95,51 +86,21 @@ func GetString(r *http.Request, n string) (string, error) {
 }
 
 //getIndex
-func getIndex(req *http.Request, name string, maxSize int) (ret int, err error) {
-	ret, err = GetInt(req, name)
-	if err != nil {
-		return
+func getIndex(r *http.Request, n string, maxSize int) (int, error) {
+	i, e := convert.Int(r.FormValue(n))
+	if e != nil {
+		return -1, e
 	}
-	if ret > maxSize {
-		ret = 0
-	} else if ret < 0 {
-		ret = maxSize
+	if i > maxSize {
+		return 0, nil
+	} else if i < 0 {
+		return maxSize, nil
 	}
-	return
-}
-
-//getCurrent
-func getCurrent(req *http.Request, maxSize int) (int, error) {
-	return getIndex(req, "current", maxSize)
-}
-
-//getNext
-func getNext(req *http.Request, maxSize int) (int, error) {
-	return getIndex(req, "next", maxSize)
-}
-
-//getProjectId
-func getProjectId(req *http.Request) (bson.ObjectId, string, error) {
-	return getId(req, "projectid", "project")
-}
-
-//getSubId
-func getSubId(req *http.Request) (bson.ObjectId, string, error) {
-	return getId(req, "subid", "submission")
-}
-
-//getSkeletonId
-func getSkeletonId(req *http.Request) (bson.ObjectId, string, error) {
-	return getId(req, "skeletonid", "skeleton")
-}
-
-//getFileId
-func getFileId(req *http.Request) (bson.ObjectId, string, error) {
-	return getId(req, "fileid", "file")
+	return i, nil
 }
 
 func getId(req *http.Request, ident, name string) (id bson.ObjectId, msg string, err error) {
-	id, err = util.ReadId(req.FormValue(ident))
+	id, err = convert.Id(req.FormValue(ident))
 	if err != nil {
 		msg = fmt.Sprintf("Could not read %s.", name)
 	}
@@ -153,24 +114,6 @@ func getActiveUser(ctx *Context) (user, msg string, err error) {
 		msg = "Could not retrieve user."
 	}
 	return
-}
-
-//getUserId
-func getUserId(req *http.Request) (userid, msg string, err error) {
-	userid, err = GetString(req, "userid")
-	if err != nil {
-		msg = "Could not read user."
-	}
-	return
-}
-
-//getString.
-func getString(r *http.Request, n string) (string, string, error) {
-	s, e := GetString(r, n)
-	if e != nil {
-		return "", fmt.Sprintf("could not read %s", n), e
-	}
-	return s, "", e
 }
 
 func getTestType(r *http.Request) (junit.Type, error) {
@@ -202,13 +145,16 @@ func ServePath(u *url.URL, src string) (string, error) {
 	return sp, nil
 }
 
-//getCredentials
-func getCredentials(r *http.Request) (u, p, m string, e error) {
-	if u, m, e = getString(r, "username"); e != nil {
-		return
+func credentials(r *http.Request) (string, string, error) {
+	u, e := GetString(r, "username")
+	if e != nil {
+		return "", "", e
 	}
-	p, m, e = getString(r, "password")
-	return
+	p, e := GetString(r, "password")
+	if e != nil {
+		return "", "", e
+	}
+	return u, p, nil
 }
 
 //Snapshots retrieves snapshots of a given file in a submission.
@@ -230,7 +176,7 @@ func getFile(id bson.ObjectId) (*project.File, error) {
 
 //projectName retrieves the project name associated with the project identified by id.
 func projectName(i interface{}) (string, error) {
-	id, e := util.ReadId(i)
+	id, e := convert.Id(i)
 	if e != nil {
 		return "", e
 	}
@@ -239,59 +185,6 @@ func projectName(i interface{}) (string, error) {
 		return "", e
 	}
 	return p.Name, nil
-}
-
-func childFile(sid bson.ObjectId, n string) (*project.File, error) {
-	pfs, e := db.Files(bson.M{db.SUBID: sid, db.NAME: n}, bson.M{db.DATA: 0}, 0)
-	if e != nil {
-		return nil, e
-	}
-	if len(pfs) == 0 {
-		return nil, fmt.Errorf("no files named %s in submission %s", n, sid)
-	}
-	switch pfs[0].Type {
-	case project.SRC:
-		s, e := db.Submission(bson.M{db.ID: sid}, nil)
-		if e != nil {
-			return nil, e
-		}
-		ts, e := db.JUnitTests(bson.M{db.PROJECTID: s.ProjectId, db.TYPE: junit.USER}, bson.M{db.NAME: 1})
-		if e != nil {
-			return nil, e
-		}
-		for _, t := range ts {
-			tn, _ := util.Extension(t.Name)
-			for _, pf := range pfs {
-				f, e := db.File(bson.M{db.SUBID: sid, db.TYPE: project.TEST, db.NAME: t.Name, db.RESULTS + "." + tn + "-" + pf.Id.Hex(): bson.M{db.EXISTS: true}}, bson.M{db.DATA: 0})
-				if e != nil {
-					continue
-				}
-				return f, nil
-			}
-		}
-		return nil, fmt.Errorf("no tests found for file %s in submission %s", n, sid)
-	case project.TEST:
-		for _, t := range pfs {
-			for k, _ := range t.Results {
-				s := strings.Split(k, "-")
-				if len(s) < 2 {
-					continue
-				}
-				id, e := util.ReadId(s[len(s)-1])
-				if e != nil {
-					continue
-				}
-				f, e := db.File(bson.M{db.ID: id}, bson.M{db.DATA: 0})
-				if e != nil {
-					continue
-				}
-				return f, nil
-			}
-		}
-		return nil, fmt.Errorf("No file name found for submission %s", sid.Hex())
-	default:
-		return nil, fmt.Errorf("unsupported type %s", pfs[0].Type)
-	}
 }
 
 func projectUsernames(pid bson.ObjectId) ([]string, error) {

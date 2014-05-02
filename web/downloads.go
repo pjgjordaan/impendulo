@@ -30,6 +30,7 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/tool/mongo"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/util/convert"
 	"labix.org/v2/mgo/bson"
 
 	"os"
@@ -80,7 +81,7 @@ func (d Downloader) CreateDownload() Handler {
 
 //LoadSkeleton makes a project skeleton available for download.
 func LoadSkeleton(r *http.Request) (string, error) {
-	id, _, e := getSkeletonId(r)
+	id, e := convert.Id(r.FormValue("skeleton-id"))
 	if e != nil {
 		return "", e
 	}

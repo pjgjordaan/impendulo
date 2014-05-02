@@ -16,6 +16,7 @@ import (
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/util/convert"
 	"labix.org/v2/mgo/bson"
 
 	"net/http"
@@ -51,7 +52,7 @@ func GenerateAJAX(r *pat.Router) {
 
 func ajaxResults(r *http.Request) ([]byte, error) {
 	var rs []string
-	if pid, e := util.ReadId(r.FormValue("project-id")); e == nil {
+	if pid, e := convert.Id(r.FormValue("project-id")); e == nil {
 		rs = db.ProjectResults(pid)
 	} else if u, e := GetString(r, "user-id"); e == nil {
 		rs = db.UserResults(u)
@@ -66,7 +67,7 @@ func ajaxResults(r *http.Request) ([]byte, error) {
 }
 
 func ajaxComparables(r *http.Request) ([]byte, error) {
-	id, e := util.ReadId(r.FormValue("id"))
+	id, e := convert.Id(r.FormValue("id"))
 	if e != nil {
 		return nil, e
 	}
@@ -118,14 +119,14 @@ func ajaxUsers(r *http.Request) ([]byte, error) {
 
 func ajaxCode(r *http.Request) ([]byte, error) {
 	m := bson.M{}
-	if rid, e := util.ReadId(r.FormValue("resultid")); e == nil {
+	if rid, e := convert.Id(r.FormValue("result-id")); e == nil {
 		tr, e := db.ToolResult(bson.M{db.ID: rid}, bson.M{db.FILEID: 1})
 		if e != nil {
 			return nil, e
 		}
 		m[db.ID] = tr.GetFileId()
 	}
-	if id, e := util.ReadId(r.FormValue("id")); e == nil {
+	if id, e := convert.Id(r.FormValue("id")); e == nil {
 		m[db.ID] = id
 	}
 	if n, e := GetString(r, "tool-name"); e == nil {
@@ -135,7 +136,7 @@ func ajaxCode(r *http.Request) ([]byte, error) {
 		}
 		if d.FileID != "" {
 			m[db.ID] = d.FileID
-		} else if pid, e := util.ReadId(r.FormValue("project-id")); e == nil {
+		} else if pid, e := convert.Id(r.FormValue("project-id")); e == nil {
 			return loadTestCode(pid, d.Name)
 		} else {
 			return nil, fmt.Errorf("could not load code for %s", d.Format())
@@ -170,7 +171,7 @@ func collections(r *http.Request) ([]byte, error) {
 
 func getProjects(r *http.Request) ([]byte, error) {
 	m := bson.M{}
-	if pid, e := util.ReadId(r.FormValue("id")); e == nil {
+	if pid, e := convert.Id(r.FormValue("id")); e == nil {
 		m[db.ID] = pid
 	}
 	p, e := db.Projects(m, nil)
@@ -181,7 +182,7 @@ func getProjects(r *http.Request) ([]byte, error) {
 }
 
 func ajaxTools(r *http.Request) ([]byte, error) {
-	pid, _, e := getProjectId(r)
+	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
 		return nil, e
 	}
@@ -194,10 +195,10 @@ func ajaxTools(r *http.Request) ([]byte, error) {
 
 func ajaxFiles(r *http.Request) ([]byte, error) {
 	m := bson.M{}
-	if sid, e := util.ReadId(r.FormValue("subid")); e == nil {
+	if sid, e := convert.Id(r.FormValue("submission-id")); e == nil {
 		m[db.SUBID] = sid
 	}
-	if id, e := util.ReadId(r.FormValue("id")); e == nil {
+	if id, e := convert.Id(r.FormValue("id")); e == nil {
 		m[db.ID] = id
 	}
 	format, _ := GetString(r, "format")
@@ -240,10 +241,10 @@ func nestedFiles(m bson.M) (map[project.Type]map[string][]*project.File, error) 
 
 func submissions(r *http.Request) ([]byte, error) {
 	m := bson.M{}
-	if sid, e := util.ReadId(r.FormValue("id")); e == nil {
+	if sid, e := convert.Id(r.FormValue("id")); e == nil {
 		m[db.ID] = sid
 	}
-	if pid, e := util.ReadId(r.FormValue("projectid")); e == nil {
+	if pid, e := convert.Id(r.FormValue("project-id")); e == nil {
 		m[db.PROJECTID] = pid
 	}
 	s, e := db.Submissions(m, nil)
@@ -254,7 +255,7 @@ func submissions(r *http.Request) ([]byte, error) {
 }
 
 func getUsernames(r *http.Request) ([]byte, error) {
-	pid, e := util.ReadId(r.FormValue("projectid"))
+	pid, e := convert.Id(r.FormValue("project-id"))
 	var u []string
 	if e != nil {
 		u, e = db.Usernames(nil)
@@ -272,7 +273,7 @@ func getLangs(r *http.Request) ([]byte, error) {
 }
 
 func getSkeletons(r *http.Request) ([]byte, error) {
-	pid, _, e := getProjectId(r)
+	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
 		return nil, e
 	}
@@ -321,7 +322,7 @@ func submissionChart(r *http.Request) ([]byte, error) {
 	}
 	switch t {
 	case "project":
-		pid, e := util.ReadId(id)
+		pid, e := convert.Id(id)
 		if e != nil {
 			return nil, e
 		}
@@ -360,7 +361,7 @@ func fileChart(r *http.Request) ([]byte, error) {
 	for i, s := range subs {
 		r := rn
 		m := bson.M{db.NAME: fn}
-		id, e := util.ReadId(s)
+		id, e := convert.Id(s)
 		if e != nil {
 			id = first
 			if !strings.Contains(s, ":") {

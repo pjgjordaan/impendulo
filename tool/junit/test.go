@@ -32,16 +32,16 @@ import (
 type (
 	//Test stores tests for a project.
 	Test struct {
-		Id        bson.ObjectId "_id"
-		ProjectId bson.ObjectId "projectid"
-		Name      string        "name"
-		Package   string        "pkg"
-		Time      int64         "time"
-		Type      Type          "type"
+		Id        bson.ObjectId `bson:"_id"`
+		ProjectId bson.ObjectId `bson:"projectid"`
+		Name      string        `bson:"name"`
+		Package   string        `bson:"pkg"`
+		Time      int64         `bson:"time"`
+		Type      Type          `bson:"type"`
 		//The test file
-		Test []byte "test"
+		Test []byte `bson:"test"`
 		//The data files needed for the test stored in a zip archive
-		Data []byte "data"
+		Data []byte `bson:"data"`
 	}
 
 	Type int

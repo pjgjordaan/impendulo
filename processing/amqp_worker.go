@@ -30,6 +30,7 @@ import (
 
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/util/convert"
 	uuid "github.com/nu7hatch/gouuid"
 	"github.com/streadway/amqp"
 	"labix.org/v2/mgo/bson"
@@ -40,7 +41,7 @@ import (
 type (
 	//Consumer is an interface for allowing the processing of messages from AMQP.
 	Consumer interface {
-		Consume(amqp.Delivery, amqp.Channel) error
+		Consume(amqp.Delivery, *amqp.Channel) error
 	}
 
 	//Changer is a Consumer which listens for updates to Impendulo's status
@@ -124,7 +125,7 @@ func handleFunc(m *MessageHandler) {
 	}
 }
 
-func Reply(c amqp.Channel, d amqp.Delivery, b []byte) error {
+func Reply(c *amqp.Channel, d amqp.Delivery, b []byte) error {
 	p := amqp.Publishing{
 		CorrelationId: d.CorrelationId,
 		DeliveryMode:  amqp.Persistent,
@@ -211,8 +212,7 @@ func (m *MessageHandler) Handle() error {
 		return e
 	}
 	for d := range ds {
-		e := m.Consume(d, *m.ch)
-		if e != nil {
+		if e := m.Consume(d, m.ch); e != nil {
 			util.Log(e)
 		}
 	}
@@ -230,7 +230,7 @@ func (m *MessageHandler) Shutdown() error {
 	return nil
 }
 
-func (s *Submitter) Consume(d amqp.Delivery, ch amqp.Channel) error {
+func (s *Submitter) Consume(d amqp.Delivery, ch *amqp.Channel) error {
 	defer func() {
 		d.Ack(false)
 	}()
@@ -242,12 +242,12 @@ func (s *Submitter) Consume(d amqp.Delivery, ch amqp.Channel) error {
 	return nil
 }
 
-func (s *Starter) Consume(d amqp.Delivery, ch amqp.Channel) error {
+func (s *Starter) Consume(d amqp.Delivery, ch *amqp.Channel) error {
 	d.Ack(false)
 	return Reply(ch, d, []byte(s.key))
 }
 
-func (c *Changer) Consume(d amqp.Delivery, ch amqp.Channel) error {
+func (c *Changer) Consume(d amqp.Delivery, ch *amqp.Channel) error {
 	defer func() {
 		d.Ack(false)
 	}()
@@ -259,7 +259,7 @@ func (c *Changer) Consume(d amqp.Delivery, ch amqp.Channel) error {
 	return nil
 }
 
-func (w *Waiter) Consume(d amqp.Delivery, ch amqp.Channel) error {
+func (w *Waiter) Consume(d amqp.Delivery, ch *amqp.Channel) error {
 	idle := false
 	for !idle {
 		w.statusChan <- Status{}
@@ -273,7 +273,7 @@ func (w *Waiter) Consume(d amqp.Delivery, ch amqp.Channel) error {
 	return Reply(ch, d, []byte{})
 }
 
-func (l *Loader) Consume(d amqp.Delivery, ch amqp.Channel) error {
+func (l *Loader) Consume(d amqp.Delivery, ch *amqp.Channel) error {
 	l.statusChan <- Status{}
 	s := <-l.statusChan
 	b, e := json.Marshal(s)
@@ -288,11 +288,11 @@ func (l *Loader) Consume(d amqp.Delivery, ch amqp.Channel) error {
 	return e
 }
 
-func (r *Redoer) Consume(d amqp.Delivery, ch amqp.Channel) error {
+func (r *Redoer) Consume(d amqp.Delivery, ch *amqp.Channel) error {
 	defer func() {
 		d.Ack(false)
 	}()
-	sid, e := util.ReadId(string(d.Body))
+	sid, e := convert.Id(string(d.Body))
 	if e != nil {
 		return e
 	}

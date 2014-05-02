@@ -36,6 +36,7 @@ import (
 	"github.com/godfried/impendulo/tool/jacoco"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/util/convert"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -92,7 +93,7 @@ func LoadChart(resultName string, files []*project.File) (ChartData, error) {
 		return c.Data, nil
 	}
 	for _, l := range ls {
-		v := []*tool.ChartVal{&tool.ChartVal{"Launches", 0.0, l.Id}}
+		v := []*tool.ChartVal{&tool.ChartVal{Name: "Launches", Y: 0.0, FileId: l.Id}}
 		c.Add(l.Time, v)
 	}
 	return c.Data, nil
@@ -100,7 +101,7 @@ func LoadChart(resultName string, files []*project.File) (ChartData, error) {
 
 func addAll(c *Chart, f *project.File) {
 	for _, id := range f.Results {
-		if _, e := util.ReadId(id); e != nil {
+		if _, e := convert.Id(id); e != nil {
 			continue
 		}
 		r, e := db.ChartResult(bson.M{db.ID: id}, nil)
@@ -113,7 +114,7 @@ func addAll(c *Chart, f *project.File) {
 }
 
 func addSingle(c *Chart, f *project.File, n string) {
-	if _, e := util.ReadId(f.Results[n]); e != nil {
+	if _, e := convert.Id(f.Results[n]); e != nil {
 		return
 	}
 	r, e := db.ChartResult(bson.M{db.ID: f.Results[n]}, nil)
@@ -133,7 +134,7 @@ func addSpecial(c *Chart, f *project.File, result string) {
 		if len(sp) != 2 {
 			continue
 		}
-		fid, e := util.ReadId(sp[1])
+		fid, e := convert.Id(sp[1])
 		if e != nil {
 			continue
 		}
@@ -141,7 +142,7 @@ func addSpecial(c *Chart, f *project.File, result string) {
 		if e != nil {
 			continue
 		}
-		if _, e := util.ReadId(rid); e != nil {
+		if _, e := convert.Id(rid); e != nil {
 			continue
 		}
 		r, e := db.ChartResult(bson.M{db.ID: rid}, nil)
@@ -202,7 +203,7 @@ func lastInfo(sid bson.ObjectId, rd *ResultDesc) (*project.File, bson.ObjectId, 
 	if len(fs) == 0 {
 		return nil, "", fmt.Errorf("no src files in submission %s", sid.Hex())
 	}
-	if id, e := util.GetId(fs[0].Results, rd.Raw()); e == nil {
+	if id, e := convert.GetId(fs[0].Results, rd.Raw()); e == nil {
 		return fs[0], id, nil
 	}
 	ts, e := db.Files(bson.M{db.SUBID: sid, db.NAME: rd.Name + ".java", db.TYPE: project.TEST}, bson.M{db.DATA: 0}, 0, "-"+db.TIME)
@@ -211,12 +212,12 @@ func lastInfo(sid bson.ObjectId, rd *ResultDesc) (*project.File, bson.ObjectId, 
 	}
 	for i, f := range fs {
 		if i > 0 {
-			if id, e := util.GetId(fs[i].Results, rd.Raw()); e == nil {
+			if id, e := convert.GetId(fs[i].Results, rd.Raw()); e == nil {
 				return fs[i], id, nil
 			}
 		}
 		for _, t := range ts {
-			if id, e := util.GetId(f.Results, rd.Raw()+"-"+t.Id.Hex()); e == nil {
+			if id, e := convert.GetId(f.Results, rd.Raw()+"-"+t.Id.Hex()); e == nil {
 				return fs[i], id, nil
 			}
 		}

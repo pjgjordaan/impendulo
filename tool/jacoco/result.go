@@ -34,13 +34,13 @@ type (
 	//Result is an implementation of ToolResult, DisplayResult
 	//and ChartResult for Jacoco coverage results.
 	Result struct {
-		Id       bson.ObjectId "_id"
-		FileId   bson.ObjectId "fileid"
-		TestId   bson.ObjectId "testid"
-		TestName string        "name"
-		Report   *Report       "report"
-		GridFS   bool          "gridfs"
-		Type     string        "type"
+		Id       bson.ObjectId `bson:"_id"`
+		FileId   bson.ObjectId `bson:"fileid"`
+		TestId   bson.ObjectId `bson:"testid"`
+		TestName string        `bson:"name"`
+		Report   *Report       `bson:"report"`
+		GridFS   bool          `bson:"gridfs"`
+		Type     string        `bson:"type"`
 	}
 )
 
@@ -106,7 +106,7 @@ func (r *Result) ChartVals() []*tool.ChartVal {
 	v := make([]*tool.ChartVal, len(r.Report.Counters))
 	for i, c := range r.Report.MainCounters {
 		p := util.Round(float64(c.Covered)/float64(c.Covered+c.Missed)*100.0, 2)
-		v[i] = &tool.ChartVal{util.Title(c.Type) + " Coverage", p, r.FileId}
+		v[i] = &tool.ChartVal{Name: util.Title(c.Type) + " Coverage", Y: p, FileId: r.FileId}
 	}
 	return v
 }

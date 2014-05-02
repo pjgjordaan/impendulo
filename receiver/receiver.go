@@ -32,6 +32,7 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/util/convert"
 	"labix.org/v2/mgo/bson"
 
 	"net"
@@ -125,22 +126,22 @@ func (s *SubmissionHandler) Login() error {
 	if e != nil {
 		return e
 	}
-	r, e := util.GetString(i, REQ)
+	r, e := convert.GetString(i, REQ)
 	if e != nil {
 		return e
 	} else if r != LOGIN {
 		return fmt.Errorf("Invalid request %q, expected %q", r, LOGIN)
 	}
 	//Read user details
-	s.submission.User, e = util.GetString(i, db.USER)
+	s.submission.User, e = convert.GetString(i, db.USER)
 	if e != nil {
 		return e
 	}
-	pw, e := util.GetString(i, user.PWORD)
+	pw, e := convert.GetString(i, user.PWORD)
 	if e != nil {
 		return e
 	}
-	m, e := util.GetString(i, project.MODE)
+	m, e := convert.GetString(i, project.MODE)
 	if e != nil {
 		return e
 	}
@@ -179,7 +180,7 @@ func (s *SubmissionHandler) LoadInfo() error {
 	if e != nil {
 		return e
 	}
-	r, e := util.GetString(i, REQ)
+	r, e := convert.GetString(i, REQ)
 	if e != nil {
 		return e
 	}
@@ -196,15 +197,15 @@ func (s *SubmissionHandler) LoadInfo() error {
 //Submission info is read from the subInfo map and used to create a new
 //submission in the db.
 func (s *SubmissionHandler) createSubmission(subInfo map[string]interface{}) error {
-	ps, e := util.GetString(subInfo, db.PROJECTID)
+	ps, e := convert.GetString(subInfo, db.PROJECTID)
 	if e != nil {
 		return e
 	}
-	s.submission.ProjectId, e = util.ReadId(ps)
+	s.submission.ProjectId, e = convert.Id(ps)
 	if e != nil {
 		return e
 	}
-	s.submission.Time, e = util.GetInt64(subInfo, db.TIME)
+	s.submission.Time, e = convert.GetInt64(subInfo, db.TIME)
 	if e != nil {
 		return e
 	}
@@ -218,11 +219,11 @@ func (s *SubmissionHandler) createSubmission(subInfo map[string]interface{}) err
 //continueSubmission is used when a client wishes to continue with a previous submission.
 //The submission id is read from the subInfo map and then the submission os loaded from the db.
 func (s *SubmissionHandler) continueSubmission(subInfo map[string]interface{}) error {
-	v, e := util.GetString(subInfo, db.SUBID)
+	v, e := convert.GetString(subInfo, db.SUBID)
 	if e != nil {
 		return e
 	}
-	id, e := util.ReadId(v)
+	id, e := convert.Id(v)
 	if e != nil {
 		return e
 	}
@@ -244,7 +245,7 @@ func (s *SubmissionHandler) Read() (bool, error) {
 		return false, e
 	}
 	//Get the type of request
-	r, e := util.GetString(i, REQ)
+	r, e := convert.GetString(i, REQ)
 	if e != nil {
 		return false, e
 	}

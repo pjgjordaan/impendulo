@@ -26,6 +26,9 @@ package util
 
 import (
 	"fmt"
+
+	"github.com/godfried/impendulo/util/errors"
+
 	"strconv"
 	"time"
 )
@@ -62,56 +65,56 @@ func CalcTime(s string) (time.Time, error) {
 	}
 	y, e := strconv.Atoi(s[:4])
 	if e != nil {
-		return t, &UtilError{s, "reading year", e}
+		return t, errors.NewUtil(s, "reading year", e)
 	}
 	if y < 1900 || y > 3000 {
 		return t, fmt.Errorf("invalid year %d", y)
 	}
 	m, e := strconv.Atoi(s[4:6])
 	if e != nil {
-		return t, &UtilError{s, "reading month", e}
+		return t, errors.NewUtil(s, "reading month", e)
 	}
 	if m < 1 || m > 12 {
 		return t, fmt.Errorf("invalid month %d", m)
 	}
 	d, e := strconv.Atoi(s[6:8])
 	if e != nil {
-		return t, &UtilError{s, "reading day", e}
+		return t, errors.NewUtil(s, "reading day", e)
 	}
 	if d < 1 || d > 31 {
 		return t, fmt.Errorf("invalid day %d", d)
 	}
 	h, e := strconv.Atoi(s[8:10])
 	if e != nil {
-		return t, &UtilError{s, "reading hour", e}
+		return t, errors.NewUtil(s, "reading hour", e)
 	}
 	if h < 0 || h > 24 {
 		return t, fmt.Errorf("invalid hour %d", h)
 	}
 	mi, e := strconv.Atoi(s[10:12])
 	if e != nil {
-		return t, &UtilError{s, "reading minutes", e}
+		return t, errors.NewUtil(s, "reading minutes", e)
 	}
 	if mi < 0 || mi > 60 {
 		return t, fmt.Errorf("invalid minutes %d", mi)
 	}
 	sc, e := strconv.Atoi(s[12:14])
 	if e != nil {
-		return t, &UtilError{s, "reading seconds", e}
+		return t, errors.NewUtil(s, "reading seconds", e)
 	}
 	if sc < 0 || sc > 60 {
 		return t, fmt.Errorf("invalid seconds %d", sc)
 	}
 	ms, e := strconv.Atoi(s[14:17])
 	if e != nil {
-		return t, &UtilError{s, "reading miliseconds", e}
+		return t, errors.NewUtil(s, "reading miliseconds", e)
 	}
 	if ms < 0 || ms > 1000 {
 		return t, fmt.Errorf("invalid miliseconds %d", ms)
 	}
 	l, e := time.LoadLocation("Local")
 	if e != nil {
-		return t, &UtilError{"", "loading location", e}
+		return t, errors.NewUtil("", "loading location", e)
 	}
 	return time.Date(y, time.Month(m), d, h, mi, sc, ms*1000000, l), nil
 }

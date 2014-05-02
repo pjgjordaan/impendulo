@@ -34,6 +34,7 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/util/convert"
 	"labix.org/v2/mgo/bson"
 
 	"net/http"
@@ -196,7 +197,7 @@ func (b *Browse) ClearSubmission() {
 }
 
 func (b *Browse) SetDisplayCount(r *http.Request) error {
-	i, e := GetInt(r, "displaycount")
+	i, e := convert.Int(r.FormValue("displaycount"))
 	if e == nil {
 		b.DisplayCount = i + 10
 	} else {
@@ -206,7 +207,7 @@ func (b *Browse) SetDisplayCount(r *http.Request) error {
 }
 
 func (b *Browse) SetUid(r *http.Request) error {
-	id, _, e := getUserId(r)
+	id, e := GetString(r, "user-id")
 	if e != nil {
 		return nil
 	}
@@ -216,7 +217,7 @@ func (b *Browse) SetUid(r *http.Request) error {
 }
 
 func (b *Browse) SetSid(r *http.Request) error {
-	id, _, e := getSubId(r)
+	id, e := convert.Id(r.FormValue("submission-id"))
 	if e != nil {
 		return nil
 	}
@@ -232,7 +233,7 @@ func (b *Browse) SetSid(r *http.Request) error {
 }
 
 func (b *Browse) SetPid(r *http.Request) error {
-	pid, _, e := getProjectId(r)
+	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
 		return nil
 	}
@@ -271,11 +272,11 @@ func (b *Browse) setIndices(r *http.Request, fs []*project.File) error {
 			b.Next = (b.Current + 1) % len(fs)
 		}
 	}()
-	c, e := getCurrent(r, len(fs)-1)
+	c, e := getIndex(r, "current", len(fs)-1)
 	if e != nil {
 		return e
 	}
-	n, e := getNext(r, len(fs)-1)
+	n, e := getIndex(r, "next", len(fs)-1)
 	if e != nil {
 		return e
 	}
@@ -380,7 +381,7 @@ func (r *ResultDesc) Set(s string) error {
 	r.FileID = ""
 	sp := strings.Split(s, "-")
 	if len(sp) > 1 {
-		id, e := util.ReadId(sp[1])
+		id, e := convert.Id(sp[1])
 		if e != nil {
 			return e
 		}

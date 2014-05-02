@@ -30,10 +30,10 @@ import (
 
 type (
 	Skeleton struct {
-		Id        bson.ObjectId "_id"
-		ProjectId bson.ObjectId "projectid"
-		Name      string        "name"
-		Data      []byte        "data"
+		Id        bson.ObjectId `bson:"_id"`
+		ProjectId bson.ObjectId `bson:"projectid"`
+		Name      string        `bson:"name"`
+		Data      []byte        `bson:"data"`
 	}
 )
 

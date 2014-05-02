@@ -45,12 +45,12 @@ function overviewChart(chartData, tipe){
 	if(tipe === 'project'){
 	    for(var i = 0; i < chartData.length; i ++){
 		if(chartData[i].key === d){
-		    url = 'getsubmissions?projectid='+chartData[i].id;
+		    url = 'getsubmissions?project-id='+chartData[i].id;
 		    break;
 		}
 	    }
 	} else if(tipe === 'user'){
-	    url = 'getsubmissions?userid='+d;
+	    url = 'getsubmissions?user-id='+d;
 	}
 	if(url !== ''){
 	    window.location = url;

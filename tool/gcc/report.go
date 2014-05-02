@@ -37,11 +37,11 @@ import (
 
 type (
 	Report struct {
-		Id       bson.ObjectId    "_id"
-		Type     tool.CompileType "type"
-		Warnings int              "warnings"
-		Errors   int              "errors"
-		Data     []byte           "data"
+		Id       bson.ObjectId    `bson:"_id"`
+		Type     tool.CompileType `bson:"type"`
+		Warnings int              `bson:"warnings"`
+		Errors   int              `bson:"errors"`
+		Data     []byte           `bson:"data"`
 	}
 )
 

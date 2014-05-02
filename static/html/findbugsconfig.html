@@ -2,9 +2,9 @@
 <h3 class="heading">Setup Findbugs Configuration</h3>
 <form class="form-horizontal" action="createfindbugs" method="post">
   <div class="form-group">
-    <label class="col-lg-2 control-label" for="projectid">Project</label>
+    <label class="col-lg-2 control-label" for="project-id">Project</label>
     <div class="col-lg-4">
-      <select class="form-control" name="projectid" id="projectid">
+      <select class="form-control" name="project-id" id="project-id">
 	{{$projects := langProjects "Java"}}
 	{{range $projects}}
 	<option value={{.Id.Hex}}>{{.Name}}</option>

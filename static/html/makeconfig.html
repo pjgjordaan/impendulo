@@ -2,9 +2,9 @@
 <h3>Change Project Makefile</h3>
 <form class="form-horizontal" action="createmake" method="post" enctype="multipart/form-data">
   <div class="form-group">
-    <label class="col-lg-2 control-label" for="projectid">Project</label>
+    <label class="col-lg-2 control-label" for="project-id">Project</label>
     <div class="col-lg-3">
-      <select class="form-control" name="projectid" id="projectid">
+      <select class="form-control" name="project-id" id="project-id">
 	{{$projects := langProjects "C"}}
 	{{range $projects}}
 	<option value={{.Id.Hex}}>{{.Name}}</option>

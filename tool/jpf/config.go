@@ -27,8 +27,10 @@ package jpf
 import (
 	"bytes"
 	"fmt"
+
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
 	"strings"
 )
 
@@ -36,11 +38,11 @@ type (
 	//Config represents a JPF configuration.
 	//This means that it contains configured JPF properties specific to running a certain project.
 	Config struct {
-		Id        bson.ObjectId "_id"
-		ProjectId bson.ObjectId "projectid"
-		Time      int64         "time"
+		Id        bson.ObjectId `bson:"_id"`
+		ProjectId bson.ObjectId `bson:"projectid"`
+		Time      int64         `bson:"time"`
 		//Contains configured JPF properties
-		Data []byte "data"
+		Data []byte `bson:"data"`
 	}
 	empty struct{}
 )

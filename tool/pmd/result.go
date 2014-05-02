@@ -39,12 +39,12 @@ type (
 	//Result is a PMD implementation of tool.ToolResult,
 	//tool.DisplayResult and tool.ChartResult.
 	Result struct {
-		Id     bson.ObjectId "_id"
-		FileId bson.ObjectId "fileid"
-		Name   string        "name"
-		Report *Report       "report"
-		GridFS bool          "gridfs"
-		Type   string        "type"
+		Id     bson.ObjectId `bson:"_id"`
+		FileId bson.ObjectId `bson:"fileid"`
+		Name   string        `bson:"name"`
+		Report *Report       `bson:"report"`
+		GridFS bool          `bson:"gridfs"`
+		Type   string        `bson:"type"`
 	}
 )
 
@@ -103,7 +103,7 @@ func (r *Result) Success() bool {
 //ChartVals gets the number of errors found by PMD.
 func (r *Result) ChartVals() []*tool.ChartVal {
 	return []*tool.ChartVal{
-		&tool.ChartVal{"Errors", float64(r.Report.Errors), r.FileId},
+		&tool.ChartVal{Name: "Errors", Y: float64(r.Report.Errors), FileId: r.FileId},
 	}
 }
 

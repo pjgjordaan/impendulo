@@ -39,12 +39,12 @@ type (
 	//Result is Checkstyle's implementation of tool.ToolResult, tool.DisplayResult
 	//and tool.ChartResult
 	Result struct {
-		Id     bson.ObjectId "_id"
-		FileId bson.ObjectId "fileid"
-		Name   string        "name"
-		Report *Report       "report"
-		GridFS bool          "gridfs"
-		Type   string        "type"
+		Id     bson.ObjectId `bson:"_id"`
+		FileId bson.ObjectId `bson:"fileid"`
+		Name   string        `bson:"name"`
+		Report *Report       `bson:"report"`
+		GridFS bool          `bson:"gridfs"`
+		Type   string        `bson:"type"`
 	}
 )
 
@@ -111,7 +111,7 @@ func (this *Result) Success() bool {
 //ChartVals
 func (this *Result) ChartVals() []*tool.ChartVal {
 	return []*tool.ChartVal{
-		&tool.ChartVal{"Errors", float64(this.Report.Errors), this.FileId},
+		&tool.ChartVal{Name: "Errors", Y: float64(this.Report.Errors), FileId: this.FileId},
 	}
 }
 

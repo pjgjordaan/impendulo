@@ -2,11 +2,11 @@
 <h3 class="heading">Create JUnit Test</h3>
 <form class="form-horizontal" action="createjunit" method="post" enctype="multipart/form-data">
   <div class="form-group">
-    <label class="col-lg-offset-3 col-lg-2 control-label" for="projectid">
+    <label class="col-lg-offset-3 col-lg-2 control-label" for="project-id">
       Project
     </label>
     <div class="col-lg-3">
-      <select class="form-control" name="projectid" id="projectid">
+      <select class="form-control" name="project-id" id="project-id">
 	{{$projects := langProjects "Java"}}
 	{{range $projects}}
 	<option value={{.Id.Hex}}>{{.Name}}</option>

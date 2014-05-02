@@ -28,6 +28,9 @@ import (
 	"archive/zip"
 	"bytes"
 	"fmt"
+
+	"github.com/godfried/impendulo/util/errors"
+
 	"io"
 	"os"
 	"path/filepath"
@@ -38,7 +41,7 @@ func Unzip(d string, p []byte) error {
 	br := bytes.NewReader(p)
 	zr, e := zip.NewReader(br, int64(br.Len()))
 	if e != nil {
-		return &UtilError{p, "creating zip reader from", e}
+		return errors.NewUtil(p, "creating zip reader from", e)
 	}
 	for _, f := range zr.File {
 		if e = ExtractFile(f, d); e != nil {
@@ -55,26 +58,26 @@ func ExtractFile(zf *zip.File, d string) error {
 	}
 	r, e := zf.Open()
 	if e != nil {
-		return &UtilError{zf, "opening zipfile", e}
+		return errors.NewUtil(zf, "opening zipfile", e)
 	}
 	defer r.Close()
 	p := filepath.Join(d, zf.Name)
 	if zf.FileInfo().IsDir() {
 		if e = os.MkdirAll(p, DPERM); e != nil {
-			return &UtilError{p, "creating directory", e}
+			return errors.NewUtil(p, "creating directory", e)
 		}
 		return nil
 	}
 	if e = os.MkdirAll(filepath.Dir(p), DPERM); e != nil {
-		return &UtilError{p, "creating directory", e}
+		return errors.NewUtil(p, "creating directory", e)
 	}
 	f, e := os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, zf.Mode())
 	if e != nil {
-		return &UtilError{p, "opening", e}
+		return errors.NewUtil(p, "opening", e)
 	}
 	defer f.Close()
 	if _, e = io.Copy(f, r); e != nil {
-		return &UtilError{f, "copying to", e}
+		return errors.NewUtil(f, "copying to", e)
 	}
 	return nil
 }
@@ -85,7 +88,7 @@ func UnzipToMap(d []byte) (map[string][]byte, error) {
 	br := bytes.NewReader(d)
 	zr, e := zip.NewReader(br, int64(br.Len()))
 	if e != nil {
-		return nil, &UtilError{d, "creating zip reader from", e}
+		return nil, errors.NewUtil(d, "creating zip reader from", e)
 	}
 	m := make(map[string][]byte)
 	for _, zf := range zr.File {
@@ -104,7 +107,7 @@ func UnzipToMap(d []byte) (map[string][]byte, error) {
 func ExtractBytes(zf *zip.File) ([]byte, error) {
 	r, e := zf.Open()
 	if e != nil {
-		return nil, &UtilError{zf, "opening zipfile", e}
+		return nil, errors.NewUtil(zf, "opening zipfile", e)
 	}
 	defer r.Close()
 	return ReadBytes(r), nil
@@ -121,7 +124,7 @@ func ZipMap(m map[string][]byte) ([]byte, error) {
 		}
 	}
 	if e := zw.Close(); e != nil {
-		return nil, &UtilError{zw, "closing zip", e}
+		return nil, errors.NewUtil(zw, "closing zip", e)
 	}
 	return b.Bytes(), nil
 }
@@ -130,10 +133,10 @@ func ZipMap(m map[string][]byte) ([]byte, error) {
 func AddToZip(zw *zip.Writer, n string, d []byte) error {
 	f, e := zw.Create(n)
 	if e != nil {
-		return &UtilError{n, "creating zipfile", e}
+		return errors.NewUtil(n, "creating zipfile", e)
 	}
 	if _, e = f.Write(d); e != nil {
-		return &UtilError{f, "writing to zipfile", e}
+		return errors.NewUtil(f, "writing to zipfile", e)
 	}
 	return nil
 }

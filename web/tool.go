@@ -45,6 +45,7 @@ import (
 	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/util/convert"
 	"labix.org/v2/mgo/bson"
 
 	"net/http"
@@ -136,9 +137,9 @@ func CreateFindbugs(r *http.Request, c *Context) (string, error) {
 }
 
 func CreateMake(r *http.Request, c *Context) (string, error) {
-	pid, m, e := getProjectId(r)
+	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
-		return m, e
+		return "Could not read project id.", e
 	}
 	_, d, e := ReadFormFile(r, "makefile")
 	if e != nil {
@@ -153,9 +154,9 @@ func CreateMake(r *http.Request, c *Context) (string, error) {
 
 //CreateJUnit adds a new JUnit test for a given project.
 func CreateJUnit(r *http.Request, c *Context) (string, error) {
-	pid, m, e := getProjectId(r)
+	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
-		return m, e
+		return "Could not read project id.", e
 	}
 	t, e := getTestType(r)
 	if e != nil {
@@ -180,9 +181,9 @@ func CreateJUnit(r *http.Request, c *Context) (string, error) {
 
 //AddJPF replaces a project's JPF configuration with a provided configuration file.
 func AddJPF(r *http.Request, c *Context) (string, error) {
-	pid, m, e := getProjectId(r)
+	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
-		return m, e
+		return "Could not read project id.", e
 	}
 	_, d, e := ReadFormFile(r, "jpf")
 	if e != nil {
@@ -193,9 +194,9 @@ func AddJPF(r *http.Request, c *Context) (string, error) {
 
 //CreateJPF replaces a project's JPF configuration with a new, provided configuration.
 func CreateJPF(r *http.Request, c *Context) (string, error) {
-	pid, m, e := getProjectId(r)
+	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
-		return m, e
+		return "Could not read project id.", e
 	}
 	//Read JPF properties.
 	ps, e := readProperties(r)
@@ -274,15 +275,15 @@ func readProperty(line string, props map[string][]string) error {
 
 //CreatePMD creates PMD rules for a project from a provided list.
 func CreatePMD(r *http.Request, c *Context) (string, error) {
-	pid, m, e := getProjectId(r)
+	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
-		return m, e
+		return "Could not read project id.", e
 	}
-	s, e := GetStrings(r, "ruleid")
+	s, e := GetStrings(r, "rule-id")
 	if e != nil {
 		return "Could not read rules.", e
 	}
-	rs, e := pmd.NewRules(pid, util.ToSet(s))
+	rs, e := pmd.NewRules(pid, convert.Set(s))
 	if e != nil {
 		return "Could not create rules.", e
 	}
@@ -296,9 +297,9 @@ func CreatePMD(r *http.Request, c *Context) (string, error) {
 //Previous results are deleted if the user has specified that the tool
 //should be rerun on all files.
 func RunTools(r *http.Request, c *Context) (string, error) {
-	pid, m, e := getProjectId(r)
+	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
-		return m, e
+		return "Could not read project id.", e
 	}
 	ts, e := GetStrings(r, "tools")
 	if e != nil {
@@ -478,40 +479,6 @@ func GetResult(rd *ResultDesc, fileId bson.ObjectId) (tool.DisplayResult, error)
 	return tool.NewErrorResult(tool.NORESULT, rd.Format()), nil
 }
 
-/*
-func getUserTestResult(k string, sid bson.ObjectId) (tool.DisplayResult, error) {
-	fs, e := db.Files(bson.M{db.TYPE: project.TEST, db.SUBID: sid, db.RESULTS + "." + k: bson.M{db.EXISTS: true}, db.RESULTS + "." + k: bson.M{db.ISTYPE: 7}}, bson.M{db.DATA: 0}, 1, db.TIME)
-	if e != nil || len(fs) == 0 {
-		return tool.NewErrorResult(tool.NORESULT, strings.Split(k, "-")[0]), nil
-	}
-	rid, e := util.GetId(fs[0].Results, k)
-	if e != nil {
-		return nil, e
-	}
-	return db.DisplayResult(bson.M{db.ID: rid}, nil)
-}
-
-func GetChildResult(key string, fileId bson.ObjectId) (tool.DisplayResult, error) {
-	f, e := db.File(bson.M{db.ID: fileId}, nil)
-	if e != nil {
-		return nil, e
-	}
-	t := strings.Split(key, ":")[0]
-	i, ok := f.Results[key]
-	if !ok {
-		return tool.NewErrorResult(tool.NORESULT, t), nil
-	}
-	switch v := i.(type) {
-	case bson.ObjectId:
-		//Retrieve result from the db.
-		return db.DisplayResult(bson.M{db.ID: v}, nil)
-	case string:
-		//Error, so create new error result.
-		return tool.NewErrorResult(v, t), nil
-	}
-	return tool.NewErrorResult(tool.NORESULT, t), nil
-}
-*/
 func validId(rs ...interface{}) (string, error) {
 	for _, i := range rs {
 		if r, ok := i.(tool.ToolResult); ok {

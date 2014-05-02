@@ -47,9 +47,9 @@ type (
 	//Rules specifies the PMD rules configured for a specific project.
 	//It only stores each rule's identifier.
 	Rules struct {
-		Id        bson.ObjectId   "_id"
-		ProjectId bson.ObjectId   "projectid"
-		Rules     map[string]bool "rules"
+		Id        bson.ObjectId   `bson:"_id"`
+		ProjectId bson.ObjectId   `bson:"projectid"`
+		Rules     map[string]bool `bson:"rules"`
 	}
 )
 

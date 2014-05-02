@@ -7,10 +7,10 @@ import (
 
 type (
 	Makefile struct {
-		Id        bson.ObjectId "_id"
-		ProjectId bson.ObjectId "projectid"
-		Time      int64         "time"
-		Data      []byte        "data"
+		Id        bson.ObjectId `bson:"_id"`
+		ProjectId bson.ObjectId `bson:"projectid"`
+		Time      int64         `bson:"time"`
+		Data      []byte        `bson:"data"`
 	}
 )
 

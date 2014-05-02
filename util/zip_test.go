@@ -65,15 +65,10 @@ func TestExtractBytes(t *testing.T) {
 			t.Error(err)
 		}
 		if !bytes.Equal(files[zf.Name], extracted) {
-			t.Error("Expected %s for %s but got %s.",
+			t.Errorf("Expected %s for %s but got %s.",
 				string(files[zf.Name]), zf.Name, string(extracted))
 		}
-	} /*
-		zf := new(zip.File)
-		_, err = ExtractBytes(zf)
-		if err == nil {
-			t.Error("Expected error for empty zip file.")
-		}*/
+	}
 }
 
 func TestUnzipToMap(t *testing.T) {

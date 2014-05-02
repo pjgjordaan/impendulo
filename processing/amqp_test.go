@@ -50,7 +50,7 @@ func init() {
 	util.SetInfoLogging("f")
 }
 
-func (bc *BasicConsumer) Consume(d amqp.Delivery, ch amqp.Channel) error {
+func (bc *BasicConsumer) Consume(d amqp.Delivery, ch *amqp.Channel) error {
 	bc.msgs <- fmt.Sprintf("Consumer %d says %s.\n", bc.id, string(d.Body))
 	d.Ack(false)
 	return nil

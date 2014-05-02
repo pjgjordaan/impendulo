@@ -29,7 +29,7 @@ import (
 
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/util/convert"
 	"labix.org/v2/mgo/bson"
 
 	"net/http"
@@ -81,7 +81,7 @@ func (g Getter) CreateGet(name, view string) Handler {
 			http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
 			return e
 		}
-		t, e := util.GetStrings(a, "templates")
+		t, e := convert.GetStrings(a, "templates")
 		if e != nil {
 			c.AddMessage("Could not load page.", true)
 			http.Redirect(w, r, r.Referer(), http.StatusSeeOther)

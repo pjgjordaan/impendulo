@@ -22,13 +22,17 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package util
+package convert
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
+
+	"errors"
+
+	ue "github.com/godfried/impendulo/util/errors"
 	"labix.org/v2/mgo/bson"
+
 	"reflect"
 	"testing"
 )
@@ -113,7 +117,7 @@ func TestGetBytes(t *testing.T) {
 	for k, v := range testmap {
 		res, err := GetBytes(testmap, k)
 		if k == this {
-			val, _ := toBytes(v)
+			val, _ := Bytes(v)
 			if err != nil || !bytes.Equal(res, val) {
 				t.Error(err, res, "!=", v)
 			}
@@ -128,7 +132,7 @@ func TestGetStrings(t *testing.T) {
 	for k, v := range testmap {
 		res, err := GetStrings(testmap, k)
 		if k == this {
-			val, _ := toStrings(v)
+			val, _ := Strings(v)
 			if err != nil || !reflect.DeepEqual(res, val) {
 				t.Error(err)
 			}
@@ -138,14 +142,14 @@ func TestGetStrings(t *testing.T) {
 	}
 }
 
-func TestToStrings(t *testing.T) {
+func TestStrings(t *testing.T) {
 	valid := []interface{}{
 		[]string{"data", "some"},
 		[]interface{}{"data", "some"},
 		interface{}([]string{"data some"}),
 	}
 	for _, data := range valid {
-		_, err := toStrings(data)
+		_, err := Strings(data)
 		if err != nil {
 			t.Error(err)
 		}
@@ -153,10 +157,10 @@ func TestToStrings(t *testing.T) {
 	invalid := []interface{}{
 		[]int{22, 32},
 		[]interface{}{"data", 32, []byte("hi")},
-		interface{}(new(ErrorWriter)),
+		interface{}(new(ue.Writer)),
 	}
 	for _, data := range invalid {
-		_, err := toStrings(data)
+		_, err := Strings(data)
 		if err == nil {
 			t.Error(fmt.Errorf("Expected error for %q,", data))
 		}

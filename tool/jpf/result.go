@@ -38,12 +38,12 @@ const (
 type (
 	//Result is a JPF implementation of tool.ToolResult, tool.DisplayResult and tool.ChartResult.
 	Result struct {
-		Id     bson.ObjectId "_id"
-		FileId bson.ObjectId "fileid"
-		Name   string        "name"
-		Report *Report       "report"
-		GridFS bool          "gridfs"
-		Type   string        "type"
+		Id     bson.ObjectId `bson:"_id"`
+		FileId bson.ObjectId `bson:"fileid"`
+		Name   string        `bson:"name"`
+		Report *Report       `bson:"report"`
+		GridFS bool          `bson:"gridfs"`
+		Type   string        `bson:"type"`
 	}
 )
 
@@ -111,8 +111,8 @@ func (this *Result) GetReport() tool.Report {
 //ChartVals
 func (this *Result) ChartVals() []*tool.ChartVal {
 	return []*tool.ChartVal{
-		&tool.ChartVal{"Total Errors", float64(this.Report.Total), this.FileId},
-		&tool.ChartVal{"Unique Errors", float64(this.Report.ErrorCount()), this.FileId},
+		&tool.ChartVal{Name: "Total Errors", Y: float64(this.Report.Total), FileId: this.FileId},
+		&tool.ChartVal{Name: "Unique Errors", Y: float64(this.Report.ErrorCount()), FileId: this.FileId},
 	}
 }
 

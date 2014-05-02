@@ -2,10 +2,10 @@
 <h3 class="heading">Run Tools</h3>
 <form class="form-horizontal" role="form" action="runtools" method="post">
   <div class="form-group">
-    <label class="col-lg-offset-3 col-lg-2 control-label" for="projectid">Project</label>
+    <label class="col-lg-offset-3 col-lg-2 control-label" for="project-id">Project</label>
     <div class="col-lg-3">
-      <select class="form-control" name="projectid" id="projectid"
-	      onchange="populate('projectid', 'tools', 'users')">
+      <select class="form-control" name="project-id" id="project-id"
+	      onchange="populate('project-id', 'tools', 'users')">
 	{{$projects := projects}}
 	{{range $projects}}
 	<option value={{.Id.Hex}}>{{.Name}}</option>
@@ -48,7 +48,7 @@
 <script type="text/javascript" language="javascript">
   window.onload = function()
   {
-  populate('projectid', 'tools', 'users');
+  populate('project-id', 'tools', 'users');
   ;}
 </script>
 {{end}}

@@ -49,16 +49,12 @@ import (
 
 //Flag variables for setting ports to listen on, users file to process, mode to run in, etc.
 var (
-	wFlags, rFlags, pFlags      *flag.FlagSet
-	cfgFile, errLog, infoLog    string
-	backupDB, access            string
-	dbName, dbAddr, mqURI       string
-	mProcs, timeLimit           uint
-	httpPort, tcpPort, procPort uint
-)
-
-const (
-	LOG_IMPENDULO = "impendulo.go"
+	wFlags, rFlags, pFlags   *flag.FlagSet
+	cfgFile, errLog, infoLog string
+	backupDB, access         string
+	dbName, dbAddr, mqURI    string
+	mProcs, timeLimit        uint
+	httpPort, tcpPort        uint
 )
 
 func init() {

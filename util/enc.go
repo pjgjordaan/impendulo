@@ -28,6 +28,9 @@ import (
 	"bytes"
 	"encoding/gob"
 	"encoding/json"
+
+	"github.com/godfried/impendulo/util/errors"
+
 	"io"
 
 	"labix.org/v2/mgo/bson"
@@ -43,7 +46,7 @@ func ReadJSON(r io.Reader) (map[string]interface{}, error) {
 	}
 	var m map[string]interface{}
 	if e = json.Unmarshal(b, &m); e != nil {
-		return nil, &UtilError{b, "unmarshalling data from", e}
+		return nil, errors.NewUtil(b, "unmarshalling data from", e)
 	}
 	return m, nil
 }
@@ -52,12 +55,12 @@ func ReadJSON(r io.Reader) (map[string]interface{}, error) {
 func LoadMap(n string) (map[bson.ObjectId]bool, error) {
 	f, e := os.Open(n)
 	if e != nil {
-		return nil, &UtilError{n, "opening", e}
+		return nil, errors.NewUtil(n, "opening", e)
 	}
 	d := gob.NewDecoder(f)
 	var m map[bson.ObjectId]bool
 	if e = d.Decode(&m); e != nil {
-		return nil, &UtilError{n, "decoding map stored in", e}
+		return nil, errors.NewUtil(n, "decoding map stored in", e)
 	}
 	return m, nil
 }
@@ -66,11 +69,11 @@ func LoadMap(n string) (map[bson.ObjectId]bool, error) {
 func SaveMap(m map[bson.ObjectId]bool, n string) error {
 	f, e := os.Create(n)
 	if e != nil {
-		return &UtilError{n, "creating", e}
+		return errors.NewUtil(n, "creating", e)
 	}
 	enc := gob.NewEncoder(f)
 	if e = enc.Encode(&m); e != nil {
-		return &UtilError{m, "encoding map", e}
+		return errors.NewUtil(m, "encoding map", e)
 	}
 	return nil
 }
@@ -79,10 +82,10 @@ func SaveMap(m map[bson.ObjectId]bool, n string) error {
 func WriteJSON(w io.Writer, i interface{}) error {
 	m, e := json.Marshal(i)
 	if e != nil {
-		return &UtilError{i, "marshalling json", e}
+		return errors.NewUtil(i, "marshalling json", e)
 	}
 	if _, e = w.Write(m); e != nil {
-		return &UtilError{m, "writing json", e}
+		return errors.NewUtil(m, "writing json", e)
 	}
 	return nil
 }

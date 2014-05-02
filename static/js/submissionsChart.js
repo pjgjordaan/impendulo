@@ -125,7 +125,7 @@ function submissionsChart(chartData, tipe) {
 		.call(yAxis);
 	    chartBody.selectAll('.link')
 		.attr('xlink:href', function(d) {
-		    return 'getfiles?subid='+d.key;
+		    return 'getfiles?submission-id='+d.key;
 		})
 		.attr('class', 'link')
 		.transition()
@@ -181,7 +181,7 @@ function submissionsChart(chartData, tipe) {
 	.enter()
 	.append('svg:a')
 	.attr('xlink:href', function(d) {
-	    return 'getfiles?subid='+d.key;
+	    return 'getfiles?submission-id='+d.key;
 	})
 	.attr('class', 'link')
 	.attr('transform', function(d) { return 'translate(' + loadDate(d) + ',' + loadY(d) + ')'; });

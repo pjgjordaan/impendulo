@@ -38,12 +38,12 @@ type (
 	//and tool.ChartResult. It contains the result of compiling a Java source
 	//file using the specified Java compiler.
 	Result struct {
-		Id     bson.ObjectId "_id"
-		FileId bson.ObjectId "fileid"
-		Name   string        "name"
-		Report *Report       "report"
-		GridFS bool          "gridfs"
-		Type   string        "type"
+		Id     bson.ObjectId `bson:"_id"`
+		FileId bson.ObjectId `bson:"fileid"`
+		Name   string        `bson:"name"`
+		Report *Report       `bson:"report"`
+		GridFS bool          `bson:"gridfs"`
+		Type   string        `bson:"type"`
 	}
 )
 
@@ -106,8 +106,8 @@ func (this *Result) ChartVals() []*tool.ChartVal {
 		yW = float64(this.Report.Count)
 	}
 	return []*tool.ChartVal{
-		&tool.ChartVal{"Errors", yE, this.FileId},
-		&tool.ChartVal{"Warnings", yW, this.FileId},
+		&tool.ChartVal{Name: "Errors", Y: yE, FileId: this.FileId},
+		&tool.ChartVal{Name: "Warnings", Y: yW, FileId: this.FileId},
 	}
 }
 

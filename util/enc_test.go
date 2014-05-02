@@ -28,18 +28,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+
+	ue "github.com/godfried/impendulo/util/errors"
 	"labix.org/v2/mgo/bson"
+
 	"os"
 	"testing"
 )
-
-type (
-	ErrorWriter struct{}
-)
-
-func (w *ErrorWriter) Write(p []byte) (int, error) {
-	return -1, errors.New("ERROR")
-}
 
 func TestReadJSON(t *testing.T) {
 	//This only
@@ -87,33 +82,30 @@ func TestMapStorage(t *testing.T) {
 }
 
 func TestWriteJSON(t *testing.T) {
-	data := map[string]interface{}{"A": "2 3", "B": " Hallo ", "C": "", "D": "''"}
-	writer := new(bytes.Buffer)
-	err := WriteJSON(writer, data)
-	if err != nil {
-		t.Error(err)
+	m := map[string]interface{}{"A": "2 3", "B": " Hallo ", "C": "", "D": "''"}
+	w := new(bytes.Buffer)
+	if e := WriteJSON(w, m); e != nil {
+		t.Error(e)
 	}
-	read, err := ReadJSON(writer)
-	if err != nil {
-		t.Error(err)
+	r, e := ReadJSON(w)
+	if e != nil {
+		t.Error(e)
 	}
-	for k, v := range data {
-		if read[k] != v {
-			t.Error(read[k], " != ", v)
+	for k, v := range m {
+		if r[k] != v {
+			t.Error(r[k], " != ", v)
 		}
 	}
-	badData := map[string]interface{}{
+	if e = WriteJSON(new(ue.Writer), m); e == nil {
+		t.Error(errors.New("Expected error for error writer."))
+	}
+	m = map[string]interface{}{
 		"B": func(msg string) bool { return msg != "" },
 		"A": make(chan bool),
 	}
-	writer.Reset()
-	err = WriteJSON(writer, badData)
-	if err == nil {
+	w.Reset()
+	if e = WriteJSON(w, m); e == nil {
 		t.Error(errors.New("Expected error for bad Json data."))
-	}
-	err = WriteJSON(new(ErrorWriter), data)
-	if err == nil {
-		t.Error(errors.New("Expected error for error writer."))
 	}
 
 }

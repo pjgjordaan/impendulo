@@ -39,13 +39,13 @@ type (
 	//Result is an implementation of ToolResult, DisplayResult
 	//and ChartResult for JUnit test results.
 	Result struct {
-		Id       bson.ObjectId "_id"
-		FileId   bson.ObjectId "fileid"
-		TestId   bson.ObjectId "testid"
-		TestName string        "name"
-		Report   *Report       "report"
-		GridFS   bool          "gridfs"
-		Type     string        "type"
+		Id       bson.ObjectId `bson:"_id"`
+		FileId   bson.ObjectId `bson:"fileid"`
+		TestId   bson.ObjectId `bson:"testid"`
+		TestName string        `bson:"name"`
+		Report   *Report       `bson:"report"`
+		GridFS   bool          `bson:"gridfs"`
+		Type     string        `bson:"type"`
 	}
 )
 
@@ -111,8 +111,8 @@ func (r *Result) Success() bool {
 //ChartVals
 func (r *Result) ChartVals() []*tool.ChartVal {
 	return []*tool.ChartVal{
-		&tool.ChartVal{"Failures", float64(r.Report.Failures), r.FileId},
-		&tool.ChartVal{"Errors", float64(r.Report.Errors), r.FileId},
+		&tool.ChartVal{Name: "Failures", Y: float64(r.Report.Failures), FileId: r.FileId},
+		&tool.ChartVal{Name: "Errors", Y: float64(r.Report.Errors), FileId: r.FileId},
 	}
 }
 

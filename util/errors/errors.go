@@ -22,47 +22,65 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package util
+package errors
 
 import (
+	"errors"
 	"fmt"
 )
 
 type (
-	//MissingError indicates that a key was not present in a map.
-	MissingError struct {
+	//missing indicates that a key was not present in a map.
+	missing struct {
 		key string
 	}
 
-	//CastError indicates that an interface{} could not be cast to
+	//cast indicates that an interface{} could not be cast to
 	//a certain type.
-	CastError struct {
+	cast struct {
 		tipe  string
 		value interface{}
 	}
 
-	//IOError is used to add more context to errors which occur in the util package.
-	UtilError struct {
+	//util is used to add more context to errors which occur in the util package.
+	util struct {
 		origin interface{}
 		tipe   string
 		err    error
 	}
+	Writer struct{}
 )
 
-func (m *MissingError) Error() string {
+func (w *Writer) Write(p []byte) (int, error) {
+	return -1, errors.New("ERROR")
+}
+
+func NewMissing(k string) error {
+	return &missing{key: k}
+}
+
+func NewCast(t string, v interface{}) error {
+	return &cast{tipe: t, value: v}
+}
+
+func NewUtil(o interface{}, t string, e error) error {
+	return &util{origin: o, tipe: t, err: e}
+}
+
+func (m *missing) Error() string {
 	return fmt.Sprintf("read error: %q.", m.key)
 }
 
-func (c *CastError) Error() string {
+func (c *cast) Error() string {
 	return fmt.Sprintf("casting error: %q to %q.", c.value, c.tipe)
 }
 
 func IsCastError(e error) bool {
-	_, ok := e.(*CastError)
+	_, ok := e.(*cast)
 	return ok
 }
 
 //Error
-func (u *UtilError) Error() string {
+func (u *util) Error() string {
 	return fmt.Sprintf("error %q while %s %q.", u.err, u.tipe, u.origin)
 }

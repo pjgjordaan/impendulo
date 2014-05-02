@@ -45,10 +45,10 @@ type (
 
 	//User represents a user within the Impendulo system.
 	User struct {
-		Name     string     "_id"
-		Password string     "password"
-		Salt     string     "salt"
-		Access   Permission "access"
+		Name     string     `bson:"_id"`
+		Password string     `bson:"password"`
+		Salt     string     `bson:"salt"`
+		Access   Permission `bson:"access"`
 	}
 )
 

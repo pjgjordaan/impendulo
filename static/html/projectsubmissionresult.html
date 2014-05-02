@@ -24,19 +24,19 @@
     {{range .subRes}}
     {{$subId := .Id.Hex}}
     <tr>
-      <td><a class="rowlink" href="getfiles?subid={{$subId}}">
+      <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
 	  {{.User}}
       </a></td>
-      <td><a class="rowlink" href="getfiles?subid={{$subId}}" >
+      <td><a class="rowlink" href="getfiles?submission-id={{$subId}}" >
 	  {{date .Time}}
       </a></td>
-      <td><a class="rowlink" href="getfiles?subid={{$subId}}">
+      <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
 	  {{snapshots .Id}}
       </a></td>
-      <td><a class="rowlink" href="getfiles?subid={{$subId}}">
+      <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
 	  {{launches .Id}}
       </a></td>
-      <td><a class="rowlink" href="getfiles?subid={{$subId}}">
+      <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
 	  {{.Result}}
       </a></td>
     </tr>

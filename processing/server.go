@@ -192,7 +192,7 @@ func (s *Server) Serve() {
 				}
 			case FILE_ADD:
 				if !ok {
-					util.Log(fmt.Errorf("no submission %s found for file %", r.SubId, r.FileId))
+					util.Log(fmt.Errorf("no submission %s found for file %s", r.SubId, r.FileId))
 				} else {
 					if h.started {
 						//Send file to goroutine if

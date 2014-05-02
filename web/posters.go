@@ -36,6 +36,7 @@ import (
 	"github.com/godfried/impendulo/tool/mongo"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/util/convert"
 	"labix.org/v2/mgo/bson"
 
 	"net/http"
@@ -115,9 +116,9 @@ func (this Poster) CreatePost(index bool) Handler {
 
 //SubmitArchive adds an Intlola archive to the database.
 func SubmitArchive(r *http.Request, c *Context) (string, error) {
-	pid, m, e := getProjectId(r)
+	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
-		return m, e
+		return "Could not read project id.", e
 	}
 	un, m, e := getActiveUser(c)
 	if e != nil {
@@ -171,9 +172,9 @@ func AddProject(r *http.Request, c *Context) (string, error) {
 }
 
 func AddSkeleton(r *http.Request, c *Context) (string, error) {
-	pid, m, e := getProjectId(r)
+	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
-		return m, e
+		return "Could not read project id.", e
 	}
 	n, e := GetString(r, "skeletonname")
 	if e != nil {
@@ -191,9 +192,9 @@ func AddSkeleton(r *http.Request, c *Context) (string, error) {
 
 //DeleteProject removes a project and all data associated with it from the system.
 func DeleteProject(r *http.Request, c *Context) (string, error) {
-	pid, m, e := getProjectId(r)
+	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
-		return m, e
+		return "Could not read project id.", e
 	}
 	if e = db.RemoveProjectById(pid); e != nil {
 		return "Could not delete project.", e
@@ -202,9 +203,9 @@ func DeleteProject(r *http.Request, c *Context) (string, error) {
 }
 
 func DeleteSkeletons(r *http.Request, c *Context) (string, error) {
-	pid, m, e := getProjectId(r)
+	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
-		return m, e
+		return "Could not read project id.", e
 	}
 	ss, e := db.Skeletons(bson.M{db.PROJECTID: pid}, bson.M{db.ID: 1})
 	if e != nil {
@@ -220,9 +221,9 @@ func DeleteSkeletons(r *http.Request, c *Context) (string, error) {
 
 //DeleteResults removes all results for a specic project.
 func DeleteResults(r *http.Request, c *Context) (string, error) {
-	pid, m, e := getProjectId(r)
+	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
-		return m, e
+		return "Could not read project id.", e
 	}
 	ss, e := db.Submissions(bson.M{db.PROJECTID: pid}, bson.M{db.ID: 1})
 	if e != nil {
@@ -254,7 +255,7 @@ func DeleteResults(r *http.Request, c *Context) (string, error) {
 
 //EditProject is used to modify a project's metadata.
 func EditProject(r *http.Request, c *Context) (string, error) {
-	pid, e := util.ReadId(r.FormValue("project-id"))
+	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
 		return "Could not read project id.", e
 	}
@@ -286,11 +287,11 @@ func EditProject(r *http.Request, c *Context) (string, error) {
 
 //EditSubmission
 func EditSubmission(r *http.Request, c *Context) (string, error) {
-	sid, e := util.ReadId(r.FormValue("submission-id"))
+	sid, e := convert.Id(r.FormValue("submission-id"))
 	if e != nil {
 		return "Could not read submission id.", e
 	}
-	pid, e := util.ReadId(r.FormValue("submission-project"))
+	pid, e := convert.Id(r.FormValue("submission-project"))
 	if e != nil {
 		return "Could not read project.", e
 	}
@@ -314,7 +315,7 @@ func EditSubmission(r *http.Request, c *Context) (string, error) {
 
 //EditFile
 func EditFile(r *http.Request, c *Context) (string, error) {
-	fid, e := util.ReadId(r.FormValue("file-id"))
+	fid, e := convert.Id(r.FormValue("file-id"))
 	if e != nil {
 		return "Could not read file id.", e
 	}
@@ -333,10 +334,10 @@ func EditFile(r *http.Request, c *Context) (string, error) {
 }
 
 func EvaluateSubmissions(r *http.Request, c *Context) (string, error) {
-	all := r.FormValue("projectid") == "all"
-	pid, msg, e := getProjectId(r)
+	all := r.FormValue("project-id") == "all"
+	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil && !all {
-		return msg, e
+		return "Could not read project id.", e
 	}
 	m := bson.M{}
 	if !all {
@@ -359,9 +360,9 @@ func EvaluateSubmissions(r *http.Request, c *Context) (string, error) {
 
 //Login signs a user into the web app.
 func Login(r *http.Request, c *Context) (string, error) {
-	un, p, m, e := getCredentials(r)
+	un, p, e := credentials(r)
 	if e != nil {
-		return m, e
+		return "Could not retrieve credentials.", e
 	}
 	u, e := db.User(un)
 	if e != nil {
@@ -377,9 +378,9 @@ func Login(r *http.Request, c *Context) (string, error) {
 
 //Register registers a new user with Impendulo.
 func Register(r *http.Request, c *Context) (string, error) {
-	un, p, m, e := getCredentials(r)
+	un, p, e := credentials(r)
 	if e != nil {
-		return m, e
+		return "Could not retrieve credentials.", e
 	}
 	if e = db.Add(db.USERS, user.New(un, p)); e != nil {
 		return fmt.Sprintf("User %s already exists.", un), e
@@ -390,9 +391,9 @@ func Register(r *http.Request, c *Context) (string, error) {
 
 //DeleteUser removes a user and all data associated with them from the system.
 func DeleteUser(r *http.Request, c *Context) (string, error) {
-	un, m, e := getString(r, "username")
+	un, e := GetString(r, "username")
 	if e != nil {
-		return m, e
+		return "Could not read user.", e
 	}
 	if e = db.RemoveUserById(un); e != nil {
 		return fmt.Sprintf("Could not delete user %s.", un), e
@@ -416,7 +417,7 @@ func EditUser(r *http.Request, c *Context) (string, error) {
 	if e != nil {
 		return "Could not read new username.", e
 	}
-	a, e := GetInt(r, "user-perm")
+	a, e := convert.Int(r.FormValue("user-perm"))
 	if e != nil {
 		return "Could not read user access level.", e
 	}

@@ -26,12 +26,17 @@ package web
 
 import (
 	"code.google.com/p/gorilla/sessions"
+
 	"fmt"
+
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/util"
+
 	"html"
+
 	"labix.org/v2/mgo/bson"
+
 	"net/http"
 	"testing"
 )
@@ -67,15 +72,15 @@ func TestCreateJPF(t *testing.T) {
 	sPkg := "gov.nasa.jpf.search."
 	other := html.EscapeString("target.args = 2,1,2\nsearch.multiple_errors = true\nasdas8823=quesq,322\n ")
 	requests := []postHolder{
-		postHolder{"/createjpf?projectid=" + id + "&addedlisteners=" +
+		postHolder{"/createjpf?project-id=" + id + "&addedlisteners=" +
 			lPkg + "ExecTracker&addedlisteners=" + lPkg +
 			"DeadlockAnalyzer&addedsearches=" + sPkg + "DFSearch&other=" + other, true},
 		postHolder{"/createjpf?", false},
-		postHolder{"/createjpf?projectid=" + id, true},
-		postHolder{"/createjpf?projectid=" + id + "&addedlisteners=" +
+		postHolder{"/createjpf?project-id=" + id, true},
+		postHolder{"/createjpf?project-id=" + id + "&addedlisteners=" +
 			lPkg + "ExecTracker&addedlisteners=" + lPkg +
 			"DeadlockAnalyzer&addedsearches=" + sPkg + "DFSearch", true},
-		postHolder{"/createjpf?projectid=" + id + "&addedlisteners=" + lPkg, true},
+		postHolder{"/createjpf?project-id=" + id + "&addedlisteners=" + lPkg, true},
 	}
 	testToolFunc(t, CreateJPF, requests)
 }
@@ -83,10 +88,10 @@ func TestCreateJPF(t *testing.T) {
 func TestCreatePMD(t *testing.T) {
 	id := bson.NewObjectId().Hex()
 	requests := []postHolder{
-		postHolder{"/createpmd?projectid=" + id + "&ruleid=java-basic&ruleid=java-controversial", true},
-		postHolder{"/createpmd?projectid=" + id + "&ruleid=", true},
-		postHolder{"/createpmd?projectid=" + id + "&ruleid=java-basic", true},
-		postHolder{"/createpmd?projectid=", false},
+		postHolder{"/createpmd?project-id=" + id + "&ruleid=java-basic&ruleid=java-controversial", true},
+		postHolder{"/createpmd?project-id=" + id + "&ruleid=", true},
+		postHolder{"/createpmd?project-id=" + id + "&ruleid=java-basic", true},
+		postHolder{"/createpmd?project-id=", false},
 		postHolder{"/createpmd?", false},
 	}
 	testToolFunc(t, CreatePMD, requests)
@@ -144,7 +149,7 @@ func TestRunTool(t *testing.T) {
 	auth, enc, err := util.CookieKeys()
 	store := sessions.NewCookieStore(auth, enc)
 	go processing.Serve(processing.AMQP_URI, 5)
-	req, err := http.NewRequest("POST", "/runtool?projectid="+p.Id.Hex()+
+	req, err := http.NewRequest("POST", "/runtool?project-id="+p.Id.Hex()+
 		"&tool="+findbugs.NAME+"&runempty-check=true", nil)
 	if err != nil {
 		t.Error(err)
