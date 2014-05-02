@@ -38,6 +38,7 @@ import (
 	"github.com/godfried/impendulo/tool/junit"
 	junit_user "github.com/godfried/impendulo/tool/junit_user/result"
 	"github.com/godfried/impendulo/tool/pmd"
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 )
@@ -439,4 +440,45 @@ func ResultNames(sid bson.ObjectId, fname string) (map[string]map[string][]inter
 	m[tool.CODE] = map[string][]interface{}{}
 	m[diff.NAME] = map[string][]interface{}{}
 	return m, nil
+}
+
+func ProjectResults(pid bson.ObjectId) []string {
+	rs := []string{javac.NAME, pmd.NAME, findbugs.NAME, checkstyle.NAME}
+	if Contains(JPF, bson.M{PROJECTID: pid}) {
+		rs = append(rs, jpf.NAME)
+	}
+	ts, e := JUnitTests(bson.M{PROJECTID: pid}, bson.M{NAME: 1})
+	if e != nil {
+		return rs
+	}
+	for _, t := range ts {
+		n, _ := util.Extension(t.Name)
+		rs = append(rs, junit.NAME+":"+n, jacoco.NAME+":"+n)
+	}
+	return rs
+}
+
+func UserResults(u string) []string {
+	rs := []string{javac.NAME, pmd.NAME, findbugs.NAME, checkstyle.NAME}
+	s, e := Session()
+	if e != nil {
+		return rs
+	}
+	defer s.Close()
+	var ids []bson.ObjectId
+	if e := s.DB("").C(SUBMISSIONS).Find(bson.M{USER: u}).Distinct(PROJECTID, &ids); e != nil || len(ids) == 0 {
+		return rs
+	}
+	type q struct{}
+	a := map[string]q{javac.NAME: q{}, pmd.NAME: q{}, findbugs.NAME: q{}, checkstyle.NAME: q{}}
+	for _, id := range ids {
+		prs := ProjectResults(id)
+		for _, r := range prs {
+			if _, ok := a[r]; !ok {
+				a[r] = q{}
+				rs = append(rs, r)
+			}
+		}
+	}
+	return rs
 }

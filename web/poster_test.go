@@ -26,10 +26,13 @@ package web
 
 import (
 	"code.google.com/p/gorilla/sessions"
+
 	"fmt"
+
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
+
 	"net/http"
 	"testing"
 )
@@ -78,28 +81,26 @@ func testUserFunc(t *testing.T, f Poster, requests []postHolder) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
 	u := user.New("user", "password")
-	err := db.Add(db.USERS, u)
-	if err != nil {
-		t.Error(err)
+	if e := db.Add(db.USERS, u); e != nil {
+		t.Error(e)
 	}
-	auth, enc, err := util.CookieKeys()
-	if err != nil {
-		t.Error(err)
+	auth, enc, e := util.CookieKeys()
+	if e != nil {
+		t.Error(e)
 	}
 	store := sessions.NewCookieStore(auth, enc)
 	for _, ph := range requests {
-		req, err := http.NewRequest("POST", ph.url, nil)
-		if err != nil {
-			t.Error(err)
+		r, e := http.NewRequest("POST", ph.url, nil)
+		if e != nil {
+			t.Error(e)
 		}
-		ctx, err := createContext(req, store)
-		if err != nil {
-			t.Error(err)
+		c, e := createContext(r, store)
+		if e != nil {
+			t.Error(e)
 		}
-		_, err = f(req, ctx)
-		if ph.valid && err != nil {
-			t.Error(err, ph.url)
-		} else if !ph.valid && err == nil {
+		if _, e = f(r, c); ph.valid && e != nil {
+			t.Error(e, ph.url)
+		} else if !ph.valid && e == nil {
 			t.Error(fmt.Errorf("Expected error for %s.", ph.url))
 		}
 	}

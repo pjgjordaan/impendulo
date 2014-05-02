@@ -69,9 +69,16 @@
 		  </dt>
 		  <dd>
 		    {{$id := $bug.Id.Hex}}
-		    <a href="{{displayCodeBug $sid $uid $code $fileName $current $next $rid $id $i}}">
+		    <a href="#" id="line{{$bugAddress}}">
 		      {{$bug.Line.Message}}
 		    </a>
+	    	    <script>      
+		      var id = 'line{{$bugAddress}}';
+		      var info = {};
+		      info.title = {{$category.Description}};
+		      info.content = {{$bug.LongMessage}};
+		      addCodeModal(id, {{$rid}}, info, {{$bug.Line.Start}}, {{$bug.Line.End}});
+		    </script>
 		  </dd>
 		</dl>
 	      </div>

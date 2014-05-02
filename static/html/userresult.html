@@ -19,22 +19,22 @@
      {{$counts := typeCounts .}}
      <tr>
        <td>
-	 <a class="rowlink" href="{{getUserSubmissions .}}">
+	 <a class="rowlink" href="getsubmissions?userid={{.}}">
 	   {{.}}
 	 </a>
        </td>
        <td>
-	 <a class="rowlink" href="{{getUserSubmissions .}}">
+	 <a class="rowlink" href="getsubmissions?userid={{.}}">
 	   {{index $counts 0}}
 	 </a>
        </td>
        <td>
-	 <a class="rowlink" href="{{getUserSubmissions .}}">
+	 <a class="rowlink" href="getsubmissions?userid={{.}}">
 	   {{index $counts 1}}
 	 </a>
        </td>
        <td>
-	 <a class="rowlink" href="{{getUserSubmissions .}}">
+	 <a class="rowlink" href="getsubmissions?userid={{.}}">
 	   {{index $counts 2}}
 	 </a>
        </td>

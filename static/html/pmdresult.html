@@ -36,7 +36,7 @@
 	    {{$id := .Id.Hex}}
 	    {{range $i, $start :=  .Starts}}
 	    {{$end := index $ends $i}}
-	    <a class="nolink" id="line{{$violationAddress}}num{{$i}}">
+	    <a href="#" id="line{{$violationAddress}}num{{$i}}">
 	      {{$start}} to {{$end}}; 
 	    </a>
 	    <script>      

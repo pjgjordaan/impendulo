@@ -22,7 +22,7 @@
     <ul class="dropdown-menu" role="menu">
       {{$users := users}}
       {{range $users}}
-      <li><a href="{{getUserSubmissions .Name}}">{{.Name}}</a></li>
+      <li><a href="getsubmissions?userid={{.}}">{{.}}</a></li>
       {{end}}
     </ul>
   </li>
@@ -41,7 +41,7 @@
     <ul class="dropdown-menu" role="menu">
       {{$projects := projects}}
       {{range $projects}}
-      <li><a href="{{getProjectSubmissions .Id}}">{{.Name}}</a></li>
+      <li><a href="getsubmissions?projectid={{.Id}}">{{.Name}}</a></li>
       {{end}}
     </ul>
   </li>
@@ -56,7 +56,7 @@
   {{$project := projectName .ctx.Browse.Pid}}
   {{$uid := .ctx.Browse.Uid}}
   {{$sid := .ctx.Browse.Sid}}
-  <li><a href="{{getFiles .ctx.Browse.Sid}}">{{$uid}}'s
+  <li><a href="getfiles?subid={{.ctx.Browse.Sid}}">{{$uid}}'s
       {{$project}} Submission</a></li>
   {{$resultName := .ctx.Browse.Result.Format}}
   {{$fileName := .ctx.Browse.File}}

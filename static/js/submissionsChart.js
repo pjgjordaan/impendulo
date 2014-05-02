@@ -22,10 +22,30 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+function chartExtent(data, f){
+    var e = d3.extent(data, f);
+    var s = 0.05*(e[1]-e[0]);
+    if(e[0] == e[1]){
+	s = 10;
+    }
+    if(e[0] >= 0){
+	e[0] = Math.max(0, e[0]-s);
+    }else{
+	e[0] -= s;
+    }
+    if(e[1] <= 100){
+	e[1] = Math.min(100, e[1]+s);
+    }else{
+	e[1] += s;
+    }
+    return e;
+}
+
 function submissionsChart(chartData, tipe) {
-    if (chartData === null){
+    if (chartData === null || chartData === undefined || chartData.length === 0){
 	return;
     }
+    $('#submissions-chart').empty();
     var m = [10, 150, 100, 100];
     var w = 1100 - m[1] - m[3];
     var h = 480 - m[0] - m[2];
@@ -36,11 +56,11 @@ function submissionsChart(chartData, tipe) {
             .domain(tipes)(tipe); 
     };    
     var y = d3.scale.linear()
-	.domain([0, 9])
+	.domain(chartExtent(chartData, getY))
 	.range([h, 0]);
     
     var x = d3.scale.linear()
-	.domain(d3.extent(chartData, getTime))
+	.domain(chartExtent(chartData, getTime))
 	.range([0, w]);  
 
     var rs =  d3.scale.linear()
@@ -66,7 +86,7 @@ function submissionsChart(chartData, tipe) {
     };
 
     var loadY = function(d) {
-	return y(d.status);
+	return y(getY(d));
     }
     var xAxis = d3.svg.axis()
 	.scale(x)
@@ -74,17 +94,14 @@ function submissionsChart(chartData, tipe) {
 	.tickSize(-h)
 	.orient('bottom')
 	.tickSubdivide(true);
-    var yVals = ['Unknown', 'Busy', 'All Failed', 'Test Errors', 
-		 'JPF Errors', 'Test Success, JPF Errors',
-		 'JPF Success, Test Errors', 'Test Success',
-		 'JPF Success', 'All Success'];
+
     var yAxis = d3.svg.axis()
 	.scale(y)
-	.ticks(9)
-	.tickFormat(function(d){return yVals[d];})
+	.ticks(5)
+	.tickSubdivide(true)
 	.orient('right');
 
-    var chart = d3.select('#chart')
+    var chart = d3.select('#submissions-chart')
 	.append('svg:svg')
 	.attr('width', w + m[1] + m[3])
 	.attr('height', h + m[0] + m[2])
@@ -101,6 +118,11 @@ function submissionsChart(chartData, tipe) {
 		.duration(duration)
 		.ease(ease)
 		.call(xAxis);
+	    chart.select('.y.axis')
+		.transition()
+		.duration(duration)
+		.ease(ease)
+		.call(yAxis);
 	    chartBody.selectAll('.link')
 		.attr('xlink:href', function(d) {
 		    return 'getfiles?subid='+d.key;
@@ -112,7 +134,6 @@ function submissionsChart(chartData, tipe) {
 		.attr('transform', function(d) { return 'translate(' + loadDate(d) + ',' + loadY(d) + ')'; });
 	    
 	});
-
     chart.call(zoom);
 
     chart.append('svg:rect')
@@ -136,7 +157,7 @@ function submissionsChart(chartData, tipe) {
 	.attr('font-size','20px')
 	.attr('transform', 'translate('+(w+120)+','+(h*0.6)+')rotate(90)')
 	.style('text-anchor', 'middle')
-        .text('Status');    
+        .text(chartData[0]["description"]);    
 
     chart.append('svg:g')
 	.attr('class', 'y axis')
@@ -230,6 +251,11 @@ function submissionsChart(chartData, tipe) {
 	.style('fill', chartColour)
 	.on('click', toggleVisibility);
 
+}
+
+
+function getY(d){
+    return d.y;
 }
 
 function getTime(d){

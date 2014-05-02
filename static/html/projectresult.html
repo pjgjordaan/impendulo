@@ -21,32 +21,32 @@
     {{$counts := typeCounts .Id}}
     <tr>
       <td>
-	<a class="rowlink" href="{{getProjectSubmissions .Id}}" >
+	<a class="rowlink" href="getsubmissions?projectid={{.Id.Hex}}" >
 	  {{.Name}}
 	</a>
       </td>
       <td>
-	<a class="rowlink" href="{{getProjectSubmissions .Id}}" >
+	<a class="rowlink" href="getsubmissions?projectid={{.Id.Hex}}" >
 	  {{date .Time}}
 	</a>
       </td>
       <td>
-	<a class="rowlink" href="{{getProjectSubmissions .Id}}" >
+	<a class="rowlink" href="getsubmissions?projectid={{.Id.Hex}}" >
 	  {{.Lang}}
 	</a>
       </td>
       <td>
-	<a class="rowlink" href="{{getProjectSubmissions .Id}}">
+	<a class="rowlink" href="getsubmissions?projectid={{.Id.Hex}}">
 	  {{index $counts 0}}
 	</a>
       </td>
       <td>
-	<a class="rowlink" href="{{getProjectSubmissions .Id}}">
+	<a class="rowlink" href="getsubmissions?projectid={{.Id.Hex}}">
 	  {{index $counts 1}}
 	</a>
       </td>
       <td>
-	<a class="rowlink" href="{{getProjectSubmissions .Id}}">
+	<a class="rowlink" href="getsubmissions?projectid={{.Id.Hex}}">
 	  {{index $counts 2}}
 	</a>
       </td>

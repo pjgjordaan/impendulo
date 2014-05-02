@@ -58,7 +58,7 @@ func defaultGetters() map[string]Getter {
 	return map[string]Getter{
 		"configview":    configView,
 		"displayresult": displayResult, "getfiles": getFiles,
-		"getsubmissionschart": getSubmissionsChart, "getsubmissions": getSubmissions,
+		"submissionschartview": submissionsChartView, "getsubmissions": getSubmissions,
 	}
 }
 
@@ -138,8 +138,7 @@ func getFiles(r *http.Request, c *Context) (Args, string, error) {
 	if e != nil {
 		return nil, "Could not retrieve files.", e
 	}
-	m := bson.M{db.SUBID: c.Browse.Sid, db.OR: [2]bson.M{bson.M{db.TYPE: project.SRC}, bson.M{db.TYPE: project.TEST}}}
-	f, e := db.FileInfos(m)
+	f, e := db.FileInfos(bson.M{db.SUBID: c.Browse.Sid, db.TYPE: project.SRC})
 	if e != nil {
 		return nil, "Could not retrieve files.", e
 	}
@@ -196,108 +195,15 @@ func _displayResult(r *http.Request, c *Context) (Args, error) {
 	}, nil
 }
 
-/*
-func displayChildResult(r *http.Request, c *Context) (Args, string, error) {
-	a, e := _displayChildResult(r, c)
-	if e != nil {
-		return nil, "Could not load results.", e
+func submissionsChartView(r *http.Request, c *Context) (Args, string, error) {
+	if e := c.Browse.Update(r); e != nil {
+		return nil, "could not update state", e
 	}
-	return a, "", nil
-}
-
-func _displayChildResult(r *http.Request, c *Context) (Args, error) {
-	e := c.Browse.Update(r)
-	if e != nil {
-		return nil, e
-	}
-	parentFiles, e := Snapshots(c.Browse.Sid, c.Browse.File, c.Browse.Type)
-	if e != nil {
-		return nil, e
-	}
-	if cur, ce := getCurrent(r, len(parentFiles)-1); ce == nil {
-		c.Browse.Current = cur
-	}
-	if next, ne := getNext(r, len(parentFiles)-1); ne == nil {
-		c.Browse.Next = next
-	}
-	currentFile, e := getFile(parentFiles[c.Browse.Current].Id)
-	if e != nil {
-		return nil, e
-	}
-	results, e := db.ResultNames(c.Browse.Sid, c.Browse.File)
-	if e != nil {
-		return nil, e
-	}
-	nextFile, e := getFile(parentFiles[c.Browse.Next].Id)
-	if e != nil {
-		return nil, e
-	}
-	childFiles, e := Snapshots(c.Browse.Sid, c.Browse.ChildFile, c.Browse.ChildType)
-	if e != nil {
-		return nil, e
-	}
-	currentChild, e := db.File(bson.M{db.ID: childFiles[c.Browse.CurrentChild].Id}, nil)
-	if e != nil {
-		return nil, e
-	}
-	var sc, sn string
-	var ic, in bson.ObjectId
-	switch c.Browse.ChildType {
-	case project.SRC:
-		ic = currentFile.Id
-		in = nextFile.Id
-		sc = currentChild.Id.Hex()
-		sn = currentChild.Id.Hex()
-	case project.TEST:
-		ic = currentChild.Id
-		in = currentChild.Id
-		sc = currentFile.Id.Hex()
-		sn = nextFile.Id.Hex()
-	}
-	currentChildResult, e := GetChildResult(c.Browse.Result+"-"+sc, ic)
-	if e != nil {
-		return nil, e
-	}
-	nextChildResult, e := GetChildResult(c.Browse.Result+"-"+sn, in)
-	if e != nil {
-		return nil, e
-	}
-	t := []string{"analysisview", "pager", "testanalysis", ""}
-	if !isError(currentChildResult) || isError(nextChildResult) {
-		t[3] = currentChildResult.Template()
-	} else {
-		t[3] = nextChildResult.Template()
-	}
-	return Args{
-		"files": parentFiles, "childFiles": childFiles, "currentFile": currentFile, "nextFile": nextFile,
-		"results": results, "childFile": currentChild, "currentChildResult": currentChildResult,
-		"nextChildResult": nextChildResult, "templates": t,
-	}, nil
-}
-*/
-
-//getSubmissionsChart displays a chart of submissions.
-func getSubmissionsChart(r *http.Request, c *Context) (Args, string, error) {
-	e := c.Browse.Update(r)
-	if e != nil {
-		return nil, "Could not load chart.", e
-	}
-	var m bson.M
-	if !c.Browse.IsUser {
-		m = bson.M{db.PROJECTID: c.Browse.Pid}
-	} else {
-		m = bson.M{db.USER: c.Browse.Uid}
-	}
-	s, e := db.Submissions(m, nil, "-"+db.TIME)
-	if e != nil {
-		return nil, "Could not load chart.", e
-	}
-	d := SubmissionChart(s)
 	t := make([]string, 1)
 	if c.Browse.IsUser {
 		t[0] = "usersubmissionchart"
 	} else {
 		t[0] = "projectsubmissionchart"
 	}
-	return Args{"chart": d, "templates": t}, "", nil
+	return Args{"templates": t}, "", nil
 }

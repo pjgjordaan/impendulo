@@ -1,9 +1,21 @@
 {{define "analysis"}}
 {{$rd := .ctx.Browse.Result}}
 {{$fileName := .ctx.Browse.File}}
+{{if $rd.HasCode}}
+<h4 class="text-center">
+  <small>tool</small> <a href="#" id="a-toolcode">{{$rd.Format}}</a>
+</h4>
+<script>
+  $('#a-toolcode').click(function(){
+  showToolCode({{$rd.Raw}},{{.ctx.Browse.Pid}},{{$rd.Format}});
+  return false;
+  });
+</script>
+{{else}}
 <h4 class="text-center">
   <small>tool</small> {{$rd.Format}}
 </h4>
+{{end}}
 {{if hasChart .currentResult .nextResult}}
 <script>
   var chartParams = {};

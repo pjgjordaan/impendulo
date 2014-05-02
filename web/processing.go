@@ -79,10 +79,19 @@ func GetStrings(r *http.Request, n string) ([]string, error) {
 //GetString retrieves a string value from a request form.
 func GetString(r *http.Request, n string) (string, error) {
 	v := r.FormValue(n)
-	if strings.TrimSpace(v) == "" {
+	if strings.TrimSpace(v) != "" {
+		return v, nil
+	}
+	if r.Form == nil {
+		if e := r.ParseForm(); e != nil {
+			return "", e
+		}
+	}
+	vs, ok := r.Form[n]
+	if !ok || len(vs) == 0 || vs[0] == "" {
 		return "", fmt.Errorf("invalid value for %s", n)
 	}
-	return v, nil
+	return vs[0], nil
 }
 
 //getIndex

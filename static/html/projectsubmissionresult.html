@@ -4,7 +4,7 @@
 {{template "breadcrumb" .}}
 <ul class="nav nav-pills">
   <li class="active"><a>Table</a></a></li>
-  <li><a href="{{getProjectChart .ctx.Browse.Pid}}">Chart</a></li>
+  <li><a href="submissionschartview">Chart</a></li>
 </ul>
 <h2 class="text-center"><small>project</small> {{projectName .ctx.Browse.Pid}}</h2>
 <!-- Here we display a table of the different submissions within this project --
@@ -22,21 +22,21 @@
   </thead>
   <tbody data-provides="rowlink" >
     {{range .subRes}}
-    {{$subId := .Id}}
+    {{$subId := .Id.Hex}}
     <tr>
-      <td><a class="rowlink" href="{{getFiles $subId}}">
+      <td><a class="rowlink" href="getfiles?subid={{$subId}}">
 	  {{.User}}
       </a></td>
-      <td><a class="rowlink" href="{{getFiles $subId}}" >
+      <td><a class="rowlink" href="getfiles?subid={{$subId}}" >
 	  {{date .Time}}
       </a></td>
-      <td><a class="rowlink" href="{{getFiles $subId}}">
+      <td><a class="rowlink" href="getfiles?subid={{$subId}}">
 	  {{snapshots .Id}}
       </a></td>
-      <td><a class="rowlink" href="{{getFiles $subId}}">
+      <td><a class="rowlink" href="getfiles?subid={{$subId}}">
 	  {{launches .Id}}
       </a></td>
-      <td><a class="rowlink" href="{{getFiles $subId}}">
+      <td><a class="rowlink" href="getfiles?subid={{$subId}}">
 	  {{.Result}}
       </a></td>
     </tr>

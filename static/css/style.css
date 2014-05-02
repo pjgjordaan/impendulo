@@ -134,6 +134,13 @@ path {
     margin-bottom: 100px;
 }
 
+#submissions-chart{
+    position: relative;
+    width:100%;
+    height:380px;
+    margin-bottom: 100px;
+}
+
 .legend {
     font: 10px sans-serif;
     overflow:auto;
@@ -289,9 +296,6 @@ pre.source span.bpc:hover {
 .atv { color: #080; }
 .dec { color: #606; }
 
-a.nolink { 
-    cursor: pointer; color: blue; 
-}
 a:hover,a.hover { 
     text-decoration: underline; 
 }

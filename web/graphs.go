@@ -153,7 +153,14 @@ func addSpecial(c *Chart, f *project.File, result string) {
 	sort.Sort(c)
 }
 
-func SubmissionChart(subs []*project.Submission) ChartData {
+func SubmissionChart(subs []*project.Submission, result *ResultDesc) (ChartData, error) {
+	if len(subs) == 0 {
+		return nil, errors.New("no submissions to create chart for")
+	}
+	n, e := projectName(subs[0].ProjectId)
+	if e != nil {
+		return nil, e
+	}
 	d := NewChartData()
 	for _, s := range subs {
 		sc, e := fileCount(s.Id, project.SRC)
@@ -164,23 +171,57 @@ func SubmissionChart(subs []*project.Submission) ChartData {
 		if e != nil {
 			continue
 		}
-		n, e := projectName(s.ProjectId)
+		f, rid, e := lastInfo(s.Id, result)
 		if e != nil {
 			continue
 		}
-		f, e := db.LastFile(bson.M{db.TYPE: project.SRC, db.SUBID: s.Id}, bson.M{db.TIME: 1})
+		r, e := db.ChartResult(bson.M{db.ID: rid}, nil)
 		if e != nil {
+			continue
+		}
+		vs := r.ChartVals()
+		if len(vs) == 0 || vs[0] == nil {
 			continue
 		}
 		t := (f.Time - s.Time) / 1000.0
 		p := map[string]interface{}{
 			"snapshots": sc, "launches": lc, "project": n,
-			"key": s.Id.Hex(), "user": s.User, "status": s.Status,
-			"description": s.Result(), "time": t,
+			"key": s.Id.Hex(), "user": s.User, "time": t, "y": vs[0].Y,
+			"description": vs[0].Name,
 		}
 		d = append(d, p)
 	}
-	return d
+	return d, nil
+}
+
+func lastInfo(sid bson.ObjectId, rd *ResultDesc) (*project.File, bson.ObjectId, error) {
+	fs, e := db.Files(bson.M{db.SUBID: sid, db.TYPE: project.SRC}, bson.M{db.DATA: 0}, 0, "-"+db.TIME)
+	if e != nil {
+		return nil, "", e
+	}
+	if len(fs) == 0 {
+		return nil, "", fmt.Errorf("no src files in submission %s", sid.Hex())
+	}
+	if id, e := util.GetId(fs[0].Results, rd.Raw()); e == nil {
+		return fs[0], id, nil
+	}
+	ts, e := db.Files(bson.M{db.SUBID: sid, db.NAME: rd.Name + ".java", db.TYPE: project.TEST}, bson.M{db.DATA: 0}, 0, "-"+db.TIME)
+	if e != nil {
+		return nil, "", e
+	}
+	for i, f := range fs {
+		if i > 0 {
+			if id, e := util.GetId(fs[i].Results, rd.Raw()); e == nil {
+				return fs[i], id, nil
+			}
+		}
+		for _, t := range ts {
+			if id, e := util.GetId(f.Results, rd.Raw()+"-"+t.Id.Hex()); e == nil {
+				return fs[i], id, nil
+			}
+		}
+	}
+	return nil, "", fmt.Errorf("no results found for %s", rd.Format())
 }
 
 func overviewChart(c string) (ChartData, error) {

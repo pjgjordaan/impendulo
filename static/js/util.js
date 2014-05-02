@@ -374,17 +374,41 @@ function addPopover(dest, src){
     };
 }
 
+function showToolCode(name, pid, title){
+    var id = 'toolcode-modal';
+    var s = '#'+id;
+    if($(s).length > 0){
+	$(s).modal('show');
+	$(s).on('shown.bs.modal', function(e){
+	    line.scrollIntoView(); 
+	});
+	return;
+    }
+    $.getJSON('code?tool-name='+name+'&project-id='+pid, function(data){
+	jQuery('<div id="'+id+'" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="'+id+'label" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="'+id+'label">'+title+'</h4></div><div class="modal-body"><script class="brush: java;" type="syntaxhighlighter"><![CDATA['+data.code+']]></script></div></div></div></div>').appendTo('body');
+	SyntaxHighlighter.defaults['toolbar'] = false;
+	SyntaxHighlighter.defaults['class-name'] = 'error';
+	SyntaxHighlighter.highlight(); 
+	$(s).modal('show');
+	$(s).on('shown.bs.modal', function(e){
+	    $(s).animate({
+		scrollTop: $(s).offset()
+	    });
+	});
+	return false;
+    });
+}
 
 function addCodeModal(dest, resultId, bug, start, end){
     $('#'+dest).click(function(){
-	var id = dest+'modal';
+	var id = 'bug-modal';
 	var s = '#'+id;
 	if($(s).length > 0){
 	    $(s).modal('show');
 	    $(s).on('shown.bs.modal', function(e){
 		line.scrollIntoView(); 
 	    });
-	    return;
+	    return false;
 	}
 	$.getJSON('code?resultid='+resultId, function(data){
 	    var h = 'highlight: [';
@@ -392,8 +416,8 @@ function addCodeModal(dest, resultId, bug, start, end){
 		h += i + ',';
 	    }
 	    h = h + end + '];'
-	    var preClass = '"brush: java; '+h+'"';
-	    jQuery('<div id="'+id+'" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="'+id+'label" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="'+id+'label">'+bug.title+'<br><small>'+bug.content+'</small></h4></div><div class="modal-body"><pre class="'+preClass+'">'+data.code+'</pre></div></div></div></div>').appendTo('body');
+	    var preClass = 'brush: java; '+h;
+	    jQuery('<div id="'+id+'" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="'+id+'label" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="'+id+'label">'+bug.title+'<br><small>'+bug.content+'</small></h4></div><div class="modal-body"><script class="'+preClass+'" type="syntaxhighlighter"><![CDATA['+data.code+']]></script></div></div></div></div>').appendTo('body');
 	    SyntaxHighlighter.defaults['toolbar'] = false;
 	    SyntaxHighlighter.defaults['class-name'] = 'error';
 	    SyntaxHighlighter.highlight(); 
@@ -407,6 +431,7 @@ function addCodeModal(dest, resultId, bug, start, end){
 		});
 	    });
 	});
+	return false;
     });
 }
 
@@ -425,7 +450,7 @@ function ajaxChart(vals){
 	subs = subs.concat($('#' + vals.src).val());
 	$('#'+vals.src).multiselect('uncheckAll');
     }
-    var params = {'submissions': subs, 'file': vals.file, 'result': vals.result};
+    var params = {'type':'file','submissions': subs, 'file': vals.file, 'result': vals.result};
     if(vals.testfileID !== undefined){
 	params.testfileid = vals.testfileID;
     }
@@ -443,16 +468,15 @@ function addComparables(rid, pid, dest){
     $('#'+dest).multiselect();
     $('#'+dest).multiselect('destroy');
     $('#'+dest).empty();
-    var url = 'submissions?projectid='+pid;
-    $.getJSON(url, function(data){
-	var items = data['submissions'];
-	for(var i = 0; i < items.length; i++) {
-	    $('#'+dest).append('<option value="'+items[i].Id+'">'+items[i].User+ ' - ' + new Date(items[i].Time).toLocaleString()+'</option>');
+    $.getJSON('comparables?id='+rid, function(cdata){
+	var comp = cdata['comparables'];
+	for(var i = 0; i < comp.length; i++) {
+	    $('#'+dest).append('<option value="'+comp[i].Id+'">'+comp[i].Name+'</option>');
 	}
-	$.getJSON('comparables?id='+rid, function(cdata){
-	    var comp = cdata['comparables'];
-	    for(var i = 0; i < comp.length; i++) {
-		$('#'+dest).append('<option value="'+comp[i].Id+'">'+comp[i].Name+'</option>');
+	$.getJSON('submissions?projectid='+pid, function(data){
+	    var items = data['submissions'];
+	    for(var i = 0; i < items.length; i++) {
+		$('#'+dest).append('<option value="'+items[i].Id+'">'+items[i].User+ ' - ' + new Date(items[i].Time).toLocaleString()+'</option>');
 	    }
 	    $('#'+dest).multiselect({
 		noneSelectedText: 'Compare results',
@@ -460,6 +484,26 @@ function addComparables(rid, pid, dest){
 	    });
 	    $('#'+dest).multiselected = true;
 	});
+    });  
+}
+
+
+function addResults(id, dest, tipe){
+    var d = '#'+dest;
+    $(d).empty();
+    $.getJSON('results?'+tipe+'-id='+id, function(data){
+	var r = data['results'];
+	for(var i = 0; i < r.length; i++) {
+	    $(d).append('<option value="'+r[i].Id+'">'+r[i].Name+'</option>');
+	}
+	loadSubmissionsChart(id, tipe,r[0].Id);
+    }); 
+}
+
+function loadSubmissionsChart(id, tipe, r){
+    var params = {'type':'submission','id':id,'result':r, 'submission-type':tipe};
+    $.getJSON('chart', params, function(data){
+	submissionsChart(data['chart'], tipe);
     });
 }
 

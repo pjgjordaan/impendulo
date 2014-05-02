@@ -366,6 +366,14 @@ func (l Level) Is(level string) bool {
 	}
 }
 
+func NewResultDesc(s string) (*ResultDesc, error) {
+	r := &ResultDesc{}
+	if e := r.Set(s); e != nil {
+		return nil, e
+	}
+	return r, nil
+}
+
 func (r *ResultDesc) Set(s string) error {
 	r.Type = ""
 	r.Name = ""
@@ -412,4 +420,8 @@ func (r *ResultDesc) Raw() string {
 		return s
 	}
 	return s + "-" + r.FileID.Hex()
+}
+
+func (r *ResultDesc) HasCode() bool {
+	return r.Name != ""
 }

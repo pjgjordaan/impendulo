@@ -33,7 +33,7 @@
 	    {{$id := .Id.Hex}}
 	    {{range $i, $line := .Lines}}
 	    {{$laddress := address .}}
-	    <a class="nolink" id="line{{$laddress}}">
+	    <a href="#" id="line{{$laddress}}">
 	      Line {{$line}};
 	    </a>
 	    <script>      
