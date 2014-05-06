@@ -146,7 +146,7 @@ func ServePath(u *url.URL, src string) (string, error) {
 }
 
 func credentials(r *http.Request) (string, string, error) {
-	u, e := GetString(r, "username")
+	u, e := GetString(r, "user-id")
 	if e != nil {
 		return "", "", e
 	}

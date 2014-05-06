@@ -31,6 +31,9 @@ import (
 	"github.com/godfried/impendulo/tool/mongo"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
+
+	"io/ioutil"
+
 	"labix.org/v2/mgo/bson"
 
 	"os"
@@ -90,11 +93,7 @@ func LoadSkeleton(r *http.Request) (string, error) {
 		return "", e
 	}
 	//Save file to filesystem and return path to it.
-	n, e := util.SaveTemp(s.Data)
-	if e != nil {
-		return "", e
-	}
-	return n, nil
+	return util.SaveTemp(s.Data)
 }
 
 //ExportData
@@ -115,5 +114,13 @@ func ExportData(r *http.Request) (string, error) {
 }
 
 func LoadIntlola(r *http.Request) (string, error) {
-	return config.INTLOLA.Path()
+	p, e := config.INTLOLA.Path()
+	if e != nil {
+		return "", e
+	}
+	b, e := ioutil.ReadFile(p)
+	if e != nil {
+		return "", e
+	}
+	return util.SaveTemp(b)
 }

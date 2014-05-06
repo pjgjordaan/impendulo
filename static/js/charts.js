@@ -218,7 +218,7 @@ function timeChart(chartData) {
 		.attr('cy', y(mid));
 	});
     d3.select('#chartHolder').html('');
-    d3.select('#chartHolder').html('<div class="row"><div class="col-md-10"><div id="chart" class="chart" xmlns:xlink="http://www.w3.org/1999/xlink"></div></div><div class="col-md-2"><div class="legend"></div></div></div>"');
+    d3.select('#chartHolder').html('<div class="row"><div class="col-md-10"><div id="chart" class="chart" xmlns:xlink="http://www.w3.org/1999/xlink"></div></div><div class="col-md-2"><div class="legend"></div></div></div>');
    
     var chart = d3.select('#chart')
 	.append('svg:svg')
@@ -228,7 +228,7 @@ function timeChart(chartData) {
 	.attr('transform', 'translate(' + m[3] + ',' + m[0] + ')')
 	.call(zoom);
 
-    $('#chart').append('<div id="chart-tooltip" ></div>');
+    $('#chart').append('<div id="chart-tooltip"></div>');
 
     chart.append('svg:rect')
 	.attr('width', w)
@@ -500,7 +500,7 @@ function showTooltip(d){
     tooltip
 	.append('h5')
 	.attr('class', 'chart-tooltip-line')
-	.text(d.user);
+	.text(d.title);
     tooltip
 	.append('p')
 	.attr('class', 'chart-tooltip-line')

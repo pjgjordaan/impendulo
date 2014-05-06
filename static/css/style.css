@@ -109,6 +109,7 @@ path {
     -moz-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
     box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
     pointer-events: none;
+    display:none;
 }
 
 .chart-tooltip-line{
@@ -161,10 +162,6 @@ path {
     float: right;
 }
 
-.pagination-centre{
-    display: inline-block;
-}
-
 .accordion-inner{
     overflow:auto;
 }
@@ -202,7 +199,6 @@ dl dd{
 
 .tooltip-inner {
     white-space:pre-wrap;
-    background-color:#ff7777 !important;
 }
 
 .code-popover{

@@ -120,9 +120,9 @@ func SubmitArchive(r *http.Request, c *Context) (string, error) {
 	if e != nil {
 		return "Could not read project id.", e
 	}
-	un, m, e := getActiveUser(c)
+	u, e := GetString(r, "user-id")
 	if e != nil {
-		return m, e
+		return "Could not read user.", e
 	}
 	_, a, e := ReadFormFile(r, "archive")
 	if e != nil {
@@ -130,7 +130,7 @@ func SubmitArchive(r *http.Request, c *Context) (string, error) {
 	}
 	//We need to create a submission for this archive so that
 	//it can be added to the db and so that it can be processed
-	s := project.NewSubmission(pid, un, project.ARCHIVE_MODE, util.CurMilis())
+	s := project.NewSubmission(pid, u, project.ARCHIVE_MODE, util.CurMilis())
 	if e = db.Add(db.SUBMISSIONS, s); e != nil {
 		return "Could not create submission.", e
 	}
@@ -391,14 +391,14 @@ func Register(r *http.Request, c *Context) (string, error) {
 
 //DeleteUser removes a user and all data associated with them from the system.
 func DeleteUser(r *http.Request, c *Context) (string, error) {
-	un, e := GetString(r, "username")
+	u, e := GetString(r, "user-id")
 	if e != nil {
 		return "Could not read user.", e
 	}
-	if e = db.RemoveUserById(un); e != nil {
-		return fmt.Sprintf("Could not delete user %s.", un), e
+	if e = db.RemoveUserById(u); e != nil {
+		return fmt.Sprintf("Could not delete user %s.", u), e
 	}
-	return fmt.Sprintf("Successfully deleted user %s.", un), nil
+	return fmt.Sprintf("Successfully deleted user %s.", u), nil
 }
 
 //Logout logs a user out of the system.
@@ -413,7 +413,7 @@ func EditUser(r *http.Request, c *Context) (string, error) {
 	if e != nil {
 		return "Could not read old username.", e
 	}
-	n, e := GetString(r, "user-name")
+	n, e := GetString(r, "user-newid")
 	if e != nil {
 		return "Could not read new username.", e
 	}

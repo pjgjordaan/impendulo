@@ -6,11 +6,16 @@
 {{$adjustment := adjustment .files $current}}
 {{$uid := .ctx.Browse.Uid}}
 {{$sid := .ctx.Browse.Sid}}
-<ul id="filepager" class="pagination pagination-right">
+<ul id="filepager" class="pagination">
   {{$prev := sum $current -1}}
   <li>
-    <a href="displayresult?current={{$prev}}&next={{$current}}">
+    <a href="displayresult?current=0&next=1">
       &laquo;
+    </a>
+  </li>
+  <li>
+    <a href="displayresult?current={{$prev}}&next={{$current}}">
+      &lsaquo;
     </a>
   </li>
   {{range $index, $file := $sliced}}
@@ -35,6 +40,11 @@
   {{$nextnext := sum $next 1}}
   <li>
     <a href="displayresult?current={{$next}}&next={{$nextnext}}">
+      &rsaquo;
+    </a>
+  </li>
+  <li>
+    <a href="displayresult?current={{sum (len .files) -1}}&next=0">
       &raquo;
     </a>
   </li>

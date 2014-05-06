@@ -80,17 +80,18 @@ func (t *FindBugs) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResu
 	//Run Findbugs and load result.
 	r, re := tool.RunCommand(a, nil)
 	rf, e := os.Open(o)
-	if e == nil {
-		nr, e := NewResult(fileId, util.ReadBytes(rf))
-		if e != nil {
-			if re != nil {
-				e = re
-			}
-			return nil, e
+	if e != nil {
+		if re != nil {
+			return nil, re
 		}
-		return nr, nil
-	} else if r.HasStdErr() {
 		return nil, fmt.Errorf("could not run findbugs: %q", string(r.StdErr))
 	}
-	return nil, re
+	nr, e := NewResult(fileId, util.ReadBytes(rf))
+	if e != nil {
+		if re != nil {
+			e = re
+		}
+		return nil, e
+	}
+	return nr, nil
 }

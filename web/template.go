@@ -33,8 +33,6 @@ import (
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/tool/jpf"
-	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
@@ -72,9 +70,6 @@ var (
 		"getBusy":         processing.GetStatus,
 		"slice":           slice,
 		"adjustment":      adjustment,
-		"listeners":       jpf.Listeners,
-		"searches":        jpf.Searches,
-		"rules":           pmd.RuleSet,
 		"tools":           tools,
 		"configtools":     configTools,
 		"unescape":        html.UnescapeString,
@@ -119,23 +114,55 @@ var (
 	baseTemplates []string
 )
 
-const (
-	PAGER_SIZE = 10
-)
+func pagerSize(high int) int {
+	if high < 100 {
+		return 10
+	} else if high < 1000 {
+		return 8
+	}
+	return 6
+}
 
-func sortFiles(ids []interface{}) ([]*project.File, error) {
-	fs := make([]*project.File, len(ids))
-	for i, s := range ids {
+//slice gets a subslice from files which is at most PAGER_SIZE
+//in length with selected within in the subslice.
+func slice(files []*project.File, i int) []*project.File {
+	s := pagerSize(i)
+	if len(files) < s {
+		return files
+	} else if i < s/2 {
+		return files[:s]
+	} else if i+s/2 >= len(files) {
+		return files[len(files)-s:]
+	}
+	return files[i-s/2 : i+s/2]
+}
+
+//adjustment determines the adjustment slice will make to files.
+func adjustment(files []*project.File, i int) int {
+	s := pagerSize(i)
+	if len(files) < s || i < s/2 {
+		return 0
+	} else if i+s/2 >= len(files) {
+		return len(files) - s
+	}
+	return i - s/2
+}
+
+func sortFiles(ids []interface{}) []*project.File {
+	fs := make([]*project.File, 0, len(ids))
+	for _, s := range ids {
 		id, e := convert.Id(s)
 		if e != nil {
-			return nil, e
+			continue
 		}
-		if fs[i], e = db.File(bson.M{db.ID: id}, bson.M{db.TIME: 1}); e != nil {
-			return nil, e
+		f, e := db.File(bson.M{db.ID: id}, bson.M{db.TIME: 1})
+		if e != nil {
+			continue
 		}
+		fs = append(fs, f)
 	}
 	sort.Sort(files(fs))
-	return fs, nil
+	return fs
 }
 
 type files []*project.File
@@ -222,29 +249,6 @@ func insert(a Args, k string, v interface{}) Args {
 //fileCount
 func fileCount(sid bson.ObjectId, t project.Type) (int, error) {
 	return db.Count(db.FILES, bson.M{db.SUBID: sid, db.TYPE: t})
-}
-
-//slice gets a subslice from files which is at most PAGER_SIZE
-//in length with selected within in the subslice.
-func slice(files []*project.File, i int) []*project.File {
-	if len(files) < PAGER_SIZE {
-		return files
-	} else if i < PAGER_SIZE/2 {
-		return files[:PAGER_SIZE]
-	} else if i+PAGER_SIZE/2 >= len(files) {
-		return files[len(files)-PAGER_SIZE:]
-	}
-	return files[i-PAGER_SIZE/2 : i+PAGER_SIZE/2]
-}
-
-//adjustment determines the adjustment slice will make to files.
-func adjustment(files []*project.File, i int) int {
-	if len(files) < PAGER_SIZE || i < PAGER_SIZE/2 {
-		return 0
-	} else if i+PAGER_SIZE/2 >= len(files) {
-		return len(files) - PAGER_SIZE
-	}
-	return i - PAGER_SIZE/2
 }
 
 //submissionCount

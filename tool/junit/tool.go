@@ -114,18 +114,19 @@ func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, 
 	defer os.Remove(of)
 	//Run the tests and load the result
 	r, re := tool.RunCommand(a, nil)
-	rf, e := os.Open(of)
-	if e == nil {
-		nr, e := NewResult(fileId, t.testId, t.test.Name, util.ReadBytes(rf))
-		if e != nil {
-			if re != nil {
-				e = re
-			}
-			return nil, e
+	rf, oe := os.Open(of)
+	if oe != nil {
+		if re != nil {
+			return nil, re
 		}
-		return nr, nil
-	} else if r.HasStdErr() {
 		return nil, fmt.Errorf("could not run junit: %q.", string(r.StdErr))
 	}
-	return nil, re
+	nr, e := NewResult(fileId, t.testId, t.test.Name, util.ReadBytes(rf))
+	if e != nil {
+		if re != nil {
+			e = re
+		}
+		return nil, e
+	}
+	return nr, nil
 }

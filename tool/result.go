@@ -35,6 +35,7 @@ import (
 type (
 	ChartVal struct {
 		Name   string
+		X      int64
 		Y      float64
 		FileId bson.ObjectId
 	}

@@ -9,8 +9,15 @@
 </h2>
 <form class="form-inline centered" role="form" onsubmit="return psc();">
   <div class="form-group">
-    <label for="results">Results For: </label>
-    <select class="form-control select-inline" name="results" id="results">
+    <label for="results">Tool: </label>
+    <select style="width:200px;" class="form-control select-inline" name="results" id="results">
+    </select>
+  </div>
+  <div class="form-group">
+    <label for="score">Score: </label>
+    <select style="width:150px;" class="form-control select-inline" name="score" id="score">
+      <option value="final">Final</option>
+      <option value="average">Average</option>
     </select>
   </div>
   <button type="submit" class="btn btn-default">
@@ -24,7 +31,7 @@
   addResults({{.ctx.Browse.Pid.Hex}}, 'results', 'project');
   }
   function psc(){
-  loadSubmissionsChart({{.ctx.Browse.Pid}},'project',document.getElementById('results').value);
+  loadSubmissionsChart({{.ctx.Browse.Pid}},'project',document.getElementById('results').value,document.getElementById('score').value);
   return false;
   }
 </script>

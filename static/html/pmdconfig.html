@@ -14,28 +14,11 @@
   </div>
   <div class="form-group">
     <label class="col-lg-2 control-label"
-    for="availablerules">Available Rules</label>
+    for="rules">Available Rules</label>
     <div class="col-lg-4">
-      <select class="form-control" name="availablerules" id="availablerules" size="10">
-	{{$rules := rules}}
-	{{range $rules}}
-	<option value={{.Id}}
-		ruleid={{.Id}} rulename={{.Name}} ruledescription={{.Description}}
-		onclick="showdescription('{{.Description}}')"
-		ondblclick="addalert('availablerules','addedrules', this)">
-	  {{.Name}}
-	</option>
-	{{end}}
+      <select class="form-control" name="rules" id="rules" multiple>
       </select>
     </div>
-    <div class="col-lg-4">
-      <span id="description" class="help-block"></span>
-    </div>
-  </div>
-  <div class="form-group">
-    <label class="col-lg-2 control-label" for="addedrules">Added Rules</label>
-    <div class="col-lg-8">
-      <ul class="list-unstyled" name="addedrules" id="addedrules"></ul>
   </div>
   <div class="form-group">
     <div class="col-lg-offset-2 col-lg-3">
@@ -43,4 +26,7 @@
     </div>
   </div>
 </form>
+<script>
+  addPMDRules('rules'); 
+</script>
 {{end}}

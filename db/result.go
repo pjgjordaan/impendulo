@@ -370,27 +370,28 @@ func ResultNames(sid bson.ObjectId, fname string) (map[string]map[string][]inter
 	}
 	
 };`,
-		Reduce: `function(n, vals) {
+		Reduce: `function(name, vals) {
         var r = {};
         var added = {};
         for(i in vals){
-            if(vals[i] in added){
-                continue;
-            }
-            added[t+n] = true;
             var t = vals[i].type;
             var n = vals[i].name;
             var id = vals[i].id;
+            var k = t+n;
+            if(k in added){
+                continue;
+            }
+            added[k] = true;
             if(!(t in r)){
                 r[t] = {};
             } 
-            if(n == ""){
+            if(n === ""){
                 continue;
             }
             if(!(n in r[t])){
                 r[t][n] = [];
             } 
-            if(id == ""){
+            if(id === ""){
                 continue;
             }
             r[t][n].push(id);

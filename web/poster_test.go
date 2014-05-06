@@ -44,35 +44,35 @@ type postHolder struct {
 
 func TestLogin(t *testing.T) {
 	requests := []postHolder{
-		postHolder{"/login?username=user&password=password", true},
-		postHolder{"/login?username=a&password=password", false},
-		postHolder{"/login?username=user&password=b", false},
+		postHolder{"/login?user-id=user&password=password", true},
+		postHolder{"/login?user-id=a&password=password", false},
+		postHolder{"/login?user-id=user&password=b", false},
 		postHolder{"/password=password", false},
-		postHolder{"/login?username=user&password=", false},
-		postHolder{"/login?username=&password=password", false},
+		postHolder{"/login?user-id=user&password=", false},
+		postHolder{"/login?user-id=&password=password", false},
 	}
 	testUserFunc(t, Login, requests)
 }
 
 func TestRegister(t *testing.T) {
 	requests := []postHolder{
-		postHolder{"/login?username=user&password=password", false},
-		postHolder{"/login?username=a&password=password", true},
-		postHolder{"/login?username=user&password=b", false},
+		postHolder{"/login?user-id=user&password=password", false},
+		postHolder{"/login?user-id=a&password=password", true},
+		postHolder{"/login?user-id=user&password=b", false},
 		postHolder{"/password=password", false},
-		postHolder{"/login?username=user&password=", false},
-		postHolder{"/login?username=&password=password", false},
+		postHolder{"/login?user-id=user&password=", false},
+		postHolder{"/login?user-id=&password=password", false},
 	}
 	testUserFunc(t, Register, requests)
 }
 
 func TestDeleteUser(t *testing.T) {
 	requests := []postHolder{
-		postHolder{"/deleteuser?username=user", true},
-		postHolder{"/deleteuser?username=user", false},
-		postHolder{"/deleteuser?username=", false},
+		postHolder{"/deleteuser?user-id=user", true},
+		postHolder{"/deleteuser?user-id=user", false},
+		postHolder{"/deleteuser?user-id=", false},
 		postHolder{"/password=password", false},
-		postHolder{"/deleteuser?username=aaaa", false},
+		postHolder{"/deleteuser?user-id=aaaa", false},
 	}
 	testUserFunc(t, DeleteUser, requests)
 }

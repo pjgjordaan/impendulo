@@ -75,6 +75,7 @@ const (
 	INFO      = "info"
 	DATA      = "data"
 	FILEID    = "fileid"
+	TESTID    = "testid"
 	SKELETON  = "skeleton"
 	REPORT    = "report"
 	STATUS    = "status"

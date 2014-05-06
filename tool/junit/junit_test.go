@@ -28,6 +28,7 @@ import (
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
+
 	"labix.org/v2/mgo/bson"
 
 	"os"
@@ -54,9 +55,9 @@ func TestRun(t *testing.T) {
 	if e = util.SaveFile(target.FilePath(), validFile); e != nil {
 		t.Errorf("Could not save file %q", e)
 	}
-	dataBytes, e := util.ZipMap(dataMap)
+	dataBytes, e := util.ZipMap(dataMap) //ioutil.ReadFile("data.zip")
 	if e != nil {
-		t.Errorf("Could not zip map %q", e)
+		t.Error("Could not read data")
 	}
 	testTarget := tool.NewTarget("AllTests.java", "testing", filepath.Join(location, bson.NewObjectId().Hex()), tool.JAVA)
 	if e = util.SaveFile(testTarget.FilePath(), testBytes); e != nil {
@@ -86,17 +87,26 @@ func TestRun(t *testing.T) {
 
 var validFile = []byte(`
 package triangle;
+ 
 public class Triangle {
-	public int maxpath(int[][] triangle) {
-		int height = triangle.length - 2;
-		for (int i = height; i >= 1; i--) {
-			for (int j = 0; j <= i; j++) {
-				triangle[i][j] += triangle[i + 1][j + 1] > triangle[i + 1][j] ? triangle[i + 1][j + 1]
-						: triangle[i + 1][j];
-			}
-		}
-		return triangle[0][0];
-	}
+ 
+    public int maxpath(int[][] tri) {
+        return maxsubpath(0, 0, tri);
+    }
+     
+    public int maxsubpath(int rootx, int rooty, int[][] tri) {
+        if (rootx + 1 == tri.length) // base case
+            return tri[rootx][rooty];
+         
+        int max = 0;
+         
+        for (int j = 0; j < tri[rootx].length; j++) {
+            int subpath = maxsubpath(rootx + 1, j, tri);
+            if (max < subpath)
+                max = subpath;
+        }
+        return max;
+    }
 }
 `)
 

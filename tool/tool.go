@@ -60,7 +60,7 @@ const (
 	C    Language = "C"
 	//The maximum size in bytes that a ToolResult is allowed to have.
 	MAX_SIZE  = 16000000
-	TIMELIMIT = 30 * time.Second
+	TIMELIMIT = 60 * time.Second
 )
 
 var (

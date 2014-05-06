@@ -218,12 +218,10 @@ func CreateJPF(r *http.Request, c *Context) (string, error) {
 func readProperties(r *http.Request) (map[string][]string, error) {
 	p := make(map[string][]string)
 	//Read configured listeners and search.
-	al, e := GetStrings(r, "addedlisteners")
-	if e == nil {
+	if al, e := GetStrings(r, "listeners"); e == nil {
 		p["listener"] = al
 	}
-	s, e := GetString(r, "addedsearches")
-	if e == nil {
+	if s, e := GetString(r, "search"); e == nil {
 		p["search.class"] = []string{s}
 	}
 	o, e := GetString(r, "other")
@@ -279,7 +277,7 @@ func CreatePMD(r *http.Request, c *Context) (string, error) {
 	if e != nil {
 		return "Could not read project id.", e
 	}
-	s, e := GetStrings(r, "rule-id")
+	s, e := GetStrings(r, "rules")
 	if e != nil {
 		return "Could not read rules.", e
 	}

@@ -22,136 +22,68 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-function movevalue(srcParentId, destParentId, src) {
-    var dest = document.createElement('option');
-    dest.innerHTML = src.innerHTML;
-    dest.setAttribute('value', src.value);
-    dest.setAttribute('onclick', 'movevalue("'+destParentId+'", "'+srcParentId+'", this)');
-    var destParent = document.getElementById(destParentId);
-    var srcParent = document.getElementById(srcParentId);
-    srcParent.removeChild(src);
-    if(destParent.getAttribute('added') === 'true'){
-	dest.setAttribute('selected', true);
-    } else{
-	var nodes = srcParent.childNodes;
-	for(var i=0; i<nodes.length; i++) {
-	    if (nodes[i].nodeName.toLowerCase() == 'option') {
-		nodes[i].setAttribute('selected', true);
-	    }
+function addJPFListeners(dest){
+    $.getJSON('jpflisteners', function(data){   
+	$('#'+dest).empty();
+	for(var i in data.listeners) {
+	    var v =data.listeners[i].Package+'.'+data.listeners[i].Name; 
+	    $('#'+dest).append('<option value="'+v+'">'+v+'</option>');
 	}
-    }
-    destParent.appendChild(dest);
+	$('#'+dest).multiselect({
+	    selectedText: "# of # listeners selected",
+	    noneSelectedText: "Select listeners",
+	    classes: "multiselect-listeners"
+	});
+	$('#'+dest).multiselected = true;
+    });
 }
 
-function unhide(it, box) {
-    var check = (box.checked) ? 'block' : 'none';
-    document.getElementById(it).style.display = check;
+
+function addJPFSearches(dest){
+    $.getJSON('jpfsearches', function(data){   
+	$('#'+dest).empty();
+	for(var i in data.searches) {
+	    var v =data.searches[i].Package+'.'+data.searches[i].Name; 
+	    $('#'+dest).append('<option value="'+v+'">'+v+'</option>');
+	}
+    });
 }
 
-function replacevalue(srcParentID, destID, src) {
-    var dest = document.getElementById(destID);
-    if(dest === null){
-	return;
-    }
-    var srcParent = document.getElementById(srcParentID);
-    if(dest.value != ''){
-	var newChild = document.createElement('option');
-	newChild.innerHTML = dest.value;
-	newChild.setAttribute('value', dest.value);
-	newChild.setAttribute('onclick', 'replacevalue("'+srcParentID+'", "'+destID+'", this)');
-    	srcParent.appendChild(newChild);
-    }
-    dest.setAttribute('value', src.value);
-    dest.setAttribute('onclick', 'movevalueback("'+srcParentID+'", this)');
-    srcParent.removeChild(src);
-}
-
-function movevalueback(destParent, src) {
-    var dest = document.createElement('option');
-    dest.innerHTML = src.value;
-    dest.setAttribute('value', src.value);
-    dest.setAttribute('onclick', 'replacevalue("'+destParent+'", "'+src.getAttribute('id')+'", this)');
-    document.getElementById(destParent).appendChild(dest);
-    src.setAttribute('value', '');
-}
-
-function showdescription(description) {
-    document.getElementById('description').innerHTML = description;
-}
-
-function movedescriptionvalue(srcParent, destParent, srcId) {
-    var src = document.getElementById(srcId);
-    var id = src.getAttribute('ruleid');
-    var name = src.getAttribute('rulename');
-    var description = src.getAttribute('ruledescription');
-    var dest = document.createElement('option');
-    dest.innerHTML = name;
-    dest.setAttribute('ruleid', id);
-    dest.setAttribute('rulename', name);
-    dest.setAttribute('ruledescription', description);
-    dest.setAttribute('onclick', 'showdescription("'+description+'")');
-    dest.setAttribute('ondblclick', 'addalert("'+destParent+'", "'+srcParent+'", this)');
-    document.getElementById(destParent).appendChild(dest);
-    document.getElementById(srcParent).removeChild(src);
-}
-
-function addalert(srcParent, destParent, src) {
-    var id = src.getAttribute('ruleid');
-    var name = src.getAttribute('rulename');
-    var description = src.getAttribute('ruledescription');
-    var dest = document.createElement('div');
-    dest.setAttribute('class', 'alert alert-dismissable alert-list');
-    dest.setAttribute('id', id);
-    dest.setAttribute('rule-id', id);
-    dest.setAttribute('rule-name', name);
-    dest.setAttribute('rule-description', description);
-    var destButton = document.createElement('button');
-    destButton.setAttribute('class', 'close');
-    destButton.setAttribute('type', 'button');
-    destButton.setAttribute('data-dismiss', 'alert');
-    destButton.setAttribute('aria-hidden', 'true');
-    destButton.setAttribute('onclick', 'movedescriptionvalue("'+destParent+'","'+srcParent+'", "'+id+'")');
-    destButton.innerHTML = '&times;';
-    var destName = document.createElement('strong');
-    destName.innerHTML = name+': ';
-    var destDescription = document.createElement('small');
-    destDescription.setAttribute('class', 'text-muted');
-    destDescription.innerHTML = description;
-    var destAnchor = document.createElement('input');
-    destAnchor.setAttribute('type', 'hidden');
-    destAnchor.setAttribute('name', 'rule-id');
-    destAnchor.setAttribute('value', id);
-    dest.appendChild(destButton);
-    dest.appendChild(destName);
-    dest.appendChild(destDescription);
-    dest.appendChild(destAnchor);
-    document.getElementById(destParent).appendChild(dest);
-    document.getElementById(srcParent).removeChild(src);
-}
-
-function highlight(){
-    SyntaxHighlighter.defaults['toolbar'] = false;
-    SyntaxHighlighter.defaults['class-name'] = 'error';
-    SyntaxHighlighter.all();
+function addPMDRules(dest){
+    $.getJSON('pmdrules', function(data){   
+	$('#'+dest).empty();
+	for(var i in data.rules) {
+	    $('#'+dest).append('<option description="'+data.rules[i].Description+'" value="'+data.rules[i].Id+'">'+data.rules[i].Name+'</option>');
+	}
+	$('#'+dest).multiselect({
+	    selectedText: "# of # rules selected",
+	    noneSelectedText: "Select rules",
+	    classes: "multiselect-rules"
+	});
+	$('.multiselect-rules li').tooltip({
+	    title: function(){
+		return $('option[value="'+$(this).find('input').val()+'"]').attr('description');
+	    },
+	    placement: 'left',
+	    container: 'body'
+	});
+	$('#'+dest).multiselected = true;
+    });
 }
 
 function addSkeletons(src, dest, skeletonMap){
-    var srcList = document.getElementById(src);
-    var id = srcList.options[srcList.selectedIndex].value;
+    var id = $('#'+src).val();
     $.getJSON('skeletons?project-id='+id, function(data){   
-	var destList = document.getElementById(dest);
-	destList.options.length = 0;
+	$('#'+dest).empty();
 	if (data.skeletons === null || data.skeletons.length === 0){
 	    return;
 	}
 	for(var i = 0; i < data.skeletons.length; i++) {
-	    var option = document.createElement('option');
-	    option.value = data.skeletons[i].Id;
-	    option.text = data.skeletons[i].Name;
-	    destList.add(option);
+	    $('#'+dest).append('<option value="'+data.skeletons[i].Id+'">'+data.skeletons[i].Name+'</option>');
 	}
     });
 }
+
 
 function populate(src, toolDest, userDest){
     ajaxSelect(src, toolDest, 'tools?project-id=', 'tools');
@@ -159,8 +91,7 @@ function populate(src, toolDest, userDest){
 }
 
 function ajaxSelect(src, dest, url, name){
-    var srcList = document.getElementById(src);
-    var val = srcList.options[srcList.selectedIndex].value;
+    var val = $('#'+src).val();
     $.getJSON(url+val, function(data){   
 	$('#'+dest).multiselect();
 	$('#'+dest).multiselect('destroy');
@@ -448,7 +379,6 @@ function ajaxChart(vals){
     var subs = [vals.subID];
     if(vals.src !== undefined){
 	subs = subs.concat($('#' + vals.src).val());
-	$('#'+vals.src).multiselect('uncheckAll');
     }
     var params = {'type':'file','submissions': subs, 'file': vals.file, 'result': vals.result};
     if(vals.testfileID !== undefined){
@@ -464,7 +394,7 @@ function ajaxChart(vals){
 }
 
 
-function addComparables(rid, pid, dest){
+function addComparables(rid, pid, dest, user){
     $('#'+dest).multiselect();
     $('#'+dest).multiselect('destroy');
     $('#'+dest).empty();
@@ -476,6 +406,9 @@ function addComparables(rid, pid, dest){
 	$.getJSON('submissions?project-id='+pid, function(data){
 	    var items = data['submissions'];
 	    for(var i = 0; i < items.length; i++) {
+		if(items[i].User === user){
+		    continue;
+		}
 		$('#'+dest).append('<option value="'+items[i].Id+'">'+items[i].User+ ' - ' + new Date(items[i].Time).toLocaleString()+'</option>');
 	    }
 	    $('#'+dest).multiselect({
@@ -496,12 +429,12 @@ function addResults(id, dest, tipe){
 	for(var i = 0; i < r.length; i++) {
 	    $(d).append('<option value="'+r[i].Id+'">'+r[i].Name+'</option>');
 	}
-	loadSubmissionsChart(id, tipe,r[0].Id);
+	loadSubmissionsChart(id, tipe,r[0].Id,$('#score').val());
     }); 
 }
 
-function loadSubmissionsChart(id, tipe, r){
-    var params = {'type':'submission','id':id,'result':r, 'submission-type':tipe};
+function loadSubmissionsChart(id, tipe, r,score){
+    var params = {'type':'submission','id':id,'result':r, 'submission-type':tipe,'score':score};
     $.getJSON('chart', params, function(data){
 	submissionsChart(data['chart'], tipe);
     });

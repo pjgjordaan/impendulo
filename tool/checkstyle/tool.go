@@ -82,18 +82,19 @@ func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, 
 	defer os.Remove(o)
 	r, re := tool.RunCommand(a, nil)
 	rf, e := os.Open(o)
-	if e == nil {
-		//Tests ran successfully.
-		nr, e := NewResult(fileId, util.ReadBytes(rf))
-		if e != nil {
-			if re != nil {
-				e = re
-			}
-			return nil, e
+	if e != nil {
+		if re != nil {
+			return nil, re
 		}
-		return nr, nil
-	} else if r.HasStdErr() {
 		return nil, fmt.Errorf("could not run checkstyle: %q", string(r.StdErr))
 	}
-	return nil, re
+	//Tests ran successfully.
+	nr, e := NewResult(fileId, util.ReadBytes(rf))
+	if e != nil {
+		if re != nil {
+			e = re
+		}
+		return nil, e
+	}
+	return nr, nil
 }

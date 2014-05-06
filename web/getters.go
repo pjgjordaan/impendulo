@@ -183,11 +183,11 @@ func _displayResult(r *http.Request, c *Context) (Args, error) {
 	if e != nil {
 		return nil, e
 	}
-	t := []string{"analysisview", "pager", "srcanalysis", ""}
+	t := []string{"analysisview", "pager", ""}
 	if !isError(cr) || isError(nr) {
-		t[3] = cr.Template()
+		t[2] = cr.Template()
 	} else {
-		t[3] = nr.Template()
+		t[2] = nr.Template()
 	}
 	return Args{
 		"files": fs, "currentFile": cf, "currentResult": cr, "results": rs,
