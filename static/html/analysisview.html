@@ -7,25 +7,127 @@
 {{$rd := .ctx.Browse.Result}}
 {{$fileName := .ctx.Browse.File}}
 {{template "breadcrumb" .}}
-<h4 class="text-center">
-  <small>user</small> {{.ctx.Browse.Uid}} 
-  <small>project</small> {{$project}}
-  <small>file</small> {{.ctx.Browse.File}}   
-</h4>
+<ul class="nav nav-tabs">
+  <li class="dropdown">
+    <a href="#" data-toggle="dropdown" role="button"
+       id="project-dropdown-label" class="dropdown-toggle">
+      <h4>
+	<small>project</small> {{$project}} <span class="caret"></span> 
+      </h4>
+    </a>
+    <ul class="dropdown-menu" role="menu" aria-labelledby="project-dropdown-label">
+      {{$projects := projects}}
+      {{range $projects}}
+      <li><a href="getsubmissions?project-id={{.Id.Hex}}">{{.Name}}</a></li>
+      {{end}}
+    </ul>
+  </li>
+  <li class="dropdown">
+    <a class="dropdown-toggle no-decoration" data-toggle="dropdown" href="#">
+      <h4>
+	<small>user</small> {{.ctx.Browse.Uid}} <span class="caret"></span>
+      </h4> 
+    </a>
+    <ul class="dropdown-menu" role="menu">
+      {{$users := users}}
+      {{range $users}}
+      <li><a href="getsubmissions?user-id={{.}}">{{.}}</a></li>
+      {{end}}
+    </ul>
+  </li>
+  <li class="dropdown">
+    <a href="#" data-toggle="dropdown" role="button"
+       id="submission-dropdown-label" class="dropdown-toggle">
+      <h4>
+	{{$sub := sub .ctx.Browse.Sid}}
+	<small>submission</small> {{date $sub.Time}} <span class="caret"></span> 
+      </h4>
+    </a>
+    <ul class="dropdown-menu" role="menu" aria-labelledby="submission-dropdown-label">
+      {{$subs := .ctx.Browse.Submissions}}
+      {{range $subs}}
+      <li><a href="displayresult?submission-id={{.Id.Hex}}">
+	  {{.Format (project .ProjectId)}}
+      </a></li>
+      {{end}}
+    </ul>
+  </li>
+  <li class="dropdown">
+    <a href="#" data-toggle="dropdown" role="button"
+       id="file-dropdown-label" class="dropdown-toggle">
+      <h4>
+	<small>file</small> {{.ctx.Browse.File}} <span class="caret"></span> 
+      </h4>
+    </a>
+    <ul class="dropdown-menu" role="menu" aria-labelledby="file-dropdown-label">
+      {{$files := fileinfos .ctx.Browse.Sid}}
+      {{range $files}}
+      <li><a href="displayresult?file={{.Name}}">
+	  {{.Name}}
+      </a></li>
+      {{end}}
+    </ul>
+  </li>
+  <li class="dropdown">
+    <a href="#" data-toggle="dropdown" role="button"
+       id="tool-dropdown-label" class="dropdown-toggle">
+      <h4>
+	<small>tool</small> {{.ctx.Browse.Result.Format}} <span class="caret"></span> 
+      </h4>
+    </a>
+    <ul class="dropdown-menu" role="menu" aria-labelledby="tool-dropdown-label">
+      {{$results := .results}}
+      {{range $k, $v := $results}}  
+      {{if emptyM $v}}
+      <li>
+	<a href="displayresult?result={{$k}}">
+	  {{$k}}
+	</a>
+      </li>
+      {{else}}
+      <li class="dropdown-submenu">
+	<a tabindex="-1" href="#">{{$k}}</a>
+	<ul class="dropdown-menu" role="menu">
+	  {{range $k2, $v2 := $v}}
+	  {{if emptyS $v2}}
+	  <li>
+		<a href="displayresult?result={{$k}}:{{$k2}}">
+		  {{$k2}}
+		</a>
+	      </li>
+	      {{else}}
+	  <li class="dropdown-submenu">
+	    <a tabindex="-1" href="#">{{$k2}}</a>
+	    <ul class="dropdown-menu" role="menu">
+	      {{$files := sortFiles $v2}}
+	      {{range $files}}
+	      <li>
+		<a href="displayresult?result={{$k}}:{{$k2}}-{{.Id.Hex}}">
+		  {{date .Time}}
+		</a>
+	      </li>
+	      {{end}}
+	    </ul>
+	  </li>   
+	  {{end}}
+	  {{end}}
+	</ul>
+      </li>
+      {{end}}
+      {{end}}
+    </ul>
+  </li>
+</ul>
 {{if $rd.HasCode}}
 <h4 class="text-center">
-  <small>tool</small> <a href="#" id="a-toolcode">{{$rd.Format}}</a>
+  <a href="#" id="a-toolcode">{{$rd.Format}}</a>
 </h4>
 <script>
   $('#a-toolcode').click(function(){
-  showToolCode({{$rd.Raw}},{{.ctx.Browse.Pid}},{{$rd.Format}});
+  showToolCode({{$rd.Raw}},{{.ctx.Browse.Pid.Hex}},{{$rd.Format}});
   return false;
   });
 </script>
-{{else}}
-<h4 class="text-center">
-  <small>tool</small> {{$rd.Format}}
-</h4>
 {{end}}
 {{if hasChart .currentResult .nextResult}}
 <script>
@@ -164,7 +266,8 @@
 {{end}}
 {{if (eq $rd.Type "Code")}}
 <script>
-  highlight();
+  SyntaxHighlighter.defaults['toolbar'] = false;
+  SyntaxHighlighter.highlight(); 
 </script>
 {{end}}
 {{end}}

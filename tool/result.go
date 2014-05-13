@@ -53,6 +53,7 @@ type (
 		GetId() bson.ObjectId
 		//Retrieves the file associated with the result's db id.
 		GetFileId() bson.ObjectId
+		GetTestId() bson.ObjectId
 		//Retrieves a summary of this result.
 		Summary() *Summary
 		//Retrieves this result's tool name.

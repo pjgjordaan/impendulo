@@ -54,42 +54,46 @@ type (
 
 var (
 	funcs = template.FuncMap{
-		"databases":       db.Databases,
-		"projectName":     projectName,
-		"date":            util.Date,
-		"setBreaks":       func(s string) template.HTML { return template.HTML(setBreaks(s)) },
-		"address":         func(i interface{}) string { return fmt.Sprint(&i) },
-		"base":            filepath.Base,
-		"shortName":       util.ShortName,
-		"sum":             sum,
-		"percent":         percent,
-		"round":           round,
-		"langs":           tool.Langs,
-		"submissionLang":  submissionLang,
-		"submissionCount": submissionCount,
-		"getBusy":         processing.GetStatus,
-		"slice":           slice,
-		"adjustment":      adjustment,
-		"tools":           tools,
-		"configtools":     configTools,
-		"unescape":        html.UnescapeString,
-		"escape":          url.QueryEscape,
-		"snapshots":       func(id bson.ObjectId) (int, error) { return fileCount(id, project.SRC) },
-		"launches":        func(id bson.ObjectId) (int, error) { return fileCount(id, project.LAUNCH) },
-		"html":            func(s string) template.HTML { return template.HTML(s) },
-		"string":          func(b []byte) string { return string(bytes.TrimSpace(b)) },
-		"args":            args,
-		"insert":          insert,
-		"isError":         isError,
-		"hasChart":        hasChart,
-		"submissions":     projectSubmissions,
-		"files":           submissionFiles,
-		"projects":        projects,
+		"databases":          db.Databases,
+		"projectName":        projectName,
+		"date":               util.Date,
+		"setBreaks":          func(s string) template.HTML { return template.HTML(setBreaks(s)) },
+		"address":            func(i interface{}) string { return fmt.Sprint(&i) },
+		"base":               filepath.Base,
+		"shortName":          util.ShortName,
+		"sum":                sum,
+		"percent":            percent,
+		"round":              round,
+		"langs":              tool.Langs,
+		"submissionLang":     submissionLang,
+		"sub":                func(id bson.ObjectId) (*project.Submission, error) { return db.Submission(bson.M{db.ID: id}, nil) },
+		"submissionCount":    submissionCount,
+		"getBusy":            processing.GetStatus,
+		"slice":              slice,
+		"adjustment":         adjustment,
+		"tools":              tools,
+		"configtools":        configTools,
+		"unescape":           html.UnescapeString,
+		"escape":             url.QueryEscape,
+		"snapshots":          func(id bson.ObjectId) (int, error) { return fileCount(id, project.SRC) },
+		"launches":           func(id bson.ObjectId) (int, error) { return fileCount(id, project.LAUNCH) },
+		"usertests":          func(id bson.ObjectId) (int, error) { return fileCount(id, project.TEST) },
+		"html":               func(s string) template.HTML { return template.HTML(s) },
+		"string":             func(b []byte) string { return string(bytes.TrimSpace(b)) },
+		"args":               args,
+		"insert":             insert,
+		"isError":            isError,
+		"hasChart":           hasChart,
+		"projectSubmissions": projectSubmissions,
+		"userSubmissions":    userSubmissions,
+		"fileinfos":          _fileinfos,
+		"projects":           projects,
 		"langProjects": func(l string) ([]*project.Project, error) {
 			return db.Projects(bson.M{db.LANG: l}, nil, db.NAME)
 		},
-		"resultNames": func(sid bson.ObjectId, n string) (map[string]map[string][]interface{}, error) {
-			return db.ResultNames(sid, n)
+		"resultNames": func(sid bson.ObjectId, n string) map[string]map[string][]interface{} {
+			rs, _ := db.ResultNames(sid, n)
+			return rs
 		},
 		"users":         func() ([]string, error) { return db.Usernames(nil) },
 		"skeletons":     skeletons,
@@ -109,10 +113,15 @@ var (
 			return len(s) == 0
 		},
 		"sortFiles": sortFiles,
+		"project":   func(id bson.ObjectId) (*project.Project, error) { return db.Project(bson.M{db.ID: id}, nil) },
 	}
 	templateDir   string
 	baseTemplates []string
 )
+
+func _fileinfos(sid bson.ObjectId) ([]*db.FileInfo, error) {
+	return db.FileInfos(bson.M{db.SUBID: sid, db.TYPE: bson.M{db.IN: []project.Type{project.SRC, project.TEST}}})
+}
 
 func pagerSize(high int) int {
 	if high < 100 {
@@ -207,12 +216,12 @@ func skeletons(pid bson.ObjectId) ([]*project.Skeleton, error) {
 	return db.Skeletons(bson.M{db.PROJECTID: pid}, bson.M{db.DATA: 0}, db.NAME)
 }
 
-func projectSubmissions(pid bson.ObjectId) ([]*project.Submission, error) {
-	return db.Submissions(bson.M{db.PROJECTID: pid}, nil, "-"+db.TIME)
+func userSubmissions(uid string) ([]*project.Submission, error) {
+	return db.Submissions(bson.M{db.USER: uid}, nil, "-"+db.TIME)
 }
 
-func submissionFiles(sid bson.ObjectId) ([]*project.File, error) {
-	return db.Files(bson.M{db.SUBID: sid}, nil, 0, "-"+db.TIME)
+func projectSubmissions(pid bson.ObjectId) ([]*project.Submission, error) {
+	return db.Submissions(bson.M{db.PROJECTID: pid}, nil, "-"+db.TIME)
 }
 
 //isError checks whether a result is an ErrorResult.

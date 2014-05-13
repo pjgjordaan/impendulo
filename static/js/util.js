@@ -398,10 +398,14 @@ function addComparables(rid, pid, dest, user){
     $('#'+dest).multiselect();
     $('#'+dest).multiselect('destroy');
     $('#'+dest).empty();
+    $('#'+dest).append('<optgroup id="optgroup-tests" label="Tests"></optgroup>"');
+    $('#'+dest).append('<optgroup id="optgroup-users" label="User Submissions"></optgroup>"');
+    $('#'+dest).append('<optgroup id="optgroup-usertests" label="User Tests"></optgroup>"');
     $.getJSON('comparables?id='+rid, function(cdata){
 	var comp = cdata['comparables'];
 	for(var i = 0; i < comp.length; i++) {
-	    $('#'+dest).append('<option value="'+comp[i].Id+'">'+comp[i].Name+'</option>');
+	    var s = comp[i].User ? '#optgroup-usertests' : '#optgroup-tests';
+	    $(s).append('<option value="'+comp[i].Id+'">'+comp[i].Name+'</option>');
 	}
 	$.getJSON('submissions?project-id='+pid, function(data){
 	    var items = data['submissions'];
@@ -409,8 +413,14 @@ function addComparables(rid, pid, dest, user){
 		if(items[i].User === user){
 		    continue;
 		}
-		$('#'+dest).append('<option value="'+items[i].Id+'">'+items[i].User+ ' - ' + new Date(items[i].Time).toLocaleString()+'</option>');
+		$('#optgroup-users').append('<option value="'+items[i].Id+'">'+items[i].User+ ' \u2192 ' + new Date(items[i].Time).toLocaleString()+'</option>');
 	    }
+	    $.each($('#dest optgroup'), function()
+		   {
+		       if($(this).children().length === 0){
+			   $(this).remove();
+		       }
+		   });
 	    $('#'+dest).multiselect({
 		noneSelectedText: 'Compare results',
 		selectedText: '# selected to compare'

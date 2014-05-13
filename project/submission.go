@@ -26,7 +26,6 @@ package project
 
 import (
 	"fmt"
-
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 )
@@ -104,4 +103,8 @@ func (s *Submission) Result() string {
 //NewSubmission
 func NewSubmission(pid bson.ObjectId, u, m string, t int64) *Submission {
 	return &Submission{bson.NewObjectId(), pid, u, m, t, BUSY}
+}
+
+func (s *Submission) Format(p *Project) string {
+	return fmt.Sprintf("%s \u2192 %s \u2192 %s", p.Name, s.User, util.Date(s.Time))
 }

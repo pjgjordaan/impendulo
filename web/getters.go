@@ -28,7 +28,6 @@ import (
 	"code.google.com/p/gorilla/pat"
 
 	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/util/convert"
 	"labix.org/v2/mgo/bson"
 
@@ -138,9 +137,13 @@ func getFiles(r *http.Request, c *Context) (Args, string, error) {
 	if e != nil {
 		return nil, "Could not retrieve files.", e
 	}
-	f, e := db.FileInfos(bson.M{db.SUBID: c.Browse.Sid, db.TYPE: project.SRC})
+	f, e := _fileinfos(c.Browse.Sid)
 	if e != nil {
 		return nil, "Could not retrieve files.", e
+	}
+	if len(f) == 1 {
+		c.Browse.File = f[0].Name
+		return displayResult(r, c)
 	}
 	return Args{"fileInfo": f, "templates": []string{"fileresult"}}, "", nil
 }
@@ -159,7 +162,7 @@ func _displayResult(r *http.Request, c *Context) (Args, error) {
 	if e != nil {
 		return nil, e
 	}
-	fs, e := Snapshots(c.Browse.Sid, c.Browse.File, c.Browse.Type)
+	fs, e := Snapshots(c.Browse.Sid, c.Browse.File)
 	if e != nil {
 		return nil, e
 	}

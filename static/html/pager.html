@@ -4,8 +4,6 @@
 {{$fileName := .ctx.Browse.File}}
 {{$sliced := slice .files $current}}
 {{$adjustment := adjustment .files $current}}
-{{$uid := .ctx.Browse.Uid}}
-{{$sid := .ctx.Browse.Sid}}
 <ul id="filepager" class="pagination">
   {{$prev := sum $current -1}}
   <li>

@@ -2,11 +2,27 @@
 <!-- This is the breadcrumb which allows us to browse through the --
   -- hierarchy quickly -->
 {{template "breadcrumb" .}}
+<ul class="nav nav-tabs">
+  <li class="dropdown">
+    <a href="#" data-toggle="dropdown" role="button"
+       id="project-dropdown-label" class="dropdown-toggle">
+      <h4>
+	<small>project</small> 
+	{{projectName .ctx.Browse.Pid}} <span class="caret"></span>
+      </h4> 
+    </a>
+    <ul class="dropdown-menu" role="menu" aria-labelledby="project-dropdown-label">
+      {{$projects := projects}}
+      {{range $projects}}
+      <li><a href="getsubmissions?project-id={{.Id.Hex}}">{{.Name}}</a></li>
+      {{end}}
+    </ul>
+  </li>
+</ul>
 <ul class="nav nav-pills">
   <li class="active"><a>Table</a></a></li>
   <li><a href="submissionschartview">Chart</a></li>
 </ul>
-<h2 class="text-center"><small>project</small> {{projectName .ctx.Browse.Pid}}</h2>
 <!-- Here we display a table of the different submissions within this project --
   -- . Included are users' names and date to allow us to differentiate between --
   -- submissions. -->
@@ -17,6 +33,7 @@
       <th>Created</th>
       <th>Snapshots</th>
       <th>Launches</th>
+      <th>Tests</th>
       <th>Status</th>
     </tr>
   </thead>
@@ -35,6 +52,9 @@
       </a></td>
       <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
 	  {{launches .Id}}
+      </a></td>
+      <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
+	  {{usertests .Id}}
       </a></td>
       <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
 	  {{.Result}}

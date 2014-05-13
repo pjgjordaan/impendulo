@@ -57,6 +57,10 @@ func (this *Result) SetReport(report tool.Report) {
 	}
 }
 
+func (this *Result) GetTestId() bson.ObjectId {
+	return ""
+}
+
 //OnGridFS
 func (this *Result) OnGridFS() bool {
 	return this.GridFS

@@ -28,11 +28,11 @@ import (
 	"code.google.com/p/gorilla/sessions"
 
 	"encoding/gob"
-	"errors"
 	"fmt"
 
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
 	"labix.org/v2/mgo/bson"
@@ -59,7 +59,6 @@ type (
 		Current, Next int
 		DisplayCount  int
 		Level         Level
-		Type          project.Type
 		Result        *ResultDesc
 	}
 	ResultDesc struct {
@@ -173,27 +172,12 @@ func LoadContext(s *sessions.Session) *Context {
 	return c
 }
 
-func (b *Browse) Src() (string, error) {
-	if b.Type == project.SRC && b.File != "" {
-		return b.File, nil
-	}
-	return "", errors.New("no source file available")
-}
-
-func (b *Browse) Test() (string, error) {
-	if b.Type == project.TEST && b.File != "" {
-		return b.File, nil
-	}
-	return "", errors.New("no source file available")
-}
-
 func (b *Browse) ClearSubmission() {
 	b.File = ""
 	b.Result = &ResultDesc{}
 	b.Current = 0
 	b.Next = 0
 	b.DisplayCount = 10
-	b.Type = project.SRC
 }
 
 func (b *Browse) SetDisplayCount(r *http.Request) error {
@@ -225,11 +209,31 @@ func (b *Browse) SetSid(r *http.Request) error {
 	if e != nil {
 		return e
 	}
+	p, e := db.Project(bson.M{db.ID: s.ProjectId}, nil)
+	if e != nil {
+		return e
+	}
+	d, e := NewResultDesc(tool.CODE)
+	if e != nil {
+		return e
+	}
 	b.ClearSubmission()
 	b.Sid = id
 	b.Pid = s.ProjectId
 	b.Uid = s.User
+	b.File = p.Name + ".java"
+	b.Result = d
 	return nil
+}
+
+func (b *Browse) Submissions() ([]*project.Submission, error) {
+	m := bson.M{}
+	if b.IsUser {
+		m[db.USER] = b.Uid
+	} else {
+		m[db.PROJECTID] = b.Pid
+	}
+	return db.Submissions(m, nil, "-"+db.TIME)
 }
 
 func (b *Browse) SetPid(r *http.Request) error {
@@ -255,12 +259,7 @@ func (b *Browse) SetFile(r *http.Request) error {
 	if e != nil {
 		return nil
 	}
-	f, e := db.File(bson.M{db.SUBID: b.Sid, db.NAME: n}, bson.M{db.TYPE: 1})
-	if e != nil {
-		return e
-	}
 	b.File = n
-	b.Type = f.Type
 	b.Current = 0
 	b.Next = 0
 	return nil
@@ -304,7 +303,7 @@ func (b *Browse) SetFileIndices(r *http.Request) error {
 	if b.File == "" {
 		return nil
 	}
-	fs, e := Snapshots(b.Sid, b.File, b.Type)
+	fs, e := Snapshots(b.Sid, b.File)
 	if e != nil {
 		return e
 	}
@@ -404,11 +403,15 @@ func (r *ResultDesc) Format() string {
 	if r.FileID == "" {
 		return s
 	}
+	return s + " \u2192 " + r.Date()
+}
+
+func (r *ResultDesc) Date() string {
 	f, e := db.File(bson.M{db.ID: r.FileID}, bson.M{db.TIME: 1})
 	if e != nil {
-		return s + " \u2192 No File Found"
+		return "No File Found"
 	}
-	return s + " \u2192 " + util.Date(f.Time)
+	return util.Date(f.Time)
 }
 
 func (r *ResultDesc) Raw() string {

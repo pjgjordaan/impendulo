@@ -2,14 +2,26 @@
 <!-- This is the breadcrumb which allows us to browse through the --
   -- hierarchy quickly -->
 {{template "breadcrumb" .}}
+<ul class="nav nav-tabs">
+  <li class="dropdown">
+    <a href="#" data-toggle="dropdown" role="button"
+       id="user-dropdown-label" class="dropdown-toggle">
+      <h4>
+	<small>user</small> {{.ctx.Browse.Uid}} <span class="caret"></span>
+      </h4> 
+    </a>
+    <ul class="dropdown-menu" role="menu" aria-labelledby="user-dropdown-label">
+      {{$users := users}}
+      {{range $users}}
+      <li><a href="getsubmissions?user-id={{.}}">{{.}}</a></li>
+      {{end}}
+    </ul>
+  </li>
+</ul>
 <ul class="nav nav-pills">
   <li class="active"><a href="#">Table</a></li>
   <li><a href="submissionschartview">Chart</a></li>
 </ul>
-<h2 class="text-center"><small>user</small> {{.ctx.Browse.Uid}}</h2>
-<!-- Here we display a table of the different submissions this user --
-  -- has made. Included are date and project name to differentiate between --
-  -- submissions. -->
 <table class="table table-hover table-striped">
   <thead><tr class="info">
       <th>Project</th>
@@ -19,7 +31,7 @@
       <th>Status</th>
   </tr></thead>
   <tbody data-provides="rowlink" >
-    {{ range .subRes}}
+    {{range .subRes}}
     {{$subId := .Id.Hex}}
     <tr>
       <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">

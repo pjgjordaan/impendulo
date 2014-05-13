@@ -78,6 +78,10 @@ func (r *Result) GetId() bson.ObjectId {
 	return r.Id
 }
 
+func (this *Result) GetTestId() bson.ObjectId {
+	return ""
+}
+
 //GetFileId
 func (r *Result) GetFileId() bson.ObjectId {
 	return r.FileId

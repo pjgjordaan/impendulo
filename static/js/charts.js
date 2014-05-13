@@ -341,7 +341,7 @@ function timeChart(chartData) {
     for(var i = 0; i < legendData.length; i ++){
 	var e = {
 	    id: 'group' + legendData[i].values[0].groupid,
-	    text: legendData[i].values[0].user,
+	    text: legendData[i].values[0].title,
 	    state:{
 		opened: true
 	    },

@@ -2,9 +2,11 @@ package web
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"labix.org/v2/mgo/bson"
+
 	"testing"
 )
 
@@ -17,7 +19,7 @@ func TestSnapshots(t *testing.T) {
 		t.Error(err)
 	}
 	specs := []spec{{"Triangle.java", project.SRC, s.Id, 5},
-		{"Triangle.java", project.LAUNCH, s.Id, 3},
+		{"Triangle", project.LAUNCH, s.Id, 3},
 		{"Helper.java", project.SRC, s.Id, 4},
 		{"UserTests.java", project.TEST, s.Id, 2},
 		{"intlola.zip", project.ARCHIVE, s.Id, 1},
@@ -42,7 +44,7 @@ func testSnapshots(s spec, t *testing.T) {
 			t.Error(err)
 		}
 	}
-	files, err := Snapshots(s.id, s.name, s.tipe)
+	files, err := Snapshots(s.id, s.name)
 	if err != nil {
 		t.Error(err)
 	}

@@ -67,6 +67,10 @@ func (this *Result) OnGridFS() bool {
 	return this.GridFS
 }
 
+func (this *Result) GetTestId() bson.ObjectId {
+	return ""
+}
+
 //String allows us to print this struct nicely.
 func (this *Result) String() string {
 	return fmt.Sprintf("Id: %q; FileId: %q; Name: %s; \nReport: %s\n",

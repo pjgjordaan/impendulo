@@ -29,6 +29,7 @@ type (
 	AJAX   func(*http.Request) ([]byte, error)
 	Select struct {
 		Id, Name string
+		User     bool
 	}
 	Selects []*Select
 )
@@ -131,17 +132,32 @@ func ajaxComparables(r *http.Request) ([]byte, error) {
 	if e != nil {
 		return nil, e
 	}
-	ts, e := db.JUnitTests(bson.M{db.PROJECTID: s.ProjectId}, bson.M{db.NAME: 1, db.TYPE: 1})
+	ts, e := db.JUnitTests(bson.M{db.PROJECTID: s.ProjectId, db.NAME: bson.M{db.NE: tr.GetName() + ".java"}, db.TYPE: bson.M{db.NE: junit.USER}}, bson.M{db.NAME: 1, db.TYPE: 1})
 	if e != nil {
 		return nil, e
 	}
-	cmp := make([]*Select, 0, len(ts))
-	for _, t := range ts {
+	m := bson.M{db.SUBID: f.SubId, db.TYPE: project.TEST}
+	if ut, e := db.File(bson.M{db.ID: tr.GetTestId()}, bson.M{db.NAME: 1}); e == nil {
+		m[db.ID] = bson.M{db.NE: ut.Id}
+	} else if !db.Contains(db.TESTS, bson.M{db.ID: tr.GetTestId()}) {
+		return nil, e
+	}
+	uts, e := db.Files(m, bson.M{db.DATA: 0}, 0, "-"+db.TIME)
+	if e != nil {
+		return nil, e
+	}
+	cmp := make([]*Select, len(ts)+len(uts))
+	for i, t := range ts {
 		n, _ := util.Extension(t.Name)
-		if n == tr.GetName() {
-			continue
+		cmp[i] = &Select{tr.GetType() + ":" + n, tr.GetType() + " \u2192 " + n, false}
+	}
+	for i, ut := range uts {
+		n, _ := util.Extension(ut.Name)
+		rd, e := NewResultDesc(tr.GetType() + ":" + n + "-" + ut.Id.Hex())
+		if e != nil {
+			return nil, e
 		}
-		cmp = append(cmp, &Select{tr.GetType() + ":" + n, tr.GetType() + " \u2192 " + n})
+		cmp[i+len(ts)] = &Select{rd.Raw(), rd.Format(), true}
 	}
 	return util.JSON(map[string]interface{}{"comparables": cmp})
 }

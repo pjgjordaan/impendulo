@@ -98,6 +98,10 @@ func (this *Result) GetFileId() bson.ObjectId {
 	return this.FileId
 }
 
+func (this *Result) GetTestId() bson.ObjectId {
+	return ""
+}
+
 //GetReport
 func (this *Result) GetReport() tool.Report {
 	return this.Report

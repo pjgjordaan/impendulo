@@ -199,14 +199,14 @@ function submissionsChart(chartData, tipe) {
 	.attr('fill', chartColour('Snapshots'))
 	.attr('r', rSnapshot);
 
-    sub.append('title')
-	.attr('class', 'description')
-	.text(function(d) { 
-	    return d.user+'\'s '+ d.project + 
-		'\nRunning Time:\t'+ d.time+ 's' +	
-		'\nSnapshots:\t' + d.snapshots+
-		'\nLaunches:\t' + d.launches;
-	});
+    $('svg circle').tooltip({
+	html: true,
+	title: function(){
+	    var d = this.__data__;
+	    return '<ul class="list-unstyled list-left"><li><strong>'+d.user+'\'s '+ d.project+'</strong></li><li>'+d.description+'<span class="span-right">'+d.y+'</span></li><li>Time<span class="span-right">'+ d.time+ 's</span></li><li>Snapshots<span class="span-right">'+d.snapshots+'</span></li><li>Launches<span class="span-right">' + d.launches+'</span></li></ul><div style="clear: both;"></div>';
+	},
+	container: 'body'
+    });
     
     sub.append('text')
 	.attr('class', 'title')

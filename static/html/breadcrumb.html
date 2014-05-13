@@ -8,107 +8,38 @@
   <li class="active">Projects</li>
   {{else if .ctx.Browse.Level.Is "users"}}
   <li class="active">Users</li>
-  {{else if .ctx.Browse.IsUser}}
-  <li><a href="userresult">Users</a></li>
+  {{else}}
+  {{if .ctx.Browse.IsUser}}
+  <li>
+    <a href="userresult">Users</a>
+  </li>
+  {{else}}
+  <li> 
+    <a href="projectresult">Projects</a>
+  </li>
+  {{end}}
   {{if .ctx.Browse.Level.Is "submissions"}}
   <li class="active">
-    User Submissions
+    Submissions
   </li>
   {{else}}
-  <li class="dropdown">
-    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-      User Submissions <span class="caret"></span>
-    </a>
-    <ul class="dropdown-menu" role="menu">
-      {{$users := users}}
-      {{range $users}}
-      <li><a href="getsubmissions?user-id={{.}}">{{.}}</a></li>
-      {{end}}
-    </ul>
-  </li>
-  {{end}}
-  {{else}} 
-  <li><a href="projectresult">Projects</a></li>
-  {{if .ctx.Browse.Level.Is "submissions"}}
-   <li class="active">
-     Project Submissions
-   </li>
+  {{if .ctx.Browse.IsUser}}
+  <li><a href="getsubmissions?user-id={{.ctx.Browse.Uid}}">Submissions</a></li>
   {{else}}
-  <li class="dropdown">
-    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-      Project Submissions <span class="caret"></span>
-    </a>
-    <ul class="dropdown-menu" role="menu">
-      {{$projects := projects}}
-      {{range $projects}}
-      <li><a href="getsubmissions?project-id={{.Id}}">{{.Name}}</a></li>
-      {{end}}
-    </ul>
-  </li>
-  {{end}}
+  <li><a href="getsubmissions?project-id={{.ctx.Browse.Pid.Hex}}">Submissions</a></li>
   {{end}}
   {{if .ctx.Browse.Level.Is "files"}}
-  {{$project := projectName .ctx.Browse.Pid}}
-  {{$uid := .ctx.Browse.Uid}}
-  <li class="active">{{$uid}}'s
-    {{$project}} Submission</li>
-  {{else if or (.ctx.Browse.Level.Is "analysis") (.ctx.Browse.Level.Is "chart")}}
-  {{$project := projectName .ctx.Browse.Pid}}
-  {{$uid := .ctx.Browse.Uid}}
-  {{$sid := .ctx.Browse.Sid}}
-  <li><a href="getfiles?submission-id={{.ctx.Browse.Sid}}">{{$uid}}'s
-      {{$project}} Submission</a></li>
-  {{$resultName := .ctx.Browse.Result.Format}}
-  {{$fileName := .ctx.Browse.File}}
-  {{$results := .results}}
-  {{if .ctx.Browse.Level.Is "analysis"}}
-  {{$current := .ctx.Browse.Current}}
-  {{$next := .ctx.Browse.Next}}
-  <li class="dropdown">
-    <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-      {{$resultName}} <span class="caret"></span>
-    </a>
-    <ul class="dropdown-menu" role="menu">
-      {{range $k, $v := $results}}  
-      {{if emptyM $v}}
-      <li>
-	<a href="displayresult?result={{$k}}">
-	  {{$k}}
-	</a>
-      </li>
-      {{else}}
-      <li class="dropdown-submenu">
-	<a tabindex="-1" href="#">{{$k}}</a>
-	<ul class="dropdown-menu" role="menu">
-	  {{range $k2, $v2 := $v}}
-	  {{if emptyS $v2}}
-	  <li>
-	    <a href="displayresult?result={{$k}}:{{$k2}}">
-	      {{$k2}}
-	    </a>
-	  </li>
-	  {{else}}
-	  <li class="dropdown-submenu">
-	    <a tabindex="-1" href="#">{{$k2}}</a>
-	    <ul class="dropdown-menu" role="menu">
-	      {{$files := sortFiles $v2}}
-	      {{range $files}}
-	      <li>
-		<a href="displayresult?result={{$k}}:{{$k2}}-{{.Id.Hex}}">
-		  {{date .Time}}
-		</a>
-	      </li>
-	      {{end}}
-	    </ul>
-	  </li>   
-	  {{end}}
-	  {{end}}
-	</ul>
-      </li>
-      {{end}}
-      {{end}}
-    </ul>
+  <li class="active">
+    Files
   </li>
+  {{else}}
+  <li><a href="getfiles?submission-id={{.ctx.Browse.Sid.Hex}}">Files</a></li>
+  {{end}}
+  {{if .ctx.Browse.Level.Is "analysis"}}
+  <li class="active">
+    Tools
+  </li>
+  {{end}}
   {{end}}
   {{end}}
   {{end}}

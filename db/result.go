@@ -377,8 +377,8 @@ func ResultNames(sid bson.ObjectId, fname string) (map[string]map[string][]inter
             var t = vals[i].type;
             var n = vals[i].name;
             var id = vals[i].id;
-            var k = t+n;
-            if(k in added){
+            var k = t+n+id;
+            if(k in added || t === undefined){
                 continue;
             }
             added[k] = true;

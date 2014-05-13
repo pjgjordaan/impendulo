@@ -16,6 +16,10 @@ type (
 	}
 )
 
+func (this *Result) GetTestId() bson.ObjectId {
+	return ""
+}
+
 func (this *Result) GetId() bson.ObjectId {
 	return this.Id
 }
