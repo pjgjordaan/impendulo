@@ -10,6 +10,7 @@ import (
 
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestProject(t *testing.T) {
@@ -41,7 +42,7 @@ func TestProject(t *testing.T) {
 	if e = util.SaveFile(path, data); e != nil {
 		t.Error(e)
 	}
-	r, e := tool.RunCommand([]string{"ant", "-f", path}, nil)
+	r, e := tool.RunCommand([]string{"ant", "-f", path}, nil, 30*time.Second)
 	if e != nil {
 		t.Error(e)
 	}
@@ -82,7 +83,8 @@ func testTool(n, pkg string, t []byte, d map[string][]byte) error {
 	if e = util.Unzip(test.PackagePath(), z); e != nil {
 		return e
 	}
-	cov, e := New(baseDir, srcDir, test, bson.NewObjectId())
+	target := &tool.Target{Name: "KSelect", Ext: "java", Package: "kselect"}
+	cov, e := New(baseDir, srcDir, test, target, bson.NewObjectId())
 	if e != nil {
 		return e
 	}

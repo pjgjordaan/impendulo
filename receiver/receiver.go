@@ -209,7 +209,6 @@ func (s *SubmissionHandler) createSubmission(subInfo map[string]interface{}) err
 	if e != nil {
 		return e
 	}
-	s.submission.Status = project.BUSY
 	if e = db.Add(db.SUBMISSIONS, s.submission); e != nil {
 		return e
 	}
@@ -225,9 +224,6 @@ func (s *SubmissionHandler) continueSubmission(subInfo map[string]interface{}) e
 	}
 	id, e := convert.Id(v)
 	if e != nil {
-		return e
-	}
-	if e = db.Update(db.SUBMISSIONS, bson.M{db.ID: id}, bson.M{db.SET: bson.M{db.STATUS: project.BUSY}}); e != nil {
 		return e
 	}
 	s.submission, e = db.Submission(bson.M{db.ID: id}, nil)

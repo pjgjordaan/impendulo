@@ -34,6 +34,11 @@ import (
 	"unicode"
 )
 
+//empty
+type (
+	E struct{}
+)
+
 var (
 	baseDir, installPath string
 )

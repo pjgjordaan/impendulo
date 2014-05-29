@@ -26,6 +26,9 @@ package web
 
 import (
 	"code.google.com/p/gorilla/pat"
+
+	"os"
+
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/tool/mongo"
@@ -35,8 +38,6 @@ import (
 	"io/ioutil"
 
 	"labix.org/v2/mgo/bson"
-
-	"os"
 
 	"net/http"
 )
@@ -55,6 +56,7 @@ func Downloaders() map[string]Downloader {
 			"skeleton.zip": LoadSkeleton,
 			"intlola.zip":  LoadIntlola,
 			"exportdb.zip": ExportData,
+			"test.zip":     LoadTest,
 		}
 	}
 	return downloaders
@@ -74,12 +76,30 @@ func (d Downloader) CreateDownload() Handler {
 		if e != nil {
 			c.AddMessage("could not load file for downloading.", true)
 			http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
-			return e
+		} else {
+			http.ServeFile(w, r, p)
+			os.Remove(p)
 		}
-		http.ServeFile(w, r, p)
-		os.Remove(p)
-		return nil
+		return e
 	}
+}
+
+//LoadSkeleton makes a project skeleton available for download.
+func LoadTest(r *http.Request) (string, error) {
+	id, e := convert.Id(r.FormValue("test-id"))
+	if e != nil {
+		return "", e
+	}
+	t, e := db.JUnitTest(bson.M{db.ID: id}, nil)
+	if e != nil {
+		return "", e
+	}
+	z, e := util.ZipMap(map[string][]byte{t.Name: t.Test})
+	if e != nil {
+		return "", e
+	}
+	//Save file to filesystem and return path to it.
+	return util.SaveTemp(z)
 }
 
 //LoadSkeleton makes a project skeleton available for download.

@@ -2,6 +2,7 @@ package web
 
 import (
 	"code.google.com/p/gorilla/pat"
+	"code.google.com/p/gorilla/sessions"
 
 	"errors"
 
@@ -26,8 +27,9 @@ import (
 )
 
 type (
-	AJAX   func(*http.Request) ([]byte, error)
-	Select struct {
+	AJAXGet  func(*http.Request) ([]byte, error)
+	AJAXPost func(http.ResponseWriter, *http.Request) error
+	Select   struct {
 		Id, Name string
 		User     bool
 	}
@@ -46,7 +48,7 @@ func (s Selects) Less(i, j int) bool {
 	return strings.ToLower(s[i].Name) <= strings.ToLower(s[j].Name)
 }
 
-func (a AJAX) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (a AJAXGet) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	b, e := a(r)
 	if e != nil {
 		util.Log(e, LOG_HANDLERS)
@@ -55,16 +57,54 @@ func (a AJAX) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, string(b))
 }
 
+func (a AJAXPost) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if e := a(w, r); e != nil {
+		b, _ := util.JSON(map[string]interface{}{"error": e.Error()})
+		util.Log(e, LOG_HANDLERS)
+		fmt.Fprint(w, string(b))
+	}
+}
+
 func GenerateAJAX(r *pat.Router) {
-	fs := map[string]AJAX{
+	gets := map[string]AJAXGet{
 		"chart": getChart, "usernames": getUsernames, "collections": collections, "pmdrules": ajaxRules,
 		"skeletons": getSkeletons, "submissions": submissions, "results": ajaxResults, "jpflisteners": ajaxListeners,
 		"langs": getLangs, "projects": getProjects, "files": ajaxFiles, "tools": ajaxTools, "jpfsearches": ajaxSearches,
 		"code": ajaxCode, "users": ajaxUsers, "permissions": ajaxPerms, "comparables": ajaxComparables,
+		"tests": ajaxTests, "test-types": testTypes,
 	}
-	for n, f := range fs {
+	for n, f := range gets {
 		r.Add("GET", "/"+n, f)
 	}
+	posts := map[string]AJAXPost{
+		"setcontext": ajaxSetContext,
+	}
+	for n, f := range posts {
+		r.Add("POST", "/"+n, f)
+	}
+}
+
+func ajaxSetContext(w http.ResponseWriter, r *http.Request) error {
+	if store == nil {
+		auth, enc, e := util.CookieKeys()
+		if e != nil {
+			return e
+		}
+		store = sessions.NewCookieStore(auth, enc)
+	}
+	s, e := store.Get(r, "impendulo")
+	if e != nil {
+		return e
+	}
+	c := LoadContext(s)
+	if e := c.Browse.Update(r); e != nil {
+		return e
+	}
+	return c.Save(r, w)
+}
+
+func testTypes(r *http.Request) ([]byte, error) {
+	return util.JSON(map[string]interface{}{"types": junit.TestTypes()})
 }
 
 func ajaxListeners(r *http.Request) ([]byte, error) {
@@ -182,6 +222,13 @@ func ajaxUsers(r *http.Request) ([]byte, error) {
 
 //ajaxCode loads code for a given src file or test.
 func ajaxCode(r *http.Request) ([]byte, error) {
+	if tid, e := convert.Id(r.FormValue("test-id")); e == nil {
+		t, e := db.JUnitTest(bson.M{db.ID: tid}, bson.M{db.TEST: 1})
+		if e != nil {
+			return nil, e
+		}
+		return util.JSON(map[string]interface{}{"code": string(t.Test)})
+	}
 	m := bson.M{}
 	if rid, e := convert.Id(r.FormValue("result-id")); e == nil {
 		tr, e := db.ToolResult(bson.M{db.ID: rid}, bson.M{db.FILEID: 1})
@@ -190,7 +237,7 @@ func ajaxCode(r *http.Request) ([]byte, error) {
 		}
 		m[db.ID] = tr.GetFileId()
 	}
-	if id, e := convert.Id(r.FormValue("id")); e == nil {
+	if id, e := convert.Id(r.FormValue("file-id")); e == nil {
 		m[db.ID] = id
 	}
 	if n, e := GetString(r, "tool-name"); e == nil {
@@ -350,6 +397,21 @@ func getSkeletons(r *http.Request) ([]byte, error) {
 		return nil, e
 	}
 	return util.JSON(map[string]interface{}{"skeletons": s})
+}
+
+func ajaxTests(r *http.Request) ([]byte, error) {
+	m := bson.M{}
+	if pid, e := convert.Id(r.FormValue("project-id")); e == nil {
+		m[db.PROJECTID] = pid
+	}
+	if id, e := convert.Id(r.FormValue("id")); e == nil {
+		m[db.ID] = id
+	}
+	t, e := db.JUnitTests(m, bson.M{db.TEST: 0, db.DATA: 0})
+	if e != nil {
+		return nil, e
+	}
+	return util.JSON(map[string]interface{}{"tests": t})
 }
 
 func getChart(r *http.Request) ([]byte, error) {

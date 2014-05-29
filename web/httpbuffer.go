@@ -41,31 +41,30 @@ type (
 )
 
 //Header implements the Header method of http.ResponseWriter
-func (this *HttpBuffer) Header() http.Header {
-	this.once.Do(func() {
-		this.headers = make(http.Header)
+func (b *HttpBuffer) Header() http.Header {
+	b.once.Do(func() {
+		b.headers = make(http.Header)
 	})
-	return this.headers
+	return b.headers
 }
 
 //WriteHeader implements the WriteHeader method of http.ResponseWriter
-func (this *HttpBuffer) WriteHeader(resp int) {
-	this.resp = resp
+func (b *HttpBuffer) WriteHeader(resp int) {
+	b.resp = resp
 }
 
 //Apply takes an http.ResponseWriter and calls the required methods on it to
 //output the buffered headers, response code, and data. It returns the number
 //of bytes written and any errors flushing.
-func (this *HttpBuffer) Apply(w http.ResponseWriter) (n int, err error) {
-	if len(this.headers) > 0 {
+func (b *HttpBuffer) Apply(w http.ResponseWriter) (int, error) {
+	if len(b.headers) > 0 {
 		h := w.Header()
-		for key, val := range this.headers {
-			h[key] = val
+		for k, v := range b.headers {
+			h[k] = v
 		}
 	}
-	if this.resp > 0 {
-		w.WriteHeader(this.resp)
+	if b.resp > 0 {
+		w.WriteHeader(b.resp)
 	}
-	n, err = w.Write(this.Bytes())
-	return
+	return w.Write(b.Bytes())
 }

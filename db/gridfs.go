@@ -26,8 +26,8 @@ package db
 
 import (
 	"encoding/gob"
+
 	"github.com/godfried/impendulo/tool"
-	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -36,45 +36,37 @@ const (
 )
 
 //HasGridFile checks whether this query needs to get data from GridFS
-func HasGridFile(result tool.ToolResult, selector bson.M) bool {
-	return (selector == nil || selector[REPORT] == 1) && result.OnGridFS()
+func HasGridFile(r tool.ToolResult, sl bson.M) bool {
+	return (sl == nil || sl[REPORT] == 1) && r.OnGridFS()
 }
 
 //GridFile loads a GridFile matching id into a provided data structure from GridFS.
-func GridFile(id, ret interface{}) (err error) {
-	session, err := Session()
-	if err != nil {
-		return
+func GridFile(id, ret interface{}) error {
+	s, e := Session()
+	if e != nil {
+		return e
 	}
-	defer session.Close()
-	fs := session.DB("").GridFS(GRIDFS_NAME)
-	var file *mgo.GridFile
-	file, err = fs.OpenId(id)
-	if err != nil {
-		return
+	defer s.Close()
+	f, e := s.DB("").GridFS(GRIDFS_NAME).OpenId(id)
+	if e != nil {
+		return e
 	}
-	defer file.Close()
-	dec := gob.NewDecoder(file)
-	err = dec.Decode(ret)
-	return
+	defer f.Close()
+	return gob.NewDecoder(f).Decode(ret)
 }
 
 //AddGridFile creates a new GridFile and stores the provided data structure in it via gob.
-func AddGridFile(id, data interface{}) (err error) {
-	session, err := Session()
-	if err != nil {
-		return
+func AddGridFile(id, data interface{}) error {
+	s, e := Session()
+	if e != nil {
+		return e
 	}
-	defer session.Close()
-	fs := session.DB("").GridFS(GRIDFS_NAME)
-	var file *mgo.GridFile
-	file, err = fs.Create("")
-	if err != nil {
-		return
+	defer s.Close()
+	f, e := s.DB("").GridFS(GRIDFS_NAME).Create("")
+	if e != nil {
+		return e
 	}
-	defer file.Close()
-	file.SetId(id)
-	enc := gob.NewEncoder(file)
-	err = enc.Encode(data)
-	return
+	defer f.Close()
+	f.SetId(id)
+	return gob.NewEncoder(f).Encode(data)
 }

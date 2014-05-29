@@ -2,6 +2,7 @@ package jacoco
 
 import (
 	"bytes"
+	"time"
 
 	"code.google.com/p/go.net/html"
 
@@ -20,7 +21,7 @@ import (
 type (
 	Tool struct {
 		buildPath, resPath string
-		test               *tool.Target
+		test, target       *tool.Target
 		testId             bson.ObjectId
 	}
 )
@@ -29,7 +30,7 @@ const (
 	NAME = "Jacoco"
 )
 
-func New(baseDir, srcDir string, test *tool.Target, testId bson.ObjectId) (tool.Tool, error) {
+func New(baseDir, srcDir string, test, target *tool.Target, testId bson.ObjectId) (tool.Tool, error) {
 	rd := filepath.Join(baseDir, "target")
 	p, e := NewProject("Jacoco Coverage", srcDir, rd, test)
 	if e != nil {
@@ -47,12 +48,16 @@ func New(baseDir, srcDir string, test *tool.Target, testId bson.ObjectId) (tool.
 		buildPath: bp,
 		resPath:   rd,
 		test:      test,
+		target:    target,
 		testId:    testId,
 	}, nil
 }
 
 func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
-	if _, e := tool.RunCommand([]string{"ant", "-f", t.buildPath}, nil); e != nil {
+	if t.target.Executable() != target.Executable() {
+		return nil, nil
+	}
+	if _, e := tool.RunCommand([]string{"ant", "-f", t.buildPath}, nil, 30*time.Second); e != nil {
 		return nil, e
 	}
 	xp := filepath.Join(t.resPath, "report", "report.xml")

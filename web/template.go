@@ -112,6 +112,7 @@ var (
 		"emptyS": func(s []interface{}) bool {
 			return len(s) == 0
 		},
+		"empty":     func(s string) bool { return strings.TrimSpace(s) == "" },
 		"sortFiles": sortFiles,
 		"project":   func(id bson.ObjectId) (*project.Project, error) { return db.Project(bson.M{db.ID: id}, nil) },
 	}
@@ -262,13 +263,14 @@ func fileCount(sid bson.ObjectId, t project.Type) (int, error) {
 
 //submissionCount
 func submissionCount(id interface{}) (int, error) {
-	switch tipe := id.(type) {
+	switch t := id.(type) {
 	case bson.ObjectId:
-		return db.Count(db.SUBMISSIONS, bson.M{db.PROJECTID: tipe})
+		return db.Count(db.SUBMISSIONS, bson.M{db.PROJECTID: t})
 	case string:
-		return db.Count(db.SUBMISSIONS, bson.M{db.USER: tipe})
+		return db.Count(db.SUBMISSIONS, bson.M{db.USER: t})
+	default:
+		return -1, fmt.Errorf("Unknown id type %q.", id)
 	}
-	return -1, fmt.Errorf("Unknown id type %q.", id)
 }
 
 //sum calculates the sum of vals.

@@ -59,13 +59,11 @@ const (
 	JAVA Language = "Java"
 	C    Language = "C"
 	//The maximum size in bytes that a ToolResult is allowed to have.
-	MAX_SIZE  = 16000000
-	TIMELIMIT = 60 * time.Second
+	MAX_SIZE = 16000000
 )
 
 var (
-	timeLimit = TIMELIMIT
-	langs     []Language
+	langs []Language
 )
 
 //Langs returns the languages supported by Impendulo
@@ -85,16 +83,6 @@ func Supported(l Language) bool {
 	return false
 }
 
-//SetTimeLimit sets the maximum time for which the RunCommand function can run.
-func SetTimeLimit(s uint) {
-	timeLimit = time.Duration(s) * time.Second
-}
-
-//TimeLimit returns the current timeout setting.
-func TimeLimit() uint {
-	return uint(timeLimit)
-}
-
 //HasStdErr checks whether the ExecResult has standard error output.
 func (e *ExecResult) HasStdErr() bool {
 	return e.StdErr != nil && len(e.StdErr) > 0
@@ -108,7 +96,7 @@ func (e *ExecResult) HasStdOut() bool {
 //RunCommand executes a given command given by args and stdin. It terminates
 //when the command finishes execution or times out. An ExecResult containing the
 //command's output is returned.
-func RunCommand(args []string, stdin io.Reader) (*ExecResult, error) {
+func RunCommand(args []string, stdin io.Reader, max time.Duration) (*ExecResult, error) {
 	c := exec.Command(args[0], args[1:]...)
 	c.Stdin = stdin
 	var so, se bytes.Buffer
@@ -125,7 +113,7 @@ func RunCommand(args []string, stdin io.Reader) (*ExecResult, error) {
 		d <- c.Wait()
 	}()
 	select {
-	case <-time.After(timeLimit):
+	case <-time.After(max):
 		c.Process.Kill()
 		return nil, &TimeoutError{args}
 	case e := <-d:

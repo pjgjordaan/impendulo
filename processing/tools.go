@@ -70,12 +70,16 @@ func javaTestTools(p *TestProcessor, tf *project.File) ([]tool.Tool, error) {
 	if e := util.SaveFile(target.FilePath(), tf.Data); e != nil {
 		return nil, e
 	}
-	ju, e := junit.New(target, p.toolDir, tf.Id)
+	t, e := db.JUnitTest(bson.M{db.PROJECTID: p.project.Id, db.NAME: tf.Name, db.TYPE: junit.USER}, bson.M{db.TARGET: 1})
+	if e != nil {
+		return nil, e
+	}
+	ju, e := junit.New(target, t.Target, p.toolDir, tf.Id)
 	if e != nil {
 		return nil, e
 	}
 	a = append(a, ju)
-	ja, e := jacoco.New(p.rootDir, p.srcDir, target, tf.Id)
+	ja, e := jacoco.New(p.rootDir, p.srcDir, target, t.Target, tf.Id)
 	if e != nil {
 		return nil, e
 	}
@@ -201,12 +205,12 @@ func junitTools(p *Processor) ([]tool.Tool, error) {
 				return nil, e
 			}
 		}
-		ja, e := jacoco.New(p.rootDir, p.srcDir, target, t.Id)
+		ja, e := jacoco.New(p.rootDir, p.srcDir, target, t.Target, t.Id)
 		if e != nil {
 			return nil, e
 		}
 		tools = append(tools, ja)
-		ju, e := junit.New(target, p.toolDir, t.Id)
+		ju, e := junit.New(target, t.Target, p.toolDir, t.Id)
 		if e != nil {
 			return nil, e
 		}

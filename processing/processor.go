@@ -25,6 +25,7 @@
 package processing
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/godfried/impendulo/config"
@@ -99,34 +100,30 @@ func NewProcessor(sid bson.ObjectId) (*Processor, error) {
 }
 
 //Process listens for a submission's incoming files and processes them.
-func (p *Processor) Process(fc chan bson.ObjectId, dc chan E) {
+func (p *Processor) Process(fc chan bson.ObjectId, dc chan util.E) {
 	util.Log("Processing submission", p.sub, LOG_PROCESSOR)
-	defer func() {
-		os.RemoveAll(p.rootDir)
-		util.Log("Processed submission", p.sub, LOG_PROCESSOR)
-		dc <- E{}
-	}()
 	//Processing loop.
 processing:
 	for {
 		select {
-		case fId := <-fc:
-			if e := p.ProcessFile(fId); e != nil {
+		case fid := <-fc:
+			if e := p.ProcessFile(fid); e != nil {
 				util.Log(e, LOG_PROCESSOR)
+
 			}
 			//Indicate that we are finished with the file.
-			fc <- fId
+			fc <- fid
 		case <-dc:
 			//We are done so time to exit.
 			break processing
 		}
 	}
-	if e := db.UpdateStatus(p.sub); e != nil {
-		util.Log(e, LOG_PROCESSOR)
-	}
 	if e := db.UpdateTime(p.sub); e != nil {
 		util.Log(e, LOG_PROCESSOR)
 	}
+	os.RemoveAll(p.rootDir)
+	util.Log("Processed submission", p.sub, LOG_PROCESSOR)
+	dc <- util.E{}
 }
 
 func (p *Processor) ProcessFile(fid bson.ObjectId) error {
@@ -197,8 +194,10 @@ func (p *Processor) ProcessArchive(a *project.File) error {
 		return e
 	}
 	for n, d := range m {
-		if e = p.StoreFile(n, d); e != nil {
+		if f, e := p.StoreFile(n, d); e != nil {
 			util.Log(e, LOG_PROCESSOR)
+		} else if e := ChangeStatus(Request{SubId: p.sub.Id, FileId: f.Id, Type: FILE_ADD}); e != nil {
+			util.Log(e)
 		}
 	}
 	//We don't need the archive anymore
@@ -209,30 +208,34 @@ func (p *Processor) ProcessArchive(a *project.File) error {
 	if e != nil {
 		return e
 	}
-	ChangeStatus(Status{len(fs), 0})
 	//Process archive files.
 	for _, f := range fs {
 		if e = p.ProcessFile(f.Id); e != nil {
 			util.Log(e, LOG_PROCESSOR)
 		}
-		ChangeStatus(Status{-1, 0})
+		if e = ChangeStatus(Request{SubId: p.sub.Id, FileId: f.Id, Type: FILE_REMOVE}); e != nil {
+			util.Log(e)
+		}
 	}
 	return nil
 }
 
 //StoreFile creates a new project.File given an encoded file name and file data.
 //The new project.File is then saved in the database.
-func (p *Processor) StoreFile(n string, d []byte) error {
+func (p *Processor) StoreFile(n string, d []byte) (*project.File, error) {
 	f, e := project.ParseName(n)
 	if e != nil {
-		return e
+		return nil, e
 	}
 	if db.Contains(db.FILES, bson.M{db.SUBID: p.sub.Id, db.TYPE: f.Type, db.TIME: f.Time}) {
-		return nil
+		return nil, errors.New("db already contains this file")
 	}
 	f.SubId = p.sub.Id
 	f.Data = d
-	return db.Add(db.FILES, f)
+	if e := db.Add(db.FILES, f); e != nil {
+		return nil, e
+	}
+	return f, nil
 }
 
 //RunTools runs all available tools on a file. It skips a tool if
@@ -261,8 +264,6 @@ func (p *Processor) RunTools(f *project.File, target *tool.Target) {
 			}
 		} else if r != nil {
 			e = db.AddResult(r, t.Name())
-		} else {
-			e = db.AddFileResult(f.Id, t.Name(), tool.NORESULT)
 		}
 		if e != nil {
 			util.Log(e, LOG_PROCESSOR)
@@ -348,8 +349,8 @@ func (tp *TestProcessor) Run(t tool.Tool, f *project.File, target *tool.Target) 
 		} else {
 			return db.AddFileResult(f.Id, n, tool.ERROR)
 		}
-	} else if r != nil {
-		return db.AddResult(r, n)
+	} else if r == nil {
+		return nil
 	}
-	return db.AddFileResult(f.Id, n, tool.NORESULT)
+	return db.AddResult(r, n)
 }

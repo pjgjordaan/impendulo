@@ -31,11 +31,13 @@
     <div id="errors{{$addr}}" class="panel-collapse collapse in">
       <div class="accordion-inner">
 	{{range $i, $err := $report.Errors}}
-	{{$details := setBreaks $err.Details}}
 	{{$errAddr := address $err}}
 	<dl class="dl">
 	  <dt>Type</dt><dd>{{shortName $err.Property}}</dd>
+	  {{if not (empty $err.Details)}}
+	  {{$details := setBreaks $err.Details}}
 	  <dt>Details</dt><dd>{{$details}}</dd>
+	  {{end}}
 	</dl>
 	<div class="panel-group" id="threadaccordion{{$errAddr}}">
 	  <div class="panel panel-default">
@@ -56,13 +58,13 @@
 		  {{else}}
 		  {{$faddress := address .}}
 		  {{$id := .Id}}
-		  <a class="nolink" id="frame{{$faddress}}">
+		  <a href="#" id="frame{{$faddress}}">
 		    {{.Details}} 
 		  </a>  
 		  <script>      
 		    var id = 'frame{{$faddress}}';
 		    var info = {};
-		    info.title = {{shortName .Property}};
+		    info.title = {{shortName $err.Property}};
 		    info.content = {{.Details}};
 		    addCodeModal(id, {{$rid}}, info, {{.Line}}, {{.Line}});
 		  </script>

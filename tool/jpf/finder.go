@@ -27,6 +27,7 @@ package jpf
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
@@ -63,22 +64,20 @@ func Searches() ([]*Class, error) {
 
 //GetClasses retrieves an array of classes matching a specific type and writes them to a
 //provided output file for future use.
-func GetClasses(tipe, fname string) (classes []*Class, err error) {
-	base, err := util.BaseDir()
-	if err != nil {
-		return
+func GetClasses(tipe, fname string) ([]*Class, error) {
+	d, e := util.BaseDir()
+	if e != nil {
+		return nil, e
 	}
-	path := filepath.Join(base, fname)
-	classes, err = loadClasses(path)
-	if err == nil {
-		return
+	p := filepath.Join(d, fname)
+	if c, e := loadClasses(p); e == nil {
+		return c, nil
 	}
-	data, err := findClasses(tipe, path)
-	if err != nil {
-		return
+	data, e := findClasses(tipe, p)
+	if e != nil {
+		return nil, e
 	}
-	classes, err = readClasses(data)
-	return
+	return readClasses(data)
 }
 
 //findClasses searches for classes in the jpf-core directory tree which match
@@ -113,7 +112,7 @@ func findClasses(tipe, fname string) ([]byte, error) {
 	if _, e = c.Run(bson.NewObjectId(), t); e != nil {
 		return nil, e
 	}
-	r, re := tool.RunCommand([]string{jp, "-cp", cp, t.Executable(), tipe, fname}, nil)
+	r, re := tool.RunCommand([]string{jp, "-cp", cp, t.Executable(), tipe, fname}, nil, 30*time.Second)
 	rf, e := os.Open(fname)
 	if e == nil {
 		return util.ReadBytes(rf), nil

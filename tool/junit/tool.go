@@ -28,6 +28,7 @@ package junit
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
@@ -42,16 +43,16 @@ import (
 type (
 	//Tool is a tool.Tool used to run Tool tests on a Java source file.
 	Tool struct {
-		cp, name     string
-		dataLocation string
-		test, runner *tool.Target
-		testId       bson.ObjectId
+		cp, name             string
+		dataLocation         string
+		test, target, runner *tool.Target
+		testId               bson.ObjectId
 	}
 )
 
 //New creates a new  instance of the JUnit Tool.
 //test is the JUnit Test to be run. dir is the location of the submission's tool directory.
-func New(test *tool.Target, toolDir string, testId bson.ObjectId) (*Tool, error) {
+func New(test, target *tool.Target, toolDir string, testId bson.ObjectId) (*Tool, error) {
 	//Load jar locations
 	j, e := config.JUNIT.Path()
 	if e != nil {
@@ -70,6 +71,7 @@ func New(test *tool.Target, toolDir string, testId bson.ObjectId) (*Tool, error)
 		dataLocation: filepath.Join(test.PackagePath(), "data"),
 		test:         test,
 		runner:       tool.NewTarget("TestRunner.java", "testing", toolDir, tool.JAVA),
+		target:       target,
 		testId:       testId,
 	}, nil
 }
@@ -86,6 +88,9 @@ func (t *Tool) Name() string {
 //Run runs a JUnit test on the provided Java source file. The source and test files are first
 //compiled and we run the tests via a Java runner class which uses ant to generate XML output.
 func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
+	if t.target.Executable() != target.Executable() {
+		return nil, fmt.Errorf("file executable %s does not match expected executable %s", target.Executable(), t.target.Executable())
+	}
 	jp, e := config.JAVA.Path()
 	if e != nil {
 		return nil, e
@@ -113,7 +118,7 @@ func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, 
 	a := []string{jp, "-cp", cp, t.runner.Executable(), t.test.Executable(), t.dataLocation, on, od}
 	defer os.Remove(of)
 	//Run the tests and load the result
-	r, re := tool.RunCommand(a, nil)
+	r, re := tool.RunCommand(a, nil, 30*time.Second)
 	rf, oe := os.Open(of)
 	if oe != nil {
 		if re != nil {

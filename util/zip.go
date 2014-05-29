@@ -36,6 +36,16 @@ import (
 	"path/filepath"
 )
 
+type (
+	KVWriter interface {
+		Write(string, []byte) error
+	}
+
+	KVReader interface {
+		Next() (string, []byte, error)
+	}
+)
+
 //Unzip extracts a file (given as a []byte) to dir.
 func Unzip(d string, p []byte) error {
 	br := bytes.NewReader(p)
@@ -95,12 +105,51 @@ func UnzipToMap(d []byte) (map[string][]byte, error) {
 		if zf.FileInfo().IsDir() {
 			continue
 		}
-		m[zf.FileInfo().Name()], e = ExtractBytes(zf)
+		m[zf.Name], e = ExtractBytes(zf)
 		if e != nil {
 			return nil, e
 		}
 	}
 	return m, nil
+}
+
+func UnzipKV(w KVWriter, d []byte) error {
+	br := bytes.NewReader(d)
+	zr, e := zip.NewReader(br, int64(br.Len()))
+	if e != nil {
+		return errors.NewUtil(d, "creating zip reader from", e)
+	}
+	for _, zf := range zr.File {
+		if zf.FileInfo().IsDir() {
+			continue
+		}
+		b, e := ExtractBytes(zf)
+		if e != nil {
+			return e
+		}
+		if e = w.Write(zf.Name, b); e != nil {
+			return e
+		}
+	}
+	return nil
+}
+
+func ZipKV(r KVReader) ([]byte, error) {
+	b := new(bytes.Buffer)
+	zw := zip.NewWriter(b)
+	for {
+		n, d, e := r.Next()
+		if e != nil {
+			break
+		}
+		if e := AddToZip(zw, n, d); e != nil {
+			return nil, e
+		}
+	}
+	if e := zw.Close(); e != nil {
+		return nil, errors.NewUtil(zw, "closing zip", e)
+	}
+	return b.Bytes(), nil
 }
 
 //ExtractBytes extracts data from a zip.File.

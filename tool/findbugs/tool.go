@@ -28,6 +28,7 @@ package findbugs
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
@@ -40,26 +41,28 @@ import (
 
 type (
 	//Findbugs is a tool.Tool used to run Findbugs on Java classes.
-	FindBugs struct {
+	Tool struct {
 		cmd string
 	}
 )
 
 //New creates a new instance of the Findbugs tool.
 //If an error is returned, it will be due Findbugs not being configured correctly.
-func New() (tool *FindBugs, err error) {
-	tool = new(FindBugs)
-	tool.cmd, err = config.FINDBUGS.Path()
-	return
+func New() (*Tool, error) {
+	p, e := config.FINDBUGS.Path()
+	if e != nil {
+		return nil, e
+	}
+	return &Tool{cmd: p}, nil
 }
 
 //Lang is Java.
-func (this *FindBugs) Lang() tool.Language {
+func (t *Tool) Lang() tool.Language {
 	return tool.JAVA
 }
 
 //Name is Findbugs.
-func (this *FindBugs) Name() string {
+func (t *Tool) Name() string {
 	return NAME
 }
 
@@ -67,7 +70,7 @@ func (this *FindBugs) Name() string {
 //Findbugs is run with the following flags: -effort:max, -experimental, -relaxed.
 //The result is written to an XML file which is then read and used to create a
 //Findbugs Result.
-func (t *FindBugs) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
+func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
 	//Setup arguments
 	jp, e := config.JAVA.Path()
 	if e != nil {
@@ -78,7 +81,7 @@ func (t *FindBugs) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResu
 		"-xml:withMessages", "-relaxed", "-output", o, target.PackagePath()}
 	defer os.Remove(o)
 	//Run Findbugs and load result.
-	r, re := tool.RunCommand(a, nil)
+	r, re := tool.RunCommand(a, nil, 30*time.Second)
 	rf, e := os.Open(o)
 	if e != nil {
 		if re != nil {

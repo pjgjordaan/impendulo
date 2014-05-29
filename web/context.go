@@ -77,7 +77,6 @@ const (
 	SUBMISSIONS
 	FILES
 	ANALYSIS
-	CHART
 )
 
 func init() {
@@ -97,9 +96,9 @@ func (c *Context) save() {
 }
 
 //Save stores the current session.
-func (c *Context) Save(r *http.Request, b *HttpBuffer) error {
+func (c *Context) Save(r *http.Request, w http.ResponseWriter) error {
 	c.save()
-	return c.Session.Save(r, b)
+	return c.Session.Save(r, w)
 }
 
 //IsView checks whether the given view matches the user's current view.
@@ -174,7 +173,6 @@ func LoadContext(s *sessions.Session) *Context {
 
 func (b *Browse) ClearSubmission() {
 	b.File = ""
-	b.Result = &ResultDesc{}
 	b.Current = 0
 	b.Next = 0
 	b.DisplayCount = 10
@@ -195,6 +193,7 @@ func (b *Browse) SetUid(r *http.Request) error {
 	if e != nil {
 		return nil
 	}
+	b.ClearSubmission()
 	b.IsUser = true
 	b.Uid = id
 	return nil
@@ -205,6 +204,7 @@ func (b *Browse) SetSid(r *http.Request) error {
 	if e != nil {
 		return nil
 	}
+	b.ClearSubmission()
 	s, e := db.Submission(bson.M{db.ID: id}, bson.M{db.PROJECTID: 1, db.USER: 1})
 	if e != nil {
 		return e
@@ -213,17 +213,11 @@ func (b *Browse) SetSid(r *http.Request) error {
 	if e != nil {
 		return e
 	}
-	d, e := NewResultDesc(tool.CODE)
-	if e != nil {
-		return e
-	}
-	b.ClearSubmission()
 	b.Sid = id
 	b.Pid = s.ProjectId
 	b.Uid = s.User
 	b.File = p.Name + ".java"
-	b.Result = d
-	return nil
+	return b.Result.Update(b.Sid, b.File)
 }
 
 func (b *Browse) Submissions() ([]*project.Submission, error) {
@@ -241,8 +235,10 @@ func (b *Browse) SetPid(r *http.Request) error {
 	if e != nil {
 		return nil
 	}
+	b.ClearSubmission()
 	b.IsUser = false
 	b.Pid = pid
+	b.Result.Check(b.Pid)
 	return nil
 }
 
@@ -314,7 +310,7 @@ func (b *Browse) SetFileIndices(r *http.Request) error {
 }
 
 func (b *Browse) Update(r *http.Request) error {
-	setters := []Setter{b.SetPid, b.SetUid, b.SetSid, b.SetResult, b.SetFile, b.SetFileIndices, b.SetDisplayCount}
+	setters := []Setter{b.SetPid, b.SetUid, b.SetSid, b.SetFile, b.SetResult, b.SetFileIndices, b.SetDisplayCount}
 	for _, s := range setters {
 		if e := s(r); e != nil {
 			return e
@@ -337,8 +333,6 @@ func (b *Browse) SetLevel(route string) {
 		b.Level = FILES
 	case "getsubmissionschart":
 		b.Level = SUBMISSIONS
-	case "displaychart":
-		b.Level = CHART
 	case "displayresult":
 		b.Level = ANALYSIS
 	}
@@ -359,8 +353,6 @@ func (l Level) Is(level string) bool {
 		return l == FILES
 	case "analysis":
 		return l == ANALYSIS
-	case "chart":
-		return l == CHART
 	default:
 		return false
 	}
@@ -428,4 +420,27 @@ func (r *ResultDesc) Raw() string {
 
 func (r *ResultDesc) HasCode() bool {
 	return r.Name != ""
+}
+
+func (r *ResultDesc) Update(sid bson.ObjectId, fname string) error {
+	if r.FileID == "" {
+		return nil
+	}
+	id, e := db.FileResultId(sid, fname, r.Type, r.Name)
+	if e != nil {
+		return e
+	}
+	r.FileID = id
+	return nil
+}
+
+func (r *ResultDesc) Check(pid bson.ObjectId) {
+	rs := db.ProjectResults(pid)
+	cur := r.Raw()
+	for _, d := range rs {
+		if d == cur || strings.HasPrefix(cur, d) {
+			return
+		}
+	}
+	r.Set(tool.CODE)
 }

@@ -26,6 +26,7 @@ package project
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 )
@@ -38,22 +39,7 @@ type (
 		User      string        `bson:"user"`
 		Mode      string        `bson:"mode"`
 		Time      int64         `bson:"time"`
-		Status    Status        `bson:"status"`
 	}
-	Status int
-)
-
-const (
-	UNKNOWN Status = iota
-	BUSY
-	FAILED
-	NOTJUNIT
-	NOTJPF
-	JUNIT_NOTJPF
-	JPF_NOTJUNIT
-	JUNIT
-	JPF
-	ALL
 )
 
 //SetMode
@@ -73,36 +59,9 @@ func (s *Submission) String() string {
 		"; Time: " + util.Date(s.Time)
 }
 
-func (s *Submission) Result() string {
-	switch s.Status {
-	case UNKNOWN:
-		return "Unknown status."
-	case BUSY:
-		return "Busy evaluating snapshots."
-	case FAILED:
-		return "Submission provided incorrect solution."
-	case NOTJUNIT:
-		return "Failed unit tests."
-	case NOTJPF:
-		return "Failed JPF evaluation."
-	case JPF_NOTJUNIT:
-		return "Passed JPF evaluation but not all unit tests passed."
-	case JUNIT_NOTJPF:
-		return "All unit tests passed, but failed JPF evaluation."
-	case JUNIT:
-		return "Successfuly passed unit tests."
-	case JPF:
-		return "Successfully passed JPF evaluation."
-	case ALL:
-		return "Successfully passed JPF and unit testing evaluation."
-	default:
-		return fmt.Sprintf("Invalid status %d.", s.Status)
-	}
-}
-
 //NewSubmission
 func NewSubmission(pid bson.ObjectId, u, m string, t int64) *Submission {
-	return &Submission{bson.NewObjectId(), pid, u, m, t, BUSY}
+	return &Submission{bson.NewObjectId(), pid, u, m, t}
 }
 
 func (s *Submission) Format(p *Project) string {

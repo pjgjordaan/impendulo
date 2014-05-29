@@ -34,8 +34,6 @@ import (
 	uuid "github.com/nu7hatch/gouuid"
 	"github.com/streadway/amqp"
 	"labix.org/v2/mgo/bson"
-
-	"time"
 )
 
 type (
@@ -47,12 +45,12 @@ type (
 	//Changer is a Consumer which listens for updates to Impendulo's status
 	//and changes it accordingly.
 	Changer struct {
-		statusChan chan Status
+		requestChan chan Request
 	}
 
 	//Submitter is a Consumer used to handle submission and file requests.
 	Submitter struct {
-		requestChan chan *Request
+		requestChan chan Request
 		key         string
 	}
 
@@ -70,13 +68,13 @@ type (
 	//Waiter is a Consumer which listens for requests for when Impendulo is idle
 	//and responds to them when it is.
 	Waiter struct {
-		statusChan chan Status
+		idleChan chan util.E
 	}
 
 	//Redoer is a Consumer which listens for requests to reanalyse submissions
 	//and submits them for reanalysis.
 	Redoer struct {
-		requestChan chan *Request
+		requestChan chan Request
 	}
 
 	//MessageHandler wraps a consumer in a struct in order to provide with other
@@ -126,14 +124,14 @@ func handleFunc(m *MessageHandler) {
 }
 
 func Reply(c *amqp.Channel, d amqp.Delivery, b []byte) error {
-	p := amqp.Publishing{
-		CorrelationId: d.CorrelationId,
-		DeliveryMode:  amqp.Persistent,
-		ContentType:   "text/plain",
-		Body:          b,
-		Priority:      0,
-	}
-	return c.Publish(d.Exchange, d.ReplyTo, true, false, p)
+	return c.Publish(d.Exchange, d.ReplyTo, true, false,
+		amqp.Publishing{
+			CorrelationId: d.CorrelationId,
+			DeliveryMode:  amqp.Persistent,
+			ContentType:   "text/plain",
+			Body:          b,
+			Priority:      0,
+		})
 }
 
 //NewHandler
@@ -149,10 +147,22 @@ func NewHandler(amqpURI, exchange, exchangeType, queue, ctag string, consumer Co
 	if e != nil {
 		return nil, e
 	}
+	conErrs := c.NotifyClose(make(chan *amqp.Error))
+	go func() {
+		for e := range conErrs {
+			util.Log(e)
+		}
+	}()
 	ch, e := c.Channel()
 	if e != nil {
 		return nil, e
 	}
+	chErrs := ch.NotifyClose(make(chan *amqp.Error))
+	go func() {
+		for e := range chErrs {
+			util.Log(e)
+		}
+	}()
 	if e = ch.ExchangeDeclare(
 		exchange,     // name of the exchange
 		exchangeType, // type
@@ -230,16 +240,22 @@ func (m *MessageHandler) Shutdown() error {
 	return nil
 }
 
-func (s *Submitter) Consume(d amqp.Delivery, ch *amqp.Channel) error {
+func (s *Submitter) Consume(d amqp.Delivery, ch *amqp.Channel) (e error) {
 	defer func() {
+		if r := recover(); r != nil {
+			e = r.(error)
+		}
 		d.Ack(false)
 	}()
 	r := new(Request)
-	if e := json.Unmarshal(d.Body, &r); e != nil {
-		return e
+	if e = json.Unmarshal(d.Body, &r); e != nil {
+		return
 	}
-	s.requestChan <- r
-	return nil
+	if e = r.Valid(); e != nil {
+		return
+	}
+	s.requestChan <- *r
+	return
 }
 
 func (s *Starter) Consume(d amqp.Delivery, ch *amqp.Channel) error {
@@ -247,87 +263,88 @@ func (s *Starter) Consume(d amqp.Delivery, ch *amqp.Channel) error {
 	return Reply(ch, d, []byte(s.key))
 }
 
-func (c *Changer) Consume(d amqp.Delivery, ch *amqp.Channel) error {
+func (c *Changer) Consume(d amqp.Delivery, ch *amqp.Channel) (e error) {
 	defer func() {
+		if r := recover(); r != nil {
+			e = r.(error)
+		}
 		d.Ack(false)
 	}()
-	s := new(Status)
-	if e := json.Unmarshal(d.Body, &s); e != nil {
-		return e
+	r := new(Request)
+	if e = json.Unmarshal(d.Body, &r); e != nil {
+		return
 	}
-	c.statusChan <- *s
-	return nil
+	if e = r.Valid(); e != nil {
+		return
+	}
+	c.requestChan <- *r
+	return
 }
 
-func (w *Waiter) Consume(d amqp.Delivery, ch *amqp.Channel) error {
-	idle := false
-	for !idle {
-		w.statusChan <- Status{}
-		s := <-w.statusChan
-		idle = s.Submissions == 0
-		if !idle {
-			time.Sleep(100 * time.Millisecond)
+func (w *Waiter) Consume(d amqp.Delivery, ch *amqp.Channel) (e error) {
+	defer func() {
+		if r := recover(); r != nil {
+			e = r.(error)
 		}
-	}
-	d.Ack(false)
-	return Reply(ch, d, []byte{})
+		d.Ack(false)
+	}()
+	w.idleChan <- util.E{}
+	<-w.idleChan
+	e = Reply(ch, d, []byte{})
+	return
 }
 
-func (l *Loader) Consume(d amqp.Delivery, ch *amqp.Channel) error {
+func (l *Loader) Consume(d amqp.Delivery, ch *amqp.Channel) (e error) {
+	defer func() {
+		if r := recover(); r != nil {
+			e = r.(error)
+		}
+		d.Ack(false)
+	}()
 	l.statusChan <- Status{}
 	s := <-l.statusChan
 	b, e := json.Marshal(s)
 	if e != nil {
 		b = []byte(e.Error())
 	}
-	d.Ack(false)
 	re := Reply(ch, d, b)
 	if e == nil && re != nil {
 		e = re
 	}
-	return e
+	return
 }
 
-func (r *Redoer) Consume(d amqp.Delivery, ch *amqp.Channel) error {
+func (r *Redoer) Consume(d amqp.Delivery, ch *amqp.Channel) (e error) {
 	defer func() {
+		if r := recover(); r != nil {
+			e = r.(error)
+		}
 		d.Ack(false)
 	}()
 	sid, e := convert.Id(string(d.Body))
 	if e != nil {
-		return e
+		return
 	}
 	fs, e := db.Files(bson.M{db.SUBID: sid}, bson.M{db.DATA: 0}, 0, db.TIME)
 	if e != nil {
-		return e
+		return
 	}
-	r.requestChan <- &Request{
-		FileId: sid,
-		SubId:  sid,
-		Type:   SUBMISSION_START,
-	}
+	r.requestChan <- Request{FileId: sid, SubId: sid, Type: SUBMISSION_START}
 	for _, f := range fs {
 		if !f.CanProcess() {
 			continue
 		}
-		r.requestChan <- &Request{
-			FileId: f.Id,
-			SubId:  sid,
-			Type:   FILE_ADD,
-		}
+		r.requestChan <- Request{FileId: f.Id, SubId: sid, Type: FILE_ADD}
 	}
-	r.requestChan <- &Request{
-		FileId: sid,
-		SubId:  sid,
-		Type:   SUBMISSION_STOP,
-	}
-	return nil
+	r.requestChan <- Request{FileId: sid, SubId: sid, Type: SUBMISSION_STOP}
+	return
 }
 
-func NewRedoer(rc chan *Request) (*MessageHandler, error) {
+func NewRedoer(rc chan Request) (*MessageHandler, error) {
 	return NewHandler(amqpURI, "submission_exchange", DIRECT, "redo_queue", "", &Redoer{requestChan: rc}, "redo_key")
 }
 
-func NewSubmitter(rc chan *Request) (*MessageHandler, *MessageHandler, error) {
+func NewSubmitter(rc chan Request) (*MessageHandler, *MessageHandler, error) {
 	k := bson.NewObjectId().String()
 	su, e := NewHandler(amqpURI, "submission_exchange", DIRECT, "", "", &Submitter{requestChan: rc}, k)
 	if e != nil {
@@ -340,14 +357,14 @@ func NewSubmitter(rc chan *Request) (*MessageHandler, *MessageHandler, error) {
 	return su, st, nil
 }
 
-func NewWaiter(sc chan Status) (*MessageHandler, error) {
-	return NewHandler(amqpURI, "wait_exchange", DIRECT, "wait_queue", "", &Waiter{statusChan: sc}, "wait_request_key")
+func NewWaiter(c chan util.E) (*MessageHandler, error) {
+	return NewHandler(amqpURI, "wait_exchange", DIRECT, "wait_queue", "", &Waiter{idleChan: c}, "wait_request_key")
 }
 
-func NewChanger(sc chan Status) (*MessageHandler, error) {
-	return NewHandler(amqpURI, "change_exchange", FANOUT, "", "", &Changer{statusChan: sc}, "change_key")
+func NewChanger(c chan Request) (*MessageHandler, error) {
+	return NewHandler(amqpURI, "change_exchange", FANOUT, "", "", &Changer{requestChan: c}, "change_key")
 }
 
-func NewLoader(sc chan Status) (*MessageHandler, error) {
-	return NewHandler(amqpURI, "status_exchange", DIRECT, "status_queue", "", &Loader{statusChan: sc}, "status_request_key")
+func NewLoader(c chan Status) (*MessageHandler, error) {
+	return NewHandler(amqpURI, "status_exchange", DIRECT, "status_queue", "", &Loader{statusChan: c}, "status_request_key")
 }

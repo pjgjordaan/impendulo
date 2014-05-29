@@ -28,7 +28,6 @@ import (
 	"fmt"
 
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -124,11 +123,6 @@ func Submission(m, sl interface{}) (*project.Submission, error) {
 	var sb *project.Submission
 	if e = s.DB("").C(SUBMISSIONS).Find(m).Select(sl).One(&sb); e != nil {
 		return nil, &GetError{"submission", e, m}
-	}
-	if sb.Status == project.UNKNOWN {
-		if e = UpdateStatus(sb); e != nil {
-			return nil, e
-		}
 	}
 	return sb, nil
 }
@@ -283,7 +277,15 @@ func RemoveProjectById(id interface{}) error {
 }
 
 func LastFile(m, sl interface{}) (*project.File, error) {
-	fs, e := Files(m, sl, 0, "-"+TIME)
+	return firstFile(m, sl, "-"+TIME)
+}
+
+func FirstFile(m, sl interface{}) (*project.File, error) {
+	return firstFile(m, sl, TIME)
+}
+
+func firstFile(m, sl interface{}, sort string) (*project.File, error) {
+	fs, e := Files(m, sl, 0, sort)
 	if e != nil {
 		return nil, e
 	}
@@ -293,105 +295,13 @@ func LastFile(m, sl interface{}) (*project.File, error) {
 	return fs[0], nil
 }
 
-func statusFile(s *project.Submission) (*project.File, error) {
-	f, e := LastFile(bson.M{TYPE: project.SRC, SUBID: s.Id}, bson.M{RESULTS: 1, TIME: 1})
-	if e != nil {
-		if s.Status != project.BUSY {
-			return nil, RemoveSubmissionById(s.Id)
-		}
-		return nil, e
-	}
-	return f, nil
-}
-
-func UpdateStatus(s *project.Submission) error {
-	f, e := statusFile(s)
-	if e != nil || f == nil {
-		return e
-	}
-	junitStatus := CheckJUnit(s.ProjectId, f)
-	jpfStatus := CheckJPF(s.ProjectId, f)
-	switch junitStatus {
-	case project.JUNIT:
-		switch jpfStatus {
-		case project.UNKNOWN:
-			s.Status = project.JUNIT
-		case project.JPF:
-			s.Status = project.ALL
-		case project.NOTJPF:
-			s.Status = project.JUNIT_NOTJPF
-		}
-	case project.NOTJUNIT:
-		switch jpfStatus {
-		case project.UNKNOWN:
-			s.Status = project.NOTJUNIT
-		case project.JPF:
-			s.Status = project.JPF_NOTJUNIT
-		case project.NOTJPF:
-			s.Status = project.FAILED
-		}
-	case project.UNKNOWN:
-		switch jpfStatus {
-		case project.UNKNOWN:
-			s.Status = project.UNKNOWN
-		case project.JPF:
-			s.Status = project.JPF
-		case project.NOTJPF:
-			s.Status = project.NOTJPF
-		}
-	}
-	return Update(SUBMISSIONS, bson.M{ID: s.Id}, bson.M{SET: bson.M{STATUS: s.Status}})
-}
-
-func timeFile(sub *project.Submission) (*project.File, error) {
-	fs, e := Files(bson.M{SUBID: sub.Id}, bson.M{TIME: 1}, 0, TIME)
-	if e != nil {
-		return nil, e
-	}
-	if len(fs) == 0 {
-		if sub.Status != project.BUSY {
-			return nil, RemoveSubmissionById(sub.Id)
-		}
-		return nil, nil
-	}
-	return fs[0], nil
-}
-
 func UpdateTime(sub *project.Submission) error {
-	f, e := timeFile(sub)
-	if e != nil || f == nil {
+	f, e := FirstFile(bson.M{SUBID: sub.Id}, bson.M{TIME: 1})
+	if e != nil {
 		return e
 	}
 	if f.Time >= sub.Time {
 		return nil
 	}
 	return Update(SUBMISSIONS, bson.M{ID: sub.Id}, bson.M{SET: bson.M{TIME: f.Time}})
-}
-
-func CheckJUnit(pid bson.ObjectId, f *project.File) project.Status {
-	ts, e := JUnitTests(bson.M{PROJECTID: pid}, bson.M{NAME: 1})
-	if e != nil || len(ts) == 0 {
-		return project.UNKNOWN
-	}
-	for _, t := range ts {
-		n, _ := util.Extension(t.Name)
-		id, ok := f.Results[n].(bson.ObjectId)
-		if !ok {
-			return project.NOTJUNIT
-		}
-		if r, e := JUnitResult(bson.M{ID: id}, nil); e != nil || !r.Success() {
-			return project.NOTJUNIT
-		}
-	}
-	return project.JUNIT
-}
-
-func CheckJPF(pid bson.ObjectId, f *project.File) project.Status {
-	if _, e := JPFConfig(bson.M{PROJECTID: pid}, bson.M{ID: 1}); e != nil {
-		return project.UNKNOWN
-	}
-	if r, e := JPFResult(bson.M{FILEID: f.Id}, nil); e == nil && r.Success() {
-		return project.JPF
-	}
-	return project.NOTJPF
 }

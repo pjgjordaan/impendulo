@@ -28,6 +28,7 @@ package pmd
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
@@ -85,7 +86,7 @@ func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, 
 	o := filepath.Join(target.Dir, "pmd.xml")
 	a := []string{t.cmd, "pmd", "-f", "xml", "-stress", "-shortnames", "-R", t.rules, "-r", o, "-d", target.Dir}
 	defer os.Remove(o)
-	r, re := tool.RunCommand(a, nil)
+	r, re := tool.RunCommand(a, nil, 30*time.Second)
 	rf, e := os.Open(o)
 	if e != nil {
 		if re != nil {
@@ -94,11 +95,11 @@ func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, 
 		return nil, fmt.Errorf("could not run pmd: %s", string(r.StdErr))
 	}
 	nr, e := NewResult(fileId, util.ReadBytes(rf))
-	if e != nil {
-		if re != nil {
-			e = re
-		}
-		return nil, e
+	if e == nil {
+		return nr, nil
 	}
-	return nr, nil
+	if re != nil {
+		e = re
+	}
+	return nil, e
 }

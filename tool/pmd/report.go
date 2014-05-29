@@ -99,12 +99,12 @@ func (r *Report) Success() bool {
 
 //String
 func (r *Report) String() string {
-	s := fmt.Sprintf("Report{ Errors: %d\n.", r.Errors)
-	if r.Files != nil {
-		s += "Files: \n"
-		for _, f := range r.Files {
-			s += f.String()
-		}
+	if r.Files == nil {
+		return fmt.Sprintf("Report{ Errors: %d\n.", r.Errors)
+	}
+	s := fmt.Sprintf("Report{ Errors: %d\nFiles:\n.", r.Errors)
+	for _, f := range r.Files {
+		s += f.String()
 	}
 	return s + "}\n"
 }

@@ -4,7 +4,7 @@
   <li class="active"><a>Table</a></li>
   <li><a  href="projectchart">Chart</a></li>
 </ul>
-<table class="table table-hover table-striped">
+<table id="table-projects" class="table table-hover table-striped tablesorter">
   <thead>
     <tr class="info">
       <th>Name</th>
@@ -54,4 +54,11 @@
     {{end}}
   </tbody>
 </table>
+<script>
+$(function(){
+$("#table-projects").tablesorter({
+theme : 'bootstrap'
+});
+});
+</script>
 {{end}}

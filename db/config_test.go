@@ -25,8 +25,10 @@
 package db
 
 import (
+	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/junit"
 	"labix.org/v2/mgo/bson"
+
 	"reflect"
 	"testing"
 )
@@ -39,7 +41,7 @@ func TestJUnitTest(t *testing.T) {
 		t.Error(err)
 	}
 	defer s.Close()
-	test := junit.NewTest(bson.NewObjectId(), "name", "pkg", junit.DEFAULT, junitData, junitData)
+	test := junit.NewTest(bson.NewObjectId(), "name", junit.DEFAULT, &tool.Target{}, junitData, junitData)
 	err = AddJUnitTest(test)
 	if err != nil {
 		t.Error(err)

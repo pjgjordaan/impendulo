@@ -22,13 +22,12 @@
   <li class="active"><a href="#">Table</a></li>
   <li><a href="submissionschartview">Chart</a></li>
 </ul>
-<table class="table table-hover table-striped">
+<table id="table-submissions" class="table table-hover table-striped tablesorter">
   <thead><tr class="info">
       <th>Project</th>
       <th>Created</th>
       <th>Snapshots</th>
       <th>Launches</th>
-      <th>Status</th>
   </tr></thead>
   <tbody data-provides="rowlink" >
     {{range .subRes}}
@@ -46,11 +45,15 @@
       <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
 	  {{launches .Id}}
       </a></td>
-      <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
-	  {{.Result}}
-      </a></td>
     </tr>
     {{end}}
   </tbody>
 </table>
+<script>
+$(function(){
+$("#table-submissions").tablesorter({
+theme : 'bootstrap'
+});
+});
+</script>
 {{end}}

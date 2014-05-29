@@ -61,6 +61,7 @@ const (
 	DEBUG_CONN   = "mongodb://localhost/impendulo_debug"
 	TEST_CONN    = "mongodb://localhost/impendulo_test"
 	//Field names
+	TARGET    = "target"
 	ID        = "_id"
 	PROJECTID = "projectid"
 	PROJECT   = "project"

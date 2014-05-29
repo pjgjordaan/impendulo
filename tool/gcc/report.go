@@ -28,6 +28,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"time"
 
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
@@ -50,74 +51,80 @@ func init() {
 }
 
 //NewReport
-func NewReport(id bson.ObjectId, data []byte) (ret *Report, err error) {
+func NewReport(id bson.ObjectId, data []byte) (*Report, error) {
 	data = bytes.TrimSpace(data)
-	ret = &Report{
-		Id:   id,
-		Data: data,
+	wc, e := calcCount("warning", data)
+	if e != nil {
+		return nil, e
 	}
-	ret.Warnings, err = calcCount("warning", data)
-	if err != nil {
-		return
+	ec, e := calcCount("error", data)
+	if e != nil {
+		return nil, e
 	}
-	ret.Errors, err = calcCount("error", data)
-	if err != nil {
-		return
+	t := tool.SUCCESS
+	if ec > 0 {
+		t = tool.ERRORS
+	} else if wc > 0 {
+		t = tool.WARNINGS
 	}
-	if ret.Errors > 0 {
-		ret.Type = tool.ERRORS
-	} else if ret.Warnings > 0 {
-		ret.Type = tool.WARNINGS
-	} else {
-		ret.Type = tool.SUCCESS
-	}
-	return
+	return &Report{
+		Id:       id,
+		Data:     data,
+		Warnings: wc,
+		Errors:   ec,
+		Type:     t,
+	}, nil
 }
 
 //Success tells us if compilation finished with no errors or warnings.
-func (this *Report) Success() bool {
-	return this.Type == tool.SUCCESS
+func (r *Report) Success() bool {
+	return r.Type == tool.SUCCESS
 }
 
 //Header generates a string which briefly describes the compilation.
-func (this *Report) Header() (header string) {
-	if this.Success() {
-		header = string(this.Data)
-	} else if this.Type == tool.ERRORS {
-		header = strconv.Itoa(this.Errors) + " Error"
-		if this.Errors > 1 {
-			header += "s"
-		}
-		if this.Warnings > 0 {
-			header += " & " + strconv.Itoa(this.Warnings) + " Warning"
-			if this.Warnings > 1 {
-				header += "s"
-			}
-		}
-	} else if this.Type == tool.WARNINGS {
-		header = strconv.Itoa(this.Warnings) + " Warning"
-		if this.Warnings > 1 {
-			header += "s"
-		}
+func (r *Report) Header() (header string) {
+	if r.Success() {
+		return string(r.Data)
 	}
-	return
+	return combine(countString(r.Errors, "Error"), countString(r.Warnings, "Warning"))
+}
+
+func countString(c int, n string) string {
+	switch c {
+	case 0:
+		return ""
+	case 1:
+		return fmt.Sprintf("%d %s", c, n)
+	default:
+		return fmt.Sprintf("%d %ss", c, n)
+	}
+
+}
+
+func combine(a, b string) string {
+	if a == "" {
+		return b
+	} else if b == "" {
+		return a
+	}
+	return fmt.Sprintf("%s & %s", a, b)
 }
 
 func calcCount(tipe string, data []byte) (int, error) {
 	prog := fmt.Sprintf("/^[^:]+:[0-9]+:[0-9]+: (%s):/ {e++} END {print e + 0} 1", tipe)
-	r, e := tool.RunCommand([]string{"awk", prog}, bytes.NewReader(data))
+	r, e := tool.RunCommand([]string{"awk", prog}, bytes.NewReader(data), 30*time.Second)
 	if e != nil {
 		return -1, e
 	} else if r.HasStdErr() {
-		return -1, fmt.Errorf("Encountered awk error %s", string(r.StdErr))
+		return -1, fmt.Errorf("encountered awk error %s", string(r.StdErr))
 	}
 	sp := bytes.Split(bytes.TrimSpace(r.StdOut), []byte("\n"))
 	if len(sp) < 1 {
-		return -1, fmt.Errorf("Awk output %s too short", string(r.StdOut))
+		return -1, fmt.Errorf("awk output %s too short", string(r.StdOut))
 	}
 	sp = bytes.Split(bytes.TrimSpace(sp[len(sp)-1]), []byte(" "))
 	if len(sp) < 1 {
-		return -1, fmt.Errorf("Awk output %s too short", string(r.StdOut))
+		return -1, fmt.Errorf("awk output %s too short", string(r.StdOut))
 	}
 	return strconv.Atoi(string(sp[0]))
 }

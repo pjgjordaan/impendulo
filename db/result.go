@@ -27,6 +27,7 @@ package db
 import (
 	"fmt"
 
+	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/diff"
@@ -38,6 +39,7 @@ import (
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/util/convert"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 )
@@ -50,259 +52,265 @@ type (
 
 //CheckstyleResult retrieves a Result matching
 //the given interface from the active database.
-func CheckstyleResult(matcher, selector bson.M) (ret *checkstyle.Result, err error) {
-	session, err := Session()
-	if err != nil {
-		return
+func CheckstyleResult(m, sl bson.M) (*checkstyle.Result, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
 	}
-	defer session.Close()
-	c := session.DB("").C(RESULTS)
-	matcher[NAME] = checkstyle.NAME
-	err = c.Find(matcher).Select(selector).One(&ret)
-	if err != nil {
-		err = &GetError{"result", err, matcher}
-	} else if HasGridFile(ret, selector) {
-		err = GridFile(ret.GetId(), &ret.Report)
+	defer s.Close()
+	var r *checkstyle.Result
+	if e = s.DB("").C(RESULTS).Find(m).Select(sl).One(&r); e != nil {
+		return nil, &GetError{"result", e, m}
+	} else if !HasGridFile(r, sl) {
+		return r, nil
 	}
-	return
+	if e = GridFile(r.GetId(), &r.Report); e != nil {
+		return nil, e
+	}
+	return r, nil
 }
 
 //PMDResult retrieves a Result matching
 //the given interface from the active database.
-func PMDResult(matcher, selector bson.M) (ret *pmd.Result, err error) {
-	session, err := Session()
-	if err != nil {
-		return
+func PMDResult(m, sl bson.M) (*pmd.Result, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
 	}
-	defer session.Close()
-	c := session.DB("").C(RESULTS)
-	matcher[NAME] = pmd.NAME
-	err = c.Find(matcher).Select(selector).One(&ret)
-	if err != nil {
-		err = &GetError{"result", err, matcher}
-	} else if HasGridFile(ret, selector) {
-		err = GridFile(ret.GetId(), &ret.Report)
+	defer s.Close()
+	var r *pmd.Result
+	if e = s.DB("").C(RESULTS).Find(m).Select(sl).One(&r); e != nil {
+		return nil, &GetError{"result", e, m}
+	} else if !HasGridFile(r, sl) {
+		return r, nil
 	}
-	return
+	if e = GridFile(r.GetId(), &r.Report); e != nil {
+		return nil, e
+	}
+	return r, nil
 }
 
 //FindbugsResult retrieves a Result matching
 //the given interface from the active database.
-func FindbugsResult(matcher, selector bson.M) (ret *findbugs.Result, err error) {
-	session, err := Session()
-	if err != nil {
-		return
+func FindbugsResult(m, sl bson.M) (*findbugs.Result, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
 	}
-	defer session.Close()
-	c := session.DB("").C(RESULTS)
-	matcher[NAME] = findbugs.NAME
-	err = c.Find(matcher).Select(selector).One(&ret)
-	if err != nil {
-		err = &GetError{"result", err, matcher}
-	} else if HasGridFile(ret, selector) {
-		err = GridFile(ret.GetId(), &ret.Report)
+	defer s.Close()
+	var r *findbugs.Result
+	if e = s.DB("").C(RESULTS).Find(m).Select(sl).One(&r); e != nil {
+		return nil, &GetError{"result", e, m}
+	} else if !HasGridFile(r, sl) {
+		return r, nil
 	}
-	return
+	if e = GridFile(r.GetId(), &r.Report); e != nil {
+		return nil, e
+	}
+	return r, nil
 }
 
 //JPFResult retrieves a Result matching
 //the given interface from the active database.
-func JPFResult(matcher, selector bson.M) (ret *jpf.Result, err error) {
-	session, err := Session()
-	if err != nil {
-		return
+func JPFResult(m, sl bson.M) (*jpf.Result, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
 	}
-	defer session.Close()
-	c := session.DB("").C(RESULTS)
-	matcher[NAME] = jpf.NAME
-	err = c.Find(matcher).Select(selector).One(&ret)
-	if err != nil {
-		err = &GetError{"result", err, matcher}
-	} else if HasGridFile(ret, selector) {
-		err = GridFile(ret.GetId(), &ret.Report)
+	defer s.Close()
+	var r *jpf.Result
+	if e = s.DB("").C(RESULTS).Find(m).Select(sl).One(&r); e != nil {
+		return nil, &GetError{"result", e, m}
+	} else if !HasGridFile(r, sl) {
+		return r, nil
 	}
-	return
+	if e := GridFile(r.GetId(), &r.Report); e != nil {
+		return nil, e
+	}
+	return r, nil
 }
 
 //JUnitResult retrieves aResult matching
 //the given interface from the active database.
-func JUnitResult(matcher, selector bson.M) (ret *junit.Result, err error) {
-	session, err := Session()
-	if err != nil {
-		return
+func JUnitResult(m, sl bson.M) (*junit.Result, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
 	}
-	defer session.Close()
-	c := session.DB("").C(RESULTS)
-	matcher[TYPE] = junit.NAME
-	err = c.Find(matcher).Select(selector).One(&ret)
-	if err != nil {
-		err = &GetError{"result", err, matcher}
-	} else if HasGridFile(ret, selector) {
-		err = GridFile(ret.GetId(), &ret.Report)
+	defer s.Close()
+	var r *junit.Result
+	if e = s.DB("").C(RESULTS).Find(m).Select(sl).One(&r); e != nil {
+		return nil, &GetError{"result", e, m}
+	} else if !HasGridFile(r, sl) {
+		return r, nil
 	}
-	return
+	if e := GridFile(r.GetId(), &r.Report); e != nil {
+		return nil, e
+	}
+	return r, nil
 }
 
-func JacocoResult(matcher, selector bson.M) (ret *jacoco.Result, err error) {
-	session, err := Session()
-	if err != nil {
-		return
+func JacocoResult(m, sl bson.M) (*jacoco.Result, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
 	}
-	defer session.Close()
-	c := session.DB("").C(RESULTS)
-	matcher[TYPE] = jacoco.NAME
-	err = c.Find(matcher).Select(selector).One(&ret)
-	if err != nil {
-		err = &GetError{"result", err, matcher}
-	} else if HasGridFile(ret, selector) {
-		err = GridFile(ret.GetId(), &ret.Report)
+	defer s.Close()
+	var r *jacoco.Result
+	if e = s.DB("").C(RESULTS).Find(m).Select(sl).One(&r); e != nil {
+		return nil, &GetError{"result", e, m}
+	} else if !HasGridFile(r, sl) {
+		return r, nil
 	}
-	return
+	if e := GridFile(r.GetId(), &r.Report); e != nil {
+		return nil, e
+	}
+	return r, nil
 }
 
 //JavacResult retrieves a JavacResult matching
 //the given interface from the active database.
-func JavacResult(matcher, selector bson.M) (ret *javac.Result, err error) {
-	session, err := Session()
-	if err != nil {
-		return
+func JavacResult(m, sl bson.M) (*javac.Result, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
 	}
-	defer session.Close()
-	c := session.DB("").C(RESULTS)
-	matcher[NAME] = javac.NAME
-	err = c.Find(matcher).Select(selector).One(&ret)
-	if err != nil {
-		err = &GetError{"result", err, matcher}
-	} else if HasGridFile(ret, selector) {
-		err = GridFile(ret.GetId(), &ret.Report)
+	defer s.Close()
+	var r *javac.Result
+	if e = s.DB("").C(RESULTS).Find(m).Select(sl).One(&r); e != nil {
+		return nil, &GetError{"result", e, m}
+	} else if !HasGridFile(r, sl) {
+		return r, nil
 	}
-	return
+	if e := GridFile(r.GetId(), &r.Report); e != nil {
+		return nil, e
+	}
+	return r, nil
 }
 
-func GCCResult(matcher, selector bson.M) (ret *gcc.Result, err error) {
-	session, err := Session()
-	if err != nil {
-		return
+func GCCResult(m, sl bson.M) (*gcc.Result, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
 	}
-	defer session.Close()
-	c := session.DB("").C(RESULTS)
-	matcher[NAME] = gcc.NAME
-	err = c.Find(matcher).Select(selector).One(&ret)
-	if err != nil {
-		err = &GetError{"result", err, matcher}
-	} else if HasGridFile(ret, selector) {
-		err = GridFile(ret.GetId(), &ret.Report)
+	defer s.Close()
+	var r *gcc.Result
+	if e = s.DB("").C(RESULTS).Find(m).Select(sl).One(&r); e != nil {
+		return nil, &GetError{"result", e, m}
+	} else if !HasGridFile(r, sl) {
+		return r, nil
 	}
-	return
+	if e := GridFile(r.GetId(), &r.Report); e != nil {
+		return nil, e
+	}
+	return r, nil
 }
 
-func resultType(matcher bson.M) (string, error) {
-	session, err := Session()
-	if err != nil {
-		return "", err
+func resultType(m bson.M) (string, error) {
+	s, e := Session()
+	if e != nil {
+		return "", e
 	}
-	defer session.Close()
-	c := session.DB("").C(RESULTS)
-	var holder *TypeHolder
-	err = c.Find(matcher).One(&holder)
-	if err != nil {
-		return "", &GetError{"result type", err, matcher}
+	defer s.Close()
+	var h *TypeHolder
+	if e = s.DB("").C(RESULTS).Find(m).One(&h); e != nil {
+		return "", &GetError{"result type", e, m}
 	}
-	return holder.Type, nil
+	return h.Type, nil
 }
 
 //ToolResult retrieves a tool.ToolResult matching
 //the given interface and name from the active database.
-func ToolResult(matcher, selector bson.M) (ret tool.ToolResult, err error) {
-	tipe, err := resultType(matcher)
-	if err != nil {
-		return
+func ToolResult(m, sl bson.M) (tool.ToolResult, error) {
+	t, e := resultType(m)
+	if e != nil {
+		return nil, e
 	}
-	switch tipe {
+	m[TYPE] = t
+	switch t {
 	case javac.NAME:
-		ret, err = JavacResult(matcher, selector)
+		return JavacResult(m, sl)
 	case jpf.NAME:
-		ret, err = JPFResult(matcher, selector)
+		return JPFResult(m, sl)
 	case findbugs.NAME:
-		ret, err = FindbugsResult(matcher, selector)
+		return FindbugsResult(m, sl)
 	case pmd.NAME:
-		ret, err = PMDResult(matcher, selector)
+		return PMDResult(m, sl)
 	case checkstyle.NAME:
-		ret, err = CheckstyleResult(matcher, selector)
+		return CheckstyleResult(m, sl)
 	case gcc.NAME:
-		ret, err = GCCResult(matcher, selector)
+		return GCCResult(m, sl)
 	case jacoco.NAME:
-		ret, err = JacocoResult(matcher, selector)
+		return JacocoResult(m, sl)
 	case junit.NAME:
-		ret, err = JUnitResult(matcher, selector)
+		return JUnitResult(m, sl)
 	default:
-		err = fmt.Errorf("Unsupported result type %s.", tipe)
+		return nil, fmt.Errorf("unsupported result type %s", t)
 	}
-	return
 }
 
 //DisplayResult retrieves a tool.DisplayResult matching
 //the given interface and name from the active database.
-func DisplayResult(matcher, selector bson.M) (ret tool.DisplayResult, err error) {
-	tipe, err := resultType(matcher)
-	if err != nil {
-		return
+func DisplayResult(m, sl bson.M) (tool.DisplayResult, error) {
+	t, e := resultType(m)
+	if e != nil {
+		return nil, e
 	}
-	switch tipe {
+	m[TYPE] = t
+	switch t {
 	case javac.NAME:
-		ret, err = JavacResult(matcher, selector)
+		return JavacResult(m, sl)
 	case jpf.NAME:
-		ret, err = JPFResult(matcher, selector)
+		return JPFResult(m, sl)
 	case findbugs.NAME:
-		ret, err = FindbugsResult(matcher, selector)
+		return FindbugsResult(m, sl)
 	case pmd.NAME:
-		ret, err = PMDResult(matcher, selector)
+		return PMDResult(m, sl)
 	case checkstyle.NAME:
-		ret, err = CheckstyleResult(matcher, selector)
+		return CheckstyleResult(m, sl)
 	case gcc.NAME:
-		ret, err = GCCResult(matcher, selector)
+		return GCCResult(m, sl)
 	case jacoco.NAME:
-		ret, err = JacocoResult(matcher, selector)
+		return JacocoResult(m, sl)
 	case junit.NAME:
-		ret, err = JUnitResult(matcher, selector)
+		return JUnitResult(m, sl)
 	default:
-		err = fmt.Errorf("Unsupported result type %s.", tipe)
+		return nil, fmt.Errorf("unsupported result type %s", t)
 	}
-	return
 }
 
-func ChartResult(matcher, selector bson.M) (ret tool.ChartResult, err error) {
-	tipe, err := resultType(matcher)
-	if err != nil {
-		return
+func ChartResult(m, sl bson.M) (tool.ChartResult, error) {
+	t, e := resultType(m)
+	if e != nil {
+		return nil, e
 	}
-	switch tipe {
+	m[TYPE] = t
+	switch t {
 	case javac.NAME:
-		ret, err = JavacResult(matcher, selector)
+		return JavacResult(m, sl)
 	case jpf.NAME:
-		ret, err = JPFResult(matcher, selector)
+		return JPFResult(m, sl)
 	case findbugs.NAME:
-		ret, err = FindbugsResult(matcher, selector)
+		return FindbugsResult(m, sl)
 	case pmd.NAME:
-		ret, err = PMDResult(matcher, selector)
+		return PMDResult(m, sl)
 	case checkstyle.NAME:
-		ret, err = CheckstyleResult(matcher, selector)
+		return CheckstyleResult(m, sl)
 	case gcc.NAME:
-		ret, err = GCCResult(matcher, selector)
+		return GCCResult(m, sl)
 	case junit.NAME:
-		ret, err = JUnitResult(matcher, selector)
+		return JUnitResult(m, sl)
 	case jacoco.NAME:
-		ret, err = JacocoResult(matcher, selector)
+		return JacocoResult(m, sl)
 	default:
-		err = fmt.Errorf("Unsupported result type %s.", tipe)
+		return nil, fmt.Errorf("Unsupported result type %s.", t)
 	}
-	return
 }
 
 //AddResult adds a new result to the active database.
 func AddResult(r tool.ToolResult, n string) error {
 	if r == nil {
-		return fmt.Errorf("Result is nil. In db/result.go.")
+		return fmt.Errorf("can't add nil result")
 	}
 	if e := AddFileResult(r.GetFileId(), n, r.GetId()); e != nil {
 		return e
@@ -325,30 +333,29 @@ func AddResult(r tool.ToolResult, n string) error {
 }
 
 //AddFileResult adds or updates a result in a file's results.
-func AddFileResult(fileId bson.ObjectId, name string, value interface{}) error {
-	return Update(FILES, bson.M{ID: fileId}, bson.M{SET: bson.M{RESULTS + "." + name: value}})
+func AddFileResult(fid bson.ObjectId, n string, v interface{}) error {
+	return Update(FILES, bson.M{ID: fid}, bson.M{SET: bson.M{RESULTS + "." + n: v}})
 }
 
 //ChartResults retrieves all tool.DisplayResults matching
 //the given file Id from the active database.
-func ChartResults(fileId bson.ObjectId) (ret []tool.ChartResult, err error) {
-	file, err := File(bson.M{ID: fileId}, bson.M{DATA: 0})
-	if err != nil {
-		return
+func ChartResults(fid bson.ObjectId) ([]tool.ChartResult, error) {
+	f, e := File(bson.M{ID: fid}, bson.M{DATA: 0})
+	if e != nil {
+		return nil, e
 	}
-	ret = make([]tool.ChartResult, 0, len(file.Results))
-	for _, id := range file.Results {
+	rs := make([]tool.ChartResult, 0, len(f.Results))
+	for _, id := range f.Results {
 		if _, ok := id.(bson.ObjectId); !ok {
 			continue
 		}
-		res, err := ChartResult(bson.M{ID: id}, nil)
-		if err != nil {
-			err = nil
+		r, e := ChartResult(bson.M{ID: id}, nil)
+		if e != nil {
 			continue
 		}
-		ret = append(ret, res)
+		rs = append(rs, r)
 	}
-	return
+	return rs, nil
 }
 
 //AllResultNames retrieves all result names for a given project.
@@ -458,4 +465,59 @@ func UserResults(u string) []string {
 		}
 	}
 	return rs
+}
+
+func FileResultId(sid bson.ObjectId, fname, rtipe, rname string) (bson.ObjectId, error) {
+	mr := &mgo.MapReduce{
+		Map: `function() {
+	var added = {};
+        var rtipe = "` + rtipe + `";
+        var rname = "` + rname + `";
+	for (n in this.results) {
+                if(n in added){
+                    continue;
+                }
+                added[n] = true;
+                var sa = n.split('-');
+                var sb = sa[0].split(':');
+                if(sa.length < 2 || sb.length < 2 || sb[0] !== rtipe || sb[1] !== rname){
+                    continue;
+                }
+                emit(sa[1], "");
+	}
+};`,
+		Reduce: `function(name, vals) {
+       return name;
+};`,
+	}
+	s, e := Session()
+	if e != nil {
+		return "", e
+	}
+	defer s.Close()
+	var ns []*struct {
+		Value string `bson:"value"`
+	}
+	if _, e := s.DB("").C(FILES).Find(bson.M{SUBID: sid, NAME: fname}).
+		Select(bson.M{NAME: 1, RESULTS: 1}).MapReduce(mr, &ns); e != nil {
+		return "", e
+	}
+	var f *project.File
+	for _, hex := range ns {
+		id, e := convert.Id(hex.Value)
+		if e != nil {
+			continue
+		}
+		cf, e := File(bson.M{ID: id}, bson.M{ID: 1, TIME: 1})
+		if e != nil {
+			continue
+		}
+		if f == nil || cf.Time > f.Time {
+			f = cf
+		}
+	}
+	if f == nil {
+		return "", fmt.Errorf("no results found for %s \u2192 %s", rtipe, rname)
+	}
+	return f.Id, nil
 }

@@ -30,6 +30,8 @@ import (
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
+
+	"time"
 )
 
 type (
@@ -76,7 +78,7 @@ func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, 
 	}
 	cp += target.Dir
 	a := []string{t.cmd, "-cp", cp + ":" + target.Dir, "-implicit:class", "-Xlint", target.FilePath()}
-	r, e := tool.RunCommand(a, nil)
+	r, e := tool.RunCommand(a, nil, 30*time.Second)
 	if e != nil {
 		if !tool.IsEndError(e) {
 			return nil, e

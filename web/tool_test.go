@@ -70,17 +70,14 @@ func TestCreateJPF(t *testing.T) {
 	id := bson.NewObjectId().Hex()
 	lPkg := "gov.nasa.jpf.listener."
 	sPkg := "gov.nasa.jpf.search."
+	tg := "pkg.Class"
 	other := html.EscapeString("target.args = 2,1,2\nsearch.multiple_errors = true\nasdas8823=quesq,322\n ")
 	requests := []postHolder{
-		postHolder{"/createjpf?project-id=" + id + "&addedlisteners=" +
-			lPkg + "ExecTracker&addedlisteners=" + lPkg +
-			"DeadlockAnalyzer&addedsearches=" + sPkg + "DFSearch&other=" + other, true},
+		postHolder{fmt.Sprintf("/createjpf?project-id=%s&target=%s&addedlisteners=%sExecTracker&addedlisteners=%sDeadlockAnalyzer&addedsearches=%sDFSearch&other=%s", id, tg, lPkg, lPkg, sPkg, other), true},
 		postHolder{"/createjpf?", false},
-		postHolder{"/createjpf?project-id=" + id, true},
-		postHolder{"/createjpf?project-id=" + id + "&addedlisteners=" +
-			lPkg + "ExecTracker&addedlisteners=" + lPkg +
-			"DeadlockAnalyzer&addedsearches=" + sPkg + "DFSearch", true},
-		postHolder{"/createjpf?project-id=" + id + "&addedlisteners=" + lPkg, true},
+		postHolder{fmt.Sprintf("/createjpf?project-id=%s&target=%s", id, tg), true},
+		postHolder{fmt.Sprintf("/createjpf?project-id=%s&target=%s&addedlisteners=%sExecTracker&addedlisteners=%sDeadlockAnalyzer&addedsearches=%sDFSearch", id, tg, lPkg, lPkg, sPkg), true},
+		postHolder{fmt.Sprintf("/createjpf?project-id=%s&target=%s&addedlisteners=%s", id, tg, lPkg), true},
 	}
 	testToolFunc(t, CreateJPF, requests)
 }

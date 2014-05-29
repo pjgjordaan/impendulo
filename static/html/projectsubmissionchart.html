@@ -5,49 +5,64 @@
     <a href="#" data-toggle="dropdown" role="button"
        id="project-dropdown-label" class="dropdown-toggle">
       <h4>
-	<small>project</small> 
-	{{projectName .ctx.Browse.Pid}} <span class="caret"></span>
+	<small>project</small> {{projectName .ctx.Browse.Pid}} <span class="caret"></span>
       </h4> 
     </a>
     <ul class="dropdown-menu" role="menu" aria-labelledby="project-dropdown-label">
       {{$projects := projects}}
       {{range $projects}}
-      <li><a href="getsubmissions?project-id={{.Id.Hex}}">{{.Name}}</a></li>
+      <li><a class="a-project" projectid="{{.Id.Hex}}" href="" onclick="return false;">{{.Name}}</a></li>
       {{end}}
     </ul>
   </li>
-</ul>
+</ul>      
 {{$pid := .ctx.Browse.Pid.Hex}}
 <ul class="nav nav-pills">
-  <li><a href="getsubmissions?project-id={{$pid}}">Table</a></li>
+  <li><a href="getsubmissions">Table</a></li>
   <li class="active"><a>Chart</a></li>
 </ul>
-<form class="form-inline centered" role="form" onsubmit="return psc();">
-  <div class="form-group">
-    <label for="results">Tool: </label>
-    <select style="width:200px;" class="form-control select-inline" name="results" id="results">
-    </select>
+<div class="row">
+  <div class="col-md-6">
+    <form class="form-inline centered" role="form" onsubmit="return false;">
+      <div class="form-group">
+	<label for="tool">Tool </label>
+	<select style="width:200px;" id="tool" name="tool"
+	class="form-control select-inline"></select>
+      </div>
+    </form>
   </div>
-  <div class="form-group">
-    <label for="score">Score: </label>
-    <select style="width:150px;" class="form-control select-inline" name="score" id="score">
-      <option value="final">Final</option>
-      <option value="average">Average</option>
-    </select>
+  <div class="col-md-6">
+    <label>
+      <input type="radio" name="score" value="final" checked>
+      Final Score
+    </label><br>
+    <label>
+      <input type="radio" name="score" value="average"> 
+      Average Score
+    </label>
   </div>
-  <button type="submit" class="btn btn-default">
-    <span class="glyphicon glyphicon-arrow-right"></span>
-  </button>
-</form>
-<div id="submissions-chart" xmlns:xlink="http://www.w3.org/1999/xlink"></div>
-<script language="javascript" src="/static/js/submissionsChart.js"></script> 
+</div>
 <script>
-  window.onload = function(){ 
-  addResults({{$pid}}, 'results', 'project');
-  }
-  function psc(){
-  loadSubmissionsChart({{$pid}},'project',document.getElementById('results').value,document.getElementById('score').value);
-  return false;
-  }
+  $( document ).ready(function(){
+  addResults({{$pid}}, 'tool', 'project');
+  $('#tool').change(function(){
+  loadSubmissionsChart({{$pid}},'project',$(this).val(),$('[name="score"]').val());
+  var params = {'result':$(this).val()};
+  setContext(params);
+  });
+  $('[name="score"]').change(function(){
+  loadSubmissionsChart({{$pid}},'project',$('#tool').val(),$(this).val());
+  });
+  $('.a-project').on('click', function(){
+  var pid = $(this).attr('projectid');
+  loadSubmissionsChart(pid,'project',$('#tool').val(),$('[name="score"]').val());
+  var params = {'project-id':pid};
+  setContext(params);
+  $('#project-dropdown-label').html('<h4><small>project</small> '+$(this).text()+' <span class="caret"></span></h4>');
+  });
+  });
 </script>
+<div id="submissions-chart"
+     xmlns:xlink="http://www.w3.org/1999/xlink">
+</div>
 {{end}}

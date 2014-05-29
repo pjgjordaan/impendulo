@@ -49,9 +49,9 @@ type (
 )
 
 func init() {
-	auth, enc, err := util.CookieKeys()
-	if err != nil {
-		panic(err)
+	auth, enc, e := util.CookieKeys()
+	if e != nil {
+		panic(e)
 	}
 	store = sessions.NewCookieStore(auth, enc)
 }
@@ -66,8 +66,7 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//Load our context from session
 	c := LoadContext(s)
 	b := new(HttpBuffer)
-	e = CheckAccess(r.URL.Path, c, Permissions())
-	if e != nil {
+	if e = CheckAccess(r.URL.Path, c, Permissions()); e != nil {
 		c.AddMessage(e.Error(), true)
 		http.Redirect(b, r, getRoute("index"), http.StatusSeeOther)
 	} else {
@@ -137,6 +136,7 @@ func getNav(c *Context) string {
 		return "teachernavbar"
 	case user.ADMIN:
 		return "adminnavbar"
+	default:
+		return "outNavbar"
 	}
-	return "outNavbar"
 }

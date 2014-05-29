@@ -25,7 +25,6 @@
 package web
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 
@@ -136,6 +135,7 @@ func CreateFindbugs(r *http.Request, c *Context) (string, error) {
 	return "", nil
 }
 
+//CreateMake
 func CreateMake(r *http.Request, c *Context) (string, error) {
 	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
@@ -158,7 +158,11 @@ func CreateJUnit(r *http.Request, c *Context) (string, error) {
 	if e != nil {
 		return "Could not read project id.", e
 	}
-	t, e := getTestType(r)
+	t, e := readTarget(r)
+	if e != nil {
+		return "Could not read target.", e
+	}
+	tipe, e := getTestType(r)
 	if e != nil {
 		return e.Error(), e
 	}
@@ -176,20 +180,7 @@ func CreateJUnit(r *http.Request, c *Context) (string, error) {
 	} else {
 		d = make([]byte, 0)
 	}
-	return "", db.AddJUnitTest(junit.NewTest(pid, n, util.GetPackage(bytes.NewReader(b)), t, b, d))
-}
-
-//AddJPF replaces a project's JPF configuration with a provided configuration file.
-func AddJPF(r *http.Request, c *Context) (string, error) {
-	pid, e := convert.Id(r.FormValue("project-id"))
-	if e != nil {
-		return "Could not read project id.", e
-	}
-	_, d, e := ReadFormFile(r, "jpf")
-	if e != nil {
-		return "Could not read JPF configuration file.", e
-	}
-	return "", db.AddJPFConfig(jpf.NewConfig(pid, d))
+	return "", db.AddJUnitTest(junit.NewTest(pid, n, tipe, t, b, d))
 }
 
 //CreateJPF replaces a project's JPF configuration with a new, provided configuration.
@@ -197,6 +188,10 @@ func CreateJPF(r *http.Request, c *Context) (string, error) {
 	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
 		return "Could not read project id.", e
+	}
+	t, e := readTarget(r)
+	if e != nil {
+		return "Could not read target.", e
 	}
 	//Read JPF properties.
 	ps, e := readProperties(r)
@@ -208,10 +203,25 @@ func CreateJPF(r *http.Request, c *Context) (string, error) {
 	if e != nil {
 		return "Could not create JPF configuration.", e
 	}
-	if e = db.AddJPFConfig(jpf.NewConfig(pid, d)); e != nil {
+	if e = db.AddJPFConfig(jpf.NewConfig(pid, t, d)); e != nil {
 		return "Could not create JPF configuration.", e
 	}
 	return "Successfully created JPF configuration.", nil
+}
+
+func readTarget(r *http.Request) (*tool.Target, error) {
+	s, e := GetString(r, "target")
+	if e != nil {
+		return nil, e
+	}
+	pkg, f := util.Extension(s)
+	if f == "" {
+		if pkg == "" {
+			return nil, fmt.Errorf("could not read target from %s", s)
+		}
+		pkg, f = f, pkg
+	}
+	return tool.NewTarget(f+".java", pkg, "", tool.JAVA), nil
 }
 
 //readProperties reads JPF properties from a raw string and stores them in a map.
@@ -241,6 +251,7 @@ func readProperties(r *http.Request) (map[string][]string, error) {
 	return p, nil
 }
 
+//readProperty
 func readProperty(line string, props map[string][]string) error {
 	ps := strings.Split(util.RemoveEmpty(line), "=")
 	if len(ps) != 2 {
@@ -326,10 +337,12 @@ func RunTools(r *http.Request, c *Context) (string, error) {
 	return "Successfully started running tools on submissions.", nil
 }
 
+//isChildTool
 func isChildTool(n string, pid bson.ObjectId) bool {
 	return n == jacoco.NAME || db.Contains(db.TESTS, bson.M{db.PROJECTID: pid, db.NAME: n})
 }
 
+//redoSubmissions
 func redoSubmissions(submissions []*project.Submission, tools, childTools []string, allFiles, allTools bool) {
 	for _, s := range submissions {
 		var srcs []*project.File
@@ -361,6 +374,7 @@ func redoSubmissions(submissions []*project.Submission, tools, childTools []stri
 	}
 }
 
+//runAllTools
 func runAllTools(f *project.File, allFiles bool) {
 	for r, s := range f.Results {
 		rid, isId := s.(bson.ObjectId)
@@ -380,6 +394,7 @@ func runAllTools(f *project.File, allFiles bool) {
 	}
 }
 
+//runTools
 func runTools(f *project.File, ts []string, allFiles bool) {
 	for _, t := range ts {
 		v, ok := f.Results[t]
@@ -403,6 +418,7 @@ func runTools(f *project.File, ts []string, allFiles bool) {
 	}
 }
 
+//runChildTools
 func runChildTools(test *project.File, srcs []*project.File, childTools []string, allFiles bool) {
 	for _, s := range srcs {
 		for _, t := range childTools {
@@ -477,6 +493,7 @@ func GetResult(rd *ResultDesc, fileId bson.ObjectId) (tool.DisplayResult, error)
 	return tool.NewErrorResult(tool.NORESULT, rd.Format()), nil
 }
 
+//validId
 func validId(rs ...interface{}) (string, error) {
 	for _, i := range rs {
 		if r, ok := i.(tool.ToolResult); ok {

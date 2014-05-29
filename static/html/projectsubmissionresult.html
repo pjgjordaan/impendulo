@@ -26,7 +26,7 @@
 <!-- Here we display a table of the different submissions within this project --
   -- . Included are users' names and date to allow us to differentiate between --
   -- submissions. -->
-<table class="table table-hover table-striped">
+<table id="table-submissions" class="table table-hover table-striped tablesorter">
   <thead>
     <tr class="info">
       <th>User</th>
@@ -34,7 +34,6 @@
       <th>Snapshots</th>
       <th>Launches</th>
       <th>Tests</th>
-      <th>Status</th>
     </tr>
   </thead>
   <tbody data-provides="rowlink" >
@@ -56,11 +55,15 @@
       <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
 	  {{usertests .Id}}
       </a></td>
-      <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
-	  {{.Result}}
-      </a></td>
     </tr>
     {{end}}
   </tbody>
 </table>
+<script>
+$(function(){
+$("#table-submissions").tablesorter({
+theme : 'bootstrap'
+});
+});
+</script>
 {{end}}

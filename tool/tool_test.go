@@ -28,31 +28,31 @@ import (
 	"errors"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestRunCommand(t *testing.T) {
+
 	failCmd := []string{"chmod", "777"}
-	_, e := RunCommand(failCmd, nil)
+	_, e := RunCommand(failCmd, nil, 30*time.Second)
 	if e == nil {
 		t.Error("Command should have failed")
 	}
 	succeedCmd := []string{"ls", "-a", "-l"}
-	_, e = RunCommand(succeedCmd, nil)
+	_, e = RunCommand(succeedCmd, nil, 30*time.Second)
 	if e != nil {
 		t.Error(e)
 	}
 	noCmd := []string{"lsa"}
-	_, e = RunCommand(noCmd, nil)
+	_, e = RunCommand(noCmd, nil, 30*time.Second)
 	if _, ok := e.(*StartError); !ok {
 		t.Error("Command should not have started", e)
 	}
-	SetTimeLimit(0)
 	longCmd := []string{"sleep", "10"}
-	_, e = RunCommand(longCmd, nil)
+	_, e = RunCommand(longCmd, nil, 0*time.Second)
 	if !IsTimeout(e) {
 		t.Error("Expected timeout, got ", e)
 	}
-	SetTimeLimit(10)
 }
 
 func TestErrorChecks(t *testing.T) {

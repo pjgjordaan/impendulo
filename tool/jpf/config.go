@@ -28,6 +28,7 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 
@@ -41,6 +42,7 @@ type (
 		Id        bson.ObjectId `bson:"_id"`
 		ProjectId bson.ObjectId `bson:"projectid"`
 		Time      int64         `bson:"time"`
+		Target    *tool.Target  `bson:"target"`
 		//Contains configured JPF properties
 		Data []byte `bson:"data"`
 	}
@@ -82,11 +84,12 @@ func (this *Config) String() string {
 }
 
 //NewConfig creates a new JPF configuration for a certain project.
-func NewConfig(projectId bson.ObjectId, data []byte) *Config {
+func NewConfig(projectId bson.ObjectId, target *tool.Target, data []byte) *Config {
 	return &Config{
 		Id:        bson.NewObjectId(),
 		ProjectId: projectId,
 		Time:      util.CurMilis(),
+		Target:    target,
 		Data:      data,
 	}
 }

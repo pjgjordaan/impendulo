@@ -71,12 +71,11 @@ func defaultPosters() map[string]Poster {
 		"submitarchive": SubmitArchive, "runtools": RunTools,
 		"deleteproject": DeleteProject, "deleteuser": DeleteUser,
 		"deleteresults": DeleteResults, "deleteskeletons": DeleteSkeletons,
-		"importdata":          ImportData,
-		"evaluatesubmissions": EvaluateSubmissions,
-		"login":               Login, "register": Register,
+		"importdata": ImportData,
+		"login":      Login, "register": Register,
 		"logout": Logout, "editproject": EditProject,
 		"edituser": EditUser, "editsubmission": EditSubmission,
-		"editfile": EditFile,
+		"editfile": EditFile, "edittest": EditTest,
 	}
 }
 
@@ -101,9 +100,9 @@ func GeneratePosts(router *pat.Router, posts map[string]Poster, indexPosts map[s
 }
 
 //CreatePost loads a post request handler.
-func (this Poster) CreatePost(index bool) Handler {
+func (p Poster) CreatePost(index bool) Handler {
 	return func(w http.ResponseWriter, r *http.Request, c *Context) error {
-		m, e := this(r, c)
+		m, e := p(r, c)
 		c.AddMessage(m, e != nil)
 		if e == nil && index {
 			http.Redirect(w, r, getRoute("index"), http.StatusSeeOther)
@@ -112,6 +111,25 @@ func (this Poster) CreatePost(index bool) Handler {
 		}
 		return e
 	}
+}
+
+func AddSkeleton(r *http.Request, c *Context) (string, error) {
+	pid, e := convert.Id(r.FormValue("project-id"))
+	if e != nil {
+		return "Could not read project id.", e
+	}
+	n, e := GetString(r, "skeletonname")
+	if e != nil {
+		return "Could not read skeleton name.", e
+	}
+	_, s, e := ReadFormFile(r, "skeleton")
+	if e != nil {
+		return "Could not read skeleton file.", e
+	}
+	if e = db.Add(db.SKELETONS, project.NewSkeleton(pid, n, s)); e != nil {
+		return "Could not add skeleton.", e
+	}
+	return "Successfully added skeleton.", nil
 }
 
 //SubmitArchive adds an Intlola archive to the database.
@@ -161,33 +179,14 @@ func AddProject(r *http.Request, c *Context) (string, error) {
 	if e != nil {
 		return "Could not read project language.", e
 	}
-	un, m, e := getActiveUser(c)
+	un, e := c.Username()
 	if e != nil {
-		return m, e
+		return "Could not retrieve user.", e
 	}
 	if e = db.Add(db.PROJECTS, project.New(n, un, l)); e != nil {
 		return "Could not add project.", e
 	}
 	return "Successfully added project.", nil
-}
-
-func AddSkeleton(r *http.Request, c *Context) (string, error) {
-	pid, e := convert.Id(r.FormValue("project-id"))
-	if e != nil {
-		return "Could not read project id.", e
-	}
-	n, e := GetString(r, "skeletonname")
-	if e != nil {
-		return "Could not read skeleton name.", e
-	}
-	_, s, e := ReadFormFile(r, "skeleton")
-	if e != nil {
-		return "Could not read skeleton file.", e
-	}
-	if e = db.Add(db.SKELETONS, project.NewSkeleton(pid, n, s)); e != nil {
-		return "Could not add skeleton.", e
-	}
-	return "Successfully added skeleton.", nil
 }
 
 //DeleteProject removes a project and all data associated with it from the system.
@@ -259,27 +258,24 @@ func EditProject(r *http.Request, c *Context) (string, error) {
 	if e != nil {
 		return "Could not read project id.", e
 	}
-	n, e := GetString(r, "project-name")
+	p, e := db.Project(bson.M{db.ID: pid}, nil)
 	if e != nil {
-		return "Could not read project name.", e
+		return "Could not load project.", e
 	}
-	u, e := GetString(r, "project-user")
-	if e != nil {
-		return "Could not read user.", e
+	sm := bson.M{}
+	if n, e := GetString(r, "project-name"); e == nil && n != p.Name {
+		sm[db.NAME] = n
 	}
-	if !db.Contains(db.USERS, bson.M{db.ID: u}) {
-		e = fmt.Errorf("invalid user %s", u)
-		return e.Error(), e
+	if u, e := GetString(r, "project-user"); e == nil && p.User != u && db.Contains(db.USERS, bson.M{db.ID: u}) {
+		sm[db.USER] = u
 	}
-	l, e := GetString(r, "project-lang")
-	if e != nil {
-		return "Could not read language.", e
+	if l, e := GetString(r, "project-lang"); e == nil && tool.Supported(tool.Language(l)) && p.Lang != l {
+		sm[db.LANG] = l
 	}
-	if !tool.Supported(tool.Language(l)) {
-		e = fmt.Errorf("unsupported language %s", l)
-		return e.Error(), e
+	if len(sm) == 0 {
+		return "Nothing to update", nil
 	}
-	if e = db.Update(db.PROJECTS, bson.M{db.ID: pid}, bson.M{db.SET: bson.M{db.NAME: n, db.USER: u, db.LANG: l}}); e != nil {
+	if e = db.Update(db.PROJECTS, bson.M{db.ID: pid}, bson.M{db.SET: sm}); e != nil {
 		return "Could not edit project.", e
 	}
 	return "Successfully edited project.", nil
@@ -291,23 +287,21 @@ func EditSubmission(r *http.Request, c *Context) (string, error) {
 	if e != nil {
 		return "Could not read submission id.", e
 	}
-	pid, e := convert.Id(r.FormValue("submission-project"))
+	s, e := db.Submission(bson.M{db.ID: sid}, nil)
 	if e != nil {
-		return "Could not read project.", e
+		return "Could not load submission.", e
 	}
-	if !db.Contains(db.PROJECTS, bson.M{db.ID: pid}) {
-		e = fmt.Errorf("invalid project %s", pid.Hex())
-		return e.Error(), e
+	sm := bson.M{}
+	if pid, e := convert.Id(r.FormValue("submission-project")); e == nil && s.ProjectId != pid && db.Contains(db.PROJECTS, bson.M{db.ID: pid}) {
+		sm[db.PROJECTID] = pid
 	}
-	u, e := GetString(r, "submission-user")
-	if e != nil {
-		return "Could not read user.", e
+	if u, e := GetString(r, "submission-user"); e == nil && s.User != u && db.Contains(db.USERS, bson.M{db.ID: u}) {
+		sm[db.USER] = u
 	}
-	if !db.Contains(db.USERS, bson.M{db.ID: u}) {
-		e = fmt.Errorf("invalid user %s", u)
-		return e.Error(), e
+	if len(sm) == 0 {
+		return "Nothing to update", nil
 	}
-	if e = db.Update(db.SUBMISSIONS, bson.M{db.ID: sid}, bson.M{db.SET: bson.M{db.PROJECTID: pid, db.USER: u}}); e != nil {
+	if e = db.Update(db.SUBMISSIONS, bson.M{db.ID: sid}, bson.M{db.SET: sm}); e != nil {
 		return "Could not edit submission.", e
 	}
 	return "Successfully edited submission.", nil
@@ -319,43 +313,59 @@ func EditFile(r *http.Request, c *Context) (string, error) {
 	if e != nil {
 		return "Could not read file id.", e
 	}
-	n, e := GetString(r, "file-name")
+	f, e := db.File(bson.M{db.ID: fid}, nil)
 	if e != nil {
-		return "Could not read file name.", e
+		return "Could not load file.", e
 	}
-	p, e := GetString(r, "file-package")
-	if e != nil {
-		return "Could not read package.", e
+	sm := bson.M{}
+	if n, e := GetString(r, "file-name"); e == nil && f.Name != n {
+		sm[db.NAME] = n
 	}
-	if e = db.Update(db.FILES, bson.M{db.ID: fid}, bson.M{db.SET: bson.M{db.NAME: n, db.PKG: p}}); e != nil {
+	if p, e := GetString(r, "file-package"); e == nil && f.Package != p {
+		sm[db.PKG] = p
+	}
+	if len(sm) == 0 {
+		return "Nothing to update", nil
+	}
+	if e = db.Update(db.FILES, bson.M{db.ID: fid}, bson.M{db.SET: sm}); e != nil {
 		return "Could not edit file.", e
 	}
 	return "Successfully edited file.", nil
 }
 
-func EvaluateSubmissions(r *http.Request, c *Context) (string, error) {
-	all := r.FormValue("project-id") == "all"
-	pid, e := convert.Id(r.FormValue("project-id"))
-	if e != nil && !all {
-		return "Could not read project id.", e
-	}
-	m := bson.M{}
-	if !all {
-		m[db.PROJECTID] = pid
-	}
-	ss, e := db.Submissions(m, nil)
+func EditTest(r *http.Request, c *Context) (string, error) {
+	tid, e := convert.Id(r.FormValue("test-id"))
 	if e != nil {
-		return "Could not retrieve submissions.", e
+		return "Could not read test id.", e
 	}
-	for _, s := range ss {
-		if e = db.UpdateStatus(s); e != nil {
-			return fmt.Sprintf("Could not evaluate submission %s.", s.Id.Hex()), e
-		}
-		if e = db.UpdateTime(s); e != nil {
-			return fmt.Sprintf("Could not evaluate submission %s.", s.Id.Hex()), e
+	t, e := db.JUnitTest(bson.M{db.ID: tid}, nil)
+	if e != nil {
+		return "Could not load test.", e
+	}
+	sm := bson.M{}
+	if pid, e := convert.Id(r.FormValue("test-project")); e == nil && pid != t.ProjectId && db.Contains(db.PROJECTS, bson.M{db.ID: pid}) {
+		sm[db.PROJECTID] = pid
+	}
+	if n, e := GetString(r, "test-name"); e == nil && t.Name != n {
+		sm[db.NAME] = n
+	}
+	if p, e := GetString(r, "test-package"); e == nil && t.Package != p {
+		sm[db.PKG] = p
+	}
+
+	if tn, e := GetString(r, "test-target-name"); e == nil {
+		tp, _ := GetString(r, "test-target-package")
+		if t.Target == nil || (tp != t.Target.Package || tn != t.Target.FullName()) {
+			sm[db.TARGET] = tool.NewTarget(tn, tp, "", tool.JAVA)
 		}
 	}
-	return "Successfully evaluated submissions.", nil
+	if len(sm) == 0 {
+		return "Nothing to update", nil
+	}
+	if e = db.Update(db.TESTS, bson.M{db.ID: tid}, bson.M{db.SET: sm}); e != nil {
+		return "Could not edit file.", e
+	}
+	return "Successfully edited test.", nil
 }
 
 //Login signs a user into the web app.
@@ -413,7 +423,11 @@ func EditUser(r *http.Request, c *Context) (string, error) {
 	if e != nil {
 		return "Could not read old username.", e
 	}
-	n, e := GetString(r, "user-newid")
+	u, e := db.User(id)
+	if e != nil {
+		return "Could not load user.", e
+	}
+	n, e := GetString(r, "user-name")
 	if e != nil {
 		return "Could not read new username.", e
 	}
@@ -425,13 +439,19 @@ func EditUser(r *http.Request, c *Context) (string, error) {
 		e = fmt.Errorf("invalid user access level %d", a)
 		return e.Error(), e
 	}
+	p := user.Permission(a)
+	if id == n && u.Access == p {
+		return "Nothing to update.", nil
+	}
 	if id != n {
 		if e = db.RenameUser(id, n); e != nil {
 			return fmt.Sprintf("could not rename user %s to %s.", id, n), e
 		}
 	}
-	if e = db.Update(db.USERS, bson.M{db.ID: n}, bson.M{db.SET: bson.M{user.ACCESS: a}}); e != nil {
-		return "Could not edit user.", e
+	if u.Access != p {
+		if e = db.Update(db.USERS, bson.M{db.ID: n}, bson.M{db.SET: bson.M{user.ACCESS: a}}); e != nil {
+			return "Could not edit user.", e
+		}
 	}
 	return "Successfully edited user.", nil
 

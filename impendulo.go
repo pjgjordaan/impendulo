@@ -35,7 +35,6 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/receiver"
-	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/web"
@@ -53,7 +52,7 @@ var (
 	cfgFile, errLog, infoLog string
 	backupDB, access         string
 	dbName, dbAddr, mqURI    string
-	mProcs, timeLimit        uint
+	mProcs                   uint
 	httpPort, tcpPort        uint
 )
 
@@ -79,7 +78,6 @@ func init() {
 	rFlags = flag.NewFlagSet("receiver", flag.ExitOnError)
 	wFlags = flag.NewFlagSet("web", flag.ExitOnError)
 
-	pFlags.UintVar(&timeLimit, "t", uint(tool.TIMELIMIT.Seconds()), fmt.Sprintf("Specify the time limit for a tool to run in, in seconds (default %s).", tool.TIMELIMIT))
 	pFlags.UintVar(&mProcs, "mp", processing.MAX_PROCS, fmt.Sprintf("Specify the maximum number of goroutines to run when processing submissions (default %d).", processing.MAX_PROCS))
 
 	rFlags.UintVar(&tcpPort, "p", receiver.PORT, fmt.Sprintf("Specify the port to listen on for files using TCP (default %d).", receiver.PORT))
@@ -125,7 +123,7 @@ func main() {
 	case "receiver":
 		runFileReceiver(tcpPort)
 	case "processor":
-		runFileProcessor(mProcs, timeLimit)
+		runFileProcessor(mProcs)
 	}
 }
 
@@ -189,9 +187,8 @@ func runFileReceiver(p uint) {
 }
 
 //runFileProcessor runs the file processing server.
-func runFileProcessor(n, t uint) {
+func runFileProcessor(n uint) {
 	pFlags.Parse(os.Args[2:])
-	tool.SetTimeLimit(t)
 	go processing.MonitorStatus()
 	processing.Serve(n)
 }

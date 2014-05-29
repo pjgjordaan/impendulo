@@ -82,189 +82,140 @@ func (this *clientSpawner) spawn() (*client, bool) {
 	return nil, false
 }
 
-func addData(numUsers uint) (users map[string]string, err error) {
-	p := project.New("Triangle", "user", "Java")
-	err = db.Add(db.PROJECTS, p)
-	if err != nil {
-		return
+func addData(numUsers uint) (map[string]string, error) {
+	if e := db.Add(db.PROJECTS, project.New("Triangle", "user", "Java")); e != nil {
+		return nil, e
 	}
-	users = make(map[string]string, numUsers)
+	users := make(map[string]string, numUsers)
 	for i := 0; i < int(numUsers); i++ {
 		uname := "user" + strconv.Itoa(i)
 		users[uname] = "password"
-		err = db.Add(db.USERS, user.New(uname, "password"))
-		if err != nil {
-			return
+		if e := db.Add(db.USERS, user.New(uname, "password")); e != nil {
+			return nil, e
 		}
 	}
-	return
+	return users, nil
 }
 
 func receive(port uint) {
-	started := make(chan struct{})
+	started := make(chan util.E)
 	go func() {
-		started <- struct{}{}
+		started <- util.E{}
 		Run(port, &SubmissionSpawner{})
 	}()
 	<-started
 }
 
-func (this *client) login(port uint) (projectId bson.ObjectId, err error) {
-	this.conn, err = net.Dial("tcp", fmt.Sprintf(":%d", port))
-	if err != nil {
-		return
+func (c *client) login(port uint) (bson.ObjectId, error) {
+	var e error
+	c.conn, e = net.Dial("tcp", fmt.Sprintf(":%d", port))
+	if e != nil {
+		return "", e
 	}
-	req := map[string]interface{}{
-		REQ:          LOGIN,
-		db.USER:      this.uname,
-		db.PWORD:     this.pword,
-		project.MODE: this.mode,
+	if e = write(c.conn, map[string]interface{}{REQ: LOGIN, db.USER: c.uname, db.PWORD: c.pword, project.MODE: c.mode}); e != nil {
+		return "", e
 	}
-	err = write(this.conn, req)
-	if err != nil {
-		return
-	}
-	read, err := util.ReadData(this.conn)
-	if err != nil {
-		return
+	d, e := util.ReadData(c.conn)
+	if e != nil {
+		return "", e
 	}
 	var infos []*ProjectInfo
-	err = json.Unmarshal(read, &infos)
-	if err != nil {
-		return
+	if e = json.Unmarshal(d, &infos); e != nil {
+		return "", e
 	}
 	if len(infos) == 0 {
-		err = errors.New("No projects found.")
-	} else {
-		projectId = infos[0].Project.Id
+		return "", errors.New("No projects found.")
 	}
-	return
+	return infos[0].Project.Id, nil
 }
 
-func (this *client) create(projectId bson.ObjectId) (err error) {
-	req := map[string]interface{}{
-		REQ:          NEW,
-		db.PROJECTID: projectId,
-		db.TIME:      util.CurMilis(),
+func (c *client) create(projectId bson.ObjectId) error {
+	if e := write(c.conn, map[string]interface{}{REQ: NEW, db.PROJECTID: projectId, db.TIME: util.CurMilis()}); e != nil {
+		return e
 	}
-	err = write(this.conn, req)
-	if err != nil {
-		return
+	d, e := util.ReadData(c.conn)
+	if e != nil {
+		return e
 	}
-	read, err := util.ReadData(this.conn)
-	if err != nil {
-		return
-	}
-	err = json.Unmarshal(read, &this.submission)
-	return
+	return json.Unmarshal(d, &c.submission)
 }
 
-func (this *client) logout() (err error) {
-	req := map[string]interface{}{
-		REQ: LOGOUT,
+func (c *client) logout() error {
+	if e := write(c.conn, map[string]interface{}{REQ: LOGOUT}); e != nil {
+		return e
 	}
-	err = write(this.conn, req)
-	if err != nil {
-		return
-	}
-	err = readOk(this.conn)
-	return
+	return readOk(c.conn)
 }
 
-func (this *client) send(numFiles uint, files []file) (err error) {
-	switch this.mode {
+func (c *client) send(numFiles uint, files []file) error {
+	switch c.mode {
 	case project.FILE_MODE:
-		err = this.sendFile(numFiles, files)
+		return c.sendFile(numFiles, files)
 	case project.ARCHIVE_MODE:
-		err = this.sendArchive(files[0])
+		return c.sendArchive(files[0])
 	default:
-		err = fmt.Errorf("Unsupported mode %s.", this.mode)
+		return fmt.Errorf("unsupported mode %s", c.mode)
 	}
-	return
 }
 
-func (this *client) sendArchive(f file) (err error) {
-	req := map[string]interface{}{
-		REQ:          SEND,
-		project.TYPE: f.tipe,
-		db.NAME:      f.name,
-		db.PKG:       f.pkg,
+func (c *client) sendArchive(f file) error {
+	if e := write(c.conn, map[string]interface{}{REQ: SEND, project.TYPE: f.tipe, db.NAME: f.name, db.PKG: f.pkg}); e != nil {
+		return e
 	}
-	err = write(this.conn, req)
-	if err != nil {
-		return
+	if e := readOk(c.conn); e != nil {
+		return e
 	}
-	err = readOk(this.conn)
-	if err != nil {
-		return
+	if _, e := c.conn.Write(f.data); e != nil {
+		return e
 	}
-	_, err = this.conn.Write(f.data)
-	if err != nil {
-		return
+	if _, e := c.conn.Write([]byte(util.EOT)); e != nil {
+		return e
 	}
-	_, err = this.conn.Write([]byte(util.EOT))
-	if err != nil {
-		return
-	}
-	err = readOk(this.conn)
-	return
+	return readOk(c.conn)
 }
 
-func (this *client) sendFile(numFiles uint, files []file) (err error) {
+func (c *client) sendFile(numFiles uint, files []file) error {
 	var i uint = 0
 	for {
 		for _, f := range files {
 			if i == numFiles {
-				return
+				return nil
 			}
-			req := map[string]interface{}{
-				REQ:          SEND,
-				project.TYPE: f.tipe,
-				db.NAME:      f.name,
-				db.PKG:       f.pkg,
-				db.TIME:      util.CurMilis(),
+			if e := write(c.conn, map[string]interface{}{REQ: SEND, project.TYPE: f.tipe, db.NAME: f.name, db.PKG: f.pkg, db.TIME: util.CurMilis()}); e != nil {
+				return e
 			}
-			err = write(this.conn, req)
-			if err != nil {
-				return
+			if e := readOk(c.conn); e != nil {
+				return e
 			}
-			err = readOk(this.conn)
-			if err != nil {
-				return
+			if _, e := c.conn.Write(f.data); e != nil {
+				return e
 			}
-			_, err = this.conn.Write(f.data)
-			if err != nil {
-				return
+			if _, e := c.conn.Write([]byte(util.EOT)); e != nil {
+				return e
 			}
-			_, err = this.conn.Write([]byte(util.EOT))
-			if err != nil {
-				return
-			}
-			err = readOk(this.conn)
-			if err != nil {
-				return
+			if e := readOk(c.conn); e != nil {
+				return e
 			}
 			i++
 		}
 	}
-	return
+	return nil
 }
 
-func write(conn net.Conn, data interface{}) (err error) {
-	err = util.WriteJSON(conn, data)
-	if err != nil {
-		return
+func write(c net.Conn, data interface{}) error {
+	if e := util.WriteJSON(c, data); e != nil {
+		return e
 	}
-	_, err = conn.Write([]byte(util.EOT))
-	return
+	_, e := c.Write([]byte(util.EOT))
+	return e
 }
 
-func readOk(conn net.Conn) (err error) {
-	read, err := util.ReadData(conn)
-	if err == nil && !bytes.HasPrefix(read, []byte(OK)) {
-		err = fmt.Errorf("Unexpected reply %s.", string(read))
+func readOk(c net.Conn) error {
+	d, e := util.ReadData(c)
+	if e == nil && !bytes.HasPrefix(d, []byte(OK)) {
+		return fmt.Errorf("unexpected reply %s", string(d))
 	}
-	return
+	return e
 }
 
 func loadZip(fileNum uint) ([]byte, error) {
@@ -277,45 +228,42 @@ func loadZip(fileNum uint) ([]byte, error) {
 	return util.ZipMap(data)
 }
 
-func testReceive(spawner *clientSpawner) (err error) {
+func testReceive(spawner *clientSpawner) error {
 	errChan := make(chan error)
 	nU := len(spawner.users)
 	ok := true
 	cli, ok := spawner.spawn()
 	for ok {
-		go func(c *client) {
-			var err error
+		go func(c *client) (e error) {
 			defer func() {
-				errChan <- err
+				errChan <- e
 			}()
-			projectId, err := c.login(spawner.rport)
-			if err != nil {
+			var pid bson.ObjectId
+			if pid, e = c.login(spawner.rport); e != nil {
 				return
 			}
-			err = c.create(projectId)
-			if err != nil {
+			if e = c.create(pid); e != nil {
 				return
 			}
-			err = c.send(spawner.numFiles, spawner.files)
-			if err != nil {
+			if e = c.send(spawner.numFiles, spawner.files); e != nil {
 				return
 			}
-			err = c.logout()
+			e = c.logout()
 			return
 		}(cli)
 		cli, ok = spawner.spawn()
 	}
 	done := 0
+	var err error
 	for done < nU && err == nil {
 		err = <-errChan
 		done++
 	}
 	time.Sleep(100 * time.Millisecond)
-	ierr := processing.WaitIdle()
-	if err == nil && ierr != nil {
-		err = ierr
+	if ie := processing.WaitIdle(); err == nil && ie != nil {
+		err = ie
 	}
-	return
+	return err
 }
 
 func testFiles(t *testing.T, nF, nU, port uint, mode string, files []file) {
@@ -326,9 +274,9 @@ func testFiles(t *testing.T, nF, nU, port uint, mode string, files []file) {
 	db.DeleteDB(db.TEST_DB + ext)
 	db.Setup(db.TEST_CONN + ext)
 	defer db.DeleteDB(db.TEST_DB + ext)
-	users, err := addData(nU)
-	if err != nil {
-		t.Error(err)
+	users, e := addData(nU)
+	if e != nil {
+		t.Error(e)
 	}
 	receive(port)
 	spawner := &clientSpawner{
@@ -338,13 +286,11 @@ func testFiles(t *testing.T, nF, nU, port uint, mode string, files []file) {
 		numFiles: nF,
 		rport:    port,
 	}
-	err = testReceive(spawner)
-	if err != nil {
-		t.Error(err)
+	if e = testReceive(spawner); e != nil {
+		t.Error(e)
 	}
-	err = processing.Shutdown()
-	if err != nil {
-		t.Error(err)
+	if e = processing.Shutdown(); e != nil {
+		t.Error(e)
 	}
 }
 

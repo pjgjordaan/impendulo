@@ -51,7 +51,7 @@ func ExportData(db string, cols []string) (string, error) {
 	fs := make(map[string][]byte, len(cols))
 	for _, col := range cols {
 		o := filepath.Join(os.TempDir(), col+".json")
-		_, e := tool.RunCommand([]string{"mongoexport", "-d", db, "-c", col, "-o", o}, nil)
+		_, e := tool.RunCommand([]string{"mongoexport", "-d", db, "-c", col, "-o", o}, nil, 30*time.Second)
 		if e != nil {
 			return "", e
 		}
@@ -86,16 +86,13 @@ func ImportData(db string, zip []byte) error {
 //ImportFile imports a single collection found in the file specified by path
 //to the database specified by this Importer. This makes use of the mongoimport utility.
 func (i Importer) ImportFile(path string, info os.FileInfo, inErr error) error {
-	if inErr != nil {
+	if inErr != nil || !strings.HasSuffix(path, ".json") {
 		return inErr
-	}
-	if !strings.HasSuffix(path, ".json") {
-		return nil
 	}
 	sp := strings.Split(filepath.Base(path), ".")
 	if len(sp) != 2 {
 		return fmt.Errorf("invalid collection file %s", path)
 	}
-	_, e := tool.RunCommand([]string{"mongoimport", "-d", string(i), "-c", sp[0], "--file", path}, nil)
+	_, e := tool.RunCommand([]string{"mongoimport", "-d", string(i), "-c", sp[0], "--file", path}, nil, 30*time.Second)
 	return e
 }

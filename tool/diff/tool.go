@@ -31,6 +31,7 @@ package diff
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
@@ -55,7 +56,7 @@ func Diff(orig, change string) (string, error) {
 	}
 	defer os.Remove(n)
 	a := []string{d, "-u", n, "-"}
-	r, e := tool.RunCommand(a, strings.NewReader(change))
+	r, e := tool.RunCommand(a, strings.NewReader(change), 30*time.Second)
 	if e != nil && len(r.StdOut) == 0 {
 		return "", e
 	}
@@ -74,7 +75,7 @@ func Diff2HTML(d string) (template.HTML, error) {
 		return "", e
 	}
 	//Execute it and convert the result to HTML.
-	r, e := tool.RunCommand([]string{s}, strings.NewReader(d))
+	r, e := tool.RunCommand([]string{s}, strings.NewReader(d), 30*time.Second)
 	if r.HasStdErr() {
 		return "", fmt.Errorf("Could not generate html: %q", string(r.StdErr))
 	} else if e != nil {

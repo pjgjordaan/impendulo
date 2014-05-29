@@ -28,8 +28,11 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+
 	"github.com/godfried/impendulo/util"
+
 	"os"
 	"path/filepath"
 )
@@ -117,12 +120,12 @@ var (
 )
 
 func init() {
-	location, err := DefaultConfig()
-	if err == nil {
-		err = LoadConfigs(location)
+	l, e := DefaultConfig()
+	if e == nil {
+		e = LoadConfigs(l)
 	}
-	if err != nil {
-		util.Log(err)
+	if e != nil {
+		util.Log(e)
 	}
 }
 
@@ -132,22 +135,21 @@ func DefaultConfig() (string, error) {
 	if defaultFile != "" {
 		return defaultFile, nil
 	}
-	base, err := util.BaseDir()
-	if err != nil {
-		return "", err
+	b, e := util.BaseDir()
+	if e != nil {
+		return "", e
 	}
-	defaultFile = filepath.Join(base, "config.json")
+	defaultFile = filepath.Join(b, "config.json")
 	if util.IsFile(defaultFile) {
 		return defaultFile, nil
 	} else if util.IsDir(defaultFile) {
-		return "", fmt.Errorf("%s is a directory.", defaultFile)
+		return "", fmt.Errorf("%s is a directory", defaultFile)
 	}
-	iPath, err := util.InstallPath()
-	if err != nil {
-		return "", err
+	ip, e := util.InstallPath()
+	if e != nil {
+		return "", e
 	}
-	installedConfig := filepath.Join(iPath, "config", "config.json")
-	return defaultFile, util.CopyFile(defaultFile, installedConfig)
+	return defaultFile, util.CopyFile(defaultFile, filepath.Join(ip, "config", "config.json"))
 }
 
 //LoadConfigs loads configurations from a file.
@@ -169,69 +171,67 @@ func DefaultConfig() (string, error) {
 //
 //Supported configuration types are currently:
 //binaries (bin), configs (cfg), directories (dir), jars (jar) and scripts (sh).
-func LoadConfigs(fname string) (err error) {
+func LoadConfigs(fname string) error {
 	//Load configuration from Json file.
-	cfgFile, err := os.Open(fname)
-	if err != nil {
-		return
+	cfgFile, e := os.Open(fname)
+	if e != nil {
+		return e
 	}
-	data := util.ReadBytes(cfgFile)
-	err = json.Unmarshal(data, &config)
-	if err != nil {
-		return
+	if e = json.Unmarshal(util.ReadBytes(cfgFile), &config); e != nil {
+		return e
 	}
-	iPath, err := util.InstallPath()
-	if err != nil {
-		return
+	ip, e := util.InstallPath()
+	if e != nil {
+		return e
 	}
-	javaPath := filepath.Join(iPath, "java")
-	config.Dir[JPF_RUNNER] = filepath.Join(javaPath, "runner")
-	config.Dir[JPF_FINDER] = filepath.Join(javaPath, "finder")
-	config.Dir[JUNIT_TESTING] = filepath.Join(javaPath, "testing")
+	jp := filepath.Join(ip, "java")
+	config.Dir[JPF_RUNNER] = filepath.Join(jp, "runner")
+	config.Dir[JPF_FINDER] = filepath.Join(jp, "finder")
+	config.Dir[JUNIT_TESTING] = filepath.Join(jp, "testing")
 	//Check if configurations are valid.
-	for bin, path := range config.Bin {
-		if err = bin.Valid(path); err != nil {
-			return
+	for b, p := range config.Bin {
+		if e = b.Valid(p); e != nil {
+			return e
 		}
 	}
-	for cfg, path := range config.Cfg {
-		if err = cfg.Valid(path); err != nil {
-			return
+	for c, p := range config.Cfg {
+		if e = c.Valid(p); e != nil {
+			return e
 		}
 	}
-	for dir, path := range config.Dir {
-		if err = dir.Valid(path); err != nil {
-			return
+	for d, p := range config.Dir {
+		if e = d.Valid(p); e != nil {
+			return e
 		}
-		if dir == JPF_HOME {
-			jar := filepath.Join(path, filepath.Join("build", "jpf.jar"))
-			if err = JPF.Valid(jar); err != nil {
-				return
+		if d == JPF_HOME {
+			jar := filepath.Join(p, filepath.Join("build", "jpf.jar"))
+			if e = JPF.Valid(jar); e != nil {
+				return e
 			}
 			config.Jar[JPF] = jar
-			jar = filepath.Join(path, filepath.Join("build", "RunJPF.jar"))
-			if err = JPF_RUN.Valid(jar); err != nil {
-				return
+			jar = filepath.Join(p, filepath.Join("build", "RunJPF.jar"))
+			if e = JPF_RUN.Valid(jar); e != nil {
+				return e
 			}
 			config.Jar[JPF_RUN] = jar
 		}
 	}
-	for jar, path := range config.Jar {
-		if err = jar.Valid(path); err != nil {
-			return
+	for j, p := range config.Jar {
+		if e = j.Valid(p); e != nil {
+			return e
 		}
 	}
-	for sh, path := range config.Sh {
-		if err = sh.Valid(path); err != nil {
-			return
+	for sh, p := range config.Sh {
+		if e = sh.Valid(p); e != nil {
+			return e
 		}
 	}
-	for a, path := range config.Archive {
-		if err = a.Valid(path); err != nil {
-			return
+	for a, p := range config.Archive {
+		if e = a.Valid(p); e != nil {
+			return e
 		}
 	}
-	return
+	return nil
 }
 
 func (cfg Cfg) Valid(path string) error {
@@ -307,53 +307,54 @@ func (a Archive) Path() (string, error) {
 }
 
 //valid determines whether the provided path is valid for corresponding file.
-func valid(file File, path string, validator Validator) (err error) {
-	if !validator(path) {
-		err = Invalid(file, path)
+func valid(f File, p string, v Validator) error {
+	if !v(p) {
+		return Invalid(f, p)
 	}
-	return
+	return nil
+}
+
+func (c *Configuration) Path(f File) (string, error) {
+	var ok bool
+	var p string
+	switch t := f.(type) {
+	case Bin:
+		p, ok = c.Bin[t]
+	case Cfg:
+		p, ok = c.Cfg[t]
+	case Dir:
+		p, ok = c.Dir[t]
+	case Jar:
+		p, ok = c.Jar[t]
+	case Sh:
+		p, ok = c.Sh[t]
+	case Archive:
+		p, ok = c.Archive[t]
+	default:
+		return "", &ConfigError{msg: fmt.Sprintf("Unknown configuration type %s.", t)}
+	}
+	if !ok {
+		return "", NA(f)
+	}
+	return p, nil
 }
 
 //path attempts to retrieve the file's path.
-func path(file File) (ret string, err error) {
-	var ok bool
-	switch t := file.(type) {
-	case Bin:
-		ret, ok = config.Bin[t]
-	case Cfg:
-		ret, ok = config.Cfg[t]
-	case Dir:
-		ret, ok = config.Dir[t]
-	case Jar:
-		ret, ok = config.Jar[t]
-	case Sh:
-		ret, ok = config.Sh[t]
-	case Archive:
-		ret, ok = config.Archive[t]
-	default:
-		ok = true
-		err = &ConfigError{
-			msg: fmt.Sprintf("Unknown configuration type %s.", t),
-		}
+func path(f File) (string, error) {
+	if config == nil {
+		return "", errors.New("configuration not initialised")
 	}
-	if !ok {
-		err = NA(file)
-	}
-	return
+	return config.Path(f)
 }
 
 //NA creates a new ConfigError if a request is made for an unavailable configuration.
-func NA(file File) error {
-	return &ConfigError{
-		msg: fmt.Sprintf("Config %s not found.", file),
-	}
+func NA(f File) error {
+	return &ConfigError{msg: fmt.Sprintf("Config %s not found.", f)}
 }
 
 //Invalid creates a new ConfigError for a bad configuration specification.
-func Invalid(file File, path string) error {
-	return &ConfigError{
-		msg: fmt.Sprintf("Bad configuration: %s is not a %s.", path, file.Description()),
-	}
+func Invalid(f File, p string) error {
+	return &ConfigError{msg: fmt.Sprintf("Bad configuration: %s is not a %s.", p, f.Description())}
 }
 
 //Error

@@ -25,6 +25,9 @@
 package junit
 
 import (
+	"bytes"
+
+	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 )
@@ -38,13 +41,18 @@ type (
 		Package   string        `bson:"pkg"`
 		Time      int64         `bson:"time"`
 		Type      Type          `bson:"type"`
+		Target    *tool.Target  `bson:"target"`
 		//The test file
 		Test []byte `bson:"test"`
 		//The data files needed for the test stored in a zip archive
 		Data []byte `bson:"data"`
 	}
 
-	Type int
+	Type     int
+	TestType struct {
+		ID   Type
+		Name string
+	}
 )
 
 const (
@@ -53,15 +61,33 @@ const (
 	USER
 )
 
+func TestTypes() []TestType {
+	return []TestType{{DEFAULT, DEFAULT.String()}, {USER, USER.String()}, {ADMIN, ADMIN.String()}}
+}
+
+func (t Type) String() string {
+	switch t {
+	case DEFAULT:
+		return "Default"
+	case ADMIN:
+		return "Admin"
+	case USER:
+		return "User"
+	default:
+		return "Unknown"
+	}
+}
+
 //NewTest
-func NewTest(projectId bson.ObjectId, name, pkg string, tipe Type, test, data []byte) *Test {
+func NewTest(projectId bson.ObjectId, name string, tipe Type, target *tool.Target, test, data []byte) *Test {
 	return &Test{
 		Id:        bson.NewObjectId(),
 		ProjectId: projectId,
 		Name:      name,
-		Package:   pkg,
+		Package:   util.GetPackage(bytes.NewReader(test)),
 		Time:      util.CurMilis(),
 		Type:      tipe,
+		Target:    target,
 		Test:      test,
 		Data:      data,
 	}

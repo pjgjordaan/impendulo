@@ -36,10 +36,6 @@ import (
 	"strings"
 )
 
-type (
-	Perm int
-)
-
 const (
 	OUT user.Permission = 42
 )
@@ -57,6 +53,7 @@ var (
 		"static", "userchart", "projectchart",
 	}
 	student = []string{
+		"testdownloadview", "test.zip",
 		"projectdownloadview", "skeleton.zip",
 		"intloladownloadview", "intlola.zip",
 		"archiveview", "submitarchive", "logout",
@@ -74,7 +71,7 @@ var (
 		"evaluatesubmissionsview", "evaluatesubmissions", "logs",
 		"editdbview", "loadproject", "editproject", "loaduser",
 		"edituser", "loadsubmission", "editsubmission", "loadfile",
-		"editfile",
+		"editfile", "edittest",
 	}
 
 	homeViews = []string{
@@ -88,7 +85,7 @@ var (
 		"configview",
 	}
 	registerViews = []string{"registerview"}
-	downloadViews = []string{"projectdownloadview", "intloladownloadview"}
+	downloadViews = []string{"projectdownloadview", "intloladownloadview", "testdownloadview"}
 	deleteViews   = []string{"projectdeleteview", "userdeleteview", "resultsdeleteview", "skeletondeleteview"}
 	statusViews   = []string{"statusview"}
 	toolViews     = []string{"runtoolsview", "evaluatesubmissionsview"}
@@ -104,31 +101,21 @@ func Views() map[string]string {
 		return viewRoutes
 	}
 	viewRoutes = make(map[string]string)
-	for _, n := range homeViews {
-		viewRoutes[n] = "home"
-	}
-	for _, n := range submitViews {
-		viewRoutes[n] = "submit"
-	}
-	for _, n := range registerViews {
-		viewRoutes[n] = "register"
-	}
-	for _, n := range downloadViews {
-		viewRoutes[n] = "download"
-	}
-	for _, n := range deleteViews {
-		viewRoutes[n] = "delete"
-	}
-	for _, n := range statusViews {
-		viewRoutes[n] = "status"
-	}
-	for _, n := range toolViews {
-		viewRoutes[n] = "tool"
-	}
-	for _, n := range dataViews {
-		viewRoutes[n] = "data"
-	}
+	setViewRoutes(homeViews, "home")
+	setViewRoutes(submitViews, "submit")
+	setViewRoutes(registerViews, "register")
+	setViewRoutes(downloadViews, "download")
+	setViewRoutes(deleteViews, "delete")
+	setViewRoutes(statusViews, "status")
+	setViewRoutes(toolViews, "tool")
+	setViewRoutes(dataViews, "data")
 	return viewRoutes
+}
+
+func setViewRoutes(routes []string, view string) {
+	for _, r := range routes {
+		viewRoutes[r] = view
+	}
 }
 
 //Permissions loads all permissions.
@@ -137,22 +124,18 @@ func Permissions() map[string]user.Permission {
 		return permissions
 	}
 	permissions = toolPermissions()
-	for _, n := range none {
-		permissions[n] = user.NONE
-	}
-	for _, n := range out {
-		permissions[n] = OUT
-	}
-	for _, n := range student {
-		permissions[n] = user.STUDENT
-	}
-	for _, n := range teacher {
-		permissions[n] = user.TEACHER
-	}
-	for _, n := range admin {
-		permissions[n] = user.ADMIN
-	}
+	setPermissions(none, user.NONE)
+	setPermissions(out, OUT)
+	setPermissions(student, user.STUDENT)
+	setPermissions(teacher, user.TEACHER)
+	setPermissions(admin, user.ADMIN)
 	return permissions
+}
+
+func setPermissions(views []string, p user.Permission) {
+	for _, v := range views {
+		permissions[v] = p
+	}
 }
 
 //GenerateViews is used to load all the basic views used by our web app.
@@ -195,39 +178,36 @@ func CheckAccess(p string, c *Context, ps map[string]user.Permission) error {
 	if !ok {
 		return fmt.Errorf("could not find request %s", n)
 	}
-	if m := checkPermission(c, v); m != "" {
-		return fmt.Errorf(m, p)
-	}
-	return nil
+	return checkPermission(c, v, p)
 }
 
-func checkPermission(c *Context, p user.Permission) string {
+func checkPermission(c *Context, p user.Permission, url string) error {
 	//Check permission levels.
 	switch p {
 	case user.NONE:
 	case OUT:
 		if c.LoggedIn() {
-			return "cannot access %s when logged in"
+			return fmt.Errorf("cannot access %s when logged in", url)
 		}
 	case user.STUDENT:
 		if !c.LoggedIn() {
-			return "you need to be logged in to access %s"
+			return fmt.Errorf("login required to access %s", url)
 		}
 	case user.ADMIN, user.TEACHER:
 		u, e := c.Username()
 		if e != nil {
-			return "you need to be logged in to access %s"
+			return fmt.Errorf("login required to access %s", url)
 		} else if !checkUserPermission(u, p) {
-			return "you have insufficient permissions to access %s"
+			return fmt.Errorf("insufficient permissions to access %s", url)
 		}
 	default:
-		return "unknown url %s"
+		return fmt.Errorf("unknown url %s", url)
 	}
-	return ""
+	return nil
 }
 
 //checkUserPermission verifies that a user has the specified permission level.
-func checkUserPermission(uname string, p user.Permission) bool {
-	u, e := db.User(uname)
+func checkUserPermission(id string, p user.Permission) bool {
+	u, e := db.User(id)
 	return e == nil && u.Access >= p
 }

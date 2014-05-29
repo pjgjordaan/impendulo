@@ -139,6 +139,7 @@ const (
 	SUCCESS CompileType = iota
 	WARNINGS
 	ERRORS
+	UNKNOWN
 )
 
 var (

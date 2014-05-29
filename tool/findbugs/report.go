@@ -250,6 +250,6 @@ func (r *Report) String() string {
 }
 
 //String
-func (r *Summary) String() string {
-	return fmt.Sprintf("BugCount: %d; ClassCount: %d", r.BugCount, r.ClassCount)
+func (s *Summary) String() string {
+	return fmt.Sprintf("BugCount: %d; ClassCount: %d", s.BugCount, s.ClassCount)
 }

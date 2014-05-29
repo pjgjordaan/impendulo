@@ -28,6 +28,7 @@ package jpf
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
@@ -45,6 +46,7 @@ type (
 	//runner.ImpenduloPublisher to output the results as XML.
 	Tool struct {
 		cp, jpfPath, exec string
+		target            *tool.Target
 	}
 )
 
@@ -94,7 +96,7 @@ func New(cfg *Config, jpfDir string) (*Tool, error) {
 	if _, e = c.Run(id, pt); e != nil {
 		return nil, e
 	}
-	return &Tool{cp: cp, jpfPath: jp, exec: jt.Executable()}, nil
+	return &Tool{cp: cp, jpfPath: jp, exec: jt.Executable(), target: cfg.Target}, nil
 }
 
 //Lang is Java
@@ -111,6 +113,9 @@ func (t *Tool) Name() string {
 //actually run JPF on the source file. If the command was successful, the
 //results are read in from a xml file.
 func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
+	if t.target.Executable() != target.Executable() {
+		return nil, nil
+	}
 	//Load arguments
 	jp, e := config.JAVA.Path()
 	if e != nil {
@@ -121,7 +126,7 @@ func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, 
 	o = o + ".xml"
 	defer os.Remove(o)
 	//Run JPF and load result
-	r, re := tool.RunCommand(a, nil)
+	r, re := tool.RunCommand(a, nil, 300*time.Second)
 	rf, e := os.Open(o)
 	if e != nil {
 		if re != nil {

@@ -24,20 +24,62 @@
 
 package project
 
-import (
-	"labix.org/v2/mgo/bson"
-)
+import "labix.org/v2/mgo/bson"
 
 type (
 	Skeleton struct {
 		Id        bson.ObjectId `bson:"_id"`
 		ProjectId bson.ObjectId `bson:"projectid"`
 		Name      string        `bson:"name"`
-		Data      []byte        `bson:"data"`
+		//	Files     map[string]*SkeletonFile `bson:"files"`
+		Data []byte `bson:"data"`
 	}
+
+/*	SkeletonFile struct {
+		Name   string `bson:"name"`
+		Ignore bool   `bson:"ignore"`
+		Data   []byte `bson:"data"`
+	}
+	SkeletonWriter struct {
+		files map[string]*SkeletonFile
+	}*/
 )
 
 //NewSkeleton
 func NewSkeleton(pid bson.ObjectId, n string, d []byte) *Skeleton {
+	/*	w := &SkeletonWriter{make(map[string]*SkeletonFile)}
+		if e := util.UnzipKV(w, d); e != nil {
+			return nil, e
+		}*/
 	return &Skeleton{Id: bson.NewObjectId(), ProjectId: pid, Name: n, Data: d}
 }
+
+/*
+func (s *Skeleton) AddIgnores(is []string) error {
+	for _, i := range is {
+		f, ok := s.Files[i]
+		if !ok {
+			return fmt.Errorf("could not locate skeleton file %s", i)
+		}
+		f.Ignore = true
+	}
+	return nil
+}
+
+func (w *SkeletonWriter) Write(k string, v []byte) error {
+	w.files[k] = &SkeletonFile{Name: k, Ignore: false, Data: v}
+	return nil
+}
+
+func (w *SkeletonWriter) Next() (string, []byte, error) {
+	for k, v := range w.files {
+		delete(w.files, k)
+		return v.Name, v.Data, nil
+	}
+	return "", nil, fmt.Errorf("no files left")
+}
+
+func (s *Skeleton) Zip() ([]byte, error) {
+	return util.ZipKV(&SkeletonWriter{s.Files})
+}
+*/

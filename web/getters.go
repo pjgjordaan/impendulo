@@ -102,14 +102,12 @@ func configView(r *http.Request, c *Context) (Args, string, error) {
 	if e != nil {
 		t = "none"
 	}
-	return Args{"tool": t, "templates": []string{"configview", toolTemplate(t)}},
-		"", nil
+	return Args{"tool": t, "templates": []string{"configview", toolTemplate(t)}}, "", nil
 }
 
 //getSubmissions displays a list of submissions.
 func getSubmissions(r *http.Request, c *Context) (Args, string, error) {
-	e := c.Browse.Update(r)
-	if e != nil {
+	if e := c.Browse.Update(r); e != nil {
 		return nil, "Could not load submissions.", e
 	}
 	var m bson.M

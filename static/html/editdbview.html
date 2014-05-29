@@ -2,56 +2,63 @@
 {{$users := users}}
 {{$projects := projects}}
 <div class="btn-group">
-<div id="projects" class="btn-group">
-  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-    Choose Project <span class="caret"></span>
-  </button>
-  <ul class="dropdown-menu" role="menu">
-    {{range $projects}}
-    <li><a href="#" projectid="{{.Id.Hex}}">{{.Name}}</a></li>
-    {{end}}
-  </ul>
-</div>
-<div id="users" class="btn-group">
-  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-    Choose User <span class="caret"></span>
-  </button>
-  <ul class="dropdown-menu" role="menu">
-    {{range $users}}
-    <li><a href="#" user="{{.}}">{{.}}</a></li>
-    {{end}}
-  </ul>
-</div>
-<div id="submissions" class="btn-group">
-  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-    Choose Submission <span class="caret"></span>
-  </button>
-  <ul class="dropdown-menu" role="menu">
-  </ul>
-</div>
-<div id="files" class="btn-group">
-  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-    Choose File <span class="caret"></span>
-  </button>
-  <ul class="dropdown-menu" role="menu">
-  </ul>
-</div>
+  <div id="projects" class="btn-group">
+    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+      Choose Project <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu" role="menu">
+      {{range $projects}}
+      <li><a href="#" projectid="{{.Id.Hex}}">{{.Name}}</a></li>
+      {{end}}
+    </ul>
+  </div>
+  <div id="users" class="btn-group">
+    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+      Choose User <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu" role="menu">
+      {{range $users}}
+      <li><a href="#" user="{{.}}">{{.}}</a></li>
+      {{end}}
+    </ul>
+  </div>
+  <div id="submissions" class="btn-group">
+    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+      Choose Submission <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu" role="menu">
+    </ul>
+  </div>
+  <div id="files" class="btn-group">
+    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+      Choose File <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu" role="menu">
+    </ul>
+  </div>
+  <div id="tests" class="btn-group">
+    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+      Choose JUnit Test <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu" role="menu">
+    </ul>
+  </div>
 </div>
 <script type="text/javascript" language="javascript">
   $('#projects a').click(function(){
-  loadproject($(this).attr('projectid'), 'project-id', 'project-name', 'project-user', 'project-lang', 'submissions');
+  loadproject($(this).attr('projectid'));
   return true;
   });
   $('#users a').click(function(){
   hideEditing();
   $('#user-panel').addClass('in');
-  loaduser($(this).attr('user'), 'user-id', 'user-newid', 'user-perm');
+  loaduser($(this).attr('user'));
   return true;
   });
   window.onload = function()
   {
-  loaduser({{index $users 0}}, 'user-id', 'user-newid', 'user-perm');
-  loadproject({{(index $projects 0).Id.Hex}}, 'project-id', 'project-name', 'project-user', 'project-lang', 'submissions');
+  loaduser({{index $users 0}});
+  loadproject({{(index $projects 0).Id.Hex}});
   ;}
 </script>
 <div class="panel-group" id="accordion">
@@ -70,20 +77,20 @@
 	  <div class="form-group">
 	    <label class="col-lg-offset-3 col-lg-2 control-label" for="project-name">Name</label>
 	    <div class="col-lg-3">
-	      <input type="text" class="form-control" name="project-name" id="project-name">      
+	      <input type="text" class="form-control project-input" name="project-name" id="project-name">      
 	    </div>
 	  </div>
 	  <div class="form-group">
 	    <label class="col-lg-offset-3 col-lg-2 control-label" for="project-user">User</label>
 	    <div class="col-lg-3">
-	      <select class="form-control" name="project-user" id="project-user">
+	      <select class="form-control project-input" name="project-user" id="project-user">
 	      </select>
 	    </div>
 	  </div>
 	  <div class="form-group">
 	    <label class="col-lg-offset-3 col-lg-2 control-label" for="project-lang">Language</label>
 	    <div class="col-lg-3">
-	      <select class="form-control" name="project-lang" id="project-lang">
+	      <select class="form-control project-input" name="project-lang" id="project-lang">
 	      </select>
 	    </div>
 	  </div>
@@ -94,7 +101,7 @@
 	      </button>
 	    </div>
 	  </div>
-	  <input type="hidden" name="project-id" id="project-id">
+	  <input type="hidden" name="project-id" id="project-id" class="project-input">
 	</form>
       </div>
     </div>
@@ -112,9 +119,9 @@
       <div class="panel-body">
 	<form class="form-horizontal" role="form" action="edituser" method="post">
 	  <div class="form-group">
-	    <label class="col-lg-offset-3 col-lg-2 control-label" for="user-newid">Name</label>
+	    <label class="col-lg-offset-3 col-lg-2 control-label" for="user-name">Name</label>
 	    <div class="col-lg-3">
-	      <input type="text" class="form-control" name="user-newid" id="user-newid">      
+	      <input type="text" class="form-control user-input" name="user-name" id="user-name">      
 	    </div>
 	  </div>
 	  <div class="form-group">
@@ -122,7 +129,7 @@
 	      Access Permission
 	    </label>
 	    <div class="col-lg-3">
-	      <select class="form-control" name="user-perm" id="user-perm">
+	      <select class="form-control user-input" name="user-perm" id="user-perm">
 	      </select>
 	    </div>
 	  </div>
@@ -133,7 +140,7 @@
 	      </button>
 	    </div>
 	  </div>
-	  <input type="hidden" name="user-id" id="user-id">
+	  <input type="hidden" name="user-id" id="user-id" class="user-input">
 	</form>
       </div>
     </div>
@@ -153,14 +160,14 @@
 	  <div class="form-group">
 	    <label class="col-lg-offset-3 col-lg-2 control-label" for="submission-project">Project</label>
 	    <div class="col-lg-3">
-	      <select class="form-control" name="submission-project" id="submission-project">
+	      <select class="form-control submission-input" name="submission-project" id="submission-project">
 	      </select>
 	    </div>
 	  </div>
 	  <div class="form-group">
 	    <label class="col-lg-offset-3 col-lg-2 control-label" for="submission-user">User</label>
 	    <div class="col-lg-3">
-	      <select class="form-control" name="submission-user" id="submission-user">
+	      <select class="form-control  submission-input" name="submission-user" id="submission-user">
 	      </select>
 	    </div>
 	  </div>
@@ -171,7 +178,8 @@
 	      </button>
 	    </div>
 	  </div>
-	  <input type="hidden" name="submission-id" id="submission-id">
+	  <input type="hidden" name="submission-id" id="submission-id"
+		 class="submission-input">
 	</form>
       </div>
     </div>
@@ -191,21 +199,13 @@
 	  <div class="form-group">
 	    <label class="col-lg-offset-3 col-lg-2 control-label" for="file-name">Name</label>
 	    <div class="col-lg-3">
-	      <input type="text" class="form-control" name="file-name" id="file-name">      
+	      <input type="text" class="form-control file-input" name="file-name" id="file-name">      
 	    </div>
 	  </div>
 	  <div class="form-group">
 	    <label class="col-lg-offset-3 col-lg-2 control-label" for="file-package">Package</label>
 	    <div class="col-lg-3">
-	      <input type="text" class="form-control" name="file-package" id="file-package">      
-	    </div>
-	  </div>
-	  <div class="form-group">
-	    <label class="col-lg-offset-3 col-lg-2 control-label" for="file-code">Code</label>
-	    <div class="col-lg-6">
-	      <textarea rows="15" cols="30" class="form-control"
-			name="file-code" id="file-code">      
-	      </textarea>
+	      <input type="text" class="form-control file-input" name="file-package" id="file-package">      
 	    </div>
 	  </div>
 	  <div class="form-group">
@@ -215,7 +215,68 @@
 	      </button>
 	    </div>
 	  </div>
-	  <input type="hidden" name="file-id" id="file-id">
+	  <input type="hidden" name="file-id" id="file-id" class="file-input">
+	</form>
+      </div>
+    </div>
+  </div>
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h4 class="panel-title">
+	<a data-toggle="collapse" data-parent="#accordion"
+	   href="#test-panel">
+	  Edit JUnit Test
+	</a>
+      </h4>
+    </div>
+    <div id="test-panel" class="panel-collapse collapse">
+      <div class="panel-body">
+	<form class="form-horizontal" role="form" action="edittest" method="post">
+	  <div class="form-group">
+	    <label class="col-lg-offset-3 col-lg-2 control-label" for="test-project">Project</label>
+	    <div class="col-lg-3">
+	      <select class="form-control test-input" name="test-project" id="test-project">
+	      </select>
+	    </div>
+	  </div>
+	  <div class="form-group">
+	    <label class="col-lg-offset-3 col-lg-2 control-label" for="test-name">Name</label>
+	    <div class="col-lg-3">
+	      <input type="text" class="form-control test-input" name="test-name" id="test-name">      
+	    </div>
+	  </div>
+	  <div class="form-group">
+	    <label class="col-lg-offset-3 col-lg-2 control-label" for="test-package">Package</label>
+	    <div class="col-lg-3">
+	      <input type="text" class="form-control test-input" name="test-package" id="test-package">      
+	    </div>
+	  </div>
+	  <div class="form-group">
+	    <label class="col-lg-offset-3 col-lg-2 control-label" for="test-target">Target</label>
+	    <div class="col-lg-3">
+	      <input type="text" class="form-control test-input"
+		     name="test-target-name" id="test-target-name"
+		     placeholder="Name: AllTests.java">      
+	      <input type="text" class="form-control test-input"
+		     name="test-target-package" id="test-target-package"
+		     placeholder="Package: testing">
+	    </div>
+	  </div>
+	  <div class="form-group">
+	    <label class="col-lg-offset-3 col-lg-2 control-label" for="test-type">Type</label>
+	    <div class="col-lg-3">
+	      <select class="form-control test-input" name="test-type" id="test-type">
+	      </select>
+	    </div>
+	  </div>
+	  <div class="form-group">
+	    <div class="col-lg-offset-5 col-lg-3">
+	      <button type="submit" class="btn btn-default">
+		<span class="glyphicon glyphicon-upload"></span> Update
+	      </button>
+	    </div>
+	  </div>
+	  <input type="hidden" name="test-id" id="test-id" class="test-input">
 	</form>
       </div>
     </div>

@@ -66,7 +66,7 @@ func TestRun(t *testing.T) {
 	if e = util.Unzip(testTarget.PackagePath(), dataBytes); e != nil {
 		t.Error(e)
 	}
-	j, e := New(testTarget, location, bson.NewObjectId())
+	j, e := New(testTarget, target, location, bson.NewObjectId())
 	if e != nil {
 		t.Errorf("Expected success, got %q", e)
 	}

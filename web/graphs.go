@@ -27,6 +27,7 @@ package web
 import (
 	"errors"
 	"fmt"
+	"math"
 
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
@@ -155,9 +156,72 @@ func SubmissionChart(subs []*project.Submission, result *ResultDesc, score strin
 			"key": s.Id.Hex(), "user": s.User, "time": v.X, "y": v.Y,
 			"description": v.Name,
 		}
+
 		d = append(d, p)
 	}
+	prev := -1
+	outliers := make(map[int]util.E, len(d))
+	var stdDev, mean float64
+	for len(outliers)-prev > 0 {
+		mean = calcMean(d, outliers)
+		stdDev = calcStdDeviation(d, outliers, mean)
+		prev = len(outliers)
+		addOutliers(d, outliers, mean, stdDev)
+	}
+	max := mean + 3*stdDev
+	min := mean - 3*stdDev
+	for i, _ := range outliers {
+		y := d[i]["y"].(float64)
+		if y < min {
+			d[i]["y"] = int(min)
+		} else if y > max {
+			d[i]["y"] = int(max)
+		}
+		d[i]["outlier"] = y
+	}
 	return d, nil
+}
+
+func calcMean(vals []map[string]interface{}, outliers map[int]util.E) float64 {
+	mean := 0.0
+	for i, c := range vals {
+		if _, ok := outliers[i]; ok {
+			continue
+		}
+		mean += c["y"].(float64)
+	}
+	mean /= float64(len(vals) - len(outliers))
+	return mean
+}
+
+func calcStdDeviation(vals []map[string]interface{}, outliers map[int]util.E, mean float64) float64 {
+	stdDev := 0.0
+	for i, c := range vals {
+		if _, ok := outliers[i]; ok {
+			continue
+		}
+		stdDev += math.Pow(c["y"].(float64)-mean, 2.0)
+	}
+	stdDev = math.Sqrt(stdDev / float64(len(vals)-len(outliers)))
+	return stdDev
+}
+
+func addOutliers(vals []map[string]interface{}, outliers map[int]util.E, mean, stdDev float64) {
+	max := mean + 3*stdDev
+	min := mean - 3*stdDev
+	for i, c := range vals {
+		if _, ok := outliers[i]; ok {
+			continue
+		}
+		y := c["y"].(float64)
+		if y < min || y > max {
+			outliers[i] = util.E{}
+		}
+	}
+}
+
+func norm(y, m, d float64) float64 {
+	return (1.0 / (d * math.Sqrt(2*math.Pi))) * math.Exp(-math.Pow(y-m, 2.0)/(2*math.Pow(d, 2.0)))
 }
 
 func finalScore(s *project.Submission, result *ResultDesc) (*tool.ChartVal, error) {
@@ -196,7 +260,7 @@ func (a *avgChartVal) add(v *tool.ChartVal) {
 }
 
 func (a *avgChartVal) chartVal() *tool.ChartVal {
-	a.val.Y /= float64(a.count)
+	a.val.Y = util.Round(a.val.Y/float64(a.count), 2)
 	return a.val
 }
 
@@ -236,6 +300,9 @@ func averageScore(s *project.Submission, rd *ResultDesc) (*tool.ChartVal, error)
 				break
 			}
 		}
+	}
+	if cv.val == nil {
+		return nil, fmt.Errorf("no chartvals for %s", rd.Format())
 	}
 	return cv.chartVal(), nil
 }

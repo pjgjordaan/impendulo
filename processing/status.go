@@ -29,6 +29,8 @@ package processing
 import (
 	"fmt"
 
+	"labix.org/v2/mgo/bson"
+
 	"github.com/godfried/impendulo/util"
 )
 
@@ -38,14 +40,16 @@ type (
 	//submissions being processed. It is also used to retrieve the current
 	//number of files and submissions being processed.
 	Status struct {
-		Files       int
-		Submissions int
+		FileCount   int
+		Submissions map[bson.ObjectId]map[bson.ObjectId]util.E
 	}
 
 	//Monitor is used to keep track of and change Impendulo's processing
 	//status.
 	Monitor struct {
 		statusChan              chan Status
+		requestChan             chan Request
+		idleChan                chan util.E
 		loader, waiter, changer *MessageHandler
 	}
 )
@@ -54,10 +58,67 @@ var (
 	monitor *Monitor
 )
 
-//add adds the value of toAdd to this Status.
-func (s *Status) add(toAdd Status) {
-	s.Files += toAdd.Files
-	s.Submissions += toAdd.Submissions
+func (s *Status) Update(r Request) error {
+	switch r.Type {
+	case FILE_ADD:
+		return s.addFile(r)
+	case FILE_REMOVE:
+		return s.removeFile(r)
+	case SUBMISSION_START:
+		return s.addSubmission(r)
+	case SUBMISSION_STOP:
+		return s.removeSubmission(r)
+	default:
+		return fmt.Errorf("unknown request type %d", r.Type)
+	}
+}
+
+func (s *Status) removeSubmission(r Request) error {
+	if fm, ok := s.Submissions[r.SubId]; !ok {
+		return fmt.Errorf("submission %s does not exist", r.SubId)
+	} else if len(fm) > 0 {
+		return fmt.Errorf("submission %s still has active files", r.SubId)
+	}
+	delete(s.Submissions, r.SubId)
+	return nil
+}
+
+func (s *Status) addSubmission(r Request) error {
+	if _, ok := s.Submissions[r.SubId]; ok {
+		return fmt.Errorf("submission %s already exists", r.SubId)
+	}
+	s.Submissions[r.SubId] = make(map[bson.ObjectId]util.E)
+	return nil
+}
+
+func (s *Status) addFile(r Request) error {
+	fm, ok := s.Submissions[r.SubId]
+	if !ok {
+		return fmt.Errorf("submission %s does not exist for file %s", r.SubId, r.FileId)
+	}
+	if _, ok = fm[r.FileId]; ok {
+		return fmt.Errorf("file %s exists for submission %s", r.FileId, r.SubId)
+	}
+	fm[r.FileId] = util.E{}
+	s.FileCount++
+	return nil
+}
+
+func (s *Status) removeFile(r Request) error {
+	fm, ok := s.Submissions[r.SubId]
+	if !ok {
+		return fmt.Errorf("submission %s does not exist for file %s", r.SubId, r.FileId)
+	}
+	if _, ok = fm[r.FileId]; !ok {
+		return fmt.Errorf("file %s does not exist for submission %s", r.FileId, r.SubId)
+	}
+	delete(fm, r.FileId)
+	s.FileCount--
+	return nil
+}
+
+func (s *Status) Idle() bool {
+	return len(s.Submissions) == 0
 }
 
 //MonitorStatus begins keeping track of Impendulo's current processing status.
@@ -78,11 +139,13 @@ func MonitorStatus() error {
 //NewMonitor
 func NewMonitor() (*Monitor, error) {
 	sc := make(chan Status)
-	c, e := NewChanger(sc)
+	rc := make(chan Request)
+	ic := make(chan util.E)
+	c, e := NewChanger(rc)
 	if e != nil {
 		return nil, e
 	}
-	w, e := NewWaiter(sc)
+	w, e := NewWaiter(ic)
 	if e != nil {
 		return nil, e
 	}
@@ -90,7 +153,7 @@ func NewMonitor() (*Monitor, error) {
 	if e != nil {
 		return nil, e
 	}
-	return &Monitor{changer: c, waiter: w, loader: l, statusChan: sc}, nil
+	return &Monitor{changer: c, waiter: w, loader: l, statusChan: sc, requestChan: rc, idleChan: ic}, nil
 }
 
 //Monitor begins a new monitoring session for this Monitor.
@@ -104,19 +167,48 @@ func (m *Monitor) Monitor() {
 	go h(m.changer)
 	go h(m.loader)
 	go h(m.waiter)
-	s := new(Status)
-	for v := range m.statusChan {
-		switch v {
-		case Status{}:
-			//A zeroed Status indicates a request for the current Status.
+	s := &Status{FileCount: 0, Submissions: make(map[bson.ObjectId]map[bson.ObjectId]util.E)}
+	waiting := 0
+	for {
+		if waiting > 0 && s.Idle() {
+			if e := m.notifyWaiting(waiting); e != nil {
+				util.Log(e)
+				return
+			}
+			waiting = 0
+		}
+		select {
+		case _, ok := <-m.statusChan:
+			if !ok {
+				return
+			}
 			m.statusChan <- *s
-		default:
-			s.add(v)
-			util.Log(fmt.Sprintf("Status updated with %v to %v.", v, *s))
+		case r, ok := <-m.requestChan:
+			if !ok {
+				return
+			}
+			if e := s.Update(r); e != nil {
+				util.Log(e)
+			}
+		case <-m.idleChan:
+			waiting++
 		}
 	}
 }
 
+func (m *Monitor) notifyWaiting(n int) (e error) {
+	defer func() {
+		if r := recover(); r != nil {
+			e = r.(error)
+		}
+	}()
+	for i := 0; i < n; i++ {
+		m.idleChan <- util.E{}
+	}
+	return
+}
+
+//ShutdownMonitor
 func ShutdownMonitor() error {
 	if monitor == nil {
 		return nil
@@ -131,6 +223,8 @@ func ShutdownMonitor() error {
 //Shutdown stops this Monitor
 func (m *Monitor) Shutdown() error {
 	close(m.statusChan)
+	close(m.requestChan)
+	close(m.idleChan)
 	return m.shutdownHandlers()
 }
 

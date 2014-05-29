@@ -28,6 +28,7 @@ package checkstyle
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
@@ -80,7 +81,7 @@ func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, 
 	o := filepath.Join(target.Dir, "checkstyle.xml")
 	a := []string{t.java, "-jar", t.cmd, "-f", "xml", "-c", t.cfg, "-o", o, "-r", target.Dir}
 	defer os.Remove(o)
-	r, re := tool.RunCommand(a, nil)
+	r, re := tool.RunCommand(a, nil, 30*time.Second)
 	rf, e := os.Open(o)
 	if e != nil {
 		if re != nil {

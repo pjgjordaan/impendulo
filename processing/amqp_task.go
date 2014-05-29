@@ -62,6 +62,7 @@ func init() {
 	rps = make(map[string]*ReceiveProducer)
 }
 
+//NewReceiveProducer
 func NewReceiveProducer(name, amqpURI, exchange, exchangeType, publishKey, bindingKey, ctag string) (*ReceiveProducer, error) {
 	if r, ok := rps[name]; ok {
 		return r, nil
@@ -108,6 +109,7 @@ func NewReceiveProducer(name, amqpURI, exchange, exchangeType, publishKey, bindi
 	return r, nil
 }
 
+//ReceiveProduce
 func (r *ReceiveProducer) ReceiveProduce(d []byte) ([]byte, error) {
 	u4, e := uuid.NewV4()
 	if e != nil {
@@ -148,6 +150,7 @@ func (r *ReceiveProducer) ReceiveProduce(d []byte) ([]byte, error) {
 	return reply, nil
 }
 
+//NewProducer
 func NewProducer(name, amqpURI, exchange, exchangeType, publishKey string) (*Producer, error) {
 	if p, ok := producers[name]; ok {
 		return p, nil
@@ -232,12 +235,15 @@ func StatusChanger(amqpURI string) (*Producer, error) {
 
 //ChangeStatus is used to update Impendulo's current
 //processing status.
-func ChangeStatus(change Status) error {
+func ChangeStatus(r Request) error {
+	if e := r.Valid(); e != nil {
+		return e
+	}
 	s, e := StatusChanger(amqpURI)
 	if e != nil {
 		return e
 	}
-	m, e := json.Marshal(change)
+	m, e := json.Marshal(r)
 	if e != nil {
 		return e
 	}
@@ -249,6 +255,7 @@ func IdleWaiter(amqpURI string) (*ReceiveProducer, error) {
 	return NewReceiveProducer("idle_waiter", amqpURI, "wait_exchange", DIRECT, "wait_request_key", "wait_response_key", "")
 }
 
+//WaitIdle will only return once impendulo's processors are idle when called.
 func WaitIdle() error {
 	w, e := IdleWaiter(amqpURI)
 	if e != nil {
@@ -258,10 +265,12 @@ func WaitIdle() error {
 	return e
 }
 
+//StatusRetriever
 func StatusRetriever(amqpURI string) (*ReceiveProducer, error) {
 	return NewReceiveProducer("status_retriever", amqpURI, "status_exchange", DIRECT, "status_request_key", "status_response_key", "")
 }
 
+//GetStatus retrieves the current status of impendulo's processors
 func GetStatus() (*Status, error) {
 	sr, e := StatusRetriever(amqpURI)
 	if e != nil {
@@ -278,10 +287,12 @@ func GetStatus() (*Status, error) {
 	return s, nil
 }
 
+//FileProducer
 func FileProducer(amqpURI string, fileKey string) (*Producer, error) {
 	return NewProducer("file_producer_"+fileKey, amqpURI, "submission_exchange", DIRECT, fileKey)
 }
 
+//AddFile
 func AddFile(f *project.File, k string) error {
 	p, e := FileProducer(amqpURI, k)
 	if e != nil {
@@ -291,7 +302,7 @@ func AddFile(f *project.File, k string) error {
 	if !f.CanProcess() {
 		return nil
 	}
-	m, e := json.Marshal(&Request{
+	m, e := json.Marshal(Request{
 		FileId: f.Id,
 		SubId:  f.SubId,
 		Type:   FILE_ADD,
@@ -308,12 +319,13 @@ func StartProducer(amqpURI string) (*ReceiveProducer, error) {
 	return NewReceiveProducer("submission_producer_"+id, amqpURI, "submission_exchange", DIRECT, "submission_key", id, "")
 }
 
+//StartSubmission
 func StartSubmission(id bson.ObjectId) (string, error) {
 	p, e := StartProducer(amqpURI)
 	if e != nil {
 		return "", e
 	}
-	m, e := json.Marshal(&Request{
+	m, e := json.Marshal(Request{
 		FileId: id,
 		SubId:  id,
 		Type:   SUBMISSION_START,
@@ -326,8 +338,7 @@ func StartSubmission(id bson.ObjectId) (string, error) {
 		return "", e
 	}
 	p.publishKey = string(d)
-	e = p.Produce(m)
-	if e != nil {
+	if e = p.Produce(m); e != nil {
 		return "", e
 	}
 	return p.publishKey, nil
@@ -340,7 +351,7 @@ func EndSubmission(id bson.ObjectId, k string) error {
 	if e != nil {
 		return e
 	}
-	m, e := json.Marshal(&Request{
+	m, e := json.Marshal(Request{
 		FileId: id,
 		SubId:  id,
 		Type:   SUBMISSION_STOP,
@@ -351,10 +362,12 @@ func EndSubmission(id bson.ObjectId, k string) error {
 	return p.Produce(m)
 }
 
+//RedoProducer
 func RedoProducer(amqpURI string) (*Producer, error) {
 	return NewProducer("redo_producer", amqpURI, "submission_exchange", DIRECT, "redo_key")
 }
 
+//RedoSubmission
 func RedoSubmission(id bson.ObjectId) error {
 	p, e := RedoProducer(amqpURI)
 	if e != nil {

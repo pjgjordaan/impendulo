@@ -23,17 +23,13 @@
     Submissions
   </li>
   {{else}}
-  {{if .ctx.Browse.IsUser}}
-  <li><a href="getsubmissions?user-id={{.ctx.Browse.Uid}}">Submissions</a></li>
-  {{else}}
-  <li><a href="getsubmissions?project-id={{.ctx.Browse.Pid.Hex}}">Submissions</a></li>
-  {{end}}
+  <li><a href="getsubmissions">Submissions</a></li>
   {{if .ctx.Browse.Level.Is "files"}}
   <li class="active">
     Files
   </li>
   {{else}}
-  <li><a href="getfiles?submission-id={{.ctx.Browse.Sid.Hex}}">Files</a></li>
+  <li><a href="getfiles">Files</a></li>
   {{end}}
   {{if .ctx.Browse.Level.Is "analysis"}}
   <li class="active">

@@ -99,23 +99,6 @@ func getIndex(r *http.Request, n string, maxSize int) (int, error) {
 	return i, nil
 }
 
-func getId(req *http.Request, ident, name string) (id bson.ObjectId, msg string, err error) {
-	id, err = convert.Id(req.FormValue(ident))
-	if err != nil {
-		msg = fmt.Sprintf("Could not read %s.", name)
-	}
-	return
-}
-
-//getActiveUser
-func getActiveUser(ctx *Context) (user, msg string, err error) {
-	user, err = ctx.Username()
-	if err != nil {
-		msg = "Could not retrieve user."
-	}
-	return
-}
-
 func getTestType(r *http.Request) (junit.Type, error) {
 	v := strings.ToLower(r.FormValue("testtype"))
 	switch v {

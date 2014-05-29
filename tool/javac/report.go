@@ -72,62 +72,60 @@ func NewReport(id bson.ObjectId, data []byte) *Report {
 }
 
 //Errors tells us if there were errors during compilation.
-func (this *Report) Errors() bool {
-	return this.Type == tool.ERRORS
+func (r *Report) Errors() bool {
+	return r.Type == tool.ERRORS
 }
 
 //Success tells us if compilation finished with no errors or warnings.
-func (this *Report) Success() bool {
-	return this.Type == tool.SUCCESS
+func (r *Report) Success() bool {
+	return r.Type == tool.SUCCESS
 }
 
 //Warnings tells us if there were warnings during compilation.
-func (this *Report) Warnings() bool {
-	return this.Type == tool.WARNINGS
+func (r *Report) Warnings() bool {
+	return r.Type == tool.WARNINGS
 }
 
 //Header generates a string which briefly describes the compilation.
-func (this *Report) Header() (header string) {
-	if this.Success() {
-		header = string(this.Data)
-		return
-	} else {
-		header = strconv.Itoa(this.Count) + " "
-		if this.Warnings() {
-			header += "Warning"
-		} else if this.Errors() {
-			header += "Error"
-		}
-		if this.Count > 1 {
-			header += "s"
-		}
+func (r *Report) Header() string {
+	if r.Success() {
+		return string(r.Data)
 	}
-	return
+	h := strconv.Itoa(r.Count) + " "
+	if r.Warnings() {
+		h += "Warning"
+	} else if r.Errors() {
+		h += "Error"
+	}
+	if r.Count > 1 {
+		h += "s"
+	}
+	return h
 }
 
 //calcCount extracts the number of errors or warnings which occurred
 //during compilation.
-func calcCount(data []byte) (n int) {
+func calcCount(data []byte) int {
 	split := bytes.Split(data, []byte("\n"))
 	if len(split) < 1 {
-		return
+		return 0
 	}
 	split = bytes.Split(bytes.TrimSpace(split[len(split)-1]), []byte(" "))
 	if len(split) < 1 {
-		return
+		return 0
 	}
-	n, _ = strconv.Atoi(string(split[0]))
-	return
+	n, _ := strconv.Atoi(string(split[0]))
+	return n
 }
 
 //getType extracts the type of compilation.
-func getType(data []byte) (tipe tool.CompileType) {
+func getType(data []byte) tool.CompileType {
 	if bytes.Equal(data, tool.COMPILE_SUCCESS) {
-		tipe = tool.SUCCESS
+		return tool.SUCCESS
 	} else if bytes.HasSuffix(data, compWarning) || bytes.HasSuffix(data, compWarnings) {
-		tipe = tool.WARNINGS
+		return tool.WARNINGS
 	} else if bytes.HasSuffix(data, compError) || bytes.HasSuffix(data, compErrors) {
-		tipe = tool.ERRORS
+		return tool.ERRORS
 	}
-	return
+	return tool.UNKNOWN
 }

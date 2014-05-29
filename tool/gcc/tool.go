@@ -4,6 +4,8 @@ import (
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
+
+	"time"
 )
 
 type (
@@ -17,30 +19,27 @@ const (
 	NAME = "GCC"
 )
 
-func New() (ret *Tool, err error) {
-	cmd, err := config.GCC.Path()
-	if err != nil {
-		return
+func New() (*Tool, error) {
+	p, e := config.GCC.Path()
+	if e != nil {
+		return nil, e
 	}
-	ret = &Tool{
-		cmd: cmd,
-	}
-	return
+	return &Tool{cmd: p}, e
 }
 
 //Lang
-func (this *Tool) Lang() tool.Language {
+func (t *Tool) Lang() tool.Language {
 	return tool.C
 }
 
 //Name
-func (this *Tool) Name() string {
+func (t *Tool) Name() string {
 	return NAME
 }
 
 func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
 	a := []string{t.cmd, "-Wall", "-Wextra", "-Wno-variadic-macros", "-pedantic", "-O0", "-o", target.Name, target.FilePath()}
-	r, e := tool.RunCommand(a, nil)
+	r, e := tool.RunCommand(a, nil, 30*time.Second)
 	if e != nil {
 		if !tool.IsEndError(e) {
 			return nil, e

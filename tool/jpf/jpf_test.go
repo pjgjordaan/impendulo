@@ -28,6 +28,7 @@ import (
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
 	"os"
 	"path/filepath"
 	"testing"
@@ -42,7 +43,7 @@ func TestRun(t *testing.T) {
 	if err != nil {
 		t.Errorf("Could not save file %q", err)
 	}
-	jpfConfig := NewConfig(bson.NewObjectId(), jpfBytes)
+	jpfConfig := NewConfig(bson.NewObjectId(), target, jpfBytes)
 	jpf, err := New(jpfConfig, location)
 	if err != nil {
 		t.Errorf("Could not load jpf %q", err)

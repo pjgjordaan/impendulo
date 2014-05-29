@@ -6,6 +6,8 @@ import (
 	"github.com/godfried/impendulo/tool/gcc"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
+	"time"
 )
 
 type (
@@ -47,7 +49,7 @@ func (this *Tool) Name() string {
 }
 
 func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
-	r, e := tool.RunCommand([]string{t.cmd, "-C", target.Dir, "-f", t.path}, nil)
+	r, e := tool.RunCommand([]string{t.cmd, "-C", target.Dir, "-f", t.path}, nil, 30*time.Second)
 	if e != nil {
 		if !tool.IsEndError(e) {
 			return nil, e

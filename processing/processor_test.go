@@ -3,6 +3,7 @@ package processing
 import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
@@ -20,7 +21,7 @@ func TestProcessFile(t *testing.T) {
 	if e := db.Add(db.PROJECTS, p); e != nil {
 		t.Error(e)
 	}
-	s := &project.Submission{bson.NewObjectId(), p.Id, "student", project.FILE_MODE, p.Time + 100, project.BUSY}
+	s := &project.Submission{bson.NewObjectId(), p.Id, "student", project.FILE_MODE, p.Time + 100}
 	if e := db.Add(db.SUBMISSIONS, s); e != nil {
 		t.Error(e)
 	}
@@ -32,11 +33,12 @@ func TestProcessFile(t *testing.T) {
 	if e != nil {
 		t.Errorf("Could not zip map %q", e)
 	}
-	test := &junit.Test{bson.NewObjectId(), p.Id, "AllTests.java", "testing", p.Time + 50, junit.DEFAULT, testBytes, dataBytes}
+	target := &tool.Target{Name: "Triangle", Package: "triangle", Ext: "java"}
+	test := &junit.Test{bson.NewObjectId(), p.Id, "AllTests.java", "testing", p.Time + 50, junit.DEFAULT, target, testBytes, dataBytes}
 	if e := db.Add(db.TESTS, test); e != nil {
 		t.Error(e)
 	}
-	ut := &junit.Test{bson.NewObjectId(), p.Id, "UserTests.java", "testing", p.Time + 150, junit.USER, userTestBytes, dataBytes}
+	ut := &junit.Test{bson.NewObjectId(), p.Id, "UserTests.java", "testing", p.Time + 150, junit.USER, target, userTestBytes, dataBytes}
 	if e := db.Add(db.TESTS, ut); e != nil {
 		t.Error(e)
 	}

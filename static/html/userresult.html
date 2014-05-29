@@ -4,7 +4,7 @@
   <li class="active"><a>Table</a></li>
   <li><a  href="userchart">Chart</a></li>
 </ul>
-<table class="table table-hover table-striped">
+<table id="table-users" class="table table-hover table-striped tablesorter">
   <thead>
     <tr class="info">
       <th>User</th>
@@ -42,4 +42,11 @@
      {{end}}
   </tbody>
 </table>
+<script>
+$(function(){
+$("#table-users").tablesorter({
+theme : 'bootstrap'
+});
+});
+</script>
 {{end}}
