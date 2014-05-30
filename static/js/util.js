@@ -626,3 +626,72 @@ function replaceAll(str, find, replace) {
 function endsWith(str, suffix) {
     return str.indexOf(suffix, str.length - suffix.length) !== -1;
 };
+
+function addProjects(dest) {
+    $.getJSON('projects', function(data) {
+        if (not(data['projects'])) {
+            return;
+        }
+        var ps = data['projects'];
+        for (var i = 0; i < ps.length; i++) {
+            $('#' + dest).append('<option value="' + ps[i].Id + '">' + ps[i].Name + '</option>');
+        }
+        addFilenames('file-name-old', ps[0].Id);
+    });
+}
+
+function addFilenames(dest, pid) {
+    $('#' + dest).empty();
+    $.getJSON('filenames?project-id=' + pid, function(data) {
+        if (not(data['filenames'])) {
+            return;
+        }
+        var ns = data['filenames'];
+        for (var i = 0; i < ns.length; i++) {
+            $('#' + dest).append('<option value="' + ns[i] + '">' + ns[i] + '</option>');
+        }
+    });
+}
+
+function loadStatus(dest) {
+    $.getJSON('status', function(data) {
+        if (not(data['status'])) {
+            return;
+        }
+        var s = data['status'];
+        var accordionItem = '<div class="panel panel-default"><div class="panel-heading"><h4 class="panel-title"><a data-toggle="collapse" data-parent="#' + dest + '" href="#{0}">{1} <span class="badge">{2}</span></a></h4></div><div id="{0}" class="panel-collapse collapse"><div class="panel-body">{3}</div></div></div>';
+        $('#' + dest).append(accordionItem.format('panel-submissions', 'Submissions', Object.keys(s.Submissions).length, '<div class="panel-group" id="submissions-accordion"></div>'));
+        $('#' + dest).append(accordionItem.format('panel-files', 'Files', s.FileCount, ''));
+        var subItem = '<div class="panel panel-default"><div class="panel-heading"><h4 class="panel-title"><a data-toggle="collapse" data-parent="#submissions-accordion" href="#{0}">{1}</a></h4></div><div id="{0}" class="panel-collapse collapse"><div class="panel-body"><dl class="dl-horizontal"><dt>Files</dt><dd>{2}</dd><dt>User</dt><dd>{3}</dd><dt>Time</dt><dd>{4}</dd><dt>Project</dt><dd>{5}</dd></dl></div></div></div></div>';
+        var pmap = {};
+        for (var sid in s.Submissions) {
+            var fc = Object.keys(s.Submissions[sid]).length;
+            addSubmissionInfo(sid, fc, subItem, 'submissions-accordion');
+        }
+    });
+}
+
+function addSubmissionInfo(sid, fc, template, dest) {
+    $.getJSON('submissions?id=' + sid, function(sdata) {
+        if (not(sdata['submissions'])) {
+            return;
+        }
+        var sub = sdata['submissions'][0];
+        $.getJSON('projects?id=' + sub.ProjectId, function(pdata) {
+            if (not(pdata['projects'])) {
+                return;
+            }
+            var p = pdata['projects'][0].Name;
+            $('#' + dest).append(template.format('panel-sub-' + sub.Id, p + ' by ' + sub.User, fc, sub.User, new Date(sub.Time).toLocaleString(), p));
+        });
+    });
+}
+
+if (!String.prototype.format) {
+    String.prototype.format = function() {
+        var args = arguments;
+        return this.replace(/{(\d+)}/g, function(match, number) {
+            return typeof args[number] != 'undefined' ? args[number] : match;
+        });
+    };
+}

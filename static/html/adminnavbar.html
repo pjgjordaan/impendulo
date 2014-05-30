@@ -1,85 +1,104 @@
 {{define "navbar"}}
 <div id="navbar" class="row">
-  <div class="navbar navbar-inverse" style="position: static;">
-    <div class="navbar-inner" style="height: auto;">
-      <div class="container">
-	<a class="navbar-brand" >Impendulo</a>
-	<ul class="nav navbar-nav">
-	  <li {{if (.ctx.IsView "home")}} class="active" {{end}}>
-	    <a href="homeview">
-	      <span class="glyphicon glyphicon-home"></span> Home
-	    </a>
-	  </li>
-	  <li {{if (.ctx.IsView "submit")}} class="dropdown active" {{else}} class="dropdown" {{end}}>
-            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-	      <span class="glyphicon glyphicon-upload"></span> Submit
-	      <b class="caret"></b>
-	    </a>
-            <ul class="dropdown-menu">
-              <li><a href="projectview">Project</a></li>
-              <li><a href="skeletonview">Project Skeleton</a></li>
-              <li><a href="configview">Tool Configuration</a></li>
-	      <li><a href="archiveview">Intlola Archive</a></li>
-	    </ul>
-          </li>
-	  <li {{if (.ctx.IsView "download")}} class="dropdown active" {{else}} class="dropdown" {{end}}>
-            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-	      <span class="glyphicon glyphicon-download"></span> Download
-	      <b class="caret"></b>
-	    </a>
-            <ul class="dropdown-menu">
-              <li><a href="projectdownloadview">Project Skeleton</a></li>
-	      <li><a href="testdownloadview">Project Tests</a></li>
-	      <li><a href="intloladownloadview">Intlola</a></li>   
-              </ul>
-          </li>
-	  <li {{if (.ctx.IsView "delete")}} class="dropdown active" {{else}} class="dropdown" {{end}}>
-            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-	      <span class="glyphicon glyphicon-remove"></span> Delete
-	      <b class="caret"></b>
-	    </a>
-            <ul class="dropdown-menu">
-              <li><a href="projectdeleteview">Projects</a></li>
-	      <li><a href="userdeleteview">Users</a></li>
-	      <li><a href="resultsdeleteview">Results</a></li>
-	     <li><a href="skeletondeleteview">Skeletons</a></li>
-	    </ul>
-          </li>
-	  <li {{if (.ctx.IsView "tool")}} class="dropdown active" {{else}} class="dropdown" {{end}}>
-            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-	      <span class="glyphicon glyphicon-wrench"></span> Tools
-	      <b class="caret"></b>
-	    </a>
-            <ul class="dropdown-menu">
-              <li><a href="runtoolsview">Run</a></li>
-              <li><a href="evaluatesubmissionsview">Evaluate</a></li>
-	    </ul>
-          </li>
-	  <li {{if (.ctx.IsView "data")}} class="dropdown active" {{else}} class="dropdown" {{end}}>
-            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-	      <span class="glyphicon glyphicon-download"></span> Data
-	      <b class="caret"></b>
-	    </a>
-            <ul class="dropdown-menu">
-              <li><a href="importdataview">Import</a></li>
-	      <li><a href="exportdataview">Export</a></li>
-	      <li><a href="logs">Logs</a></li>
-	      <li><a href="editdbview">Edit</a></li>
-	    </ul>
-          </li>
-	  <li {{if (.ctx.IsView "status")}} class="active" {{end}}>
-	    <a href="statusview">
-	      <span class="glyphicon glyphicon-heart-empty"></span> Status
-	    </a>
-	  </li>
-	</ul>
-	<form class="navbar-form pull-right" action="logout" method="POST">
-          <button type="submit" class="btn btn-default">
-	    <span class="glyphicon glyphicon-log-out"></span> Logout
-	  </button>
-	</form>
-      </div>
+    <div class="navbar navbar-inverse" style="position: static;">
+        <div class="navbar-inner" style="height: auto;">
+            <div class="container">
+                <a class="navbar-brand">Impendulo</a>
+                <ul class="nav navbar-nav">
+                    <li {{if (.ctx.IsView "home")}} class="active" {{end}}>
+                        <a href="homeview">
+                            <span class="glyphicon glyphicon-home"></span> Home
+                        </a>
+                    </li>
+                    <li {{if (.ctx.IsView "submit")}} class="dropdown active" {{else}} class="dropdown" {{end}}>
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                            <span class="glyphicon glyphicon-upload"></span> Submit
+                            <b class="caret"></b>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a href="projectview">Project</a>
+                            </li>
+                            <li><a href="skeletonview">Project Skeleton</a>
+                            </li>
+                            <li><a href="configview">Tool Configuration</a>
+                            </li>
+                            <li><a href="archiveview">Intlola Archive</a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li {{if (.ctx.IsView "download")}} class="dropdown active" {{else}} class="dropdown" {{end}}>
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                            <span class="glyphicon glyphicon-download"></span> Download
+                            <b class="caret"></b>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a href="projectdownloadview">Project Skeleton</a>
+                            </li>
+                            <li><a href="testdownloadview">Project Tests</a>
+                            </li>
+                            <li><a href="intloladownloadview">Intlola</a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li {{if (.ctx.IsView "delete")}} class="dropdown active" {{else}} class="dropdown" {{end}}>
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                            <span class="glyphicon glyphicon-remove"></span> Delete
+                            <b class="caret"></b>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a href="projectdeleteview">Projects</a>
+                            </li>
+                            <li><a href="userdeleteview">Users</a>
+                            </li>
+                            <li><a href="resultsdeleteview">Results</a>
+                            </li>
+                            <li><a href="skeletondeleteview">Skeletons</a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li {{if (.ctx.IsView "tool")}} class="dropdown active" {{else}} class="dropdown" {{end}}>
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                            <span class="glyphicon glyphicon-wrench"></span> Tools
+                            <b class="caret"></b>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a href="runtoolsview">Run</a>
+                            </li>
+                            <li><a href="evaluatesubmissionsview">Evaluate</a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li {{if (.ctx.IsView "data")}} class="dropdown active" {{else}} class="dropdown" {{end}}>
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                            <span class="glyphicon glyphicon-download"></span> Data
+                            <b class="caret"></b>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a href="importdataview">Import</a>
+                            </li>
+                            <li><a href="exportdataview">Export</a>
+                            </li>
+                            <li><a href="logs">Logs</a>
+                            </li>
+                            <li><a href="editdbview">Edit</a>
+                            </li>
+                            <li><a href="renameview">Rename Files</a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li {{if (.ctx.IsView "status")}} class="active" {{end}}>
+                        <a href="statusview">
+                            <span class="glyphicon glyphicon-heart-empty"></span> Status
+                        </a>
+                    </li>
+                </ul>
+                <form class="navbar-form pull-right" action="logout" method="POST">
+                    <button type="submit" class="btn btn-default">
+                        <span class="glyphicon glyphicon-log-out"></span> Logout
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 {{end}}

@@ -26,7 +26,6 @@ package processing
 
 import (
 	"encoding/json"
-
 	"github.com/godfried/impendulo/project"
 	uuid "github.com/nu7hatch/gouuid"
 	"github.com/streadway/amqp"
@@ -280,11 +279,11 @@ func GetStatus() (*Status, error) {
 	if e != nil {
 		return nil, e
 	}
-	s := new(Status)
+	s := Status{}
 	if e = json.Unmarshal(r, &s); e != nil {
 		return nil, e
 	}
-	return s, nil
+	return &s, nil
 }
 
 //FileProducer

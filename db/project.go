@@ -305,3 +305,16 @@ func UpdateTime(sub *project.Submission) error {
 	}
 	return Update(SUBMISSIONS, bson.M{ID: sub.Id}, bson.M{SET: bson.M{TIME: f.Time}})
 }
+
+func ProjectFileNames(id bson.ObjectId) ([]string, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
+	}
+	defer s.Close()
+	var ss []bson.ObjectId
+	if e := s.DB("").C(SUBMISSIONS).Find(bson.M{PROJECTID: id}).Distinct(ID, &ss); e != nil {
+		return nil, &GetError{"submissions", e, id}
+	}
+	return FileNames(bson.M{SUBID: bson.M{IN: ss}})
+}

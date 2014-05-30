@@ -63,17 +63,17 @@ func (bc *BasicConsumer) Consume(d amqp.Delivery, ch *amqp.Channel) error {
 }
 
 func basicStatus() (Status, bson.ObjectId) {
-	sid := bson.NewObjectId()
-	sm := map[bson.ObjectId]map[bson.ObjectId]util.E{
+	sid := bson.NewObjectId().Hex()
+	sm := map[string]map[string]util.E{
 		sid: {
-			bson.NewObjectId(): util.E{},
-			bson.NewObjectId(): util.E{},
-			bson.NewObjectId(): util.E{},
-			bson.NewObjectId(): util.E{},
-			bson.NewObjectId(): util.E{},
+			bson.NewObjectId().Hex(): util.E{},
+			bson.NewObjectId().Hex(): util.E{},
+			bson.NewObjectId().Hex(): util.E{},
+			bson.NewObjectId().Hex(): util.E{},
+			bson.NewObjectId().Hex(): util.E{},
 		},
 	}
-	return Status{FileCount: len(sm[sid]), Submissions: sm}, sid
+	return Status{FileCount: len(sm[sid]), Submissions: sm}, bson.ObjectIdHex(sid)
 }
 
 func TestWaitIdle(t *testing.T) {
@@ -88,8 +88,8 @@ func TestWaitIdle(t *testing.T) {
 		for status.FileCount > 0 {
 			<-wChan
 			wChan <- util.E{}
-			for k, _ := range status.Submissions[sid] {
-				status.Update(Request{SubId: sid, FileId: k, Type: FILE_REMOVE})
+			for k, _ := range status.Submissions[sid.Hex()] {
+				status.Update(Request{SubId: sid, FileId: bson.ObjectIdHex(k), Type: FILE_REMOVE})
 				break
 			}
 		}

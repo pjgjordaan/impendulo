@@ -175,3 +175,13 @@ func ParseName(n string) (*File, error) {
 func isOutFolder(a string) bool {
 	return a == SRC_DIR || a == BIN_DIR
 }
+
+func (f *File) Rename(n string) {
+	if !strings.HasSuffix(n, "java") {
+		n += ".java"
+	}
+	on, _ := util.Extension(f.Name)
+	nn, _ := util.Extension(n)
+	f.Name = n
+	f.Data = bytes.Replace(f.Data, []byte(on), []byte(nn), -1)
+}

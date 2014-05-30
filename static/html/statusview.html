@@ -1,11 +1,11 @@
 {{define "view"}}
 <div class="jumbotron">
-  <h2>Impendulo Status</h2>
-  {{$busy := getBusy}}
-  <dl>
-    <dt>Processing</dt>
-    <dd>{{$busy.Files}} Files</dd>
-    <dd>{{$busy.Submissions}} Submissions</dd>
-  </dl>
+    <h2>Impendulo Status</h2>
+    <h3>Processing</h3>
+    <div class="panel-group" id="status-accordion">
+    </div>
 </div>
+<script>
+    loadStatus('status-accordion');
+</script>
 {{end}}

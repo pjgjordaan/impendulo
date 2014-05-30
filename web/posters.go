@@ -71,8 +71,8 @@ func defaultPosters() map[string]Poster {
 		"submitarchive": SubmitArchive, "runtools": RunTools,
 		"deleteproject": DeleteProject, "deleteuser": DeleteUser,
 		"deleteresults": DeleteResults, "deleteskeletons": DeleteSkeletons,
-		"importdata": ImportData,
-		"login":      Login, "register": Register,
+		"importdata": ImportData, "renamefiles": RenameFiles,
+		"login": Login, "register": Register,
 		"logout": Logout, "editproject": EditProject,
 		"edituser": EditUser, "editsubmission": EditSubmission,
 		"editfile": EditFile, "edittest": EditTest,
@@ -471,4 +471,40 @@ func ImportData(r *http.Request, c *Context) (string, error) {
 		return "Unable to import db data.", e
 	}
 	return "Successfully imported db data.", nil
+}
+
+func RenameFiles(r *http.Request, c *Context) (string, error) {
+	pid, e := convert.Id(r.FormValue("project-id"))
+	if e != nil {
+		return "Could not read project.", e
+	}
+	newName, e := GetString(r, "file-name-new")
+	if e != nil {
+		return "Could not read new file name.", e
+	}
+	oldName, e := GetString(r, "file-name-old")
+	if e != nil {
+		return "Could not read current file name.", e
+	}
+	subs, e := db.Submissions(bson.M{db.PROJECTID: pid}, nil)
+	if e != nil {
+		return "Could not retrieve submissions.", e
+	}
+	for _, s := range subs {
+		fs, e := db.Files(bson.M{db.SUBID: s.Id, db.NAME: oldName}, bson.M{db.ID: 1}, 0)
+		if e != nil {
+			return "Could not retrieve files.", e
+		}
+		for _, fi := range fs {
+			f, e := db.File(bson.M{db.ID: fi.Id}, nil)
+			if e != nil {
+				return "Could not retrieve files.", e
+			}
+			f.Rename(newName)
+			if e := db.Update(db.FILES, bson.M{db.ID: f.Id}, bson.M{db.SET: bson.M{db.DATA: f.Data, db.NAME: f.Name}}); e != nil {
+				return "Could not update file name.", e
+			}
+		}
+	}
+	return fmt.Sprintf("Succesfully renamed files to %s.", newName), nil
 }

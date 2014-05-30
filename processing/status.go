@@ -29,8 +29,6 @@ package processing
 import (
 	"fmt"
 
-	"labix.org/v2/mgo/bson"
-
 	"github.com/godfried/impendulo/util"
 )
 
@@ -41,7 +39,7 @@ type (
 	//number of files and submissions being processed.
 	Status struct {
 		FileCount   int
-		Submissions map[bson.ObjectId]map[bson.ObjectId]util.E
+		Submissions map[string]map[string]util.E
 	}
 
 	//Monitor is used to keep track of and change Impendulo's processing
@@ -57,6 +55,10 @@ type (
 var (
 	monitor *Monitor
 )
+
+func NewStatus() *Status {
+	return &Status{FileCount: 0, Submissions: make(map[string]map[string]util.E)}
+}
 
 func (s *Status) Update(r Request) error {
 	switch r.Type {
@@ -74,45 +76,49 @@ func (s *Status) Update(r Request) error {
 }
 
 func (s *Status) removeSubmission(r Request) error {
-	if fm, ok := s.Submissions[r.SubId]; !ok {
-		return fmt.Errorf("submission %s does not exist", r.SubId)
+	sk := r.SubId.Hex()
+	if fm, ok := s.Submissions[sk]; !ok {
+		return fmt.Errorf("submission %s does not exist", sk)
 	} else if len(fm) > 0 {
-		return fmt.Errorf("submission %s still has active files", r.SubId)
+		return fmt.Errorf("submission %s still has active files", sk)
 	}
-	delete(s.Submissions, r.SubId)
+	delete(s.Submissions, sk)
 	return nil
 }
 
 func (s *Status) addSubmission(r Request) error {
-	if _, ok := s.Submissions[r.SubId]; ok {
-		return fmt.Errorf("submission %s already exists", r.SubId)
+	sk := r.SubId.Hex()
+	if _, ok := s.Submissions[sk]; ok {
+		return fmt.Errorf("submission %s already exists", sk)
 	}
-	s.Submissions[r.SubId] = make(map[bson.ObjectId]util.E)
+	s.Submissions[sk] = make(map[string]util.E)
 	return nil
 }
 
 func (s *Status) addFile(r Request) error {
-	fm, ok := s.Submissions[r.SubId]
+	sk, fk := r.SubId.Hex(), r.FileId.Hex()
+	fm, ok := s.Submissions[sk]
 	if !ok {
-		return fmt.Errorf("submission %s does not exist for file %s", r.SubId, r.FileId)
+		return fmt.Errorf("submission %s does not exist for file %s", sk, fk)
 	}
-	if _, ok = fm[r.FileId]; ok {
-		return fmt.Errorf("file %s exists for submission %s", r.FileId, r.SubId)
+	if _, ok = fm[fk]; ok {
+		return fmt.Errorf("file %s exists for submission %s", fk, sk)
 	}
-	fm[r.FileId] = util.E{}
+	fm[fk] = util.E{}
 	s.FileCount++
 	return nil
 }
 
 func (s *Status) removeFile(r Request) error {
-	fm, ok := s.Submissions[r.SubId]
+	sk, fk := r.SubId.Hex(), r.FileId.Hex()
+	fm, ok := s.Submissions[sk]
 	if !ok {
-		return fmt.Errorf("submission %s does not exist for file %s", r.SubId, r.FileId)
+		return fmt.Errorf("submission %s does not exist for file %s", sk, fk)
 	}
-	if _, ok = fm[r.FileId]; !ok {
-		return fmt.Errorf("file %s does not exist for submission %s", r.FileId, r.SubId)
+	if _, ok = fm[fk]; !ok {
+		return fmt.Errorf("file %s does not exist for submission %s", fk, sk)
 	}
-	delete(fm, r.FileId)
+	delete(fm, fk)
 	s.FileCount--
 	return nil
 }
@@ -167,7 +173,7 @@ func (m *Monitor) Monitor() {
 	go h(m.changer)
 	go h(m.loader)
 	go h(m.waiter)
-	s := &Status{FileCount: 0, Submissions: make(map[bson.ObjectId]map[bson.ObjectId]util.E)}
+	s := NewStatus()
 	waiting := 0
 	for {
 		if waiting > 0 && s.Idle() {

@@ -71,7 +71,7 @@ var (
 		"evaluatesubmissionsview", "evaluatesubmissions", "logs",
 		"editdbview", "loadproject", "editproject", "loaduser",
 		"edituser", "loadsubmission", "editsubmission", "loadfile",
-		"editfile", "edittest",
+		"editfile", "edittest", "renamefiles", "renameview",
 	}
 
 	homeViews = []string{
@@ -90,7 +90,7 @@ var (
 	statusViews   = []string{"statusview"}
 	toolViews     = []string{"runtoolsview", "evaluatesubmissionsview"}
 	dataViews     = []string{
-		"importdataview", "exportdataview", "editdbview",
+		"importdataview", "exportdataview", "editdbview", "renameview",
 		"loadproject", "loadsubmission", "loadfile", "loaduser",
 	}
 )

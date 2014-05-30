@@ -4,6 +4,8 @@ import (
 	"code.google.com/p/gorilla/pat"
 	"code.google.com/p/gorilla/sessions"
 
+	"time"
+
 	"errors"
 
 	"sort"
@@ -12,6 +14,7 @@ import (
 	"fmt"
 
 	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/processing"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/jacoco"
@@ -71,7 +74,7 @@ func GenerateAJAX(r *pat.Router) {
 		"skeletons": getSkeletons, "submissions": submissions, "results": ajaxResults, "jpflisteners": ajaxListeners,
 		"langs": getLangs, "projects": getProjects, "files": ajaxFiles, "tools": ajaxTools, "jpfsearches": ajaxSearches,
 		"code": ajaxCode, "users": ajaxUsers, "permissions": ajaxPerms, "comparables": ajaxComparables,
-		"tests": ajaxTests, "test-types": testTypes,
+		"tests": ajaxTests, "test-types": testTypes, "filenames": fileNames, "status": ajaxStatus,
 	}
 	for n, f := range gets {
 		r.Add("GET", "/"+n, f)
@@ -82,6 +85,41 @@ func GenerateAJAX(r *pat.Router) {
 	for n, f := range posts {
 		r.Add("POST", "/"+n, f)
 	}
+}
+
+func ajaxStatus(r *http.Request) ([]byte, error) {
+	type wrapper struct {
+		s *processing.Status
+		e error
+	}
+	sc := make(chan wrapper)
+	go func() {
+		s, e := processing.GetStatus()
+		w := wrapper{s, e}
+		sc <- w
+	}()
+	select {
+	case <-time.After(15 * time.Second):
+		return util.JSON(map[string]interface{}{"status": processing.NewStatus()})
+	case w := <-sc:
+		if w.e != nil {
+			util.Log(w.e)
+			return util.JSON(map[string]interface{}{"status": processing.NewStatus()})
+		}
+		return util.JSON(map[string]interface{}{"status": w.s})
+	}
+}
+
+func fileNames(r *http.Request) ([]byte, error) {
+	pid, e := convert.Id(r.FormValue("project-id"))
+	if e != nil {
+		return nil, e
+	}
+	ns, e := db.ProjectFileNames(pid)
+	if e != nil {
+		return nil, e
+	}
+	return util.JSON(map[string]interface{}{"filenames": ns})
 }
 
 func ajaxSetContext(w http.ResponseWriter, r *http.Request) error {

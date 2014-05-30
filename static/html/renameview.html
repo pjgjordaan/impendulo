@@ -1,0 +1,40 @@
+{{define "view"}}
+<h3 class="heading">Rename Files</h3>
+<form class="form-horizontal" role="form" action="renamefiles" method="post">
+    <div class="form-group">
+        <label class="col-lg-offset-3 col-lg-2 control-label" for="project-id">Project</label>
+        <div class="col-lg-3">
+            <select class="form-control" name="project-id" id="project-id">
+            </select>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-lg-offset-3 col-lg-2 control-label" for="file-name-old">File Name</label>
+        <div class="col-lg-3">
+            <select class="form-control" name="file-name-old" id="file-name-old">
+            </select>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-lg-offset-3 col-lg-2 control-label" for="file-name-new">New Name</label>
+        <div class="col-lg-3">
+            <input type="text" class="form-control" name="file-name-new" id="file-name-new">
+        </div>
+    </div>
+    <div class="form-group">
+        <div class="col-lg-offset-5 col-lg-3">
+            <button type="submit" class="btn btn-default">
+                <span class="glyphicon glyphicon-play"></span> Rename
+            </button>
+        </div>
+    </div>
+</form>
+<script type="text/javascript" language="javascript">
+    window.onload = function() {
+        addProjects('project-id');
+        $('#project-id').change(function() {
+            addFilenames('file-name-old', $(this).val());
+        });
+    }
+</script>
+{{end}}
