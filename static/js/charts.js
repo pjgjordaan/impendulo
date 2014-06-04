@@ -32,12 +32,43 @@ var ResultChart = {
     ACTIVE_SHADE: -0.3,
     ACTIVE_WIDTH: 3,
     getColour: null,
-    show: function(chartData, currentTime, nextTime, currentUser) {
-        ResultChart.CURRENT_TIME = currentTime;
-        ResultChart.NEXT_TIME = nextTime;
-        ResultChart.CURRENT_USER = currentUser;
-        ResultChart.create(chartData);
+    init: function(vals) {
+        $(function() {
+            if (vals.subID === undefined) {
+                return;
+            }
+            if (vals.file === undefined) {
+                return;
+            }
+            if (vals.result === undefined) {
+                return;
+            }
+            var subs = [vals.subID];
+            if (vals.src !== undefined) {
+                subs = subs.concat($('#' + vals.src).val());
+            }
+            var params = {
+                'type': 'file',
+                'submissions': subs,
+                'file': vals.file,
+                'result': vals.result
+            };
+            if (vals.testfileID !== undefined) {
+                params.testfileid = vals.testfileID;
+            }
+            if (vals.srcfileID !== undefined) {
+                params.srcfileid = vals.srcfileID;
+            }
+            $.getJSON('chart', params, function(data) {
+                ResultChart.CURRENT_TIME = vals.currentTime;
+                ResultChart.NEXT_TIME = vals.nextTime;
+                ResultChart.CURRENT_USER = vals.user;
+                ResultChart.create(data['chart']);
+            });
+        });
+        return false;
     },
+
 
     create: function(chartData) {
         if (chartData === null || chartData === undefined) {

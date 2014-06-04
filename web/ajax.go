@@ -74,7 +74,7 @@ func GenerateAJAX(r *pat.Router) {
 		"skeletons": getSkeletons, "submissions": submissions, "results": ajaxResults, "jpflisteners": ajaxListeners,
 		"langs": getLangs, "projects": getProjects, "files": ajaxFiles, "tools": ajaxTools, "jpfsearches": ajaxSearches,
 		"code": ajaxCode, "users": ajaxUsers, "permissions": ajaxPerms, "comparables": ajaxComparables,
-		"tests": ajaxTests, "test-types": testTypes, "filenames": fileNames, "status": ajaxStatus,
+		"tests": ajaxTests, "test-types": testTypes, "filenames": fileNames, "status": ajaxStatus, "counts": ajaxCounts,
 	}
 	for n, f := range gets {
 		r.Add("GET", "/"+n, f)
@@ -143,6 +143,33 @@ func ajaxSetContext(w http.ResponseWriter, r *http.Request) error {
 
 func testTypes(r *http.Request) ([]byte, error) {
 	return util.JSON(map[string]interface{}{"types": junit.TestTypes()})
+}
+
+func ajaxCounts(r *http.Request) ([]byte, error) {
+	if sid, e := convert.Id(r.FormValue("submission-id")); e == nil {
+		return submissionCounts(sid)
+	}
+	return nil, errors.New("unsupported counts request")
+}
+
+func submissionCounts(sid bson.ObjectId) ([]byte, error) {
+	all, e := db.Count(db.FILES, bson.M{db.SUBID: sid})
+	if e != nil {
+		return nil, e
+	}
+	s, e := db.Count(db.FILES, bson.M{db.SUBID: sid, db.TYPE: project.SRC})
+	if e != nil {
+		return nil, e
+	}
+	l, e := db.Count(db.FILES, bson.M{db.SUBID: sid, db.TYPE: project.LAUNCH})
+	if e != nil {
+		return nil, e
+	}
+	t, e := db.Count(db.FILES, bson.M{db.SUBID: sid, db.TYPE: project.TEST})
+	if e != nil {
+		return nil, e
+	}
+	return util.JSON(map[string]interface{}{"counts": map[string]int{"all": all, "source": s, "launch": l, "test": t}})
 }
 
 func ajaxListeners(r *http.Request) ([]byte, error) {
@@ -465,9 +492,32 @@ func getChart(r *http.Request) ([]byte, error) {
 		return fileChart(r)
 	case "submission":
 		return submissionChart(r)
+	case "overview":
+		return overviewChart(r)
 	default:
 		return nil, fmt.Errorf("unsupported chart type %s", t)
 	}
+}
+
+func overviewChart(r *http.Request) ([]byte, error) {
+	v, e := GetString(r, "view")
+	if e != nil {
+		return nil, e
+	}
+	var f func() (ChartData, error)
+	switch v {
+	case "user":
+		f = UserChart
+	case "project":
+		f = ProjectChart
+	default:
+		return nil, fmt.Errorf("unknown view %s", v)
+	}
+	c, e := f()
+	if e != nil {
+		return nil, e
+	}
+	return util.JSON(map[string]interface{}{"chart": c})
 }
 
 func submissionChart(r *http.Request) ([]byte, error) {

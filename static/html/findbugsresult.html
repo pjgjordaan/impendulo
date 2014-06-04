@@ -1,94 +1,87 @@
-{{define "result"}}
-{{$report := .Report}}
-{{if $report.Success}}
+{{define "result"}} {{$report := .Report}} {{if $report.Success}}
 <h4 class="text-success">No bugs found</h4>
-{{else}}
-{{$code := "Code"}}
-{{$uid := .state.Uid}}
-{{$sid := .state.Sid}}
-{{$fileName := .state.File}}
-{{$current := .state.Current}}
-{{$next := .state.Next}}
-{{$rid := $report.Id.Hex}}
-{{$addr := address $report}}
+{{else}} {{$code := "Code"}} {{$uid := .state.Uid}} {{$sid := .state.Sid}} {{$fileName := .state.File}} {{$current := .state.Current}} {{$next := .state.Next}} {{$rid := $report.Id.Hex}} {{$addr := address $report}}
 <h4 class="text-danger">{{$report.Summary.BugCount}} bugs found</h4>
 <div class="panel-group" id="fbaccordion{{$addr}}">
-  <div class="panel panel-default">
-    <div class="panel-heading">
-      <a class="accordion-toggle" data-toggle="collapse"
-	 data-parent="#fbaccordion{{$addr}}" href="#summary{{$addr}}">
-	<h4>Summary</h4>
-      </a>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbaccordion{{$addr}}" href="#summary{{$addr}}">
+                <h4>Summary</h4>
+            </a>
+        </div>
+        <div id="summary{{$addr}}" class="panel-collapse collapse in">
+            <div class="accordion-inner">
+                <dl class="dl-horizontal">
+                    <dt>Classes Analyzed</dt>
+                    <dd>{{$report.Summary.ClassCount}}</dd>
+                    <dt>Packages Analyzed</dt>
+                    <dd>{{$report.Summary.PackageCount}}</dd>
+                    <dt>Classes Referenced</dt>
+                    <dd>{{$report.Summary.ReferenceCount}}</dd>
+                    <dt>Total Bugs Found</dt>
+                    <dd>{{$report.Summary.BugCount}}</dd>
+                    <dt>Priority 1 Bugs Found</dt>
+                    <dd>{{$report.Summary.Priority1}}</dd>
+                    <dt>Priority 2 Bugs Found</dt>
+                    <dd>{{$report.Summary.Priority2}}</dd>
+                    <dt>Priority 3 Bugs Found</dt>
+                    <dd>{{$report.Summary.Priority3}}</dd>
+                </dl>
+            </div>
+        </div>
     </div>
-    <div id="summary{{$addr}}" class="panel-collapse collapse in">
-      <div class="accordion-inner">
-	<dl class="dl-horizontal">
-	  <dt>Classes Analyzed</dt><dd>{{$report.Summary.ClassCount}}</dd>
-	  <dt>Packages Analyzed</dt><dd>{{$report.Summary.PackageCount}}</dd>
-	  <dt>Classes Referenced</dt><dd>{{$report.Summary.ReferenceCount}}</dd>
-	  <dt>Total Bugs Found</dt><dd>{{$report.Summary.BugCount}}</dd>
-	  <dt>Priority 1 Bugs Found</dt><dd>{{$report.Summary.Priority1}}</dd>
-	  <dt>Priority 2 Bugs Found</dt><dd>{{$report.Summary.Priority2}}</dd>
-	  <dt>Priority 3 Bugs Found</dt><dd>{{$report.Summary.Priority3}}</dd>
-	</dl>
-      </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbaccordion{{$addr}}" href="#bugs{{$addr}}">
+                <h4>Bugs</h4>
+            </a>
+        </div>
+        <div id="bugs{{$addr}}" class="panel-collapse collapse">
+            <div class="accordion-inner">
+                <div class="panel-group" id="fbbugsaccordion{{$addr}}">
+                    {{$patterns := $report.PatternMap}} {{$categories := $report.CategoryMap}} {{range $i, $bug := $report.Instances}} {{$pattern := index $patterns $bug.Type}} {{$category := index $categories $bug.Category}}
+                    <div class="panel panel-default">
+                        {{$bugAddress := address $bug}}
+                        <div class="panel-heading">
+                            <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbbugsaccordion{{$addr}}" href="#bug{{$bugAddress}}">
+                                <h5 class="text-center">{{$pattern.Description}}</h5>
+                            </a>
+                        </div>
+                        <div id="bug{{$bugAddress}}" class="panel-collapse collapse">
+                            <div class="accordion-inner">
+                                <dl class="dl-horizontal">
+                                    <dt>Priority</dt>
+                                    <dd>{{$bug.Priority}}</dd>
+                                    <dt>Category</dt>
+                                    <dd>{{$category.Description}}</dd>
+                                    <dt>Rank</dt>
+                                    <dd>{{$bug.Rank}}</dd>
+                                    <dt>Description</dt>
+                                    <dd>{{$bug.LongMessage}}</dd>
+                                    <dt>
+				      Source Line
+				    </dt>
+                                    <dd>
+                                        {{$id := $bug.Id.Hex}}
+                                        <a href="#" id="line{{$bugAddress}}">
+					{{$bug.Line.Message}}
+				      </a>
+                                        <script>
+                                            var id = 'line{{$bugAddress}}';
+                                            var info = {};
+                                            info.title = '{{$category.Description}}';
+                                            info.content = '{{$bug.LongMessage}}';
+                                            Analysis.addCodeModal(id, '{{$rid}}', info, '{{$bug.Line.Start}}', '{{$bug.Line.End}}');
+                                        </script>
+                                    </dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
-  <div class="panel panel-default">
-    <div class="panel-heading">
-      <a class="accordion-toggle" data-toggle="collapse"
-	 data-parent="#fbaccordion{{$addr}}" href="#bugs{{$addr}}">
-	<h4>Bugs</h4>
-      </a>
-    </div>
-    <div id="bugs{{$addr}}" class="panel-collapse collapse">
-      <div class="accordion-inner">
-	<div class="panel-group" id="fbbugsaccordion{{$addr}}">
-	  {{$patterns := $report.PatternMap}}
-	  {{$categories := $report.CategoryMap}}
-	  {{range $i, $bug := $report.Instances}}
-	  {{$pattern := index $patterns $bug.Type}}
-	  {{$category := index $categories $bug.Category}}
-	  <div class="panel panel-default">
-	    {{$bugAddress := address $bug}} 
-	    <div class="panel-heading">
-	      <a class="accordion-toggle" data-toggle="collapse" 
-		 data-parent="#fbbugsaccordion{{$addr}}" href="#bug{{$bugAddress}}">
-		<h5 class="text-center">{{$pattern.Description}}</h5>
-	      </a>
-	    </div>
-	    <div id="bug{{$bugAddress}}" class="panel-collapse collapse">
-	      <div class="accordion-inner">
-		<dl class="dl-horizontal">
-		  <dt>Priority</dt><dd>{{$bug.Priority}}</dd>
-		  <dt>Category</dt><dd>{{$category.Description}}</dd>
-		  <dt>Rank</dt><dd>{{$bug.Rank}}</dd>
-		  <dt>Description</dt><dd>{{$bug.LongMessage}}</dd>
-		  <dt>
-		    Source Line
-		  </dt>
-		  <dd>
-		    {{$id := $bug.Id.Hex}}
-		    <a href="#" id="line{{$bugAddress}}">
-		      {{$bug.Line.Message}}
-		    </a>
-	    	    <script>      
-		      var id = 'line{{$bugAddress}}';
-		      var info = {};
-		      info.title = {{$category.Description}};
-		      info.content = {{$bug.LongMessage}};
-		      addCodeModal(id, {{$rid}}, info, {{$bug.Line.Start}}, {{$bug.Line.End}});
-		    </script>
-		  </dd>
-		</dl>
-	      </div>
-	    </div>
-	  </div>
-	  {{end}}
-	</div>
-      </div>
-    </div>
-  </div>
 </div>
-{{end}}
-{{end}}
+{{end}} {{end}}

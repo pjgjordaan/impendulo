@@ -1,69 +1,73 @@
 {{define "view"}}
-<!-- This is the breadcrumb which allows us to browse through the --
-  -- hierarchy quickly -->
+<!-- !-->
 {{template "breadcrumb" .}}
 <ul class="nav nav-tabs">
-  <li class="dropdown">
-    <a href="#" data-toggle="dropdown" role="button"
-       id="project-dropdown-label" class="dropdown-toggle">
-      <h4>
+    <li class="dropdown">
+        <a href="#" data-toggle="dropdown" role="button" id="project-dropdown-label" class="dropdown-toggle">
+            <h4>
 	<small>project</small> 
 	{{projectName .ctx.Browse.Pid}} <span class="caret"></span>
       </h4> 
-    </a>
-    <ul class="dropdown-menu" role="menu" aria-labelledby="project-dropdown-label">
-      {{$projects := projects}}
-      {{range $projects}}
-      <li><a href="getsubmissions?project-id={{.Id.Hex}}">{{.Name}}</a></li>
-      {{end}}
-    </ul>
-  </li>
+        </a>
+        <ul class="dropdown-menu" role="menu" aria-labelledby="project-dropdown-label">
+            {{$projects := projects}} {{range $projects}}
+            <li><a href="getsubmissions?project-id={{.Id.Hex}}">{{.Name}}</a>
+            </li>
+            {{end}}
+        </ul>
+    </li>
 </ul>
 <ul class="nav nav-pills">
-  <li class="active"><a>Table</a></a></li>
-  <li><a href="submissionschartview">Chart</a></li>
+    <li class="active"><a>Table</a></a>
+    </li>
+    <li><a href="submissionschartview">Chart</a>
+    </li>
 </ul>
 <!-- Here we display a table of the different submissions within this project --
   -- . Included are users' names and date to allow us to differentiate between --
   -- submissions. -->
 <table id="table-submissions" class="table table-hover table-striped tablesorter">
-  <thead>
-    <tr class="info">
-      <th>User</th>
-      <th>Created</th>
-      <th>Snapshots</th>
-      <th>Launches</th>
-      <th>Tests</th>
-    </tr>
-  </thead>
-  <tbody data-provides="rowlink" >
-    {{range .subRes}}
-    {{$subId := .Id.Hex}}
-    <tr>
-      <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
+    <thead>
+        <tr class="info">
+            <th>User</th>
+            <th>Created</th>
+            <th>Snapshots</th>
+            <th>Launches</th>
+            <th>Tests</th>
+        </tr>
+    </thead>
+    <tbody data-provides="rowlink">
+        {{range .subRes}} {{$subId := .Id.Hex}}
+        <tr>
+            <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
 	  {{.User}}
-      </a></td>
-      <td><a class="rowlink" href="getfiles?submission-id={{$subId}}" >
+      </a>
+            </td>
+            <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
 	  {{date .Time}}
-      </a></td>
-      <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
+      </a>
+            </td>
+            <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
 	  {{snapshots .Id}}
-      </a></td>
-      <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
+      </a>
+            </td>
+            <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
 	  {{launches .Id}}
-      </a></td>
-      <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
+      </a>
+            </td>
+            <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
 	  {{usertests .Id}}
-      </a></td>
-    </tr>
-    {{end}}
-  </tbody>
+      </a>
+            </td>
+        </tr>
+        {{end}}
+    </tbody>
 </table>
 <script>
-$(function(){
-$("#table-submissions").tablesorter({
-theme : 'bootstrap'
-});
-});
+    $(function() {
+        $("#table-submissions").tablesorter({
+            theme: 'bootstrap'
+        });
+    });
 </script>
 {{end}}

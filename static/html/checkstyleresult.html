@@ -1,57 +1,42 @@
-{{define "result"}}
-{{$report := .Report}}
-{{if $report.Success}}
+{{define "result"}} {{$report := .Report}} {{if $report.Success}}
 <h4 class="text-success">No problems detected.</h4>
-{{else}}
-{{$uid := .state.Uid}}
-{{$sid := .state.Sid}}
-{{$fileName := .state.File}}
-{{$current := .state.Current}}
-{{$next := .state.Next}}
-{{$file := $report.File $fileName}}
-{{$rid := $report.Id.Hex}}
+{{else}} {{$uid := .state.Uid}} {{$sid := .state.Sid}} {{$fileName := .state.File}} {{$current := .state.Current}} {{$next := .state.Next}} {{$file := $report.File $fileName}} {{$rid := $report.Id.Hex}}
 <h4 class="text-danger">{{$report.Errors}} problems detected.</h4>
 {{$addr := address $report}}
 <div class="panel-group" id="checkstyleaccordion{{$addr}}">
-  {{range $file.Errors}}
-  {{$errorAddress := address .}}
-  {{$errorMsg := .Message}}
-  {{$errorName := shortName .Source}}
-  <div class="panel panel-default">
-    <div class="panel-heading">
-      <a class="accordion-toggle" data-toggle="collapse"
-	 data-parent="#checkstyleaccordion{{$addr}}"
-	 href="#error{{$errorAddress}}">
-	<h5 class="text-center">{{$errorName}}</h5>
-      </a>
+    {{range $file.Errors}} {{$errorAddress := address .}} {{$errorMsg := .Message}} {{$errorName := shortName .Source}}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <a class="accordion-toggle" data-toggle="collapse" data-parent="#checkstyleaccordion{{$addr}}" href="#error{{$errorAddress}}">
+                <h5 class="text-center">{{$errorName}}</h5>
+            </a>
+        </div>
+        <div id="error{{$errorAddress}}" class="panel-collapse collapse">
+            <div class="accordion-inner">
+                <dl class="dl-horizontal">
+                    <dt>Locations</dt>
+                    <dd>
+                        {{$id := .Id.Hex}} {{range $i, $line := .Lines}} {{$laddress := address .}}
+                        <a href="#" id="line{{$laddress}}">
+			  Line {{$line}};
+			</a>
+                        <script>
+                            var id = 'line{{$laddress}}';
+                            var info = {};
+                            info.title = '{{$errorName}}';
+                            info.content = '{{$errorMsg}}';
+                            Analysis.addCodeModal(id, '{{$rid}}', info, '{{$line}}', '{{$line}}');
+                        </script>
+                        {{end}}
+                    </dd>
+                    <dt>Severity</dt>
+                    <dd>{{.Severity}}</dd>
+                    <dt>Description</dt>
+                    <dd>{{.Message}}</dd>
+                </dl>
+            </div>
+        </div>
     </div>
-    <div id="error{{$errorAddress}}" class="panel-collapse collapse">
-      <div class="accordion-inner">
-	<dl class="dl-horizontal">
-	  <dt>Locations</dt>
-	  <dd>
-	    {{$id := .Id.Hex}}
-	    {{range $i, $line := .Lines}}
-	    {{$laddress := address .}}
-	    <a href="#" id="line{{$laddress}}">
-	      Line {{$line}};
-	    </a>
-	    <script>      
-	      var id = 'line{{$laddress}}';
-	      var info = {};
-	      info.title = {{$errorName}};
-	      info.content = {{$errorMsg}};
-	      addCodeModal(id, {{$rid}}, info, {{$line}}, {{$line}});
-	    </script>
-	    {{end}}
-	  </dd>	
-	  <dt>Severity</dt><dd>{{.Severity}}</dd>
-	  <dt>Description</dt><dd>{{.Message}}</dd>
-	</dl>
-      </div>
-    </div>
-  </div>
-  {{end}}
+    {{end}}
 </div>
-{{end}}
-{{end}}
+{{end}} {{end}}

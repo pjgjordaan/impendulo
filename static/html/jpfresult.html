@@ -1,9 +1,6 @@
-{{define "result"}}
-{{$report := .Report}}
-{{if $report.Success}}
+{{define "result"}} {{$report := .Report}} {{if $report.Success}}
 <h4 class="text-success">No errors detected</h4>
-{{else}}
-{{$errCount := len $report.Errors}}
+{{else}} {{$errCount := len $report.Errors}}
 <h4 class="text-danger accordion-text">
   {{if eq $errCount 1}} 
   1 Unique Error ({{$report.Total}} Total)
@@ -11,96 +8,86 @@
   {{$errCount}} Unique Errors ({{$report.Total}} Total)
   {{end}}
 </h4>
-{{end}}
-{{$addr := address $report}}
+{{end}} {{$addr := address $report}}
 <div class="panel-group" id="jpfaccordion{{$addr}}">
-  {{if not $report.Success}}
-  {{$uid := .state.Uid}}
-  {{$sid := .state.Sid}}
-  {{$fileName := .state.File}}
-  {{$current := .state.Current}}
-  {{$next := .state.Next}}
-  {{$rid := $report.Id.Hex}}
-  <div class="panel panel-default">
-    <div class="panel-heading">
-      <a class="accordion-toggle" data-toggle="collapse"
-	 data-parent="#jpfaccordion{{$addr}}" href="#errors{{$addr}}">
-	<h4>Errors</h4>
-      </a>
+    {{if not $report.Success}} {{$uid := .state.Uid}} {{$sid := .state.Sid}} {{$fileName := .state.File}} {{$current := .state.Current}} {{$next := .state.Next}} {{$rid := $report.Id.Hex}}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <a class="accordion-toggle" data-toggle="collapse" data-parent="#jpfaccordion{{$addr}}" href="#errors{{$addr}}">
+                <h4>Errors</h4>
+            </a>
+        </div>
+        <div id="errors{{$addr}}" class="panel-collapse collapse in">
+            <div class="accordion-inner">
+                {{range $i, $err := $report.Errors}} {{$errAddr := address $err}}
+                <dl class="dl">
+                    <dt>Type</dt>
+                    <dd>{{shortName $err.Property}}</dd>
+                    {{if not (empty $err.Details)}} {{$details := setBreaks $err.Details}}
+                    <dt>Details</dt>
+                    <dd>{{$details}}</dd>
+                    {{end}}
+                </dl>
+                <div class="panel-group" id="threadaccordion{{$errAddr}}">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <a class="accordion-toggle" data-toggle="collapse" data-parent="#threadaccordion{{$addr}}" href="#threads{{$errAddr}}">
+                                <h5 class="text-center">Threads</h5>
+                            </a>
+                        </div>
+                        <div id="threads{{$errAddr}}" class="panel-collapse collapse">
+                            <div class="accordion-inner">
+                                {{range $err.Threads}}
+                                <h5 class="thread-title"><strong>{{.Name}}</strong> <small>Status</small> {{.Status}}</h5>
+                                <p class="thread-content">
+                                    {{range .Frames}} {{if eq .Line -1}} {{.Details}} {{else}} {{$faddress := address .}} {{$id := .Id}}
+                                    <a href="#" id="frame{{$faddress}}">
+				      {{.Details}} 
+				    </a> 
+                                    <script>
+                                        var id = 'frame{{$faddress}}';
+                                        var info = {};
+                                        info.title = '{{shortName $err.Property}}';
+                                        info.content = '{{.Details}}';
+                                        Analysis.addCodeModal(id, '{{$rid}}', info, '{{.Line}}', '{{.Line}}');
+                                    </script>
+                                    {{end}}
+                                    <br>{{end}}
+                                </p>
+                                {{end}}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        </div>
     </div>
-    <div id="errors{{$addr}}" class="panel-collapse collapse in">
-      <div class="accordion-inner">
-	{{range $i, $err := $report.Errors}}
-	{{$errAddr := address $err}}
-	<dl class="dl">
-	  <dt>Type</dt><dd>{{shortName $err.Property}}</dd>
-	  {{if not (empty $err.Details)}}
-	  {{$details := setBreaks $err.Details}}
-	  <dt>Details</dt><dd>{{$details}}</dd>
-	  {{end}}
-	</dl>
-	<div class="panel-group" id="threadaccordion{{$errAddr}}">
-	  <div class="panel panel-default">
-	    <div class="panel-heading">
-	      <a class="accordion-toggle" data-toggle="collapse"
-		 data-parent="#threadaccordion{{$addr}}" href="#threads{{$errAddr}}">
-		<h5 class="text-center">Threads</h5>
-	      </a>
-	    </div>
-	    <div id="threads{{$errAddr}}" class="panel-collapse collapse">
-	      <div class="accordion-inner">
-		{{range $err.Threads}}
-		<h5 class="thread-title"><strong>{{.Name}}</strong> <small>Status</small> {{.Status}}</h5>
-		<p class="thread-content">
-		  {{range .Frames}}
-		  {{if eq .Line -1}}
-		  {{.Details}}
-		  {{else}}
-		  {{$faddress := address .}}
-		  {{$id := .Id}}
-		  <a href="#" id="frame{{$faddress}}">
-		    {{.Details}} 
-		  </a>  
-		  <script>      
-		    var id = 'frame{{$faddress}}';
-		    var info = {};
-		    info.title = {{shortName $err.Property}};
-		    info.content = {{.Details}};
-		    addCodeModal(id, {{$rid}}, info, {{.Line}}, {{.Line}});
-		  </script>
-	    	  {{end}}
-		  <br>
-		  {{end}}
-		</dl>
-		{{end}}
-	      </div>
-	    </div>
-	  </div>
-	</div>
-	{{end}}
-      </div>
+    {{end}}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <a class="accordion-toggle" data-toggle="collapse" data-parent="#jpfaccordion{{$addr}}" href="#statistics{{$addr}}">
+                <h4>Statistics</h4>
+            </a>
+        </div>
+        <div id="statistics{{$addr}}" class="panel-collapse collapse">
+            <div class="accordion-inner">
+                <dl class="dl-horizontal">
+                    <dt>Elapsed time</dt>
+                    <dd>{{$report.Stats.Time}} ms</dd>
+                    <dt>New States</dt>
+                    <dd>{{$report.Stats.NewStates}}</dd>
+                    <dt>Visited States</dt>
+                    <dd>{{$report.Stats.VisitedStates}}</dd>
+                    <dt>BackTracked States</dt>
+                    <dd>{{$report.Stats.BacktrackedStates}}</dd>
+                    <dt>End States</dt>
+                    <dd>{{$report.Stats.EndStates}}</dd>
+                    <dt>Memory Usage</dt>
+                    <dd>{{$report.Stats.Memory}} MB</dd>
+                </dl>
+            </div>
+        </div>
     </div>
-  </div>
-  {{end}}
-  <div class="panel panel-default">
-    <div class="panel-heading">
-      <a class="accordion-toggle" data-toggle="collapse"
-	 data-parent="#jpfaccordion{{$addr}}" href="#statistics{{$addr}}">
-	<h4>Statistics</h4>
-      </a>
-    </div>
-    <div id="statistics{{$addr}}" class="panel-collapse collapse">
-      <div class="accordion-inner">
-	<dl class="dl-horizontal">
-	  <dt>Elapsed time</dt><dd>{{$report.Stats.Time}} ms</dd>
-	  <dt>New States</dt><dd>{{$report.Stats.NewStates}}</dd>
-	  <dt>Visited States</dt><dd>{{$report.Stats.VisitedStates}}</dd>
-	  <dt>BackTracked States</dt><dd>{{$report.Stats.BacktrackedStates}}</dd>
-	  <dt>End States</dt><dd>{{$report.Stats.EndStates}}</dd>
-	  <dt>Memory Usage</dt><dd>{{$report.Stats.Memory}} MB</dd>
-	</dl>
-      </div>
-    </div>
-  </div>
 </div>
 {{end}}

@@ -1,39 +1,31 @@
 {{define "view"}}
+<!-- !-->
 {{$projects := projects}}
 <h3 class="heading">Download Project Skeleton</h3>
-<form class="form-horizontal" action="skeleton.zip" method="get" >
-  <div class="form-group">
-    <label class="col-lg-offset-3 col-lg-2 control-label" for="project-id">Project</label>
-    <div class="col-lg-3">
-      <select class="form-control" name="project-id" id="project-id"
-	      onchange="addSkeletons('project-id', 'skeleton-id')">
-	{{range $projects}}
-	<option value={{.Id.Hex}}>
-	  {{.Name}}
-	</option>
-	{{end}}
-      </select>
+<form class="form-horizontal" action="skeleton.zip" method="get">
+    <div class="form-group">
+        <label class="col-lg-offset-3 col-lg-2 control-label" for="project-id">Project</label>
+        <div class="col-lg-3">
+            <select class="form-control" name="project-id" id="project-id">
+            </select>
+        </div>
     </div>
-  </div>
-  <div class="form-group">
-    <label class="col-lg-offset-3 col-lg-2 control-label" for="skeleton-id">Skeleton</label>
-    <div class="col-lg-3">
-      <select class="form-control" name="skeleton-id" id="skeleton-id">    
-      </select>
+    <div class="form-group">
+        <label class="col-lg-offset-3 col-lg-2 control-label" for="skeleton-id">Skeleton</label>
+        <div class="col-lg-3">
+            <select class="form-control" name="skeleton-id" id="skeleton-id">
+            </select>
+        </div>
     </div>
-</div>
-<div class="form-group">
-    <div class="col-lg-offset-5 col-lg-3">
-      <button type="submit" class="btn btn-default">
-	<span class="glyphicon glyphicon-download"></span> Download
-      </button>
+    <div class="form-group">
+        <div class="col-lg-offset-5 col-lg-3">
+            <button type="submit" class="btn btn-default">
+                <span class="glyphicon glyphicon-download"></span> Download
+            </button>
+        </div>
     </div>
-  </div>
 </form>
 <script type="text/javascript" language="javascript">
-  window.onload = function()
-  {
-  addSkeletons('project-id', 'skeleton-id');
-  ;}
+    SkeletonDowload.init();
 </script>
 {{end}}

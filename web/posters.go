@@ -67,14 +67,11 @@ func Posters() map[string]Poster {
 //defaultPosters loads the default posters.
 func defaultPosters() map[string]Poster {
 	return map[string]Poster{
-		"addproject": AddProject, "addskeleton": AddSkeleton,
-		"submitarchive": SubmitArchive, "runtools": RunTools,
-		"deleteproject": DeleteProject, "deleteuser": DeleteUser,
-		"deleteresults": DeleteResults, "deleteskeletons": DeleteSkeletons,
-		"importdata": ImportData, "renamefiles": RenameFiles,
-		"login": Login, "register": Register,
-		"logout": Logout, "editproject": EditProject,
-		"edituser": EditUser, "editsubmission": EditSubmission,
+		"addproject": AddProject, "addskeleton": AddSkeleton, "submitarchive": SubmitArchive,
+		"runtools": RunTools, "deleteprojects": DeleteProjects, "deleteusers": DeleteUsers,
+		"deletesubmissions": DeleteSubmissions, "deleteresults": DeleteResults, "deleteskeletons": DeleteSkeletons,
+		"importdata": ImportData, "renamefiles": RenameFiles, "login": Login, "register": Register,
+		"logout": Logout, "editproject": EditProject, "edituser": EditUser, "editsubmission": EditSubmission,
 		"editfile": EditFile, "edittest": EditTest,
 	}
 }
@@ -189,30 +186,70 @@ func AddProject(r *http.Request, c *Context) (string, error) {
 	return "Successfully added project.", nil
 }
 
-//DeleteProject removes a project and all data associated with it from the system.
-func DeleteProject(r *http.Request, c *Context) (string, error) {
-	pid, e := convert.Id(r.FormValue("project-id"))
+//DeleteProjects removes a project and all data associated with it from the system.
+func DeleteProjects(r *http.Request, c *Context) (string, error) {
+	pids, e := GetStrings(r, "project-id")
 	if e != nil {
-		return "Could not read project id.", e
+		return "Could not read projects.", e
 	}
-	if e = db.RemoveProjectById(pid); e != nil {
-		return "Could not delete project.", e
+	for _, p := range pids {
+		id, e := convert.Id(p)
+		if e != nil {
+			util.Log(e)
+			continue
+		}
+		if e = db.RemoveProjectById(id); e != nil {
+			util.Log(e)
+		}
 	}
 	return "Successfully deleted project.", nil
 }
 
-func DeleteSkeletons(r *http.Request, c *Context) (string, error) {
-	pid, e := convert.Id(r.FormValue("project-id"))
+//DeleteUsers removes users and all data associated with them from the system.
+func DeleteUsers(r *http.Request, c *Context) (string, error) {
+	us, e := GetStrings(r, "user-id")
 	if e != nil {
-		return "Could not read project id.", e
+		return "Could not read user.", e
 	}
-	ss, e := db.Skeletons(bson.M{db.PROJECTID: pid}, bson.M{db.ID: 1})
+	for _, u := range us {
+		if e = db.RemoveUserById(u); e != nil {
+			util.Log(e)
+		}
+	}
+	return "Successfully deleted users.", nil
+}
+
+func DeleteSubmissions(r *http.Request, c *Context) (string, error) {
+	ss, e := GetStrings(r, "submission-id")
 	if e != nil {
-		return "Could not retrieve skeletons.", e
+		return "Could not read submissions.", e
 	}
 	for _, s := range ss {
-		if e = db.RemoveById(db.SKELETONS, s.Id); e != nil {
-			return "Could not delete skeletons.", e
+		id, e := convert.Id(s)
+		if e != nil {
+			util.Log(e)
+			continue
+		}
+		if e = db.RemoveSubmissionById(id); e != nil {
+			util.Log(e)
+		}
+	}
+	return "Successfully deleted submissions.", nil
+}
+
+func DeleteSkeletons(r *http.Request, c *Context) (string, error) {
+	sks, e := GetStrings(r, "skeleton-id")
+	if e != nil {
+		return "Could not read skeletons.", e
+	}
+	for _, sk := range sks {
+		id, e := convert.Id(sk)
+		if e != nil {
+			util.Log(e)
+			continue
+		}
+		if e = db.RemoveById(db.SKELETONS, id); e != nil {
+			util.Log(e)
 		}
 	}
 	return "Successfully deleted skeletons.", nil
@@ -220,16 +257,17 @@ func DeleteSkeletons(r *http.Request, c *Context) (string, error) {
 
 //DeleteResults removes all results for a specic project.
 func DeleteResults(r *http.Request, c *Context) (string, error) {
-	pid, e := convert.Id(r.FormValue("project-id"))
+	ss, e := GetStrings(r, "submission-id")
 	if e != nil {
-		return "Could not read project id.", e
-	}
-	ss, e := db.Submissions(bson.M{db.PROJECTID: pid}, bson.M{db.ID: 1})
-	if e != nil {
-		return "Could not retrieve submissions.", e
+		return "Could not read submissions.", e
 	}
 	for _, s := range ss {
-		fs, e := db.Files(bson.M{db.SUBID: s.Id}, bson.M{db.DATA: 0}, 0)
+		sid, e := convert.Id(s)
+		if e != nil {
+			util.Log(e)
+			continue
+		}
+		fs, e := db.Files(bson.M{db.SUBID: sid}, bson.M{db.DATA: 0}, 0)
 		if e != nil {
 			util.Log(e)
 			continue
@@ -397,18 +435,6 @@ func Register(r *http.Request, c *Context) (string, error) {
 	}
 	c.AddUser(un)
 	return "Registered successfully.", nil
-}
-
-//DeleteUser removes a user and all data associated with them from the system.
-func DeleteUser(r *http.Request, c *Context) (string, error) {
-	u, e := GetString(r, "user-id")
-	if e != nil {
-		return "Could not read user.", e
-	}
-	if e = db.RemoveUserById(u); e != nil {
-		return fmt.Sprintf("Could not delete user %s.", u), e
-	}
-	return fmt.Sprintf("Successfully deleted user %s.", u), nil
 }
 
 //Logout logs a user out of the system.

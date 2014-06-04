@@ -124,10 +124,6 @@ func SubmissionChart(subs []*project.Submission, result *ResultDesc, score strin
 	if len(subs) == 0 {
 		return nil, errors.New("no submissions to create chart for")
 	}
-	n, e := projectName(subs[0].ProjectId)
-	if e != nil {
-		return nil, e
-	}
 	var f scoreFunc
 	switch score {
 	case "final":
@@ -139,6 +135,10 @@ func SubmissionChart(subs []*project.Submission, result *ResultDesc, score strin
 	}
 	d := NewChartData()
 	for _, s := range subs {
+		n, e := projectName(s.ProjectId)
+		if e != nil {
+			continue
+		}
 		sc, e := fileCount(s.Id, project.SRC)
 		if e != nil {
 			continue
@@ -333,16 +333,6 @@ func lastInfo(sid bson.ObjectId, rd *ResultDesc) (*project.File, bson.ObjectId, 
 		}
 	}
 	return nil, "", fmt.Errorf("no results found for %s", rd.Format())
-}
-
-func overviewChart(c string) (ChartData, error) {
-	switch c {
-	case "user":
-		return UserChart()
-	case "project":
-		return ProjectChart()
-	}
-	return nil, fmt.Errorf("Unknown type %s.", c)
 }
 
 func UserChart() (ChartData, error) {

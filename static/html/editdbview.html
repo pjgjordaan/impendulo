@@ -1,14 +1,10 @@
-{{define "view"}} {{$users := users}} {{$projects := projects}}
+{{define "view"}}
 <div class="btn-group">
     <div id="projects" class="btn-group">
         <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
             Choose Project <span class="caret"></span>
         </button>
         <ul class="dropdown-menu" role="menu">
-            {{range $projects}}
-            <li><a href="#" projectid="{{.Id.Hex}}">{{.Name}}</a>
-            </li>
-            {{end}}
         </ul>
     </div>
     <div id="users" class="btn-group">
@@ -16,10 +12,6 @@
             Choose User <span class="caret"></span>
         </button>
         <ul class="dropdown-menu" role="menu">
-            {{range $users}}
-            <li><a href="#" user="{{.}}">{{.}}</a>
-            </li>
-            {{end}}
         </ul>
     </div>
     <div id="submissions" class="btn-group">
@@ -44,31 +36,6 @@
         </ul>
     </div>
 </div>
-<script type="text/javascript" language="javascript">
-    $('#projects a').click(function() {
-        loadproject($(this).attr('projectid'));
-        return true;
-    });
-    $('#users a').click(function() {
-        hideEditing();
-        $('#user-panel').addClass('in');
-        loaduser($(this).attr('user'));
-        return true;
-    });
-    window.onload = function() {
-        var u = {
-            {
-                index $users 0
-            }
-        };
-        loaduser(u);
-        loadproject({
-            {
-                (index $projects 0).Id.Hex
-            }
-        });;
-    }
-</script>
 <div class="panel-group" id="accordion">
     <div class="panel panel-default">
         <div class="panel-heading">
@@ -285,4 +252,7 @@
         </div>
     </div>
 </div>
+<script type="text/javascript" language="javascript">
+    EditView.init();
+</script>
 {{end}}

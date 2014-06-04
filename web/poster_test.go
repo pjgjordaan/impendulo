@@ -66,15 +66,15 @@ func TestRegister(t *testing.T) {
 	testUserFunc(t, Register, requests)
 }
 
-func TestDeleteUser(t *testing.T) {
+func TestDeleteUsers(t *testing.T) {
 	requests := []postHolder{
-		postHolder{"/deleteuser?user-id=user", true},
-		postHolder{"/deleteuser?user-id=user", false},
-		postHolder{"/deleteuser?user-id=", false},
+		postHolder{"/deleteusers?user-id=user", true},
+		postHolder{"/deleteusers?user-id=user", false},
+		postHolder{"/deleteusers?user-id=", false},
 		postHolder{"/password=password", false},
-		postHolder{"/deleteuser?user-id=aaaa", false},
+		postHolder{"/deleteusers?user-id=aaaa", false},
 	}
-	testUserFunc(t, DeleteUser, requests)
+	testUserFunc(t, DeleteUsers, requests)
 }
 
 func testUserFunc(t *testing.T, f Poster, requests []postHolder) {

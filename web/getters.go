@@ -88,7 +88,9 @@ func (g Getter) CreateGet(name, view string) Handler {
 		}
 		delete(a, "templates")
 		c.Browse.View = view
-		if c.Browse.View == "home" {
+		if l, ok := a["level"]; ok {
+			c.Browse.Level = l.(Level)
+		} else if c.Browse.View == "home" {
 			c.Browse.SetLevel(name)
 		}
 		a["ctx"] = c
@@ -152,6 +154,7 @@ func displayResult(r *http.Request, c *Context) (Args, string, error) {
 	if e != nil {
 		return nil, "Could not load results.", e
 	}
+	a["level"] = ANALYSIS
 	return a, "", nil
 }
 

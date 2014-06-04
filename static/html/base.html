@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head> 
+
+<head>
     <link rel="shortcut icon" href="/static/images/favicon.ico" type="image/ico"></link>
     <link type="text/css" rel="stylesheet" href="/static/css/jquery-ui.css"></link>
     <link type="text/css" rel="stylesheet" href="/static/css/jquery.multiselect.css"></link>
@@ -14,8 +15,8 @@
     <link type="text/css" rel="stylesheet" href="/static/css/jstree.min.css"></link>
     <link type="text/css" rel="stylesheet" href="/static/css/tablesorter/theme.bootstrap.css"></link>
     <script type="text/javascript" language="javascript" src="/static/js/shCore.js"></script>
-    <script type="text/javascript" language="javascript" src="/static/js/shBrushJava.js"></script>   
-    <script type="text/javascript" language="javascript" src="/static/js/shBrushDiff.js"></script>   
+    <script type="text/javascript" language="javascript" src="/static/js/shBrushJava.js"></script>
+    <script type="text/javascript" language="javascript" src="/static/js/shBrushDiff.js"></script>
     <script type="text/javascript" language="javascript" src="/static/js/shBrushCpp.js"></script>
     <script type="text/javascript" language="javascript" src="/static/js/jquery-2.1.0.min.js"></script>
     <script type="text/javascript" language="javascript" src="/static/js/jquery-ui.min.js"></script>
@@ -27,16 +28,21 @@
     <script type="text/javascript" language="javascript" src="/static/js/d3.v3.min.js"></script>
     <script type="text/javascript" language="javascript" src="/static/js/jstree.min.js"></script>
     <script type="text/javascript" language="javascript" src="/static/js/prettify.js"></script>
-    <script type="text/javascript" language="javascript" src="/static/js/jquery.tablesorter.min.js"></script>  
-    <script type="text/javascript" language="javascript" src="/static/js/charts.js"></script>
-    <script type="text/javascript" language="javascript" src="/static/js/submissionsChart.js"></script> 
+    <script type="text/javascript" language="javascript" src="/static/js/jquery.tablesorter.min.js"></script>
     <script type="text/javascript" language="javascript" src="/static/js/util.js"></script>
+    <script type="text/javascript" language="javascript" src="/static/js/charts.js"></script>
+    <script language="javascript" language="javascript" src="/static/js/overviewChart.js"></script>
+    <script type="text/javascript" language="javascript" src="/static/js/submissionsChart.js"></script>
     <title>{{template "title" .}}</title>
-  </head>
-  <body>
+</head>
+
+<body>
     <section id="content">
-      {{template "content" .}}
-    </section> 
-  </body>
-<script>prettyPrint();</script>
+        {{template "content" .}}
+    </section>
+</body>
+<script>
+    prettyPrint();
+</script>
+
 </html>

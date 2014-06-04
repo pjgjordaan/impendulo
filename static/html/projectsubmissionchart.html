@@ -1,68 +1,50 @@
 {{define "view"}}
+<!-- !-->
 {{template "breadcrumb" .}}
 <ul class="nav nav-tabs">
-  <li class="dropdown">
-    <a href="#" data-toggle="dropdown" role="button"
-       id="project-dropdown-label" class="dropdown-toggle">
-      <h4>
+    <li class="dropdown">
+        <a href="#" data-toggle="dropdown" role="button" id="project-dropdown-label" class="dropdown-toggle">
+            <h4>
 	<small>project</small> {{projectName .ctx.Browse.Pid}} <span class="caret"></span>
       </h4> 
-    </a>
-    <ul class="dropdown-menu" role="menu" aria-labelledby="project-dropdown-label">
-      {{$projects := projects}}
-      {{range $projects}}
-      <li><a class="a-project" projectid="{{.Id.Hex}}" href="" onclick="return false;">{{.Name}}</a></li>
-      {{end}}
-    </ul>
-  </li>
-</ul>      
+        </a>
+        <ul class="dropdown-menu" role="menu" aria-labelledby="project-dropdown-label">
+            {{$projects := projects}} {{range $projects}}
+            <li><a class="a-project" projectid="{{.Id.Hex}}" href="" onclick="return false;">{{.Name}}</a>
+            </li>
+            {{end}}
+        </ul>
+    </li>
+</ul>
 {{$pid := .ctx.Browse.Pid.Hex}}
 <ul class="nav nav-pills">
-  <li><a href="getsubmissions">Table</a></li>
-  <li class="active"><a>Chart</a></li>
+    <li><a href="getsubmissions">Table</a>
+    </li>
+    <li class="active"><a>Chart</a>
+    </li>
 </ul>
 <div class="row">
-  <div class="col-md-6">
-    <form class="form-inline centered" role="form" onsubmit="return false;">
-      <div class="form-group">
-	<label for="tool">Tool </label>
-	<select style="width:200px;" id="tool" name="tool"
-	class="form-control select-inline"></select>
-      </div>
-    </form>
-  </div>
-  <div class="col-md-6">
-    <label>
-      <input type="radio" name="score" value="final" checked>
-      Final Score
-    </label><br>
-    <label>
-      <input type="radio" name="score" value="average"> 
-      Average Score
-    </label>
-  </div>
+    <div class="col-md-6">
+        <form class="form-inline centered" role="form" onsubmit="return false;">
+            <div class="form-group">
+                <label for="tool">Tool</label>
+                <select style="width:200px;" id="tool" name="tool" class="form-control select-inline"></select>
+            </div>
+        </form>
+    </div>
+    <div class="col-md-6">
+        <label>
+            <input type="radio" name="score" value="final" checked>Final Score
+        </label>
+        <br>
+        <label>
+            <input type="radio" name="score" value="average">Average Score
+        </label>
+    </div>
 </div>
 <script>
-  $( document ).ready(function(){
-  addResults({{$pid}}, 'tool', 'project');
-  $('#tool').change(function(){
-  loadSubmissionsChart({{$pid}},'project',$(this).val(),$('[name="score"]').val());
-  var params = {'result':$(this).val()};
-  setContext(params);
-  });
-  $('[name="score"]').change(function(){
-  loadSubmissionsChart({{$pid}},'project',$('#tool').val(),$(this).val());
-  });
-  $('.a-project').on('click', function(){
-  var pid = $(this).attr('projectid');
-  loadSubmissionsChart(pid,'project',$('#tool').val(),$('[name="score"]').val());
-  var params = {'project-id':pid};
-  setContext(params);
-  $('#project-dropdown-label').html('<h4><small>project</small> '+$(this).text()+' <span class="caret"></span></h4>');
-  });
-  });
+    SubmissionsChart.init('user', '{{$pid}}');
 </script>
-<div id="submissions-chart"
-     xmlns:xlink="http://www.w3.org/1999/xlink">
+<div id="submissions-chart" xmlns:xlink="http://www.w3.org/1999/xlink">
 </div>
 {{end}}

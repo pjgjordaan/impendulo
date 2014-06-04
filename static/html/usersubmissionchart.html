@@ -1,43 +1,49 @@
 {{define "view"}}
+<!-- !-->
 {{template "breadcrumb" .}}
 <ul class="nav nav-tabs">
-  <li class="dropdown">
-    <a href="#" data-toggle="dropdown" role="button"
-       id="user-dropdown-label" class="dropdown-toggle">
-      <h4>
+    <li class="dropdown">
+        <a href="#" data-toggle="dropdown" role="button" id="user-dropdown-label" class="dropdown-toggle">
+            <h4>
 	<small>user</small> {{.ctx.Browse.Uid}} <span class="caret"></span>
       </h4> 
-    </a>
-    <ul class="dropdown-menu" role="menu" aria-labelledby="user-dropdown-label">
-      {{$users := users}}
-      {{range $users}}
-      <li><a href="getsubmissions?user-id={{.}}">{{.}}</a></li>
-      {{end}}
-    </ul>
-  </li>
+        </a>
+        <ul class="dropdown-menu" role="menu" aria-labelledby="user-dropdown-label">
+            {{$users := users}} {{range $users}}
+            <li><a class="a-user" userid="{{.}}" href="" onclick="return false;">{{.}}</a>
+            </li>
+            {{end}}
+        </ul>
+    </li>
 </ul>
+{{$uid := .ctx.Browse.Uid}}
 <ul class="nav nav-pills">
-  <li><a href="getsubmissions?user-id={{.ctx.Browse.Uid}}">Table</a></li>
-  <li class="active"><a>Chart</a></li>
+    <li><a href="getsubmissions">Table</a>
+    </li>
+    <li class="active"><a>Chart</a>
+    </li>
 </ul>
-<form class="form-inline centered" role="form" onsubmit="return usc();">
-  <div class="form-group">
-    <label for="results">Results For: </label>
-    <select class="form-control select-inline" name="results" id="results">
-    </select>
-  </div>
-  <button type="submit" class="btn btn-default">
-    <span class="glyphicon glyphicon-arrow-right"></span>
-  </button>
-</form>
-<div id="submissions-chart" xmlns:xlink="http://www.w3.org/1999/xlink"></div>
+<div class="row">
+    <div class="col-md-6">
+        <form class="form-inline centered" role="form" onsubmit="return false;">
+            <div class="form-group">
+                <label for="tool">Tool</label>
+                <select style="width:200px;" id="tool" name="tool" class="form-control select-inline"></select>
+            </div>
+        </form>
+    </div>
+    <div class="col-md-6">
+        <label>
+            <input type="radio" name="score" value="final" checked>Final Score
+        </label>
+        <br>
+        <label>
+            <input type="radio" name="score" value="average">Average Score
+        </label>
+    </div>
+</div>
 <script>
-  window.onload = function(){ 
-  addResults({{.ctx.Browse.Uid}}, 'results','user');
-  }
-  function usc(){
-  loadSubmissionsChart({{.ctx.Browse.Uid}},'user',document.getElementById('results').value);
-  return false;
-  }
+    SubmissionsChart.init('user', '{{$uid}}');
 </script>
+<div id="submissions-chart" xmlns:xlink="http://www.w3.org/1999/xlink"></div>
 {{end}}

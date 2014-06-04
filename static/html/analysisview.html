@@ -1,273 +1,234 @@
-{{define "view"}}
-{{$currentFile := .currentFile}}
-{{$nextFile := .nextFile}}
-{{$current := .ctx.Browse.Current}}
-{{$next := .ctx.Browse.Next}}
-{{$project := projectName .ctx.Browse.Pid}}
-{{$rd := .ctx.Browse.Result}}
-{{$fileName := .ctx.Browse.File}}
-{{template "breadcrumb" .}}
+{{define "view"}} {{$currentFile := .currentFile}} {{$nextFile := .nextFile}} {{$current := .ctx.Browse.Current}} {{$next := .ctx.Browse.Next}} {{$project := projectName .ctx.Browse.Pid}} {{$rd := .ctx.Browse.Result}} {{$fileName := .ctx.Browse.File}} {{template "breadcrumb" .}}
 <ul class="nav nav-tabs">
-  <li class="dropdown">
-    <a href="#" data-toggle="dropdown" role="button"
-       id="project-dropdown-label" class="dropdown-toggle">
-      <h4>
+    <li class="dropdown">
+        <a href="#" data-toggle="dropdown" role="button" id="project-dropdown-label" class="dropdown-toggle">
+            <h4>
 	<small>project</small> {{$project}} <span class="caret"></span> 
       </h4>
-    </a>
-    <ul class="dropdown-menu" role="menu" aria-labelledby="project-dropdown-label">
-      {{$projects := projects}}
-      {{range $projects}}
-      <li><a href="getsubmissions?project-id={{.Id.Hex}}">{{.Name}}</a></li>
-      {{end}}
-    </ul>
-  </li>
-  <li class="dropdown">
-    <a class="dropdown-toggle no-decoration" data-toggle="dropdown" href="#">
-      <h4>
+        </a>
+        <ul class="dropdown-menu" role="menu" aria-labelledby="project-dropdown-label">
+            {{$projects := projects}} {{range $projects}}
+            <li><a href="getsubmissions?project-id={{.Id.Hex}}">{{.Name}}</a>
+            </li>
+            {{end}}
+        </ul>
+    </li>
+    <li class="dropdown">
+        <a class="dropdown-toggle no-decoration" data-toggle="dropdown" href="#">
+            <h4>
 	<small>user</small> {{.ctx.Browse.Uid}} <span class="caret"></span>
       </h4> 
-    </a>
-    <ul class="dropdown-menu" role="menu">
-      {{$users := users}}
-      {{range $users}}
-      <li><a href="getsubmissions?user-id={{.}}">{{.}}</a></li>
-      {{end}}
-    </ul>
-  </li>
-  <li class="dropdown">
-    <a href="#" data-toggle="dropdown" role="button"
-       id="submission-dropdown-label" class="dropdown-toggle">
-      <h4>
+        </a>
+        <ul class="dropdown-menu" role="menu">
+            {{$users := users}} {{range $users}}
+            <li><a href="getsubmissions?user-id={{.}}">{{.}}</a>
+            </li>
+            {{end}}
+        </ul>
+    </li>
+    <li class="dropdown">
+        <a href="#" data-toggle="dropdown" role="button" id="submission-dropdown-label" class="dropdown-toggle">
+            <h4>
 	{{$sub := sub .ctx.Browse.Sid}}
 	<small>submission</small> {{date $sub.Time}} <span class="caret"></span> 
       </h4>
-    </a>
-    <ul class="dropdown-menu" role="menu" aria-labelledby="submission-dropdown-label">
-      {{$subs := .ctx.Browse.Submissions}}
-      {{range $subs}}
-      <li><a href="displayresult?submission-id={{.Id.Hex}}">
+        </a>
+        <ul class="dropdown-menu" role="menu" aria-labelledby="submission-dropdown-label">
+            {{$subs := .ctx.Browse.Submissions}} {{range $subs}}
+            <li><a href="displayresult?submission-id={{.Id.Hex}}">
 	  {{.Format (project .ProjectId)}}
-      </a></li>
-      {{end}}
-    </ul>
-  </li>
-  <li class="dropdown">
-    <a href="#" data-toggle="dropdown" role="button"
-       id="file-dropdown-label" class="dropdown-toggle">
-      <h4>
+      </a>
+            </li>
+            {{end}}
+        </ul>
+    </li>
+    <li class="dropdown">
+        <a href="#" data-toggle="dropdown" role="button" id="file-dropdown-label" class="dropdown-toggle">
+            <h4>
 	<small>file</small> {{.ctx.Browse.File}} <span class="caret"></span> 
       </h4>
-    </a>
-    <ul class="dropdown-menu" role="menu" aria-labelledby="file-dropdown-label">
-      {{$files := fileinfos .ctx.Browse.Sid}}
-      {{range $files}}
-      <li><a href="displayresult?file={{.Name}}">
+        </a>
+        <ul class="dropdown-menu" role="menu" aria-labelledby="file-dropdown-label">
+            {{$files := fileinfos .ctx.Browse.Sid}} {{range $files}}
+            <li><a href="displayresult?file={{.Name}}">
 	  {{.Name}}
-      </a></li>
-      {{end}}
-    </ul>
-  </li>
-  <li class="dropdown">
-    <a href="#" data-toggle="dropdown" role="button"
-       id="tool-dropdown-label" class="dropdown-toggle">
-      <h4>
+      </a>
+            </li>
+            {{end}}
+        </ul>
+    </li>
+    <li class="dropdown">
+        <a href="#" data-toggle="dropdown" role="button" id="tool-dropdown-label" class="dropdown-toggle">
+            <h4>
 	<small>tool</small> {{.ctx.Browse.Result.Format}} <span class="caret"></span> 
       </h4>
-    </a>
-    <ul class="dropdown-menu" role="menu" aria-labelledby="tool-dropdown-label">
-      {{$results := .results}}
-      {{range $k, $v := $results}}  
-      {{if emptyM $v}}
-      <li>
-	<a href="displayresult?result={{$k}}">
+        </a>
+        <ul class="dropdown-menu" role="menu" aria-labelledby="tool-dropdown-label">
+            {{$results := .results}} {{range $k, $v := $results}} {{if emptyM $v}}
+            <li>
+                <a href="displayresult?result={{$k}}">
 	  {{$k}}
 	</a>
-      </li>
-      {{else}}
-      <li class="dropdown-submenu">
-	<a tabindex="-1" href="#">{{$k}}</a>
-	<ul class="dropdown-menu" role="menu">
-	  {{range $k2, $v2 := $v}}
-	  {{if emptyS $v2}}
-	  <li>
-		<a href="displayresult?result={{$k}}:{{$k2}}">
+            </li>
+            {{else}}
+            <li class="dropdown-submenu">
+                <a tabindex="-1" href="#">{{$k}}</a>
+                <ul class="dropdown-menu" role="menu">
+                    {{range $k2, $v2 := $v}} {{if emptyS $v2}}
+                    <li>
+                        <a href="displayresult?result={{$k}}:{{$k2}}">
 		  {{$k2}}
 		</a>
-	      </li>
-	      {{else}}
-	  <li class="dropdown-submenu">
-	    <a tabindex="-1" href="#">{{$k2}}</a>
-	    <ul class="dropdown-menu" role="menu">
-	      {{$files := sortFiles $v2}}
-	      {{range $files}}
-	      <li>
-		<a href="displayresult?result={{$k}}:{{$k2}}-{{.Id.Hex}}">
+                    </li>
+                    {{else}}
+                    <li class="dropdown-submenu">
+                        <a tabindex="-1" href="#">{{$k2}}</a>
+                        <ul class="dropdown-menu" role="menu">
+                            {{$files := sortFiles $v2}} {{range $files}}
+                            <li>
+                                <a href="displayresult?result={{$k}}:{{$k2}}-{{.Id.Hex}}">
 		  {{date .Time}}
 		</a>
-	      </li>
-	      {{end}}
-	    </ul>
-	  </li>   
-	  {{end}}
-	  {{end}}
-	</ul>
-      </li>
-      {{end}}
-      {{end}}
-    </ul>
-  </li>
+                            </li>
+                            {{end}}
+                        </ul>
+                    </li>
+                    {{end}} {{end}}
+                </ul>
+            </li>
+            {{end}} {{end}}
+        </ul>
+    </li>
 </ul>
 {{if $rd.HasCode}}
 <h4 class="text-center">
   <a href="#" id="a-toolcode">{{$rd.Format}}</a>
 </h4>
 <script>
-  $('#a-toolcode').click(function(){
-  showToolCode({{$rd.Raw}},{{.ctx.Browse.Pid.Hex}},{{$rd.Format}});
-  return false;
-  });
+    $('#a-toolcode').click(function() {
+        Analysis.showToolCode('{{$rd.Raw}}', '{{.ctx.Browse.Pid.Hex}}', '{{$rd.Format}}');
+        return false;
+    });
 </script>
-{{end}}
-{{if hasChart .currentResult .nextResult}}
+{{end}} {{if hasChart .currentResult .nextResult}}
 <script>
-  var chartParams = {};
-  chartParams.subID = {{.ctx.Browse.Sid.Hex}};
-  chartParams.file = {{$fileName}};
-  chartParams.result = {{$rd.Raw}};
-  chartParams.user = {{.ctx.Browse.Uid}};
-  chartParams.currentTime = {{chartTime (index .files .ctx.Browse.Current)}};
-  chartParams.nextTime = {{chartTime (index .files .ctx.Browse.Next)}};
-  chartParams.src = 'comparables';
+    var chartParams = {};
+    chartParams.subID = '{{.ctx.Browse.Sid.Hex}}';
+    chartParams.file = '{{$fileName}}';
+    chartParams.result = '{{$rd.Raw}}';
+    chartParams.user = '{{.ctx.Browse.Uid}}';
+    chartParams.currentTime = '{{chartTime (index .files .ctx.Browse.Current)}}';
+    chartParams.nextTime = '{{chartTime (index .files .ctx.Browse.Next)}}';
+    chartParams.src = 'comparables';
 </script>
-<form class="form-inline centered" role="form" onsubmit="return ajaxChart(chartParams)">
-  <div class="form-group">
-    <label class="sr-only" for="comparables">Submissions</label>
-    <select class="form-control select-inline" name="comparables" id="comparables" multiple>
-    </select>
-  </div>
-  <button type="submit" class="btn btn-default">
-    <span class="glyphicon glyphicon-arrow-right"></span>
-  </button>
+<form class="form-inline centered" role="form" onsubmit="return ResultChart.init(chartParams)">
+    <div class="form-group">
+        <label class="sr-only" for="comparables">Submissions</label>
+        <select class="form-control select-inline" name="comparables" id="comparables" multiple>
+        </select>
+    </div>
+    <button type="submit" class="btn btn-default">
+        <span class="glyphicon glyphicon-arrow-right"></span>
+    </button>
 </form>
 <script type="text/javascript" language="javascript">
-  $('#comparables').multiselect();
-  window.onload = function()
-  { 
-  addComparables({{validId .currentResult .nextResult}},{{.ctx.Browse.Pid.Hex}}, 'comparables', {{.ctx.Browse.Uid}});
-  ;}
+    $(function() {
+        $('#comparables').multiselect();
+        Analysis.addComparables('{{validId .currentResult .nextResult}}', '{{.ctx.Browse.Pid.Hex}}', 'comparables', '{{.ctx.Browse.Uid}}');
+    });
 </script>
 <div id="chartHolder">
 </div>
 <script>
-  ajaxChart(chartParams);
+    ResultChart.init(chartParams);
 </script>
 {{end}}
 <div class="row">
-  <div class="col-md-3">
-    <h4 style="margin-top:20px;" class="text-left">
+    <div class="col-md-3">
+        <h4 style="margin-top:20px;" class="text-left">
       Compare Snapshots
     </h4>
-  </div>
-  <div class="col-md-6">
-    {{template "pager" .}}
-  </div>
-  <div class="col-md-3">
-    <form role="form" class="form-padded form-inline" action="displayresult" method="get">
-      <div class="form-group">
-	<label class="sr-only" for="current">First File</label>
-	<select class="form-control" name="current" id="current">
-	  {{range $index, $file := .files}} 
-	  {{$dispIndex := sum $index 1}}
-	  {{if $currentFile.Same $file}}
-	  <option selected value="{{$index}}">{{$dispIndex}}</option>
-	  {{else}}
-	  <option value="{{$index}}">{{$dispIndex}}</option>
-	  {{end}}
-	  {{end}}
-	</select>
-      </div>
-      <div class="form-group">
-	<label class="sr-only" for="next">Second File</label>
-	<select class="form-control" name="next" id="next">
-	  {{range $index, $file := .files}} 
-	  {{$dispIndex := sum $index 1}}
-	  {{if eq $next $index}}
-	  <option selected value="{{$index}}">{{$dispIndex}}</option>
-	  {{else}}
-	  <option value="{{$index}}">{{$dispIndex}}</option>
-	  {{end}}
-	  {{end}}
-	</select>
-      </div>
-      <button type="submit" class="btn btn-default">
-	<span class="glyphicon glyphicon-arrow-right"></span>
-      </button>
-    </form>
-  </div>
+    </div>
+    <div class="col-md-6">
+        {{template "pager" .}}
+    </div>
+    <div class="col-md-3">
+        <form role="form" class="form-padded form-inline" action="displayresult" method="get">
+            <div class="form-group">
+                <label class="sr-only" for="current">First File</label>
+                <select class="form-control" name="current" id="current">
+                    {{range $index, $file := .files}} {{$dispIndex := sum $index 1}} {{if $currentFile.Same $file}}
+                    <option selected value="{{$index}}">{{$dispIndex}}</option>
+                    {{else}}
+                    <option value="{{$index}}">{{$dispIndex}}</option>
+                    {{end}} {{end}}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="sr-only" for="next">Second File</label>
+                <select class="form-control" name="next" id="next">
+                    {{range $index, $file := .files}} {{$dispIndex := sum $index 1}} {{if eq $next $index}}
+                    <option selected value="{{$index}}">{{$dispIndex}}</option>
+                    {{else}}
+                    <option value="{{$index}}">{{$dispIndex}}</option>
+                    {{end}} {{end}}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-default">
+                <span class="glyphicon glyphicon-arrow-right"></span>
+            </button>
+        </form>
+    </div>
 </div>
 <div class="row">
-  <div class="col-md-6">
-    <dl class="dl-horizontal text-info">
-      <dt>File Number</dt>
-      <dd>{{sum $current 1}}</dd>
-      <dt>Date</dt>
-      <dd>{{date $currentFile.Time}}</dd>
-    </dl>
-  </div>
-  <div class="col-md-6">
-    <dl class="dl-horizontal text-info">
-      <dt>File Number</dt>
-      <dd>{{sum $next 1}}</dd>
-      <dt>Date</dt>
-      <dd>{{date $nextFile.Time}}</dd>
-    </dl>
-  </div>
+    <div class="col-md-6">
+        <dl class="dl-horizontal text-info">
+            <dt>File Number</dt>
+            <dd>{{sum $current 1}}</dd>
+            <dt>Date</dt>
+            <dd>{{date $currentFile.Time}}</dd>
+        </dl>
+    </div>
+    <div class="col-md-6">
+        <dl class="dl-horizontal text-info">
+            <dt>File Number</dt>
+            <dd>{{sum $next 1}}</dd>
+            <dt>Date</dt>
+            <dd>{{date $nextFile.Time}}</dd>
+        </dl>
+    </div>
 </div>
-{{if (eq $rd.Type "Diff")}}
-{{$data := .currentResult.Create .nextResult}}
-{{template "result"  $data}}
-{{else}}
+{{if (eq $rd.Type "Diff")}} {{$data := .currentResult.Create .nextResult}} {{template "result" $data}} {{else}}
 <div class="row">
-  {{$args := args "state" .ctx.Browse}}
-  <div class="col-md-6">
-    {{if isError .currentResult}}
-    <p class="text-danger">{{.currentResult.GetReport}}</p>
-    {{else}}
-    {{$args := insert $args "Report" .currentResult.GetReport}}
-    {{template "result"  $args}}
-    {{end}}
-  </div>
-  <div class="col-md-6">
-    {{if isError .nextResult}}
-    <p class="text-danger">{{.nextResult.GetReport}}</p>
-    {{else}}
-    {{$args := insert $args "Report" .nextResult.GetReport}}
-    {{template "result"  $args}}
-    {{end}}
-  </div>
+    {{$args := args "state" .ctx.Browse}}
+    <div class="col-md-6">
+        {{if isError .currentResult}}
+        <p class="text-danger">{{.currentResult.GetReport}}</p>
+        {{else}} {{$args := insert $args "Report" .currentResult.GetReport}} {{template "result" $args}} {{end}}
+    </div>
+    <div class="col-md-6">
+        {{if isError .nextResult}}
+        <p class="text-danger">{{.nextResult.GetReport}}</p>
+        {{else}} {{$args := insert $args "Report" .nextResult.GetReport}} {{template "result" $args}} {{end}}
+    </div>
 </div>
 {{if (eq .currentResult.Template "junitresult")}}
 <div class="row">
-  <div class="col-md-5">
-  </div>
-  <div class="col-md-2">
-    <a class="btn btn-block btn-info" 
-       href="displayresult?displaycount={{.ctx.Browse.DisplayCount}}">
-      <span class="glyphicon glyphicon-chevron-down"></span>
-      More
-      <span class="glyphicon glyphicon-chevron-down"></span> 
-    </a>
-  </div>
-  <div class="col-md-5">
-  </div>
+    <div class="col-md-5">
+    </div>
+    <div class="col-md-2">
+        <a class="btn btn-block btn-info" href="displayresult?displaycount={{.ctx.Browse.DisplayCount}}">
+            <span class="glyphicon glyphicon-chevron-down"></span>
+            More
+            <span class="glyphicon glyphicon-chevron-down"></span> 
+        </a>
+    </div>
+    <div class="col-md-5">
+    </div>
 </div>
-{{end}}
-{{end}}
-{{if (eq $rd.Type "Code")}}
+{{end}} {{end}} {{if (eq $rd.Type "Code")}}
 <script>
-  SyntaxHighlighter.defaults['toolbar'] = false;
-  SyntaxHighlighter.highlight(); 
+    SyntaxHighlighter.defaults['toolbar'] = false;
+    SyntaxHighlighter.highlight();
 </script>
-{{end}}
-{{end}}
+{{end}} {{end}}

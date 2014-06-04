@@ -1,0 +1,126 @@
+{{define "view"}}
+<h3 class="heading">Delete</h3>
+<ul class="nav nav-tabs">
+    <li class="active"><a href="#tab-projects" data-toggle="tab">Projects</a>
+    </li>
+    <li><a href="#tab-users" data-toggle="tab">Users</a>
+    </li>
+    <li><a href="#tab-submissions" data-toggle="tab">Submissions</a>
+    </li>
+    <li><a href="#tab-results" data-toggle="tab">Results</a>
+    </li>
+    <li><a href="#tab-skeletons" data-toggle="tab">Skeletons</a>
+    </li>
+</ul>
+<div class="tab-content">
+    <div class="tab-pane fade in active" id="tab-projects">
+        <form class="form-horizontal" action="deleteprojects" method="post">
+            <div class="form-group">
+                <div class="col-lg-offset-5 col-lg-3">
+                    <select class="form-control" name="project-id" id="tp-project-id" multiple>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-lg-offset-5 col-lg-3">
+                    <button type="submit" class="btn btn-default">
+                        <span class="glyphicon glyphicon-remove"></span> Delete
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="tab-pane fade" id="tab-users">
+        <form class="form-horizontal" action="deleteusers" method="post">
+            <div class="form-group">
+                <div class="col-lg-offset-5 col-lg-3">
+                    <select class="form-control" name="user-id" id="tu-user-id" multiple>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-lg-offset-5 col-lg-3">
+                    <button type="submit" class="btn btn-default">
+                        <span class="glyphicon glyphicon-remove"></span> Delete
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="tab-pane fade" id="tab-submissions">
+        <form class="form-horizontal" action="deletesubmissions" method="post">
+            <div class="form-group">
+                <label class="col-lg-offset-3 col-lg-2 control-label" for="ts-project-id">Project</label>
+                <div class="col-lg-3">
+                    <select class="form-control" name="project-id" id="ts-project-id">
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-lg-offset-5 col-lg-3">
+                    <select class="form-control" name="submission-id" id="ts-submission-id" multiple>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-lg-offset-5 col-lg-3">
+                    <button type="submit" class="btn btn-default">
+                        <span class="glyphicon glyphicon-remove"></span> Delete
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="tab-pane fade" id="tab-results">
+        <form class="form-horizontal" action="deleteresults" method="post">
+            <div class="form-group">
+                <label class="col-lg-offset-3 col-lg-2 control-label" for="tr-project-id">Project</label>
+                <div class="col-lg-3">
+                    <select class="form-control" name="project-id" id="tr-project-id">
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-lg-offset-5 col-lg-3">
+                    <select class="form-control" name="submission-id" id="tr-submission-id" multiple>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-lg-offset-5 col-lg-3">
+                    <button type="submit" class="btn btn-default">
+                        <span class="glyphicon glyphicon-remove"></span> Delete
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="tab-pane fade" id="tab-skeletons">
+        <form class="form-horizontal" action="deleteskeletons" method="post">
+            <div class="form-group">
+                <label class="col-lg-offset-3 col-lg-2 control-label" for="tsk-project-id">Project</label>
+                <div class="col-lg-3">
+                    <select class="form-control" name="project-id" id="tsk-project-id">
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-lg-offset-5 col-lg-3">
+                    <select class="form-control" name="skeleton-id" id="tsk-skeleton-id" multiple>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-lg-offset-5 col-lg-3">
+                    <button type="submit" class="btn btn-default">
+                        <span class="glyphicon glyphicon-remove"></span> Delete
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    DeleteView.init();
+</script>
+{{end}}

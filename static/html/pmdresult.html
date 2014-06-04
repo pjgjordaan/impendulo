@@ -1,62 +1,43 @@
-{{define "result" }}
-{{$report := .Report}}
-{{if $report.Success}}
+{{define "result" }} {{$report := .Report}} {{if $report.Success}}
 <h4 class="text-success">No problems detected.</h4>
-{{else}}
-{{$uid := .state.Uid}}
-{{$sid := .state.Sid}}
-{{$fileName := .state.File}}
-{{$current := .state.Current}}
-{{$next := .state.Next}}
-{{$file := $report.File $fileName}}
-{{$rid := $report.Id.Hex}}
-{{$addr := address $report}}
-<script>
-  var infos = {};
-</script>
+{{else}} {{$uid := .state.Uid}} {{$sid := .state.Sid}} {{$fileName := .state.File}} {{$current := .state.Current}} {{$next := .state.Next}} {{$file := $report.File $fileName}} {{$rid := $report.Id.Hex}} {{$addr := address $report}}
 <h4 class="text-danger">{{$report.Errors}} problems detected.</h4>
 <div class="panel-group" id="pmdaccordion{{$addr}}">
-  {{range $file.Violations}}
-  {{$v := .}}
-  {{$violationAddress := address .}}
-  <div class="panel panel-default">
-    <div class="panel-heading">
-      <a class="accordion-toggle" data-toggle="collapse"
-	 data-parent="pmdaccordion{{$addr}}"
-	 href="#violation{{$violationAddress}}">
-	<h5 class="text-center">{{addSpaces .Rule}}</h5>
-      </a>
+    {{range $file.Violations}} {{$v := .}} {{$violationAddress := address .}}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <a class="accordion-toggle" data-toggle="collapse" data-parent="pmdaccordion{{$addr}}" href="#violation{{$violationAddress}}">
+                <h5 class="text-center">{{addSpaces .Rule}}</h5>
+            </a>
+        </div>
+        <div id="violation{{$violationAddress}}" class="panel-collapse collapse">
+            <div class="accordion-inner">
+                <dl class="dl-horizontal">
+                    <dt>Location</dt>
+                    <dd>Lines: {{$ends := .Ends}} {{$id := .Id.Hex}} {{range $i, $start := .Starts}} {{$end := index $ends $i}}
+                        <a href="#" id="line{{$violationAddress}}num{{$i}}">
+			  {{$start}} to {{$end}}; 
+			</a>
+                        <script>
+                            var id = 'line{{$violationAddress}}num{{$i}}';
+                            var info = {};
+                            info.title = '{{$v.RuleSet}} Violation';
+                            info.content = '{{$v.Description}}';
+                            Analysis.addCodeModal(id, '{{$rid}}', info, '{{$start}}', '{{$end}}');
+                        </script>
+                        {{end}}
+                    </dd>
+                    <dt>Rule Set</dt>
+                    <dd>{{.RuleSet}}</dd>
+                    <dt>Priority</dt>
+                    <dd>{{.Priority}}</dd>
+                    <dt>Description</dt>
+                    <dd>{{.Description}}</dd>
+                </dl>
+                <a href="{{.Url}}">More Info</a>
+            </div>
+        </div>
     </div>
-    <div id="violation{{$violationAddress}}" class="panel-collapse collapse">
-      <div class="accordion-inner">
-	<dl class="dl-horizontal">
-	  <dt>Location</dt>
-	  <dd>Lines: 
-	    {{$ends := .Ends}}
-	    {{$id := .Id.Hex}}
-	    {{range $i, $start :=  .Starts}}
-	    {{$end := index $ends $i}}
-	    <a href="#" id="line{{$violationAddress}}num{{$i}}">
-	      {{$start}} to {{$end}}; 
-	    </a>
-	    <script>      
-	      var id = 'line{{$violationAddress}}num{{$i}}';
-	      var info = {};
-	      info.title = {{$v.RuleSet}} + ' Violation';
-	      info.content = {{$v.Description}};
-	      addCodeModal(id, {{$rid}}, info, {{$start}}, {{$end}});
-	    </script>
-	    {{end}}
-	  </dd>
-	  <dt>Rule Set</dt><dd>{{.RuleSet}}</dd>
-	  <dt>Priority</dt><dd>{{.Priority}}</dd>
-	  <dt>Description</dt><dd>{{.Description}}</dd>
-	</dl>
-	<a href="{{.Url}}">More Info</a>
-      </div>
-    </div>
-  </div>
-  {{end}}
+    {{end}}
 </div>
-{{end}}
-{{end}}
+{{end}} {{end}}

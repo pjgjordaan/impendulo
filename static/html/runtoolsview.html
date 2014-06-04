@@ -1,54 +1,44 @@
 {{define "view"}}
 <h3 class="heading">Run Tools</h3>
 <form class="form-horizontal" role="form" action="runtools" method="post">
-  <div class="form-group">
-    <label class="col-lg-offset-3 col-lg-2 control-label" for="project-id">Project</label>
-    <div class="col-lg-3">
-      <select class="form-control" name="project-id" id="project-id"
-	      onchange="populate('project-id', 'tools', 'users')">
-	{{$projects := projects}}
-	{{range $projects}}
-	<option value={{.Id.Hex}}>{{.Name}}</option>
-	{{end}}
-      </select>
+    <div class="form-group">
+        <label class="col-lg-offset-3 col-lg-2 control-label" for="project-id">Project</label>
+        <div class="col-lg-3">
+            <select class="form-control" name="project-id" id="project-id">
+            </select>
+        </div>
     </div>
-  </div>
-  <div class="form-group">
-    <label class="col-lg-offset-3 col-lg-2 control-label" for="tools">Tools</label>
-    <div class="col-lg-3">
-      <select class="form-control" name="tools" id="tools" multiple>
-      </select>
+    <div class="form-group">
+        <label class="col-lg-offset-3 col-lg-2 control-label" for="tools">Tools</label>
+        <div class="col-lg-3">
+            <select class="form-control" name="tools" id="tools" multiple>
+            </select>
+        </div>
     </div>
-  </div>
-  <div class="form-group">
-    <label class="col-lg-offset-3 col-lg-2 control-label" for="users">Users</label>
-    <div class="col-lg-3">
-      <select class="form-control" name="users" id="users" multiple>
-      </select>
+    <div class="form-group">
+        <label class="col-lg-offset-3 col-lg-2 control-label" for="users">Users</label>
+        <div class="col-lg-3">
+            <select class="form-control" name="users" id="users" multiple>
+            </select>
+        </div>
     </div>
-  </div>
-  <div class="form-group">
-    <div class="col-lg-offset-5 col-lg-3">
-      <div class="checkbox">
-        <label>
-	  <input type="checkbox" value="true"
-		 id="runempty-check" name="runempty-check">
-	  Run only on files without results.</label>
-      </div>
+    <div class="form-group">
+        <div class="col-lg-offset-5 col-lg-3">
+            <div class="checkbox">
+                <label>
+                    <input type="checkbox" value="true" id="runempty-check" name="runempty-check">Run only on files without results.</label>
+            </div>
+        </div>
     </div>
-  </div>
-  <div class="form-group">
-    <div class="col-lg-offset-5 col-lg-3">
-      <button type="submit" class="btn btn-default">
-	<span class="glyphicon glyphicon-play"></span> Run
-      </button>
+    <div class="form-group">
+        <div class="col-lg-offset-5 col-lg-3">
+            <button type="submit" class="btn btn-default">
+                <span class="glyphicon glyphicon-play"></span> Run
+            </button>
+        </div>
     </div>
-  </div>
 </form>
 <script type="text/javascript" language="javascript">
-  window.onload = function()
-  {
-  populate('project-id', 'tools', 'users');
-  ;}
+    ToolView.init();
 </script>
 {{end}}

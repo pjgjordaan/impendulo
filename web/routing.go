@@ -48,7 +48,7 @@ var (
 	}
 	none = []string{
 		"index", "", "homeview", "projectresult",
-		"userresult", "displayresult", "displaychildresult",
+		"userresult", "displayresult",
 		"getfiles", "favicon.ico", "getsubmissions", "submissionschartview",
 		"static", "userchart", "projectchart",
 	}
@@ -63,14 +63,11 @@ var (
 		"addproject", "runtoolsview", "runtools", "configview",
 	}
 	admin = []string{
-		"projectdeleteview", "deleteproject", "userdeleteview",
-		"deleteuser", "resultsdeleteview", "deleteresults",
-		"deleteskeletons", "skeletondeleteview",
-		"importdataview", "exportdataview",
-		"importdata", "exportdb.zip", "statusview",
-		"evaluatesubmissionsview", "evaluatesubmissions", "logs",
-		"editdbview", "loadproject", "editproject", "loaduser",
-		"edituser", "loadsubmission", "editsubmission", "loadfile",
+		"deleteprojects", "deleteusers", "deleteresults", "deleteview",
+		"deleteskeletons", "deletesubmissions", "importdataview", "exportdataview",
+		"importdata", "exportdb.zip", "statusview", "evaluatesubmissionsview",
+		"evaluatesubmissions", "logs", "editdbview", "loadproject", "editproject",
+		"loaduser", "edituser", "loadsubmission", "editsubmission", "loadfile",
 		"editfile", "edittest", "renamefiles", "renameview",
 	}
 
@@ -78,7 +75,7 @@ var (
 		"homeview", "userresult", "projectresult",
 		"userchart", "projectchart",
 		"displayresult", "getfiles", "submissionschartview",
-		"getsubmissions", "displaychildresult",
+		"getsubmissions",
 	}
 	submitViews = []string{
 		"skeletonview", "archiveview", "projectview",
@@ -86,12 +83,11 @@ var (
 	}
 	registerViews = []string{"registerview"}
 	downloadViews = []string{"projectdownloadview", "intloladownloadview", "testdownloadview"}
-	deleteViews   = []string{"projectdeleteview", "userdeleteview", "resultsdeleteview", "skeletondeleteview"}
 	statusViews   = []string{"statusview"}
 	toolViews     = []string{"runtoolsview", "evaluatesubmissionsview"}
 	dataViews     = []string{
 		"importdataview", "exportdataview", "editdbview", "renameview",
-		"loadproject", "loadsubmission", "loadfile", "loaduser",
+		"loadproject", "loadsubmission", "loadfile", "loaduser", "deleteview",
 	}
 )
 
@@ -105,7 +101,6 @@ func Views() map[string]string {
 	setViewRoutes(submitViews, "submit")
 	setViewRoutes(registerViews, "register")
 	setViewRoutes(downloadViews, "download")
-	setViewRoutes(deleteViews, "delete")
 	setViewRoutes(statusViews, "status")
 	setViewRoutes(toolViews, "tool")
 	setViewRoutes(dataViews, "data")
@@ -149,9 +144,6 @@ func GenerateViews(r *pat.Router, views map[string]string) {
 func LoadView(n, v string) Handler {
 	return func(w http.ResponseWriter, r *http.Request, c *Context) error {
 		c.Browse.View = v
-		if c.Browse.View == "home" {
-			c.Browse.SetLevel(n)
-		}
 		return T(getNav(c), n).Execute(w, map[string]interface{}{"ctx": c})
 	}
 }

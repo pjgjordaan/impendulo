@@ -40,22 +40,6 @@
                             </li>
                         </ul>
                     </li>
-                    <li {{if (.ctx.IsView "delete")}} class="dropdown active" {{else}} class="dropdown" {{end}}>
-                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-                            <span class="glyphicon glyphicon-remove"></span> Delete
-                            <b class="caret"></b>
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a href="projectdeleteview">Projects</a>
-                            </li>
-                            <li><a href="userdeleteview">Users</a>
-                            </li>
-                            <li><a href="resultsdeleteview">Results</a>
-                            </li>
-                            <li><a href="skeletondeleteview">Skeletons</a>
-                            </li>
-                        </ul>
-                    </li>
                     <li {{if (.ctx.IsView "tool")}} class="dropdown active" {{else}} class="dropdown" {{end}}>
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">
                             <span class="glyphicon glyphicon-wrench"></span> Tools
@@ -82,7 +66,9 @@
                             </li>
                             <li><a href="editdbview">Edit</a>
                             </li>
-                            <li><a href="renameview">Rename Files</a>
+                            <li><a href="renameview">Rename</a>
+                            </li>
+                            <li><a href="deleteview">Delete</a>
                             </li>
                         </ul>
                     </li>
