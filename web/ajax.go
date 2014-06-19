@@ -14,7 +14,8 @@ import (
 	"fmt"
 
 	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/processing"
+	"github.com/godfried/impendulo/processor/mq"
+	"github.com/godfried/impendulo/processor/status"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/jacoco"
@@ -24,6 +25,9 @@ import (
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
+	"github.com/godfried/impendulo/web/charts"
+	"github.com/godfried/impendulo/web/context"
+	"github.com/godfried/impendulo/web/webutil"
 	"labix.org/v2/mgo/bson"
 
 	"net/http"
@@ -37,6 +41,11 @@ type (
 		User     bool
 	}
 	Selects []*Select
+)
+
+var (
+	CountsError  = errors.New("unsupported counts request")
+	ResultsError = errors.New("cannot retrieve results")
 )
 
 func (s Selects) Len() int {
@@ -89,22 +98,22 @@ func GenerateAJAX(r *pat.Router) {
 
 func ajaxStatus(r *http.Request) ([]byte, error) {
 	type wrapper struct {
-		s *processing.Status
+		s *status.S
 		e error
 	}
 	sc := make(chan wrapper)
 	go func() {
-		s, e := processing.GetStatus()
+		s, e := mq.GetStatus()
 		w := wrapper{s, e}
 		sc <- w
 	}()
 	select {
 	case <-time.After(15 * time.Second):
-		return util.JSON(map[string]interface{}{"status": processing.NewStatus()})
+		return util.JSON(map[string]interface{}{"status": status.New()})
 	case w := <-sc:
 		if w.e != nil {
 			util.Log(w.e)
-			return util.JSON(map[string]interface{}{"status": processing.NewStatus()})
+			return util.JSON(map[string]interface{}{"status": status.New()})
 		}
 		return util.JSON(map[string]interface{}{"status": w.s})
 	}
@@ -134,7 +143,7 @@ func ajaxSetContext(w http.ResponseWriter, r *http.Request) error {
 	if e != nil {
 		return e
 	}
-	c := LoadContext(s)
+	c := context.Load(s)
 	if e := c.Browse.Update(r); e != nil {
 		return e
 	}
@@ -149,7 +158,7 @@ func ajaxCounts(r *http.Request) ([]byte, error) {
 	if sid, e := convert.Id(r.FormValue("submission-id")); e == nil {
 		return submissionCounts(sid)
 	}
-	return nil, errors.New("unsupported counts request")
+	return nil, CountsError
 }
 
 func submissionCounts(sid bson.ObjectId) ([]byte, error) {
@@ -202,10 +211,10 @@ func ajaxResults(r *http.Request) ([]byte, error) {
 	var rs []string
 	if pid, e := convert.Id(r.FormValue("project-id")); e == nil {
 		rs = db.ProjectResults(pid)
-	} else if u, e := GetString(r, "user-id"); e == nil {
+	} else if u, e := webutil.String(r, "user-id"); e == nil {
 		rs = db.UserResults(u)
 	} else {
-		return nil, errors.New("cannot retrieve results")
+		return nil, ResultsError
 	}
 	s := make(Selects, len(rs))
 	for i, r := range rs {
@@ -258,7 +267,7 @@ func ajaxComparables(r *http.Request) ([]byte, error) {
 	}
 	for i, ut := range uts {
 		n, _ := util.Extension(ut.Name)
-		rd, e := NewResultDesc(tr.GetType() + ":" + n + "-" + ut.Id.Hex())
+		rd, e := context.NewResult(tr.GetType() + ":" + n + "-" + ut.Id.Hex())
 		if e != nil {
 			return nil, e
 		}
@@ -275,7 +284,7 @@ func ajaxPerms(r *http.Request) ([]byte, error) {
 //ajaxUsers retrieves a list of users.
 func ajaxUsers(r *http.Request) ([]byte, error) {
 	m := bson.M{}
-	if n, e := GetString(r, "name"); e == nil {
+	if n, e := webutil.String(r, "name"); e == nil {
 		m[db.ID] = n
 	}
 	u, e := db.Users(m)
@@ -305,8 +314,8 @@ func ajaxCode(r *http.Request) ([]byte, error) {
 	if id, e := convert.Id(r.FormValue("file-id")); e == nil {
 		m[db.ID] = id
 	}
-	if n, e := GetString(r, "tool-name"); e == nil {
-		d, e := NewResultDesc(n)
+	if n, e := webutil.String(r, "tool-name"); e == nil {
+		d, e := context.NewResult(n)
 		if e != nil {
 			return nil, e
 		}
@@ -336,7 +345,7 @@ func loadTestCode(pid bson.ObjectId, n string) ([]byte, error) {
 
 //collections retrieves the names of all collections in the current database.
 func collections(r *http.Request) ([]byte, error) {
-	n, e := GetString(r, "db")
+	n, e := webutil.String(r, "db")
 	if e != nil {
 		return nil, e
 	}
@@ -381,7 +390,7 @@ func ajaxFiles(r *http.Request) ([]byte, error) {
 	if id, e := convert.Id(r.FormValue("id")); e == nil {
 		m[db.ID] = id
 	}
-	format, _ := GetString(r, "format")
+	format, _ := webutil.String(r, "format")
 	var f interface{}
 	var e error
 	if format == "nested" {
@@ -440,7 +449,7 @@ func getUsernames(r *http.Request) ([]byte, error) {
 	if e != nil {
 		u, e = db.Usernames(nil)
 	} else {
-		u, e = projectUsernames(pid)
+		u, e = db.ProjectUsernames(pid)
 	}
 	if e != nil {
 		return nil, e
@@ -483,7 +492,7 @@ func getChart(r *http.Request) ([]byte, error) {
 	if e := r.ParseForm(); e != nil {
 		return nil, e
 	}
-	t, e := GetString(r, "type")
+	t, e := webutil.String(r, "type")
 	if e != nil {
 		return nil, e
 	}
@@ -500,16 +509,16 @@ func getChart(r *http.Request) ([]byte, error) {
 }
 
 func overviewChart(r *http.Request) ([]byte, error) {
-	v, e := GetString(r, "view")
+	v, e := webutil.String(r, "view")
 	if e != nil {
 		return nil, e
 	}
-	var f func() (ChartData, error)
+	var f func() (charts.D, error)
 	switch v {
 	case "user":
-		f = UserChart
+		f = charts.User
 	case "project":
-		f = ProjectChart
+		f = charts.Project
 	default:
 		return nil, fmt.Errorf("unknown view %s", v)
 	}
@@ -521,24 +530,24 @@ func overviewChart(r *http.Request) ([]byte, error) {
 }
 
 func submissionChart(r *http.Request) ([]byte, error) {
-	rn, e := GetString(r, "result")
+	rn, e := webutil.String(r, "result")
 	if e != nil {
 		return nil, e
 	}
-	rd, e := NewResultDesc(rn)
+	rd, e := context.NewResult(rn)
 	if e != nil {
 		return nil, e
 	}
 	m := bson.M{}
-	t, e := GetString(r, "submission-type")
+	t, e := webutil.String(r, "submission-type")
 	if e != nil {
 		return nil, e
 	}
-	id, e := GetString(r, "id")
+	id, e := webutil.String(r, "id")
 	if e != nil {
 		return nil, e
 	}
-	sc, e := GetString(r, "score")
+	sc, e := webutil.String(r, "score")
 	if e != nil {
 		return nil, e
 	}
@@ -552,13 +561,13 @@ func submissionChart(r *http.Request) ([]byte, error) {
 	case "user":
 		m[db.USER] = id
 	default:
-		return nil, errors.New("no submission chart type specified")
+		return nil, fmt.Errorf("invalid submission chart type %s", t)
 	}
 	s, e := db.Submissions(m, nil)
 	if e != nil {
 		return nil, e
 	}
-	c, e := SubmissionChart(s, rd, sc)
+	c, e := charts.Submission(s, rd, sc)
 	if e != nil {
 		return nil, e
 	}
@@ -566,54 +575,72 @@ func submissionChart(r *http.Request) ([]byte, error) {
 }
 
 func fileChart(r *http.Request) ([]byte, error) {
-	fn, e := GetString(r, "file")
+	sid, e := convert.Id(r.FormValue("submission-id"))
 	if e != nil {
 		return nil, e
 	}
-	rn, e := GetString(r, "result")
+	fn, e := webutil.String(r, "file")
 	if e != nil {
 		return nil, e
 	}
-	rd, e := NewResultDesc(rn)
+	rn, e := webutil.String(r, "result")
 	if e != nil {
 		return nil, e
 	}
-	subs, e := GetStrings(r, "submissions[]")
+	rd, e := context.NewResult(rn)
 	if e != nil {
 		return nil, e
 	}
-	var d ChartData
-	var first bson.ObjectId
+	subs, e := webutil.Strings(r, "submissions[]")
+	if e != nil {
+		return nil, e
+	}
+	cmps, e := webutil.Strings(r, "comparables[]")
+	if e != nil {
+		return nil, e
+	}
+	var d charts.D
 	for _, s := range subs {
-		r := rd
-		m := bson.M{db.NAME: fn}
-		id, e := convert.Id(s)
-		if e != nil {
-			id = first
-			if !strings.Contains(s, ":") {
-				m[db.NAME] = s
-			} else if r, e = NewResultDesc(s); e != nil {
-				return nil, e
-			}
+		if c, e := _fileChart(s, fn, rd); e != nil {
+			util.Log(e)
 		} else {
-			if first == "" {
-				first = id
-			} else if rd.FileID != "" {
-				rd.FileID = findTestId(id)
-			}
+			d = append(d, c...)
 		}
-		m[db.SUBID] = id
-		fs, e := db.Files(m, bson.M{db.DATA: 0}, 0, db.TIME)
-		if e != nil {
-			return nil, e
+	}
+	for _, cmp := range cmps {
+		if c, e := _cmpChart(sid, cmp, fn); e != nil {
+			util.Log(e)
+		} else {
+			d = append(d, c...)
 		}
-		c, e := LoadChart(r, fs)
-		if e != nil {
-			return nil, e
-		}
-		d = append(d, c...)
 	}
 	return util.JSON(map[string]interface{}{"chart": d})
+}
+
+func _fileChart(s, fn string, r *context.Result) (charts.D, error) {
+	id, e := convert.Id(s)
+	if e != nil {
+		return nil, e
+	} else if r.FileID != "" {
+		r.FileID = findTestId(id)
+	}
+	fs, e := db.Files(bson.M{db.NAME: fn, db.SUBID: id}, bson.M{db.DATA: 0}, 0, db.TIME)
+	if e != nil {
+		return nil, e
+	}
+	return charts.Tool(r, fs)
+}
+
+func _cmpChart(sid bson.ObjectId, cmp, fn string) (charts.D, error) {
+	r, e := context.NewResult(cmp)
+	if e != nil {
+		return nil, e
+	}
+	fs, e := db.Files(bson.M{db.NAME: fn, db.SUBID: sid}, bson.M{db.DATA: 0}, 0, db.TIME)
+	if e != nil {
+		return nil, e
+	}
+	return charts.Tool(r, fs)
 }
 
 func findTestId(sid bson.ObjectId) bson.ObjectId {
@@ -627,5 +654,4 @@ func findTestId(sid bson.ObjectId) bson.ObjectId {
 		}
 	}
 	return ""
-
 }

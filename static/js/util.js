@@ -322,24 +322,35 @@ var ToolView = {
                 }
                 $('#project-id').change(function() {
                     var pid = $(this).val();
-                    ToolView.fill('#tools', 'tools?project-id=' + pid, 'tools');
-                    ToolView.fill('#users', 'usernames?project-id=' + pid, 'usernames');
+                    ToolView.loadTools(pid);
+                    ToolView.loadUsers(pid);
                 });
-                ToolView.fill('#tools', 'tools?project-id=' + ps[0].Id, 'tools');
-                ToolView.fill('#users', 'usernames?project-id=' + ps[0].Id, 'usernames');
+                ToolView.loadTools(ps[0].Id);
+                ToolView.loadUsers(ps[0].Id);
             });
         });
     },
-
-    fill: function(dest, url, name) {
-        clearMulti(dest);
-        $.getJSON(url, function(data) {
-            var items = data[name];
-            for (var i = 0; i < items.length; i++) {
-                $(dest).append('<option value="' + items[i] + '">' + items[i] + '</option>');
+    loadTools: function(pid) {
+        clearMulti('#tools');
+        $.getJSON('tools?project-id=' + pid, function(data) {
+            var t = data['tools'];
+            for (var i = 0; i < t.length; i++) {
+                var n = t[i].replace(':', '\u2192')
+                $('#tools').append('<option value="' + t[i] + '">' + n + '</option>');
             }
-            $(dest).multiselect();
-            $(dest).multiselected = true;
+            $('#tools').multiselect();
+            $('#tools').multiselected = true;
+        });
+    },
+    loadUsers: function(pid) {
+        clearMulti('#users');
+        $.getJSON('usernames?project-id=' + pid, function(data) {
+            var u = data['usernames'];
+            for (var i = 0; i < u.length; i++) {
+                $('#users').append('<option value="' + u[i] + '">' + u[i] + '</option>');
+            }
+            $('#users').multiselect();
+            $('#users').multiselected = true;
         });
     }
 }
@@ -414,39 +425,6 @@ var Analysis = {
                 });
             });
             return false;
-        });
-    },
-
-    addComparables: function(rid, pid, dest, user) {
-        clearMulti('#' + dest);
-        $('#' + dest).append('<optgroup id="optgroup-tests" label="Tests"></optgroup>"');
-        $('#' + dest).append('<optgroup id="optgroup-users" label="User Submissions"></optgroup>"');
-        $('#' + dest).append('<optgroup id="optgroup-usertests" label="User Tests"></optgroup>"');
-        $.getJSON('comparables?id=' + rid, function(cdata) {
-            var comp = cdata['comparables'];
-            for (var i = 0; i < comp.length; i++) {
-                var s = comp[i].User ? '#optgroup-usertests' : '#optgroup-tests';
-                $(s).append('<option value="' + comp[i].Id + '">' + comp[i].Name + '</option>');
-            }
-            $.getJSON('submissions?project-id=' + pid, function(data) {
-                var items = data['submissions'];
-                for (var i = 0; i < items.length; i++) {
-                    if (items[i].User === user) {
-                        continue;
-                    }
-                    $('#optgroup-users').append('<option value="' + items[i].Id + '">' + items[i].User + ' \u2192 ' + new Date(items[i].Time).toLocaleString() + '</option>');
-                }
-                $.each($('#dest optgroup'), function() {
-                    if ($(this).children().length === 0) {
-                        $(this).remove();
-                    }
-                });
-                $('#' + dest).multiselect({
-                    noneSelectedText: 'Compare results',
-                    selectedText: '# selected to compare'
-                });
-                $('#' + dest).multiselected = true;
-            });
         });
     }
 }
@@ -650,6 +628,7 @@ var EditView = {
             var p = data['projects'][0];
             $('#project-id').val(p.Id);
             $('#project-name').val(p.Name);
+            $('#project-description').val(p.Description);
             $.getJSON('usernames', function(udata) {
                 var users = udata['usernames'];
                 if (not(users)) {
@@ -886,4 +865,11 @@ var EditView = {
             }
         });
     }
+}
+
+function round(n, p) {
+    if (p === undefined) {
+        p = 2
+    }
+    return +Number(n).toFixed(2);
 }

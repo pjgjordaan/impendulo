@@ -31,6 +31,7 @@ import (
 
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/user"
+	"github.com/godfried/impendulo/web/context"
 
 	"net/http"
 	"strings"
@@ -142,14 +143,17 @@ func GenerateViews(r *pat.Router, views map[string]string) {
 
 //LoadView loads a view so that it is accessible in our web app.
 func LoadView(n, v string) Handler {
-	return func(w http.ResponseWriter, r *http.Request, c *Context) error {
+	return func(w http.ResponseWriter, r *http.Request, c *context.C) error {
 		c.Browse.View = v
+		if c.Browse.View == "home" {
+			c.Browse.SetLevel(n)
+		}
 		return T(getNav(c), n).Execute(w, map[string]interface{}{"ctx": c})
 	}
 }
 
 //CheckAccess verifies that a user is allowed access to a url.
-func CheckAccess(p string, c *Context, ps map[string]user.Permission) error {
+func CheckAccess(p string, c *context.C, ps map[string]user.Permission) error {
 	//Retrieve the location they are requesting
 	n := p
 	if strings.HasPrefix(n, "/") {
@@ -173,7 +177,7 @@ func CheckAccess(p string, c *Context, ps map[string]user.Permission) error {
 	return checkPermission(c, v, p)
 }
 
-func checkPermission(c *Context, p user.Permission, url string) error {
+func checkPermission(c *context.C, p user.Permission, url string) error {
 	//Check permission levels.
 	switch p {
 	case user.NONE:

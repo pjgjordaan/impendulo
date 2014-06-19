@@ -36,28 +36,25 @@
             <th>Tests</th>
         </tr>
     </thead>
-    <tbody data-provides="rowlink">
+    <tbody data-link="row" class="rowlink">
         {{range .subRes}} {{$subId := .Id.Hex}}
         <tr>
-            <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
-	  {{.User}}
-      </a>
+            <td>
+                <a href="getfiles?submission-id={{$subId}}">
+		  {{.User}}
+		</a>
             </td>
-            <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
-	  {{date .Time}}
-      </a>
+            <td>
+                {{date .Time}}
             </td>
-            <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
-	  {{snapshots .Id}}
-      </a>
+            <td>
+                {{snapshots .Id}}
             </td>
-            <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
-	  {{launches .Id}}
-      </a>
+            <td>
+                {{launches .Id}}
             </td>
-            <td><a class="rowlink" href="getfiles?submission-id={{$subId}}">
-	  {{usertests .Id}}
-      </a>
+            <td>
+                {{usertests .Id}}
             </td>
         </tr>
         {{end}}

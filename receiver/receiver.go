@@ -28,7 +28,7 @@ import (
 	"fmt"
 
 	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/processing"
+	"github.com/godfried/impendulo/processor/mq"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
@@ -104,11 +104,11 @@ func (s *SubmissionHandler) Handle() error {
 	if e = s.LoadInfo(); e != nil {
 		return e
 	}
-	s.processingKey, e = processing.StartSubmission(s.submission.Id)
+	s.processingKey, e = mq.StartSubmission(s.submission.Id)
 	if e != nil {
 		return e
 	}
-	defer func() { processing.EndSubmission(s.submission.Id, s.processingKey) }()
+	defer func() { mq.EndSubmission(s.submission.Id, s.processingKey) }()
 	d := false
 	for !d {
 		d, e = s.Read()
@@ -273,7 +273,7 @@ func (s *SubmissionHandler) Read() (bool, error) {
 			return false, e
 		}
 		//Send file to be processed.
-		return false, processing.AddFile(f, s.processingKey)
+		return false, mq.AddFile(f, s.processingKey)
 	case LOGOUT:
 		//Logout request so we are done with this client.
 		return true, nil

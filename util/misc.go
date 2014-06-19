@@ -25,7 +25,8 @@
 package util
 
 import (
-	"errors"
+	"github.com/godfried/impendulo/util/errors"
+
 	"math"
 	"os"
 	"os/user"
@@ -56,7 +57,7 @@ func InstallPath() (string, error) {
 	}
 	p := os.Getenv("GOPATH")
 	if p == "" {
-		return "", errors.New("GOPATH is not set.")
+		return "", errors.GoPathError
 	}
 	installPath = filepath.Join(p, "src", "github.com", "godfried", "impendulo")
 	return installPath, nil

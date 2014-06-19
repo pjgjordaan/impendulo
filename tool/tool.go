@@ -47,6 +47,15 @@ type (
 		//Run runs the tool on a given file.
 		Run(fileId bson.ObjectId, target *Target) (ToolResult, error)
 	}
+	Compiler interface {
+		//Name retrieves the Tool's name.
+		Name() string
+		//Lang retrieves the language which the Tool is used for.
+		Lang() Language
+		//Run runs the tool on a given file.
+		Run(fileId bson.ObjectId, target *Target) (ToolResult, error)
+		AddCP(string)
+	}
 
 	//ExecResult is the result of RunCommand.
 	ExecResult struct {

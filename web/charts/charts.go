@@ -22,7 +22,7 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package web
+package charts
 
 import (
 	"errors"
@@ -35,44 +35,52 @@ import (
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
+	"github.com/godfried/impendulo/web/context"
 	"labix.org/v2/mgo/bson"
 )
 
 type (
 	//Chart represents the x and y values used to draw the charts.
-	Chart struct {
-		user, id, result string
-		start            int64
-		keys             map[string]string
-		Data             ChartData
+	C struct {
+		sid, user, id string
+		result        *context.Result
+		start         int64
+		keys          map[string]string
+		Data          D
 	}
 
-	ChartData   []map[string]interface{}
-	avgChartVal struct {
+	D      []map[string]interface{}
+	avgVal struct {
 		count int
 		val   *tool.ChartVal
 	}
 )
 
-func LoadChart(rd *ResultDesc, files []*project.File) (ChartData, error) {
+var (
+	NoFilesError       = errors.New("no files to load chart for")
+	NoSubmissionsError = errors.New("no submissions to create chart for")
+	NoValuesError      = errors.New("no values found")
+)
+
+func Tool(r *context.Result, files []*project.File) (D, error) {
 	if len(files) == 0 {
-		return nil, errors.New("no files to load chart for")
+		return nil, NoFilesError
 	}
 	s, e := db.Submission(bson.M{db.ID: files[0].SubId}, nil)
 	if e != nil {
 		return nil, e
 	}
-	c := NewChart(s, rd)
+	c := New(s, r)
 	for _, f := range files {
 		f, e = db.File(bson.M{db.ID: f.Id}, nil)
 		if e != nil {
 			continue
 		}
-		switch rd.Type {
+		switch c.result.Type {
 		case tool.SUMMARY:
 			addAll(c, f)
 		default:
-			addSingle(c, f, rd)
+			addSingle(c, f)
 		}
 	}
 	f, e := db.File(bson.M{db.ID: files[0].Id}, bson.M{db.SUBID: 1})
@@ -92,7 +100,7 @@ func LoadChart(rd *ResultDesc, files []*project.File) (ChartData, error) {
 	return c.Data, nil
 }
 
-func addAll(c *Chart, f *project.File) {
+func addAll(c *C, f *project.File) {
 	for _, id := range f.Results {
 		if _, e := convert.Id(id); e != nil {
 			continue
@@ -106,11 +114,11 @@ func addAll(c *Chart, f *project.File) {
 	return
 }
 
-func addSingle(c *Chart, f *project.File, rd *ResultDesc) {
-	if _, e := convert.Id(f.Results[rd.Raw()]); e != nil {
+func addSingle(c *C, f *project.File) {
+	if _, e := convert.Id(f.Results[c.result.Raw()]); e != nil {
 		return
 	}
-	r, e := db.ChartResult(bson.M{db.ID: f.Results[rd.Raw()]}, nil)
+	r, e := db.ChartResult(bson.M{db.ID: f.Results[c.result.Raw()]}, nil)
 	if e != nil {
 		return
 	}
@@ -118,11 +126,119 @@ func addSingle(c *Chart, f *project.File, rd *ResultDesc) {
 	return
 }
 
-type scoreFunc func(*project.Submission, *ResultDesc) (*tool.ChartVal, error)
+//Add inserts new coordinates into data used to display a chart.
+func (c *C) Add(t int64, vs []*tool.ChartVal) {
+	if len(vs) == 0 {
+		return
+	}
+	x := util.Round(float64(t-c.start)/1000.0, 2)
+	title := c.user + " \u2192 " + c.result.Format()
+	r := c.result.Raw()
+	for i, v := range vs {
+		p := map[string]interface{}{
+			"x": x, "y": v.Y, "key": c.Key(v.Name), "name": v.Name,
+			"groupid": c.id, "user": c.user, "title": title,
+			"created": c.start, "time": t, "pos": i, "sid": c.sid, "rid": r,
+		}
+		c.Data = append(c.Data, p)
+	}
+}
 
-func SubmissionChart(subs []*project.Submission, result *ResultDesc, score string) (ChartData, error) {
+func (c *C) Key(n string) string {
+	k, ok := c.keys[n]
+	if ok {
+		return k
+	}
+	c.keys[n] = bson.NewObjectId().Hex()
+	return c.keys[n]
+}
+
+func (c *C) Len() int {
+	return len(c.Data)
+}
+func (c *C) Swap(i, j int) {
+	c.Data[i], c.Data[j] = c.Data[j], c.Data[i]
+}
+func (c *C) Less(i, j int) bool {
+	if c.Data[i]["time"] == c.Data[j]["time"] {
+		pi, ok := c.Data[i]["pos"].(int)
+		if !ok {
+			return false
+		}
+		pj, ok := c.Data[j]["pos"].(int)
+		if !ok {
+			return false
+		}
+		return pi <= pj
+	}
+	ti, ok := c.Data[i]["time"].(int64)
+	if !ok {
+		return false
+	}
+	tj, ok := c.Data[j]["time"].(int64)
+	if !ok {
+		return true
+	}
+	return ti <= tj
+}
+
+//New initialises new chart data.
+func New(s *project.Submission, result *context.Result) *C {
+	return &C{
+		keys:   make(map[string]string),
+		user:   s.User,
+		id:     bson.NewObjectId().Hex(),
+		result: result,
+		start:  s.Time,
+		Data:   NewData(),
+		sid:    s.Id.Hex(),
+	}
+}
+
+func NewData() D {
+	return make(D, 0, 1000)
+}
+
+func User() (D, error) {
+	us, e := db.Users(nil)
+	if e != nil {
+		return nil, e
+	}
+	d := NewData()
+	for _, u := range us {
+		c := db.TypeCounts(u.Name)
+		p := map[string]interface{}{
+			"key": u.Name, "submissions": c[0],
+			"snapshots": c[1], "launches": c[2],
+		}
+		d = append(d, p)
+	}
+	return d, nil
+}
+
+func Project() (D, error) {
+	ps, e := db.Projects(bson.M{}, nil)
+	if e != nil {
+		return nil, e
+	}
+	d := NewData()
+	for _, p := range ps {
+		c := db.TypeCounts(p.Id)
+		v := map[string]interface{}{
+			"key": p.Name, "submissions": c[0],
+			"snapshots": c[1], "launches": c[2],
+			"id": p.Id,
+		}
+		d = append(d, v)
+	}
+	return d, nil
+}
+
+type scoreFunc func(*project.Submission, *context.Result) (*tool.ChartVal, error)
+
+func Submission(subs []*project.Submission, r *context.Result, score string) (D, error) {
 	if len(subs) == 0 {
-		return nil, errors.New("no submissions to create chart for")
+		return nil, NoSubmissionsError
 	}
 	var f scoreFunc
 	switch score {
@@ -133,21 +249,21 @@ func SubmissionChart(subs []*project.Submission, result *ResultDesc, score strin
 	default:
 		return nil, fmt.Errorf("unsupported score type %s", score)
 	}
-	d := NewChartData()
+	d := NewData()
 	for _, s := range subs {
-		n, e := projectName(s.ProjectId)
+		n, e := db.ProjectName(s.ProjectId)
 		if e != nil {
 			continue
 		}
-		sc, e := fileCount(s.Id, project.SRC)
+		sc, e := db.FileCount(s.Id, project.SRC)
 		if e != nil {
 			continue
 		}
-		lc, e := fileCount(s.Id, project.LAUNCH)
+		lc, e := db.FileCount(s.Id, project.LAUNCH)
 		if e != nil {
 			continue
 		}
-		v, e := f(s, result)
+		v, e := f(s, r)
 		if e != nil {
 			continue
 		}
@@ -224,29 +340,29 @@ func norm(y, m, d float64) float64 {
 	return (1.0 / (d * math.Sqrt(2*math.Pi))) * math.Exp(-math.Pow(y-m, 2.0)/(2*math.Pow(d, 2.0)))
 }
 
-func finalScore(s *project.Submission, result *ResultDesc) (*tool.ChartVal, error) {
-	f, rid, e := lastInfo(s.Id, result)
+func finalScore(s *project.Submission, r *context.Result) (*tool.ChartVal, error) {
+	f, rid, e := lastInfo(s.Id, r)
 	if e != nil {
 		return nil, e
 	}
 	t := (f.Time - s.Time) / 1000.0
-	return firstChartVal(rid, t)
+	return firstVal(rid, t)
 }
 
-func firstChartVal(rid bson.ObjectId, t int64) (*tool.ChartVal, error) {
+func firstVal(rid bson.ObjectId, t int64) (*tool.ChartVal, error) {
 	r, e := db.ChartResult(bson.M{db.ID: rid}, nil)
 	if e != nil {
 		return nil, e
 	}
 	vs := r.ChartVals()
 	if len(vs) == 0 || vs[0] == nil {
-		return nil, errors.New("no values found")
+		return nil, NoValuesError
 	}
 	vs[0].X = t
 	return vs[0], nil
 }
 
-func (a *avgChartVal) add(v *tool.ChartVal) {
+func (a *avgVal) add(v *tool.ChartVal) {
 	if a.val == nil {
 		a.count = 0
 		a.val = v
@@ -259,12 +375,12 @@ func (a *avgChartVal) add(v *tool.ChartVal) {
 	a.count++
 }
 
-func (a *avgChartVal) chartVal() *tool.ChartVal {
+func (a *avgVal) chartVal() *tool.ChartVal {
 	a.val.Y = util.Round(a.val.Y/float64(a.count), 2)
 	return a.val
 }
 
-func averageScore(s *project.Submission, rd *ResultDesc) (*tool.ChartVal, error) {
+func averageScore(s *project.Submission, r *context.Result) (*tool.ChartVal, error) {
 	fs, e := db.Files(bson.M{db.SUBID: s.Id, db.TYPE: project.SRC}, bson.M{db.DATA: 0}, 0)
 	if e != nil {
 		return nil, e
@@ -273,41 +389,41 @@ func averageScore(s *project.Submission, rd *ResultDesc) (*tool.ChartVal, error)
 		return nil, fmt.Errorf("no src files in submission %s", s.Id.Hex())
 	}
 	var ts []*project.File
-	if rd.Name != "" && db.Contains(db.TESTS, bson.M{db.NAME: rd.Name + ".java", db.TYPE: junit.USER}) {
-		ts, e = db.Files(bson.M{db.SUBID: s.Id, db.NAME: rd.Name + ".java", db.TYPE: project.TEST}, bson.M{db.DATA: 0}, 0, "-"+db.TIME)
+	if r.Name != "" && db.Contains(db.TESTS, bson.M{db.NAME: r.Name + ".java", db.TYPE: junit.USER}) {
+		ts, e = db.Files(bson.M{db.SUBID: s.Id, db.NAME: r.Name + ".java", db.TYPE: project.TEST}, bson.M{db.DATA: 0}, 0, "-"+db.TIME)
 		if e != nil {
 			return nil, e
 		}
 	}
-	cv := new(avgChartVal)
+	cv := new(avgVal)
 	for i, f := range fs {
 		ft := (f.Time - s.Time) / 1000.0
-		if id, e := convert.GetId(fs[i].Results, rd.Raw()); e == nil {
-			v, e := firstChartVal(id, ft)
+		if id, e := convert.GetId(fs[i].Results, r.Raw()); e == nil {
+			v, e := firstVal(id, ft)
 			if e == nil {
 				cv.add(v)
 			}
 			continue
 		}
 		for _, t := range ts {
-			if id, e := convert.GetId(f.Results, rd.Raw()+"-"+t.Id.Hex()); e == nil {
-				v, e := firstChartVal(id, ft)
+			if id, e := convert.GetId(f.Results, r.Raw()+"-"+t.Id.Hex()); e == nil {
+				v, e := firstVal(id, ft)
 				if e != nil {
 					continue
 				}
 				cv.add(v)
-				rd.FileID = t.Id
+				r.FileID = t.Id
 				break
 			}
 		}
 	}
 	if cv.val == nil {
-		return nil, fmt.Errorf("no chartvals for %s", rd.Format())
+		return nil, fmt.Errorf("no chartvals for %s", r.Format())
 	}
 	return cv.chartVal(), nil
 }
 
-func lastInfo(sid bson.ObjectId, rd *ResultDesc) (*project.File, bson.ObjectId, error) {
+func lastInfo(sid bson.ObjectId, r *context.Result) (*project.File, bson.ObjectId, error) {
 	fs, e := db.Files(bson.M{db.SUBID: sid, db.TYPE: project.SRC}, bson.M{db.DATA: 0}, 0, "-"+db.TIME)
 	if e != nil {
 		return nil, "", e
@@ -316,165 +432,21 @@ func lastInfo(sid bson.ObjectId, rd *ResultDesc) (*project.File, bson.ObjectId, 
 		return nil, "", fmt.Errorf("no src files in submission %s", sid.Hex())
 	}
 	var ts []*project.File
-	if rd.Name != "" && db.Contains(db.TESTS, bson.M{db.NAME: rd.Name + ".java", db.TYPE: junit.USER}) {
-		ts, e = db.Files(bson.M{db.SUBID: sid, db.NAME: rd.Name + ".java", db.TYPE: project.TEST}, bson.M{db.DATA: 0}, 0, "-"+db.TIME)
+	if r.Name != "" && db.Contains(db.TESTS, bson.M{db.NAME: r.Name + ".java", db.TYPE: junit.USER}) {
+		ts, e = db.Files(bson.M{db.SUBID: sid, db.NAME: r.Name + ".java", db.TYPE: project.TEST}, bson.M{db.DATA: 0}, 0, "-"+db.TIME)
 		if e != nil {
 			return nil, "", e
 		}
 	}
 	for i, f := range fs {
-		if id, e := convert.GetId(fs[i].Results, rd.Raw()); e == nil {
+		if id, e := convert.GetId(fs[i].Results, r.Raw()); e == nil {
 			return fs[i], id, nil
 		}
 		for _, t := range ts {
-			if id, e := convert.GetId(f.Results, rd.Raw()+"-"+t.Id.Hex()); e == nil {
+			if id, e := convert.GetId(f.Results, r.Raw()+"-"+t.Id.Hex()); e == nil {
 				return fs[i], id, nil
 			}
 		}
 	}
-	return nil, "", fmt.Errorf("no results found for %s", rd.Format())
-}
-
-func UserChart() (ChartData, error) {
-	us, e := db.Users(nil)
-	if e != nil {
-		return nil, e
-	}
-	d := NewChartData()
-	for _, u := range us {
-		c := TypeCounts(u.Name)
-		p := map[string]interface{}{
-			"key": u.Name, "submissions": c[0],
-			"snapshots": c[1], "launches": c[2],
-		}
-		d = append(d, p)
-	}
-	return d, nil
-}
-
-func ProjectChart() (ChartData, error) {
-	ps, e := db.Projects(bson.M{}, nil)
-	if e != nil {
-		return nil, e
-	}
-	d := NewChartData()
-	for _, p := range ps {
-		c := TypeCounts(p.Id)
-		v := map[string]interface{}{
-			"key": p.Name, "submissions": c[0],
-			"snapshots": c[1], "launches": c[2],
-			"id": p.Id,
-		}
-		d = append(d, v)
-	}
-	return d, nil
-}
-
-func TypeCounts(id interface{}) []int {
-	c := []int{0, 0, 0}
-	var m string
-	switch id.(type) {
-	case string:
-		m = db.USER
-	case bson.ObjectId:
-		m = db.PROJECTID
-	default:
-		return c
-	}
-	ss, err := db.Submissions(bson.M{m: id}, nil)
-	if err != nil {
-		return c
-	}
-	c[0] = len(ss)
-	if c[0] == 0 {
-		return c
-	}
-	for _, s := range ss {
-		if sc, e := fileCount(s.Id, project.SRC); e == nil {
-			c[1] += sc
-		}
-		if l, e := fileCount(s.Id, project.LAUNCH); e == nil {
-			c[2] += l
-		}
-	}
-	return c
-}
-
-//Add inserts new coordinates into data used to display a chart.
-func (c *Chart) Add(t int64, vs []*tool.ChartVal) {
-	if len(vs) == 0 {
-		return
-	}
-	x := util.Round(float64(t-c.start)/1000.0, 2)
-	for i, v := range vs {
-		p := map[string]interface{}{
-			"x": x, "y": v.Y, "key": c.Key(v.Name), "name": v.Name,
-			"groupid": c.id, "user": c.user, "title": c.user + " \u2192 " + c.result,
-			"created": c.start, "time": t, "pos": i,
-		}
-		c.Data = append(c.Data, p)
-	}
-}
-
-func (c *Chart) Key(n string) string {
-	k, ok := c.keys[n]
-	if ok {
-		return k
-	}
-	c.keys[n] = bson.NewObjectId().Hex()
-	return c.keys[n]
-}
-
-func (c *Chart) Len() int {
-	return len(c.Data)
-}
-func (c *Chart) Swap(i, j int) {
-	c.Data[i], c.Data[j] = c.Data[j], c.Data[i]
-}
-func (c *Chart) Less(i, j int) bool {
-	if c.Data[i]["time"] == c.Data[j]["time"] {
-		pi, ok := c.Data[i]["pos"].(int)
-		if !ok {
-			return false
-		}
-		pj, ok := c.Data[j]["pos"].(int)
-		if !ok {
-			return false
-		}
-		return pi <= pj
-	}
-	ti, ok := c.Data[i]["time"].(int64)
-	if !ok {
-		return false
-	}
-	tj, ok := c.Data[j]["time"].(int64)
-	if !ok {
-		return true
-	}
-	return ti <= tj
-}
-
-//NewChart initialises new chart data.
-func NewChart(s *project.Submission, rd *ResultDesc) *Chart {
-	return &Chart{
-		keys:   make(map[string]string),
-		user:   s.User,
-		id:     bson.NewObjectId().Hex(),
-		result: rd.Format(),
-		start:  s.Time,
-		Data:   NewChartData(),
-	}
-}
-
-func NewChartData() ChartData {
-	return make(ChartData, 0, 1000)
-}
-
-func hasChart(cs ...interface{}) bool {
-	for _, c := range cs {
-		if _, ok := c.(tool.ChartResult); ok {
-			return true
-		}
-	}
-	return false
+	return nil, "", fmt.Errorf("no results found for %s", r.Format())
 }

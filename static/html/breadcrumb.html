@@ -1,43 +1,40 @@
 {{define "breadcrumb"}}
 <ul class="breadcrumb">
-  {{if .ctx.Browse.Level.Is "home"}} 
-  <li class="active">Home</li>
-  {{else}}
-  <li><a href="homeview">Home</a></li>
-  {{if .ctx.Browse.Level.Is "projects"}}
-  <li class="active">Projects</li>
-  {{else if .ctx.Browse.Level.Is "users"}}
-  <li class="active">Users</li>
-  {{else}}
-  {{if .ctx.Browse.IsUser}}
-  <li>
-    <a href="userresult">Users</a>
-  </li>
-  {{else}}
-  <li> 
-    <a href="projectresult">Projects</a>
-  </li>
-  {{end}}
-  {{if .ctx.Browse.Level.Is "submissions"}}
-  <li class="active">
-    Submissions
-  </li>
-  {{else}}
-  <li><a href="getsubmissions">Submissions</a></li>
-  {{if .ctx.Browse.Level.Is "files"}}
-  <li class="active">
-    Files
-  </li>
-  {{else}}
-  <li><a href="getfiles">Files</a></li>
-  {{end}}
-  {{if .ctx.Browse.Level.Is "analysis"}}
-  <li class="active">
-    Tools
-  </li>
-  {{end}}
-  {{end}}
-  {{end}}
-  {{end}}
+    {{if .ctx.Browse.Level.Is "home"}}
+    <li class="active">Home</li>
+    {{else}}
+    <li><a href="homeview">Home</a>
+    </li>
+    {{if .ctx.Browse.Level.Is "projects"}}
+    <li class="active">Projects</li>
+    {{else if .ctx.Browse.Level.Is "users"}}
+    <li class="active">Users</li>
+    {{else}} {{if .ctx.Browse.IsUser}}
+    <li>
+        <a href="userresult">Users</a>
+    </li>
+    {{else}}
+    <li>
+        <a href="projectresult">Projects</a>
+    </li>
+    {{end}} {{if .ctx.Browse.Level.Is "submissions"}}
+    <li class="active">
+        Submissions
+    </li>
+    {{else}}
+    <li><a href="getsubmissions">Submissions</a>
+    </li>
+    {{if .ctx.Browse.Level.Is "files"}}
+    <li class="active">
+        Files
+    </li>
+    {{else}}
+    <li><a href="getfiles">Files</a>
+    </li>
+    {{end}} {{if .ctx.Browse.Level.Is "analysis"}}
+    <li class="active">
+        Tools
+    </li>
+    {{end}} {{end}} {{end}} {{end}}
 </ul>
 {{end}}

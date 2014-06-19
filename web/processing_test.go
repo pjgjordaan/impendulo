@@ -44,7 +44,7 @@ func testSnapshots(s spec, t *testing.T) {
 			t.Error(err)
 		}
 	}
-	files, err := Snapshots(s.id, s.name)
+	files, err := db.Snapshots(s.id, s.name)
 	if err != nil {
 		t.Error(err)
 	}

@@ -1,52 +1,45 @@
-{{define "view"}}
-{{template "breadcrumb" .}}
+{{define "view"}} {{template "breadcrumb" .}}
 <ul class="nav nav-pills">
-  <li class="active"><a>Table</a></li>
-  <li><a  href="userchart">Chart</a></li>
+    <li class="active"><a>Table</a>
+    </li>
+    <li><a href="userchart">Chart</a>
+    </li>
 </ul>
 <table id="table-users" class="table table-hover table-striped tablesorter">
-  <thead>
-    <tr class="info">
-      <th>User</th>
-      <th>Submissions</th>
-      <th>Snapshots</th>
-      <th>Launches</th>
-    </tr>
-  </thead>
-  <tbody data-provides="rowlink" >
-     {{$users := users}}
-     {{range $users}}
-     {{$counts := typeCounts .}}
-     <tr>
-       <td>
-	 <a class="rowlink" href="getsubmissions?user-id={{.}}">
+    <thead>
+        <tr class="info">
+            <th>User</th>
+            <th>Submissions</th>
+            <th>Snapshots</th>
+            <th>Launches</th>
+        </tr>
+    </thead>
+    <tbody data-link="row" class="rowlink">
+        {{$users := users}} {{range $users}} {{$counts := typeCounts .}}
+        <tr>
+            <td>
+                <a href="getsubmissions?user-id={{.}}">
 	   {{.}}
 	 </a>
-       </td>
-       <td>
-	 <a class="rowlink" href="getsubmissions?user-id={{.}}">
-	   {{index $counts 0}}
-	 </a>
-       </td>
-       <td>
-	 <a class="rowlink" href="getsubmissions?user-id={{.}}">
-	   {{index $counts 1}}
-	 </a>
-       </td>
-       <td>
-	 <a class="rowlink" href="getsubmissions?user-id={{.}}">
-	   {{index $counts 2}}
-	 </a>
-       </td>
-     </tr>
-     {{end}}
-  </tbody>
+            </td>
+            <td>
+                {{index $counts 0}}
+            </td>
+            <td>
+                {{index $counts 1}}
+            </td>
+            <td>
+                {{index $counts 2}}
+            </td>
+        </tr>
+        {{end}}
+    </tbody>
 </table>
 <script>
-$(function(){
-$("#table-users").tablesorter({
-theme : 'bootstrap'
-});
-});
+    $(function() {
+        $("#table-users").tablesorter({
+            theme: 'bootstrap'
+        });
+    });
 </script>
 {{end}}

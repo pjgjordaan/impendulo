@@ -29,7 +29,7 @@ import (
 	"fmt"
 
 	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/processing"
+	"github.com/godfried/impendulo/processor/mq"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/checkstyle"
@@ -45,6 +45,8 @@ import (
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
+	"github.com/godfried/impendulo/web/context"
+	"github.com/godfried/impendulo/web/webutil"
 	"labix.org/v2/mgo/bson"
 
 	"net/http"
@@ -63,6 +65,7 @@ var (
 		mk.NAME:         "makeconfig",
 		"none":          "noconfig",
 	}
+	JPFKeyError = errors.New("JPF key cannot be empty")
 )
 
 //toolTemplate
@@ -113,7 +116,7 @@ func tools(pid bson.ObjectId) ([]string, error) {
 		if js, e := db.JUnitTests(bson.M{db.PROJECTID: pid}, bson.M{db.NAME: 1}); e == nil {
 			for _, j := range js {
 				n, _ := util.Extension(j.Name)
-				ts = append(ts, jacoco.NAME+" \u2192 "+n, junit.NAME+" \u2192 "+n)
+				ts = append(ts, jacoco.NAME+":"+n, junit.NAME+":"+n)
 			}
 		}
 		sort.Strings(ts)
@@ -126,22 +129,22 @@ func tools(pid bson.ObjectId) ([]string, error) {
 }
 
 //CreateCheckstyle
-func CreateCheckstyle(r *http.Request, c *Context) (string, error) {
+func CreateCheckstyle(r *http.Request, c *context.C) (string, error) {
 	return "", nil
 }
 
 //CreateFindbugs
-func CreateFindbugs(r *http.Request, c *Context) (string, error) {
+func CreateFindbugs(r *http.Request, c *context.C) (string, error) {
 	return "", nil
 }
 
 //CreateMake
-func CreateMake(r *http.Request, c *Context) (string, error) {
+func CreateMake(r *http.Request, c *context.C) (string, error) {
 	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
 		return "Could not read project id.", e
 	}
-	_, d, e := ReadFormFile(r, "makefile")
+	_, d, e := webutil.File(r, "makefile")
 	if e != nil {
 		return "Could not read Makefile.", e
 	}
@@ -153,7 +156,7 @@ func CreateMake(r *http.Request, c *Context) (string, error) {
 }
 
 //CreateJUnit adds a new JUnit test for a given project.
-func CreateJUnit(r *http.Request, c *Context) (string, error) {
+func CreateJUnit(r *http.Request, c *context.C) (string, error) {
 	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
 		return "Could not read project id.", e
@@ -166,14 +169,14 @@ func CreateJUnit(r *http.Request, c *Context) (string, error) {
 	if e != nil {
 		return e.Error(), e
 	}
-	n, b, e := ReadFormFile(r, "test")
+	n, b, e := webutil.File(r, "test")
 	if e != nil {
 		return "Could not read JUnit file.", e
 	}
 	//A test does not always need data files.
 	var d []byte
 	if r.FormValue("data-check") == "true" {
-		_, d, e = ReadFormFile(r, "data")
+		_, d, e = webutil.File(r, "data")
 		if e != nil {
 			return "Could not read data file.", e
 		}
@@ -184,7 +187,7 @@ func CreateJUnit(r *http.Request, c *Context) (string, error) {
 }
 
 //CreateJPF replaces a project's JPF configuration with a new, provided configuration.
-func CreateJPF(r *http.Request, c *Context) (string, error) {
+func CreateJPF(r *http.Request, c *context.C) (string, error) {
 	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
 		return "Could not read project id.", e
@@ -210,7 +213,7 @@ func CreateJPF(r *http.Request, c *Context) (string, error) {
 }
 
 func readTarget(r *http.Request) (*tool.Target, error) {
-	s, e := GetString(r, "target")
+	s, e := webutil.String(r, "target")
 	if e != nil {
 		return nil, e
 	}
@@ -228,13 +231,13 @@ func readTarget(r *http.Request) (*tool.Target, error) {
 func readProperties(r *http.Request) (map[string][]string, error) {
 	p := make(map[string][]string)
 	//Read configured listeners and search.
-	if al, e := GetStrings(r, "listeners"); e == nil {
+	if al, e := webutil.Strings(r, "listeners"); e == nil {
 		p["listener"] = al
 	}
-	if s, e := GetString(r, "search"); e == nil {
+	if s, e := webutil.String(r, "search"); e == nil {
 		p["search.class"] = []string{s}
 	}
-	o, e := GetString(r, "other")
+	o, e := webutil.String(r, "other")
 	if e != nil {
 		return p, nil
 	}
@@ -259,7 +262,7 @@ func readProperty(line string, props map[string][]string) error {
 	}
 	k, v := ps[0], ps[1]
 	if len(k) == 0 {
-		return errors.New("JPF key cannot be empty")
+		return JPFKeyError
 	}
 	if len(v) == 0 {
 		return fmt.Errorf("JPF value for %s cannot be empty", k)
@@ -283,12 +286,12 @@ func readProperty(line string, props map[string][]string) error {
 }
 
 //CreatePMD creates PMD rules for a project from a provided list.
-func CreatePMD(r *http.Request, c *Context) (string, error) {
+func CreatePMD(r *http.Request, c *context.C) (string, error) {
 	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
 		return "Could not read project id.", e
 	}
-	s, e := GetStrings(r, "rules")
+	s, e := webutil.Strings(r, "rules")
 	if e != nil {
 		return "Could not read rules.", e
 	}
@@ -305,53 +308,64 @@ func CreatePMD(r *http.Request, c *Context) (string, error) {
 //RunTools runs a tool on submissions in a given project.
 //Previous results are deleted if the user has specified that the tool
 //should be rerun on all files.
-func RunTools(r *http.Request, c *Context) (string, error) {
+func RunTools(r *http.Request, c *context.C) (string, error) {
 	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
 		return "Could not read project id.", e
 	}
-	ts, e := GetStrings(r, "tools")
+	ts, e := webutil.Strings(r, "tools")
 	if e != nil {
 		return "Could not read tool.", e
 	}
 	all, e := tools(pid)
 	allTools := e == nil && len(all) == len(ts)
-	us, e := GetStrings(r, "users")
+	us, e := webutil.Strings(r, "users")
 	if e != nil {
-		return "Could not read tool.", e
+		return "Could not read users.", e
 	}
 	ss, e := db.Submissions(bson.M{db.PROJECTID: pid, db.USER: bson.M{db.IN: us}}, bson.M{db.ID: 1})
 	if e != nil {
 		return "Could not retrieve submissions.", e
 	}
-	ct := make([]string, 0, len(ts))
-	bt := make([]string, 0, len(ts))
-	for _, t := range ts {
-		if isChildTool(t, pid) {
-			ct = append(ct, t)
-		} else {
-			bt = append(bt, t)
-		}
-	}
-	redoSubmissions(ss, bt, ct, r.FormValue("runempty-check") != "true", allTools)
+	redoSubmissions(ss, ts, r.FormValue("runempty-check") != "true", allTools)
 	return "Successfully started running tools on submissions.", nil
 }
 
-//isChildTool
-func isChildTool(n string, pid bson.ObjectId) bool {
-	return n == jacoco.NAME || db.Contains(db.TESTS, bson.M{db.PROJECTID: pid, db.NAME: n})
+func addUserTools(sid bson.ObjectId, tools []string) []string {
+	ts, e := db.Files(bson.M{db.SUBID: sid, db.TYPE: project.TEST}, bson.M{db.ID: 1, db.NAME: 1}, 0)
+	if e != nil {
+		return tools
+	}
+	newTools := make([]string, 0, len(ts)*len(tools))
+	for _, tool := range tools {
+		if !isUserTool(tool) {
+			newTools = append(newTools, tool)
+			continue
+		}
+		n := strings.Split(tool, ":")[1] + ".java"
+		for _, t := range ts {
+			if n != t.Name {
+				continue
+			}
+			newTools = append(newTools, tool+"-"+t.Id.Hex())
+		}
+	}
+	return newTools
+}
+
+func isUserTool(t string) bool {
+	if !strings.Contains(t, ":") {
+		return false
+	}
+	return db.Contains(db.TESTS, bson.M{db.NAME: strings.Split(t, ":")[1] + ".java", db.TYPE: junit.USER})
 }
 
 //redoSubmissions
-func redoSubmissions(submissions []*project.Submission, tools, childTools []string, allFiles, allTools bool) {
+func redoSubmissions(submissions []*project.Submission, tools []string, allFiles, allTools bool) {
 	for _, s := range submissions {
-		var srcs []*project.File
-		var e error
-		if len(childTools) > 0 {
-			srcs, e = db.Files(bson.M{db.SUBID: s.Id, db.TYPE: project.SRC}, bson.M{db.ID: 1}, 0)
-			if e != nil {
-				util.Log(e)
-			}
+		var ts []string
+		if !allTools {
+			ts = addUserTools(s.Id, tools)
 		}
 		fs, e := db.Files(bson.M{db.SUBID: s.Id}, bson.M{db.DATA: 0}, 0)
 		if e != nil {
@@ -362,13 +376,10 @@ func redoSubmissions(submissions []*project.Submission, tools, childTools []stri
 			if allTools {
 				runAllTools(f, allFiles)
 			} else {
-				runTools(f, tools, allFiles)
-				if f.Type == project.TEST && len(childTools) > 0 {
-					runChildTools(f, srcs, childTools, allFiles)
-				}
+				runTools(f, ts, allFiles)
 			}
 		}
-		if e = processing.RedoSubmission(s.Id); e != nil {
+		if e = mq.RedoSubmission(s.Id); e != nil {
 			util.Log(e)
 		}
 	}
@@ -377,12 +388,12 @@ func redoSubmissions(submissions []*project.Submission, tools, childTools []stri
 //runAllTools
 func runAllTools(f *project.File, allFiles bool) {
 	for r, s := range f.Results {
-		rid, isId := s.(bson.ObjectId)
-		if !allFiles && isId {
+		rid, e := convert.Id(s)
+		if !allFiles && e == nil {
 			continue
 		}
 		delete(f.Results, r)
-		if !isId {
+		if e != nil {
 			continue
 		}
 		if e := db.RemoveById(db.RESULTS, rid); e != nil {
@@ -418,35 +429,8 @@ func runTools(f *project.File, ts []string, allFiles bool) {
 	}
 }
 
-//runChildTools
-func runChildTools(test *project.File, srcs []*project.File, childTools []string, allFiles bool) {
-	for _, s := range srcs {
-		for _, t := range childTools {
-			k := t + "-" + s.Id.Hex()
-			v, ok := test.Results[k]
-			if !ok {
-				continue
-			}
-			rid, isId := v.(bson.ObjectId)
-			if !allFiles && isId {
-				continue
-			}
-			delete(test.Results, k)
-			if !isId {
-				continue
-			}
-			if e := db.RemoveById(db.RESULTS, rid); e != nil {
-				util.Log(e)
-			}
-		}
-	}
-	if e := db.Update(db.FILES, bson.M{db.ID: test.Id}, bson.M{db.SET: bson.M{db.RESULTS: test.Results}}); e != nil {
-		util.Log(e)
-	}
-}
-
 //GetResult retrieves a DisplayResult for a given file and result name.
-func GetResult(rd *ResultDesc, fileId bson.ObjectId) (tool.DisplayResult, error) {
+func GetResult(r *context.Result, fileId bson.ObjectId) (tool.DisplayResult, error) {
 	m := bson.M{db.ID: fileId}
 	f, err := db.File(m, nil)
 	if err != nil {
@@ -456,7 +440,7 @@ func GetResult(rd *ResultDesc, fileId bson.ObjectId) (tool.DisplayResult, error)
 	if err != nil {
 		return nil, err
 	}
-	switch rd.Type {
+	switch r.Type {
 	case tool.CODE:
 		p, err := db.Project(bson.M{db.ID: s.ProjectId}, nil)
 		if err != nil {
@@ -477,9 +461,9 @@ func GetResult(rd *ResultDesc, fileId bson.ObjectId) (tool.DisplayResult, error)
 		}
 		return r, nil
 	default:
-		ival, ok := f.Results[rd.Raw()]
+		ival, ok := f.Results[r.Raw()]
 		if !ok {
-			return tool.NewErrorResult(tool.NORESULT, rd.Format()), nil
+			return tool.NewErrorResult(tool.NORESULT, r.Format()), nil
 		}
 		switch v := ival.(type) {
 		case bson.ObjectId:
@@ -487,10 +471,10 @@ func GetResult(rd *ResultDesc, fileId bson.ObjectId) (tool.DisplayResult, error)
 			return db.DisplayResult(bson.M{db.ID: v}, nil)
 		case string:
 			//Error, so create new error result.
-			return tool.NewErrorResult(v, rd.Format()), nil
+			return tool.NewErrorResult(v, r.Format()), nil
 		}
 	}
-	return tool.NewErrorResult(tool.NORESULT, rd.Format()), nil
+	return tool.NewErrorResult(tool.NORESULT, r.Format()), nil
 }
 
 //validId
@@ -501,4 +485,18 @@ func validId(rs ...interface{}) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("no valid result found")
+}
+
+func getTestType(r *http.Request) (junit.Type, error) {
+	v := strings.ToLower(r.FormValue("testtype"))
+	switch v {
+	case "default":
+		return junit.DEFAULT, nil
+	case "admin":
+		return junit.ADMIN, nil
+	case "user":
+		return junit.USER, nil
+	default:
+		return -1, fmt.Errorf("unsupported test type %s", v)
+	}
 }

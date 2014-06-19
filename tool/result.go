@@ -146,6 +146,15 @@ var (
 	COMPILE_SUCCESS = []byte("Compiled successfully")
 )
 
+func HasChart(cs ...interface{}) bool {
+	for _, c := range cs {
+		if _, ok := c.(ChartResult); ok {
+			return true
+		}
+	}
+	return false
+}
+
 //NewErrorResult creates an ErrorResult. There are 3 types:
 //Timeout, No result and error.
 func NewErrorResult(tipe, name string) *ErrorResult {

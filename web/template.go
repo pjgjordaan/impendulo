@@ -30,7 +30,7 @@ import (
 	"fmt"
 
 	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/processing"
+	"github.com/godfried/impendulo/processor/mq"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/user"
@@ -55,7 +55,7 @@ type (
 var (
 	funcs = template.FuncMap{
 		"databases":          db.Databases,
-		"projectName":        projectName,
+		"projectName":        db.ProjectName,
 		"date":               util.Date,
 		"setBreaks":          func(s string) template.HTML { return template.HTML(setBreaks(s)) },
 		"address":            func(i interface{}) string { return fmt.Sprint(&i) },
@@ -68,22 +68,22 @@ var (
 		"submissionLang":     submissionLang,
 		"sub":                func(id bson.ObjectId) (*project.Submission, error) { return db.Submission(bson.M{db.ID: id}, nil) },
 		"submissionCount":    submissionCount,
-		"getBusy":            processing.GetStatus,
+		"getBusy":            mq.GetStatus,
 		"slice":              slice,
 		"adjustment":         adjustment,
 		"tools":              tools,
 		"configtools":        configTools,
 		"unescape":           html.UnescapeString,
 		"escape":             url.QueryEscape,
-		"snapshots":          func(id bson.ObjectId) (int, error) { return fileCount(id, project.SRC) },
-		"launches":           func(id bson.ObjectId) (int, error) { return fileCount(id, project.LAUNCH) },
-		"usertests":          func(id bson.ObjectId) (int, error) { return fileCount(id, project.TEST) },
+		"snapshots":          func(id bson.ObjectId) (int, error) { return db.FileCount(id, project.SRC) },
+		"launches":           func(id bson.ObjectId) (int, error) { return db.FileCount(id, project.LAUNCH) },
+		"usertests":          func(id bson.ObjectId) (int, error) { return db.FileCount(id, project.TEST) },
 		"html":               func(s string) template.HTML { return template.HTML(s) },
 		"string":             func(b []byte) string { return string(bytes.TrimSpace(b)) },
 		"args":               args,
 		"insert":             insert,
 		"isError":            isError,
-		"hasChart":           hasChart,
+		"hasChart":           tool.HasChart,
 		"projectSubmissions": projectSubmissions,
 		"userSubmissions":    userSubmissions,
 		"fileinfos":          _fileinfos,
@@ -91,14 +91,11 @@ var (
 		"langProjects": func(l string) ([]*project.Project, error) {
 			return db.Projects(bson.M{db.LANG: l}, nil, db.NAME)
 		},
-		"resultNames": func(sid bson.ObjectId, n string) map[string]map[string][]interface{} {
-			rs, _ := db.ResultNames(sid, n)
-			return rs
-		},
+		"resultNames":   db.ResultNames,
 		"users":         func() ([]string, error) { return db.Usernames(nil) },
 		"skeletons":     skeletons,
 		"overviewChart": overviewChart,
-		"typeCounts":    TypeCounts,
+		"typeCounts":    db.TypeCounts,
 		"editables":     func() []string { return []string{"Project", "User"} },
 		"permissions":   user.Permissions,
 		"file":          func(id bson.ObjectId) (*project.File, error) { return db.File(bson.M{db.ID: id}, nil) },
@@ -116,8 +113,9 @@ var (
 		"sortFiles": sortFiles,
 		"project":   func(id bson.ObjectId) (*project.Project, error) { return db.Project(bson.M{db.ID: id}, nil) },
 	}
-	templateDir   string
-	baseTemplates []string
+	templateDir      string
+	baseTemplates    []string
+	InvalidArgsError = errors.New("invalid args call")
 )
 
 func _fileinfos(sid bson.ObjectId) ([]*db.FileInfo, error) {
@@ -237,7 +235,7 @@ func isError(i interface{}) bool {
 //contain an even number of items.
 func args(values ...interface{}) (Args, error) {
 	if len(values)%2 != 0 {
-		return nil, errors.New("Invalid args call.")
+		return nil, InvalidArgsError
 	}
 	a := make(Args, len(values)/2)
 	for i := 0; i < len(values); i += 2 {
@@ -254,11 +252,6 @@ func args(values ...interface{}) (Args, error) {
 func insert(a Args, k string, v interface{}) Args {
 	a[k] = v
 	return a
-}
-
-//fileCount
-func fileCount(sid bson.ObjectId, t project.Type) (int, error) {
-	return db.Count(db.FILES, bson.M{db.SUBID: sid, db.TYPE: t})
 }
 
 //submissionCount

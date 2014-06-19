@@ -25,6 +25,8 @@
 package web
 
 import (
+	"bytes"
+
 	"code.google.com/p/gorilla/sessions"
 
 	"fmt"
@@ -32,6 +34,7 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/web/context"
 
 	"net/http"
 	"testing"
@@ -66,17 +69,6 @@ func TestRegister(t *testing.T) {
 	testUserFunc(t, Register, requests)
 }
 
-func TestDeleteUsers(t *testing.T) {
-	requests := []postHolder{
-		postHolder{"/deleteusers?user-id=user", true},
-		postHolder{"/deleteusers?user-id=user", false},
-		postHolder{"/deleteusers?user-id=", false},
-		postHolder{"/password=password", false},
-		postHolder{"/deleteusers?user-id=aaaa", false},
-	}
-	testUserFunc(t, DeleteUsers, requests)
-}
-
 func testUserFunc(t *testing.T, f Poster, requests []postHolder) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
@@ -90,7 +82,7 @@ func testUserFunc(t *testing.T, f Poster, requests []postHolder) {
 	}
 	store := sessions.NewCookieStore(auth, enc)
 	for _, ph := range requests {
-		r, e := http.NewRequest("POST", ph.url, nil)
+		r, e := http.NewRequest("POST", ph.url, new(bytes.Buffer))
 		if e != nil {
 			t.Error(e)
 		}
@@ -106,11 +98,10 @@ func testUserFunc(t *testing.T, f Poster, requests []postHolder) {
 	}
 }
 
-func createContext(req *http.Request, store sessions.Store) (ctx *Context, err error) {
-	sess, err := store.Get(req, "test")
-	if err == nil {
-		ctx = LoadContext(sess)
+func createContext(r *http.Request, store sessions.Store) (*context.C, error) {
+	s, e := store.Get(r, "test")
+	if e != nil {
+		return nil, e
 	}
-	return
-
+	return context.Load(s), nil
 }

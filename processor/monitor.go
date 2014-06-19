@@ -22,110 +22,30 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//Package processing provides functionality for running a submission and its snapshots
-//through the Impendulo tool suite.
-package processing
+package processor
 
 import (
-	"fmt"
-
+	"github.com/godfried/impendulo/processor/mq"
+	"github.com/godfried/impendulo/processor/request"
+	"github.com/godfried/impendulo/processor/status"
 	"github.com/godfried/impendulo/util"
 )
 
 type (
 
-	//Status is used to indicate a change in the files or
-	//submissions being processed. It is also used to retrieve the current
-	//number of files and submissions being processed.
-	Status struct {
-		FileCount   int
-		Submissions map[string]map[string]util.E
-	}
-
 	//Monitor is used to keep track of and change Impendulo's processing
 	//status.
 	Monitor struct {
-		statusChan              chan Status
-		requestChan             chan Request
+		statusChan              chan status.S
+		requestChan             chan *request.R
 		idleChan                chan util.E
-		loader, waiter, changer *MessageHandler
+		loader, waiter, changer *mq.MessageHandler
 	}
 )
 
 var (
 	monitor *Monitor
 )
-
-func NewStatus() *Status {
-	return &Status{FileCount: 0, Submissions: make(map[string]map[string]util.E)}
-}
-
-func (s *Status) Update(r Request) error {
-	switch r.Type {
-	case FILE_ADD:
-		return s.addFile(r)
-	case FILE_REMOVE:
-		return s.removeFile(r)
-	case SUBMISSION_START:
-		return s.addSubmission(r)
-	case SUBMISSION_STOP:
-		return s.removeSubmission(r)
-	default:
-		return fmt.Errorf("unknown request type %d", r.Type)
-	}
-}
-
-func (s *Status) removeSubmission(r Request) error {
-	sk := r.SubId.Hex()
-	if fm, ok := s.Submissions[sk]; !ok {
-		return fmt.Errorf("submission %s does not exist", sk)
-	} else if len(fm) > 0 {
-		return fmt.Errorf("submission %s still has active files", sk)
-	}
-	delete(s.Submissions, sk)
-	return nil
-}
-
-func (s *Status) addSubmission(r Request) error {
-	sk := r.SubId.Hex()
-	if _, ok := s.Submissions[sk]; ok {
-		return fmt.Errorf("submission %s already exists", sk)
-	}
-	s.Submissions[sk] = make(map[string]util.E)
-	return nil
-}
-
-func (s *Status) addFile(r Request) error {
-	sk, fk := r.SubId.Hex(), r.FileId.Hex()
-	fm, ok := s.Submissions[sk]
-	if !ok {
-		return fmt.Errorf("submission %s does not exist for file %s", sk, fk)
-	}
-	if _, ok = fm[fk]; ok {
-		return fmt.Errorf("file %s exists for submission %s", fk, sk)
-	}
-	fm[fk] = util.E{}
-	s.FileCount++
-	return nil
-}
-
-func (s *Status) removeFile(r Request) error {
-	sk, fk := r.SubId.Hex(), r.FileId.Hex()
-	fm, ok := s.Submissions[sk]
-	if !ok {
-		return fmt.Errorf("submission %s does not exist for file %s", sk, fk)
-	}
-	if _, ok = fm[fk]; !ok {
-		return fmt.Errorf("file %s does not exist for submission %s", fk, sk)
-	}
-	delete(fm, fk)
-	s.FileCount--
-	return nil
-}
-
-func (s *Status) Idle() bool {
-	return len(s.Submissions) == 0
-}
 
 //MonitorStatus begins keeping track of Impendulo's current processing status.
 func MonitorStatus() error {
@@ -144,18 +64,18 @@ func MonitorStatus() error {
 
 //NewMonitor
 func NewMonitor() (*Monitor, error) {
-	sc := make(chan Status)
-	rc := make(chan Request)
+	sc := make(chan status.S)
+	rc := make(chan *request.R)
 	ic := make(chan util.E)
-	c, e := NewChanger(rc)
+	c, e := mq.NewChanger(rc)
 	if e != nil {
 		return nil, e
 	}
-	w, e := NewWaiter(ic)
+	w, e := mq.NewWaiter(ic)
 	if e != nil {
 		return nil, e
 	}
-	l, e := NewLoader(sc)
+	l, e := mq.NewLoader(sc)
 	if e != nil {
 		return nil, e
 	}
@@ -165,15 +85,10 @@ func NewMonitor() (*Monitor, error) {
 //Monitor begins a new monitoring session for this Monitor.
 //It handles status updates and requests.
 func (m *Monitor) Monitor() {
-	h := func(mh *MessageHandler) {
-		if e := mh.Handle(); e != nil {
-			util.Log(e, mh.Shutdown())
-		}
-	}
-	go h(m.changer)
-	go h(m.loader)
-	go h(m.waiter)
-	s := NewStatus()
+	go mq.H(m.changer)
+	go mq.H(m.loader)
+	go mq.H(m.waiter)
+	s := status.New()
 	waiting := 0
 	for {
 		if waiting > 0 && s.Idle() {

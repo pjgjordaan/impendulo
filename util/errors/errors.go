@@ -51,6 +51,10 @@ type (
 	Writer struct{}
 )
 
+var (
+	GoPathError = errors.New("GOPATH is not set.")
+)
+
 func (w *Writer) Write(p []byte) (int, error) {
 	return -1, errors.New("ERROR")
 }

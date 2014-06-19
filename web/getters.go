@@ -28,7 +28,10 @@ import (
 	"code.google.com/p/gorilla/pat"
 
 	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
+	"github.com/godfried/impendulo/web/context"
+	"github.com/godfried/impendulo/web/webutil"
 	"labix.org/v2/mgo/bson"
 
 	"net/http"
@@ -37,7 +40,7 @@ import (
 type (
 	//Args represents arguments passed to html templates or to template.Execute.
 	Args   map[string]interface{}
-	Getter func(r *http.Request, c *Context) (Args, string, error)
+	Getter func(r *http.Request, c *context.C) (Args, string, error)
 )
 
 var (
@@ -71,7 +74,7 @@ func GenerateGets(r *pat.Router, gets map[string]Getter, views map[string]string
 }
 
 func (g Getter) CreateGet(name, view string) Handler {
-	return func(w http.ResponseWriter, r *http.Request, c *Context) error {
+	return func(w http.ResponseWriter, r *http.Request, c *context.C) error {
 		a, m, e := g(r, c)
 		if m != "" {
 			c.AddMessage(m, e != nil)
@@ -89,7 +92,7 @@ func (g Getter) CreateGet(name, view string) Handler {
 		delete(a, "templates")
 		c.Browse.View = view
 		if l, ok := a["level"]; ok {
-			c.Browse.Level = l.(Level)
+			c.Browse.Level = l.(context.Level)
 		} else if c.Browse.View == "home" {
 			c.Browse.SetLevel(name)
 		}
@@ -99,8 +102,8 @@ func (g Getter) CreateGet(name, view string) Handler {
 }
 
 //configView loads a tool's configuration page.
-func configView(r *http.Request, c *Context) (Args, string, error) {
-	t, e := GetString(r, "tool")
+func configView(r *http.Request, c *context.C) (Args, string, error) {
+	t, e := webutil.String(r, "tool")
 	if e != nil {
 		t = "none"
 	}
@@ -108,7 +111,7 @@ func configView(r *http.Request, c *Context) (Args, string, error) {
 }
 
 //getSubmissions displays a list of submissions.
-func getSubmissions(r *http.Request, c *Context) (Args, string, error) {
+func getSubmissions(r *http.Request, c *context.C) (Args, string, error) {
 	if e := c.Browse.Update(r); e != nil {
 		return nil, "Could not load submissions.", e
 	}
@@ -132,42 +135,42 @@ func getSubmissions(r *http.Request, c *Context) (Args, string, error) {
 }
 
 //getFiles diplays information about files.
-func getFiles(r *http.Request, c *Context) (Args, string, error) {
-	e := c.Browse.Update(r)
-	if e != nil {
+func getFiles(r *http.Request, c *context.C) (Args, string, error) {
+	if e := c.Browse.Update(r); e != nil {
 		return nil, "Could not retrieve files.", e
 	}
 	f, e := _fileinfos(c.Browse.Sid)
 	if e != nil {
-		return nil, "Could not retrieve files.", e
+		util.Log(e)
+		f = []*db.FileInfo{}
 	}
-	if len(f) == 1 {
-		c.Browse.File = f[0].Name
-		return displayResult(r, c)
+	if len(f) != 1 {
+		return Args{"fileInfo": f, "templates": []string{"fileresult"}}, "", nil
 	}
-	return Args{"fileInfo": f, "templates": []string{"fileresult"}}, "", nil
+	c.Browse.File = f[0].Name
+	return displayResult(r, c)
 }
 
 //displayResult displays a tool's result.
-func displayResult(r *http.Request, c *Context) (Args, string, error) {
+func displayResult(r *http.Request, c *context.C) (Args, string, error) {
 	a, e := _displayResult(r, c)
 	if e != nil {
 		return nil, "Could not load results.", e
 	}
-	a["level"] = ANALYSIS
+	a["level"] = context.ANALYSIS
 	return a, "", nil
 }
 
-func _displayResult(r *http.Request, c *Context) (Args, error) {
+func _displayResult(r *http.Request, c *context.C) (Args, error) {
 	e := c.Browse.Update(r)
 	if e != nil {
 		return nil, e
 	}
-	fs, e := Snapshots(c.Browse.Sid, c.Browse.File)
+	fs, e := db.Snapshots(c.Browse.Sid, c.Browse.File)
 	if e != nil {
 		return nil, e
 	}
-	cf, e := getFile(fs[c.Browse.Current].Id)
+	cf, e := db.File(bson.M{db.ID: fs[c.Browse.Current].Id}, bson.M{db.NAME: 1, db.TIME: 1})
 	if e != nil {
 		return nil, e
 	}
@@ -179,7 +182,7 @@ func _displayResult(r *http.Request, c *Context) (Args, error) {
 	if e != nil {
 		return nil, e
 	}
-	nf, e := getFile(fs[c.Browse.Next].Id)
+	nf, e := db.File(bson.M{db.ID: fs[c.Browse.Next].Id}, bson.M{db.NAME: 1, db.TIME: 1})
 	if e != nil {
 		return nil, e
 	}
@@ -199,7 +202,7 @@ func _displayResult(r *http.Request, c *Context) (Args, error) {
 	}, nil
 }
 
-func submissionsChartView(r *http.Request, c *Context) (Args, string, error) {
+func submissionsChartView(r *http.Request, c *context.C) (Args, string, error) {
 	if e := c.Browse.Update(r); e != nil {
 		return nil, "could not update state", e
 	}

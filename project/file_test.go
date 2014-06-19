@@ -31,10 +31,11 @@ import (
 
 func TestParseName(t *testing.T) {
 	correctFile := &File{
-		Name:    "File.java",
-		Time:    int64(1256030454696),
-		Type:    SRC,
-		Package: "za.ac.sun.cs",
+		Name:     "File.java",
+		Time:     int64(1256030454696),
+		Type:     SRC,
+		Package:  "za.ac.sun.cs",
+		Comments: []*Comment{},
 	}
 	correct := "za_ac_sun_cs_File.java_1256030454696_123_c"
 	incorrect := "za_ac_sun_cs_File.java_123_c"

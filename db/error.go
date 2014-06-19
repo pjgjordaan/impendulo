@@ -25,6 +25,7 @@
 package db
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -48,6 +49,10 @@ type (
 		err     error
 		matcher interface{}
 	}
+)
+
+var (
+	DuplicateFile = errors.New("db already contains this file")
 )
 
 func (g *GetError) Error() string {

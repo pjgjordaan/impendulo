@@ -42,14 +42,15 @@ type (
 	Type string
 	//File stores a single file's data from a submission.
 	File struct {
-		Id      bson.ObjectId `bson:"_id"`
-		SubId   bson.ObjectId `bson:"subid"`
-		Name    string        `bson:"name"`
-		Package string        `bson:"package"`
-		Type    Type          `bson:"type"`
-		Time    int64         `bson:"time"`
-		Data    []byte        `bson:"data"`
-		Results bson.M        `bson:"results"`
+		Id       bson.ObjectId `bson:"_id"`
+		SubId    bson.ObjectId `bson:"subid"`
+		Name     string        `bson:"name"`
+		Package  string        `bson:"package"`
+		Type     Type          `bson:"type"`
+		Time     int64         `bson:"time"`
+		Data     []byte        `bson:"data"`
+		Results  bson.M        `bson:"results"`
+		Comments []*Comment    `bson:"comments"`
 	}
 )
 
@@ -104,12 +105,12 @@ func NewFile(sid bson.ObjectId, m map[string]interface{}, d []byte) (*File, erro
 	if e != nil {
 		return nil, e
 	}
-	return &File{Id: bson.NewObjectId(), SubId: sid, Data: d, Type: Type(tp), Name: n, Package: p, Time: t}, nil
+	return &File{Id: bson.NewObjectId(), SubId: sid, Data: d, Type: Type(tp), Name: n, Package: p, Time: t, Comments: []*Comment{}}, nil
 }
 
 //NewArchive
 func NewArchive(sid bson.ObjectId, d []byte) *File {
-	return &File{Id: bson.NewObjectId(), SubId: sid, Data: d, Type: ARCHIVE}
+	return &File{Id: bson.NewObjectId(), SubId: sid, Data: d, Type: ARCHIVE, Comments: []*Comment{}}
 }
 
 //ParseName retrieves file metadata encoded in a file name.
@@ -168,7 +169,7 @@ func ParseName(n string) (*File, error) {
 	} else {
 		return nil, fmt.Errorf("unsupported file type in name %s", n)
 	}
-	return &File{Id: bson.NewObjectId(), Type: tp, Name: fn, Package: pkg, Time: t}, nil
+	return &File{Id: bson.NewObjectId(), Type: tp, Name: fn, Package: pkg, Time: t, Comments: []*Comment{}}, nil
 }
 
 //isOutFolder

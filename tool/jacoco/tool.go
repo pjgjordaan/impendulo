@@ -30,6 +30,11 @@ const (
 	NAME = "Jacoco"
 )
 
+var (
+	ReportError = errors.New("no report created")
+	CodeError   = errors.New("no code found")
+)
+
 func New(baseDir, srcDir string, test, target *tool.Target, testId bson.ObjectId) (tool.Tool, error) {
 	rd := filepath.Join(baseDir, "target")
 	p, e := NewProject("Jacoco Coverage", srcDir, rd, test)
@@ -63,7 +68,7 @@ func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, 
 	xp := filepath.Join(t.resPath, "report", "report.xml")
 	hp := filepath.Join(t.resPath, "report", "html", target.Package, target.FullName()+".html")
 	if !util.Exists(xp) || !util.Exists(hp) {
-		return nil, errors.New("no report created")
+		return nil, ReportError
 	}
 	hf, e := os.Open(hp)
 	if e != nil {
@@ -108,7 +113,7 @@ func codeNode(d *html.Node) (*html.Node, error) {
 	}
 	f(d)
 	if pre == nil {
-		return nil, errors.New("no code found")
+		return nil, CodeError
 	}
 	return pre, nil
 }

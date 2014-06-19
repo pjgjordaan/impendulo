@@ -115,8 +115,9 @@ const (
 )
 
 var (
-	config      *Configuration
-	defaultFile string
+	config           *Configuration
+	defaultFile      string
+	UnitialisedError = errors.New("configuration not initialised")
 )
 
 func init() {
@@ -342,7 +343,7 @@ func (c *Configuration) Path(f File) (string, error) {
 //path attempts to retrieve the file's path.
 func path(f File) (string, error) {
 	if config == nil {
-		return "", errors.New("configuration not initialised")
+		return "", UnitialisedError
 	}
 	return config.Path(f)
 }

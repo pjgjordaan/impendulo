@@ -362,47 +362,42 @@ func ChartResults(fid bson.ObjectId) ([]tool.ChartResult, error) {
 func ResultNames(sid bson.ObjectId, fname string) (map[string]map[string][]interface{}, error) {
 	mr := &mgo.MapReduce{
 		Map: `function() {
-	var results = {};
-	for (n in this.results) {
-		var sa = n.split('-');
-		var o = {};
-                var sb = sa[0].split(':');
-                o.type = sb[0];
-                o.name = sb.length >= 2 ? sb[1] : "";
-                o.id = sa.length >= 2 ? sa[1] : "";                 
-                if(!(n in results)){
-			results[n] = true;
-                        emit("", o);		
-                }
+	var emitted = {};
+	for (r in this.results) {
+            if(r in emitted || r === undefined){
+               continue;		
+            }		
+            var sa = r.split('-');
+	    var sb = sa[0].split(':');
+            var t = sb[0];
+            var n = sb.length >= 2 ? sb[1] : '';
+            var id = sa.length >= 2 ? sa[1] : '';                 
+            if(t === ''){
+                continue;
+            }
+            emitted[r] = true;
+            o = {};
+            o[t] = {};
+            if(n === ''){
+                emit("", o);
+                continue;           
+            }
+            o[t][n] = [];
+            if(o.id !== ''){
+                o[t][n].push(id);
+            }
+            emit('', o);		
 	}
 	
 };`,
-		Reduce: `function(name, vals) {
+		Reduce: `function(name, values) {
         var r = {};
         var added = {};
-        for(i in vals){
-            var t = vals[i].type;
-            var n = vals[i].name;
-            var id = vals[i].id;
-            var k = t+n+id;
-            if(k in added || t === undefined){
-                continue;
-            }
-            added[k] = true;
-            if(!(t in r)){
-                r[t] = {};
-            } 
-            if(n === ""){
-                continue;
-            }
-            if(!(n in r[t])){
-                r[t][n] = [];
-            } 
-            if(id === ""){
-                continue;
-            }
-            r[t][n].push(id);
-       }		
+        for(i in values){
+            for(k in values[i]){
+                r[k] = values[i][k];
+            }    
+       }
        return r;
 };`,
 	}

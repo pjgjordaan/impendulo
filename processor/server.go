@@ -24,25 +24,20 @@
 
 //Package processing provides functionality for running a submission and its snapshots
 //through the Impendulo tool suite.
-package processing
+package processor
 
 import (
 	"container/list"
 	"fmt"
 	"runtime"
 
+	"github.com/godfried/impendulo/processor/mq"
+	"github.com/godfried/impendulo/processor/request"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 )
 
 type (
-
-	//Request is used to carry requests to process submissions and files.
-	Request struct {
-		SubId, FileId bson.ObjectId
-		Type          RequestType
-	}
-	RequestType uint8
 
 	//Helper is used to help handle a submission's files.
 	Helper struct {
@@ -56,54 +51,21 @@ type (
 	//Server is our processing server which receives and processes submissions and files.
 	Server struct {
 		maxProcs      uint
-		requestChan   chan Request
+		requestChan   chan *request.R
 		processedChan chan util.E
 		//submitter listens for messages on AMQP which indicate that a submission has started.
-		redoer, starter, submitter *MessageHandler
+		redoer, starter, submitter *mq.MessageHandler
 	}
 )
 
 const (
-	LOG_SERVER                   = "processing/server.go"
-	SUBMISSION_START RequestType = iota
-	SUBMISSION_STOP
-	FILE_ADD
-	FILE_REMOVE
+	LOG_SERVER = "processing/server.go"
 )
 
 var (
 	defaultServer *Server
 	MAX_PROCS     = max(runtime.NumCPU()-1, 1)
 )
-
-func (r RequestType) String() string {
-	switch r {
-	case SUBMISSION_START:
-		return "SUBMISSION_START REQUEST"
-	case SUBMISSION_STOP:
-		return "SUBMISSION_STOP REQUEST"
-	case FILE_ADD:
-		return "FILE_ADD REQUEST"
-	case FILE_REMOVE:
-		return "FILE_REMOVE REQUEST"
-	default:
-		return "UNKNOWN REQUEST"
-	}
-}
-
-func (r *Request) Valid() error {
-	switch r.Type {
-	case SUBMISSION_START, SUBMISSION_STOP, FILE_ADD, FILE_REMOVE:
-		if !bson.IsObjectIdHex(r.SubId.Hex()) {
-			return fmt.Errorf("Request Submission ID %s is not a valid ObjectId", r.SubId.Hex())
-		} else if !bson.IsObjectIdHex(r.FileId.Hex()) {
-			return fmt.Errorf("Request File ID %s is not a valid ObjectId", r.FileId.Hex())
-		}
-		return nil
-	default:
-		return fmt.Errorf("Unknown Request Type %d", r.Type)
-	}
-}
 
 //max is a convenience function to find the largest of two integers.
 func max(a, b int) uint {
@@ -134,7 +96,7 @@ func Shutdown() error {
 	if e := defaultServer.Shutdown(); e != nil {
 		return e
 	}
-	if e := StopProducers(); e != nil {
+	if e := mq.StopProducers(); e != nil {
 		return e
 	}
 	return ShutdownMonitor()
@@ -143,12 +105,12 @@ func Shutdown() error {
 //NewServer constructs a new Server instance which will listen on the coinfigured
 //AMQP URI.
 func NewServer(maxProcs uint) (*Server, error) {
-	rc := make(chan Request)
-	sm, st, e := NewSubmitter(rc)
+	rc := make(chan *request.R)
+	sm, st, e := mq.NewSubmitter(rc)
 	if e != nil {
 		return nil, e
 	}
-	r, e := NewRedoer(rc)
+	r, e := mq.NewRedoer(rc)
 	if e != nil {
 		return nil, e
 	}
@@ -165,9 +127,9 @@ func NewServer(maxProcs uint) (*Server, error) {
 //Serve spawns new processing routines for each submission started.
 //Added files are received here and then sent to the relevant submission goroutine.
 func (s *Server) Serve() {
-	go handleFunc(s.starter)
-	go handleFunc(s.submitter)
-	go handleFunc(s.redoer)
+	go mq.H(s.starter)
+	go mq.H(s.submitter)
+	go mq.H(s.redoer)
 	hm := make(map[bson.ObjectId]*Helper)
 	fq := make(map[bson.ObjectId]*list.List)
 	sq := list.New()
@@ -195,7 +157,7 @@ func (s *Server) Serve() {
 		case r := <-s.requestChan:
 			h, ok := hm[r.SubId]
 			switch r.Type {
-			case SUBMISSION_STOP:
+			case request.SUBMISSION_STOP:
 				if !ok {
 					util.Log(fmt.Errorf("no submission %q found to end", r.SubId))
 				} else {
@@ -206,7 +168,7 @@ func (s *Server) Serve() {
 						delete(hm, r.SubId)
 					}
 				}
-			case SUBMISSION_START:
+			case request.SUBMISSION_START:
 				if ok {
 					util.Log(fmt.Errorf("submission %s already started", r.SubId))
 				} else {
@@ -214,11 +176,11 @@ func (s *Server) Serve() {
 					sq.PushBack(r.SubId)
 					hm[r.SubId] = NewHelper(r.SubId)
 					fq[r.SubId] = list.New()
-					if e := ChangeStatus(r); e != nil {
+					if e := mq.ChangeStatus(r); e != nil {
 						util.Log(e)
 					}
 				}
-			case FILE_ADD:
+			case request.FILE_ADD:
 				if !ok {
 					util.Log(fmt.Errorf("no submission %s found for file %s", r.SubId, r.FileId))
 				} else {
@@ -230,7 +192,7 @@ func (s *Server) Serve() {
 						//Add file to queue if not.
 						fq[r.SubId].PushBack(r.FileId)
 					}
-					if e := ChangeStatus(r); e != nil {
+					if e := mq.ChangeStatus(r); e != nil {
 						util.Log(e)
 					}
 				}
@@ -285,18 +247,20 @@ func (h *Helper) SetDone() {
 //fq is the queue of files the submission has received
 //prior to the start of processing.
 func (h *Helper) Handle(onDone chan util.E, fq *list.List) {
-	p, e := NewProcessor(h.subId)
-	if e != nil {
-		util.Log(e, LOG_SERVER)
-		if e := ChangeStatus(Request{SubId: h.subId, Type: SUBMISSION_STOP}); e != nil {
-			util.Log(e)
+	defer func() {
+		if e := mq.ChangeStatus(request.StopSubmission(h.subId)); e != nil {
+			util.Log(e, LOG_SERVER)
 		}
 		onDone <- util.E{}
+	}()
+	p, e := NewFileProcessor(h.subId)
+	if e != nil {
+		util.Log(e, LOG_SERVER)
 		return
 	}
 	pc := make(chan bson.ObjectId)
 	sc := make(chan util.E)
-	go p.Process(pc, sc)
+	go p.Start(pc, sc)
 	busy := false
 	for {
 		if !busy {
@@ -309,10 +273,6 @@ func (h *Helper) Handle(onDone chan util.E, fq *list.List) {
 				//Not busy and we are done so we should finish up here.
 				sc <- util.E{}
 				<-sc
-				if e := ChangeStatus(Request{SubId: h.subId, FileId: h.subId, Type: SUBMISSION_STOP}); e != nil {
-					util.Log(e)
-				}
-				onDone <- util.E{}
 				return
 			}
 		}
@@ -322,7 +282,7 @@ func (h *Helper) Handle(onDone chan util.E, fq *list.List) {
 			fq.PushBack(fid)
 		case fid := <-pc:
 			//Processor has finished with its current file.
-			if e := ChangeStatus(Request{SubId: h.subId, FileId: fid, Type: FILE_REMOVE}); e != nil {
+			if e := mq.ChangeStatus(request.RemoveFile(fid, h.subId)); e != nil {
 				util.Log(e)
 			}
 			busy = false

@@ -22,10 +22,13 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package processing
+package mq
 
 import (
 	"encoding/json"
+
+	"github.com/godfried/impendulo/processor/request"
+	"github.com/godfried/impendulo/processor/status"
 	"github.com/godfried/impendulo/project"
 	uuid "github.com/nu7hatch/gouuid"
 	"github.com/streadway/amqp"
@@ -234,7 +237,7 @@ func StatusChanger(amqpURI string) (*Producer, error) {
 
 //ChangeStatus is used to update Impendulo's current
 //processing status.
-func ChangeStatus(r Request) error {
+func ChangeStatus(r *request.R) error {
 	if e := r.Valid(); e != nil {
 		return e
 	}
@@ -270,7 +273,7 @@ func StatusRetriever(amqpURI string) (*ReceiveProducer, error) {
 }
 
 //GetStatus retrieves the current status of impendulo's processors
-func GetStatus() (*Status, error) {
+func GetStatus() (*status.S, error) {
 	sr, e := StatusRetriever(amqpURI)
 	if e != nil {
 		return nil, e
@@ -279,7 +282,7 @@ func GetStatus() (*Status, error) {
 	if e != nil {
 		return nil, e
 	}
-	s := Status{}
+	s := status.S{}
 	if e = json.Unmarshal(r, &s); e != nil {
 		return nil, e
 	}
@@ -301,11 +304,7 @@ func AddFile(f *project.File, k string) error {
 	if !f.CanProcess() {
 		return nil
 	}
-	m, e := json.Marshal(Request{
-		FileId: f.Id,
-		SubId:  f.SubId,
-		Type:   FILE_ADD,
-	})
+	m, e := json.Marshal(request.AddFile(f.Id, f.SubId))
 	if e != nil {
 		return e
 	}
@@ -324,11 +323,7 @@ func StartSubmission(id bson.ObjectId) (string, error) {
 	if e != nil {
 		return "", e
 	}
-	m, e := json.Marshal(Request{
-		FileId: id,
-		SubId:  id,
-		Type:   SUBMISSION_START,
-	})
+	m, e := json.Marshal(request.StartSubmission(id))
 	if e != nil {
 		return "", e
 	}
@@ -350,11 +345,7 @@ func EndSubmission(id bson.ObjectId, k string) error {
 	if e != nil {
 		return e
 	}
-	m, e := json.Marshal(Request{
-		FileId: id,
-		SubId:  id,
-		Type:   SUBMISSION_STOP,
-	})
+	m, e := json.Marshal(request.StopSubmission(id))
 	if e != nil {
 		return e
 	}

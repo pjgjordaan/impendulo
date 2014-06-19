@@ -37,6 +37,9 @@ func (t *Tool) Name() string {
 	return NAME
 }
 
+func (t *Tool) AddCP(p string) {
+}
+
 func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
 	a := []string{t.cmd, "-Wall", "-Wextra", "-Wno-variadic-macros", "-pedantic", "-O0", "-o", target.Name, target.FilePath()}
 	r, e := tool.RunCommand(a, nil, 30*time.Second)

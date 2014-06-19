@@ -22,7 +22,7 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package web
+package buffer
 
 import (
 	"bytes"
@@ -31,8 +31,8 @@ import (
 )
 
 type (
-	//Buffer is a http.ResponseWriter which buffers all the data and headers.
-	HttpBuffer struct {
+	//B is a http.ResponseWriter which buffers all the data and headers.
+	B struct {
 		bytes.Buffer
 		resp    int
 		headers http.Header
@@ -40,8 +40,10 @@ type (
 	}
 )
 
+var _ http.ResponseWriter = &B{}
+
 //Header implements the Header method of http.ResponseWriter
-func (b *HttpBuffer) Header() http.Header {
+func (b *B) Header() http.Header {
 	b.once.Do(func() {
 		b.headers = make(http.Header)
 	})
@@ -49,14 +51,14 @@ func (b *HttpBuffer) Header() http.Header {
 }
 
 //WriteHeader implements the WriteHeader method of http.ResponseWriter
-func (b *HttpBuffer) WriteHeader(resp int) {
+func (b *B) WriteHeader(resp int) {
 	b.resp = resp
 }
 
 //Apply takes an http.ResponseWriter and calls the required methods on it to
 //output the buffered headers, response code, and data. It returns the number
 //of bytes written and any errors flushing.
-func (b *HttpBuffer) Apply(w http.ResponseWriter) (int, error) {
+func (b *B) Apply(w http.ResponseWriter) (int, error) {
 	if len(b.headers) > 0 {
 		h := w.Header()
 		for k, v := range b.headers {

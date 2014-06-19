@@ -112,16 +112,18 @@
 </script>
 {{end}} {{if hasChart .currentResult .nextResult}}
 <script>
-    var chartParams = {};
-    chartParams.subID = '{{.ctx.Browse.Sid.Hex}}';
-    chartParams.file = '{{$fileName}}';
-    chartParams.result = '{{$rd.Raw}}';
-    chartParams.user = '{{.ctx.Browse.Uid}}';
-    chartParams.currentTime = '{{chartTime (index .files .ctx.Browse.Current)}}';
-    chartParams.nextTime = '{{chartTime (index .files .ctx.Browse.Next)}}';
-    chartParams.src = 'comparables';
+    var chartParams = {
+        sid: '{{.ctx.Browse.Sid.Hex}}',
+        file: '{{$fileName}}',
+        result: '{{$rd.Raw}}',
+        uid: '{{.ctx.Browse.Uid}}',
+        rid: '{{validId .currentResult .nextResult}}',
+        pid: '{{.ctx.Browse.Pid.Hex}}',
+        currentTime: '{{chartTime (index .files .ctx.Browse.Current)}}',
+        nextTime: '{{chartTime (index .files .ctx.Browse.Next)}}'
+    }
 </script>
-<form class="form-inline centered" role="form" onsubmit="return ResultChart.init(chartParams)">
+<form class="form-inline centered" role="form" onsubmit="return ResultChart.load(chartParams)">
     <div class="form-group">
         <label class="sr-only" for="comparables">Submissions</label>
         <select class="form-control select-inline" name="comparables" id="comparables" multiple>
@@ -131,12 +133,6 @@
         <span class="glyphicon glyphicon-arrow-right"></span>
     </button>
 </form>
-<script type="text/javascript" language="javascript">
-    $(function() {
-        $('#comparables').multiselect();
-        Analysis.addComparables('{{validId .currentResult .nextResult}}', '{{.ctx.Browse.Pid.Hex}}', 'comparables', '{{.ctx.Browse.Uid}}');
-    });
-</script>
 <div id="chartHolder">
 </div>
 <script>

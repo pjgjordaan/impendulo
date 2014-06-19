@@ -34,37 +34,68 @@ var ResultChart = {
     getColour: null,
     init: function(vals) {
         $(function() {
-            if (vals.subID === undefined) {
-                return;
+            ResultChart.addComparables(vals.rid, vals.pid, vals.uid);
+            ResultChart.load(vals);
+        });
+    },
+
+    addComparables: function(rid, pid, user) {
+        var d = '#comparables';
+        clearMulti(d);
+        $(d).append('<optgroup id="optgroup-tests" label="Tests"></optgroup>"');
+        $(d).append('<optgroup id="optgroup-users" label="User Submissions"></optgroup>"');
+        $(d).append('<optgroup id="optgroup-usertests" label="User Tests"></optgroup>"');
+        $.getJSON('comparables?id=' + rid, function(cdata) {
+            var comp = cdata['comparables'];
+            for (var i = 0; i < comp.length; i++) {
+                var s = comp[i].User ? '#optgroup-usertests' : '#optgroup-tests';
+                $(s).append('<option value="' + comp[i].Id + '">' + comp[i].Name + '</option>');
             }
-            if (vals.file === undefined) {
-                return;
-            }
-            if (vals.result === undefined) {
-                return;
-            }
-            var subs = [vals.subID];
-            if (vals.src !== undefined) {
-                subs = subs.concat($('#' + vals.src).val());
-            }
-            var params = {
-                'type': 'file',
-                'submissions': subs,
-                'file': vals.file,
-                'result': vals.result
-            };
-            if (vals.testfileID !== undefined) {
-                params.testfileid = vals.testfileID;
-            }
-            if (vals.srcfileID !== undefined) {
-                params.srcfileid = vals.srcfileID;
-            }
-            $.getJSON('chart', params, function(data) {
-                ResultChart.CURRENT_TIME = vals.currentTime;
-                ResultChart.NEXT_TIME = vals.nextTime;
-                ResultChart.CURRENT_USER = vals.user;
-                ResultChart.create(data['chart']);
+            $.getJSON('submissions?project-id=' + pid, function(data) {
+                var items = data['submissions'];
+                for (var i = 0; i < items.length; i++) {
+                    if (items[i].User === user) {
+                        continue;
+                    }
+                    $('#optgroup-users').append('<option value="' + items[i].Id + '">' + items[i].User + ' \u2192 ' + new Date(items[i].Time).toLocaleString() + '</option>');
+                }
+                $.each($(d + ' optgroup'), function() {
+                    if ($(this).children().length === 0) {
+                        $(this).remove();
+                    }
+                });
+                $(d).multiselect({
+                    noneSelectedText: 'Compare results',
+                    selectedText: '# selected to compare'
+                });
+                $(d).multiselected = true;
             });
+        });
+    },
+    load: function(vals) {
+        var subs = [vals.sid];
+        var cmp = []
+        var all = [].concat($('#comparables').val());
+        for (var i = 0; i < all.length; i++) {
+            if ($('#optgroup-users option[value="' + all[i] + '"]').length) {
+                subs.push(all[i]);
+            } else if ($('#optgroup-usertests option[value="' + all[i] + '"]').length || $('#optgroup-tests option[value="' + all[i] + '"]').length) {
+                cmp.push(all[i]);
+            }
+        }
+        var params = {
+            'type': 'file',
+            'submissions': subs,
+            'comparables': cmp,
+            'file': vals.file,
+            'result': vals.result,
+            'submission-id': vals.sid
+        };
+        $.getJSON('chart', params, function(data) {
+            ResultChart.CURRENT_TIME = round(vals.currentTime);
+            ResultChart.NEXT_TIME = round(vals.nextTime);
+            ResultChart.CURRENT_USER = vals.uid;
+            ResultChart.create(data['chart']);
         });
         return false;
     },
@@ -133,7 +164,7 @@ var ResultChart = {
             .range([0, w]);
 
         var loadLink = function(d) {
-            return 'displayresult?time=' + d.time;
+            return 'displayresult?time=' + d.time + '&result=' + d.rid + '&submission-id=' + d.sid;
         };
         var loadX = function(d, i) {
             return x(getX(d));
@@ -593,10 +624,11 @@ var ResultChart = {
     },
 
     active: function(d) {
+        var x = round(getX(d));
         if (d.user !== ResultChart.CURRENT_USER) {
             return false;
         }
-        return getX(d) === ResultChart.CURRENT_TIME || getX(d) === ResultChart.NEXT_TIME;
+        return x === ResultChart.CURRENT_TIME || x === ResultChart.NEXT_TIME;
     },
 
     shadeColor: function(color, percent) {

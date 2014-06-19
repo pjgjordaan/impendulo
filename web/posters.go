@@ -30,13 +30,15 @@ import (
 	"fmt"
 
 	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/processing"
+	"github.com/godfried/impendulo/processor/mq"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/mongo"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
+	"github.com/godfried/impendulo/web/context"
+	"github.com/godfried/impendulo/web/webutil"
 	"labix.org/v2/mgo/bson"
 
 	"net/http"
@@ -44,7 +46,7 @@ import (
 
 type (
 	//A function used to fullfill a POST request.
-	Poster func(*http.Request, *Context) (string, error)
+	Poster func(*http.Request, *context.C) (string, error)
 )
 
 var (
@@ -98,7 +100,7 @@ func GeneratePosts(router *pat.Router, posts map[string]Poster, indexPosts map[s
 
 //CreatePost loads a post request handler.
 func (p Poster) CreatePost(index bool) Handler {
-	return func(w http.ResponseWriter, r *http.Request, c *Context) error {
+	return func(w http.ResponseWriter, r *http.Request, c *context.C) error {
 		m, e := p(r, c)
 		c.AddMessage(m, e != nil)
 		if e == nil && index {
@@ -110,16 +112,16 @@ func (p Poster) CreatePost(index bool) Handler {
 	}
 }
 
-func AddSkeleton(r *http.Request, c *Context) (string, error) {
+func AddSkeleton(r *http.Request, c *context.C) (string, error) {
 	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
 		return "Could not read project id.", e
 	}
-	n, e := GetString(r, "skeletonname")
+	n, e := webutil.String(r, "skeletonname")
 	if e != nil {
 		return "Could not read skeleton name.", e
 	}
-	_, s, e := ReadFormFile(r, "skeleton")
+	_, s, e := webutil.File(r, "skeleton")
 	if e != nil {
 		return "Could not read skeleton file.", e
 	}
@@ -130,16 +132,16 @@ func AddSkeleton(r *http.Request, c *Context) (string, error) {
 }
 
 //SubmitArchive adds an Intlola archive to the database.
-func SubmitArchive(r *http.Request, c *Context) (string, error) {
+func SubmitArchive(r *http.Request, c *context.C) (string, error) {
 	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
 		return "Could not read project id.", e
 	}
-	u, e := GetString(r, "user-id")
+	u, e := webutil.String(r, "user-id")
 	if e != nil {
 		return "Could not read user.", e
 	}
-	_, a, e := ReadFormFile(r, "archive")
+	_, a, e := webutil.File(r, "archive")
 	if e != nil {
 		return "Could not read archive.", e
 	}
@@ -153,26 +155,26 @@ func SubmitArchive(r *http.Request, c *Context) (string, error) {
 	if e = db.Add(db.FILES, f); e != nil {
 		return "Could not store archive.", e
 	}
-	k, e := processing.StartSubmission(s.Id)
+	k, e := mq.StartSubmission(s.Id)
 	if e != nil {
 		return "Could not start archive submission.", e
 	}
-	if e = processing.AddFile(f, k); e != nil {
+	if e = mq.AddFile(f, k); e != nil {
 		return "Could not submit archive.", e
 	}
-	if e = processing.EndSubmission(s.Id, k); e != nil {
+	if e = mq.EndSubmission(s.Id, k); e != nil {
 		return "Could not complete archive submission.", e
 	}
 	return "Archive submitted successfully.", nil
 }
 
 //AddProject creates a new Impendulo Project.
-func AddProject(r *http.Request, c *Context) (string, error) {
-	n, e := GetString(r, "projectname")
+func AddProject(r *http.Request, c *context.C) (string, error) {
+	n, e := webutil.String(r, "projectname")
 	if e != nil {
 		return "Could not read project name.", e
 	}
-	l, e := GetString(r, "lang")
+	l, e := webutil.String(r, "lang")
 	if e != nil {
 		return "Could not read project language.", e
 	}
@@ -180,15 +182,19 @@ func AddProject(r *http.Request, c *Context) (string, error) {
 	if e != nil {
 		return "Could not retrieve user.", e
 	}
-	if e = db.Add(db.PROJECTS, project.New(n, un, l)); e != nil {
+	d, e := webutil.String(r, "description")
+	if e != nil {
+		return "Could not read description.", e
+	}
+	if e = db.Add(db.PROJECTS, project.New(n, un, l, d)); e != nil {
 		return "Could not add project.", e
 	}
 	return "Successfully added project.", nil
 }
 
 //DeleteProjects removes a project and all data associated with it from the system.
-func DeleteProjects(r *http.Request, c *Context) (string, error) {
-	pids, e := GetStrings(r, "project-id")
+func DeleteProjects(r *http.Request, c *context.C) (string, error) {
+	pids, e := webutil.Strings(r, "project-id")
 	if e != nil {
 		return "Could not read projects.", e
 	}
@@ -206,8 +212,8 @@ func DeleteProjects(r *http.Request, c *Context) (string, error) {
 }
 
 //DeleteUsers removes users and all data associated with them from the system.
-func DeleteUsers(r *http.Request, c *Context) (string, error) {
-	us, e := GetStrings(r, "user-id")
+func DeleteUsers(r *http.Request, c *context.C) (string, error) {
+	us, e := webutil.Strings(r, "user-id")
 	if e != nil {
 		return "Could not read user.", e
 	}
@@ -219,8 +225,8 @@ func DeleteUsers(r *http.Request, c *Context) (string, error) {
 	return "Successfully deleted users.", nil
 }
 
-func DeleteSubmissions(r *http.Request, c *Context) (string, error) {
-	ss, e := GetStrings(r, "submission-id")
+func DeleteSubmissions(r *http.Request, c *context.C) (string, error) {
+	ss, e := webutil.Strings(r, "submission-id")
 	if e != nil {
 		return "Could not read submissions.", e
 	}
@@ -237,8 +243,8 @@ func DeleteSubmissions(r *http.Request, c *Context) (string, error) {
 	return "Successfully deleted submissions.", nil
 }
 
-func DeleteSkeletons(r *http.Request, c *Context) (string, error) {
-	sks, e := GetStrings(r, "skeleton-id")
+func DeleteSkeletons(r *http.Request, c *context.C) (string, error) {
+	sks, e := webutil.Strings(r, "skeleton-id")
 	if e != nil {
 		return "Could not read skeletons.", e
 	}
@@ -256,8 +262,8 @@ func DeleteSkeletons(r *http.Request, c *Context) (string, error) {
 }
 
 //DeleteResults removes all results for a specic project.
-func DeleteResults(r *http.Request, c *Context) (string, error) {
-	ss, e := GetStrings(r, "submission-id")
+func DeleteResults(r *http.Request, c *context.C) (string, error) {
+	ss, e := webutil.Strings(r, "submission-id")
 	if e != nil {
 		return "Could not read submissions.", e
 	}
@@ -291,7 +297,7 @@ func DeleteResults(r *http.Request, c *Context) (string, error) {
 }
 
 //EditProject is used to modify a project's metadata.
-func EditProject(r *http.Request, c *Context) (string, error) {
+func EditProject(r *http.Request, c *context.C) (string, error) {
 	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
 		return "Could not read project id.", e
@@ -301,14 +307,17 @@ func EditProject(r *http.Request, c *Context) (string, error) {
 		return "Could not load project.", e
 	}
 	sm := bson.M{}
-	if n, e := GetString(r, "project-name"); e == nil && n != p.Name {
+	if n, e := webutil.String(r, "project-name"); e == nil && n != p.Name {
 		sm[db.NAME] = n
 	}
-	if u, e := GetString(r, "project-user"); e == nil && p.User != u && db.Contains(db.USERS, bson.M{db.ID: u}) {
+	if u, e := webutil.String(r, "project-user"); e == nil && p.User != u && db.Contains(db.USERS, bson.M{db.ID: u}) {
 		sm[db.USER] = u
 	}
-	if l, e := GetString(r, "project-lang"); e == nil && tool.Supported(tool.Language(l)) && p.Lang != l {
+	if l, e := webutil.String(r, "project-lang"); e == nil && tool.Supported(tool.Language(l)) && p.Lang != l {
 		sm[db.LANG] = l
+	}
+	if d, e := webutil.String(r, "project-description"); e == nil && p.Description != d {
+		sm[db.DESCRIPTION] = d
 	}
 	if len(sm) == 0 {
 		return "Nothing to update", nil
@@ -320,7 +329,7 @@ func EditProject(r *http.Request, c *Context) (string, error) {
 }
 
 //EditSubmission
-func EditSubmission(r *http.Request, c *Context) (string, error) {
+func EditSubmission(r *http.Request, c *context.C) (string, error) {
 	sid, e := convert.Id(r.FormValue("submission-id"))
 	if e != nil {
 		return "Could not read submission id.", e
@@ -333,7 +342,7 @@ func EditSubmission(r *http.Request, c *Context) (string, error) {
 	if pid, e := convert.Id(r.FormValue("submission-project")); e == nil && s.ProjectId != pid && db.Contains(db.PROJECTS, bson.M{db.ID: pid}) {
 		sm[db.PROJECTID] = pid
 	}
-	if u, e := GetString(r, "submission-user"); e == nil && s.User != u && db.Contains(db.USERS, bson.M{db.ID: u}) {
+	if u, e := webutil.String(r, "submission-user"); e == nil && s.User != u && db.Contains(db.USERS, bson.M{db.ID: u}) {
 		sm[db.USER] = u
 	}
 	if len(sm) == 0 {
@@ -346,7 +355,7 @@ func EditSubmission(r *http.Request, c *Context) (string, error) {
 }
 
 //EditFile
-func EditFile(r *http.Request, c *Context) (string, error) {
+func EditFile(r *http.Request, c *context.C) (string, error) {
 	fid, e := convert.Id(r.FormValue("file-id"))
 	if e != nil {
 		return "Could not read file id.", e
@@ -356,10 +365,10 @@ func EditFile(r *http.Request, c *Context) (string, error) {
 		return "Could not load file.", e
 	}
 	sm := bson.M{}
-	if n, e := GetString(r, "file-name"); e == nil && f.Name != n {
+	if n, e := webutil.String(r, "file-name"); e == nil && f.Name != n {
 		sm[db.NAME] = n
 	}
-	if p, e := GetString(r, "file-package"); e == nil && f.Package != p {
+	if p, e := webutil.String(r, "file-package"); e == nil && f.Package != p {
 		sm[db.PKG] = p
 	}
 	if len(sm) == 0 {
@@ -371,7 +380,7 @@ func EditFile(r *http.Request, c *Context) (string, error) {
 	return "Successfully edited file.", nil
 }
 
-func EditTest(r *http.Request, c *Context) (string, error) {
+func EditTest(r *http.Request, c *context.C) (string, error) {
 	tid, e := convert.Id(r.FormValue("test-id"))
 	if e != nil {
 		return "Could not read test id.", e
@@ -384,15 +393,15 @@ func EditTest(r *http.Request, c *Context) (string, error) {
 	if pid, e := convert.Id(r.FormValue("test-project")); e == nil && pid != t.ProjectId && db.Contains(db.PROJECTS, bson.M{db.ID: pid}) {
 		sm[db.PROJECTID] = pid
 	}
-	if n, e := GetString(r, "test-name"); e == nil && t.Name != n {
+	if n, e := webutil.String(r, "test-name"); e == nil && t.Name != n {
 		sm[db.NAME] = n
 	}
-	if p, e := GetString(r, "test-package"); e == nil && t.Package != p {
+	if p, e := webutil.String(r, "test-package"); e == nil && t.Package != p {
 		sm[db.PKG] = p
 	}
 
-	if tn, e := GetString(r, "test-target-name"); e == nil {
-		tp, _ := GetString(r, "test-target-package")
+	if tn, e := webutil.String(r, "test-target-name"); e == nil {
+		tp, _ := webutil.String(r, "test-target-package")
 		if t.Target == nil || (tp != t.Target.Package || tn != t.Target.FullName()) {
 			sm[db.TARGET] = tool.NewTarget(tn, tp, "", tool.JAVA)
 		}
@@ -407,8 +416,8 @@ func EditTest(r *http.Request, c *Context) (string, error) {
 }
 
 //Login signs a user into the web app.
-func Login(r *http.Request, c *Context) (string, error) {
-	un, p, e := credentials(r)
+func Login(r *http.Request, c *context.C) (string, error) {
+	un, p, e := webutil.Credentials(r)
 	if e != nil {
 		return "Could not retrieve credentials.", e
 	}
@@ -425,8 +434,8 @@ func Login(r *http.Request, c *Context) (string, error) {
 }
 
 //Register registers a new user with Impendulo.
-func Register(r *http.Request, c *Context) (string, error) {
-	un, p, e := credentials(r)
+func Register(r *http.Request, c *context.C) (string, error) {
+	un, p, e := webutil.Credentials(r)
 	if e != nil {
 		return "Could not retrieve credentials.", e
 	}
@@ -438,14 +447,14 @@ func Register(r *http.Request, c *Context) (string, error) {
 }
 
 //Logout logs a user out of the system.
-func Logout(r *http.Request, c *Context) (string, error) {
+func Logout(r *http.Request, c *context.C) (string, error) {
 	c.RemoveUser()
 	return "Successfully logged out.", nil
 }
 
 //EditUser
-func EditUser(r *http.Request, c *Context) (string, error) {
-	id, e := GetString(r, "user-id")
+func EditUser(r *http.Request, c *context.C) (string, error) {
+	id, e := webutil.String(r, "user-id")
 	if e != nil {
 		return "Could not read old username.", e
 	}
@@ -453,7 +462,7 @@ func EditUser(r *http.Request, c *Context) (string, error) {
 	if e != nil {
 		return "Could not load user.", e
 	}
-	n, e := GetString(r, "user-name")
+	n, e := webutil.String(r, "user-name")
 	if e != nil {
 		return "Could not read new username.", e
 	}
@@ -484,12 +493,12 @@ func EditUser(r *http.Request, c *Context) (string, error) {
 }
 
 //ImportData
-func ImportData(r *http.Request, c *Context) (string, error) {
-	n, e := GetString(r, "db")
+func ImportData(r *http.Request, c *context.C) (string, error) {
+	n, e := webutil.String(r, "db")
 	if e != nil {
 		return "Could not read db to import to.", e
 	}
-	_, d, e := ReadFormFile(r, "data")
+	_, d, e := webutil.File(r, "data")
 	if e != nil {
 		return "Unable to read data file.", e
 	}
@@ -499,16 +508,16 @@ func ImportData(r *http.Request, c *Context) (string, error) {
 	return "Successfully imported db data.", nil
 }
 
-func RenameFiles(r *http.Request, c *Context) (string, error) {
+func RenameFiles(r *http.Request, c *context.C) (string, error) {
 	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
 		return "Could not read project.", e
 	}
-	newName, e := GetString(r, "file-name-new")
+	newName, e := webutil.String(r, "file-name-new")
 	if e != nil {
 		return "Could not read new file name.", e
 	}
-	oldName, e := GetString(r, "file-name-old")
+	oldName, e := webutil.String(r, "file-name-old")
 	if e != nil {
 		return "Could not read current file name.", e
 	}

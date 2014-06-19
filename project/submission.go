@@ -39,6 +39,7 @@ type (
 		User      string        `bson:"user"`
 		Mode      string        `bson:"mode"`
 		Time      int64         `bson:"time"`
+		Comments  []*Comment    `bson:"comments"`
 	}
 )
 
@@ -61,7 +62,7 @@ func (s *Submission) String() string {
 
 //NewSubmission
 func NewSubmission(pid bson.ObjectId, u, m string, t int64) *Submission {
-	return &Submission{bson.NewObjectId(), pid, u, m, t}
+	return &Submission{bson.NewObjectId(), pid, u, m, t, []*Comment{}}
 }
 
 func (s *Submission) Format(p *Project) string {

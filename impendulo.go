@@ -33,7 +33,7 @@ import (
 
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/processing"
+	"github.com/godfried/impendulo/processor"
 	"github.com/godfried/impendulo/receiver"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
@@ -72,13 +72,13 @@ func init() {
 		"Change a user's access permissions."+
 			"Available permissions: NONE=0, STUDENT=1, TEACHER=2, ADMIN=3."+
 			"Example: -a=pieter:2.")
-	flag.StringVar(&mqURI, "mq", processing.DEFAULT_AMQP_URI, fmt.Sprintf("Specify the address of the Rabbitmq server (default %s).", processing.DEFAULT_AMQP_URI))
+	flag.StringVar(&mqURI, "mq", processor.DEFAULT_AMQP_URI, fmt.Sprintf("Specify the address of the Rabbitmq server (default %s).", processor.DEFAULT_AMQP_URI))
 
 	pFlags = flag.NewFlagSet("processor", flag.ExitOnError)
 	rFlags = flag.NewFlagSet("receiver", flag.ExitOnError)
 	wFlags = flag.NewFlagSet("web", flag.ExitOnError)
 
-	pFlags.UintVar(&mProcs, "mp", processing.MAX_PROCS, fmt.Sprintf("Specify the maximum number of goroutines to run when processing submissions (default %d).", processing.MAX_PROCS))
+	pFlags.UintVar(&mProcs, "mp", processor.MAX_PROCS, fmt.Sprintf("Specify the maximum number of goroutines to run when processing submissions (default %d).", processor.MAX_PROCS))
 
 	rFlags.UintVar(&tcpPort, "p", receiver.PORT, fmt.Sprintf("Specify the port to listen on for files using TCP (default %d).", receiver.PORT))
 
@@ -98,7 +98,7 @@ func main() {
 	flag.Parse()
 	util.SetErrorLogging(errLog)
 	util.SetInfoLogging(infoLog)
-	processing.SetAMQP_URI(mqURI)
+	processor.SetAMQP_URI(mqURI)
 	//Handle setup flags
 	if e = backup(backupDB); e != nil {
 		return
@@ -189,6 +189,6 @@ func runFileReceiver(p uint) {
 //runFileProcessor runs the file processing server.
 func runFileProcessor(n uint) {
 	pFlags.Parse(os.Args[2:])
-	go processing.MonitorStatus()
-	processing.Serve(n)
+	go processor.MonitorStatus()
+	processor.Serve(n)
 }

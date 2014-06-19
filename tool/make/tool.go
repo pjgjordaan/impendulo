@@ -21,30 +21,31 @@ const (
 	NAME = "Make"
 )
 
-func New(mf *Makefile, dir string) (ret *Tool, err error) {
-	cmd, err := config.MAKE.Path()
-	if err != nil {
-		return
+func New(mf *Makefile, dir string) (*Tool, error) {
+	cmd, e := config.MAKE.Path()
+	if e != nil {
+		return nil, e
 	}
-	makeInfo := tool.NewTarget("Makefile", "", dir, tool.C)
-	err = util.SaveFile(makeInfo.FilePath(), mf.Data)
-	if err != nil {
-		return
+	t := tool.NewTarget("Makefile", "", dir, tool.C)
+	if e = util.SaveFile(t.FilePath(), mf.Data); e != nil {
+		return nil, e
 	}
-	ret = &Tool{
+	return &Tool{
 		cmd:  cmd,
-		path: makeInfo.FilePath(),
-	}
-	return
+		path: t.FilePath(),
+	}, nil
+}
+
+func (t *Tool) AddCP(p string) {
 }
 
 //Lang
-func (this *Tool) Lang() tool.Language {
+func (t *Tool) Lang() tool.Language {
 	return tool.C
 }
 
 //Name
-func (this *Tool) Name() string {
+func (t *Tool) Name() string {
 	return NAME
 }
 

@@ -9,12 +9,13 @@
     <li class="dropdown">
         <a href="#" data-toggle="dropdown" role="button" id="project-dropdown-label" class="dropdown-toggle">
             <h4>
-	<small>project</small> {{$project}} <span class="caret"></span> 
-      </h4>
+	      <small>project</small> {{$project}} <span class="caret"></span> 
+	    </h4>
         </a>
         <ul class="dropdown-menu" role="menu" aria-labelledby="project-dropdown-label">
             {{$projects := projects}} {{range $projects}}
-            <li><a href="getsubmissions?project-id={{.Id.Hex}}">{{.Name}}</a>
+            <li>
+                <a href="getsubmissions?project-id={{.Id.Hex}}">{{.Name}}</a>
             </li>
             {{end}}
         </ul>
@@ -22,12 +23,13 @@
     <li class="dropdown">
         <a href="#" data-toggle="dropdown" role="button" id="user-dropdown-label" class="dropdown-toggle">
             <h4>
-	<small>user</small> {{.ctx.Browse.Uid}} <span class="caret"></span>
-      </h4> 
+	      <small>user</small> {{.ctx.Browse.Uid}} <span class="caret"></span>
+	    </h4> 
         </a>
         <ul class="dropdown-menu" role="menu" aria-labelledby="user-dropdown-label">
             {{$users := users}} {{range $users}}
-            <li><a href="getsubmissions?user-id={{.}}">{{.}}</a>
+            <li>
+                <a href="getsubmissions?user-id={{.}}">{{.}}</a>
             </li>
             {{end}}
         </ul>
@@ -35,15 +37,16 @@
     <li class="dropdown">
         <a href="#" data-toggle="dropdown" role="button" id="submission-dropdown-label" class="dropdown-toggle">
             <h4>
-	{{$sub := sub .ctx.Browse.Sid}}
-	<small>submission</small> {{date $sub.Time}} <span class="caret"></span> 
-      </h4>
+	      {{$sub := sub .ctx.Browse.Sid}}
+	      <small>submission</small> {{date $sub.Time}} <span class="caret"></span> 
+	    </h4>
         </a>
         <ul class="dropdown-menu" role="menu" aria-labelledby="submission-dropdown-label">
             {{$subs := .ctx.Browse.Submissions}} {{range $subs}}
-            <li><a href="displayresult?submission-id={{.Id.Hex}}">
-	  {{.Format (project .ProjectId)}}
-      </a>
+            <li>
+                <a href="displayresult?submission-id={{.Id.Hex}}">
+		{{.Format (project .ProjectId)}}
+	      </a>
             </li>
             {{end}}
         </ul>

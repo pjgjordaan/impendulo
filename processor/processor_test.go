@@ -1,4 +1,4 @@
-package processing
+package processor
 
 import (
 	"github.com/godfried/impendulo/db"
@@ -9,7 +9,6 @@ import (
 	"labix.org/v2/mgo/bson"
 
 	"testing"
-	"time"
 )
 
 func TestProcessFile(t *testing.T) {
@@ -17,15 +16,15 @@ func TestProcessFile(t *testing.T) {
 	db.DeleteDB(db.TEST_DB)
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
-	p := &project.Project{bson.NewObjectId(), "Triangle", "User", "Java", util.GetMilis(time.Now())}
+	p := project.New("Triangle", "User", "Java", "A description")
 	if e := db.Add(db.PROJECTS, p); e != nil {
 		t.Error(e)
 	}
-	s := &project.Submission{bson.NewObjectId(), p.Id, "student", project.FILE_MODE, p.Time + 100}
+	s := project.NewSubmission(p.Id, "student", project.FILE_MODE, p.Time+100)
 	if e := db.Add(db.SUBMISSIONS, s); e != nil {
 		t.Error(e)
 	}
-	f := &project.File{bson.NewObjectId(), s.Id, "Triangle.java", "triangle", project.SRC, s.Time + 100, srcBytes, bson.M{}}
+	f := &project.File{bson.NewObjectId(), s.Id, "Triangle.java", "triangle", project.SRC, s.Time + 100, srcBytes, bson.M{}, []*project.Comment{}}
 	if e := db.Add(db.FILES, f); e != nil {
 		t.Error(e)
 	}
@@ -42,19 +41,19 @@ func TestProcessFile(t *testing.T) {
 	if e := db.Add(db.TESTS, ut); e != nil {
 		t.Error(e)
 	}
-	tf := &project.File{bson.NewObjectId(), s.Id, "UserTests.java", "testing", project.TEST, s.Time + 200, userTestBytes, bson.M{}}
+	tf := &project.File{bson.NewObjectId(), s.Id, "UserTests.java", "testing", project.TEST, s.Time + 200, userTestBytes, bson.M{}, []*project.Comment{}}
 	if e := db.Add(db.FILES, tf); e != nil {
 		t.Error(e)
 	}
-	proc, e := NewProcessor(s.Id)
+	proc, e := NewFileProcessor(s.Id)
 	if e != nil {
 		t.Error(e)
 		return
 	}
-	if e = proc.ProcessFile(f.Id); e != nil {
+	if e = proc.Process(f.Id); e != nil {
 		t.Error(e)
 	}
-	if e = proc.ProcessFile(tf.Id); e != nil {
+	if e = proc.Process(tf.Id); e != nil {
 		t.Error(e)
 	}
 }

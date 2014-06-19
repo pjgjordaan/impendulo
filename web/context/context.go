@@ -22,7 +22,7 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package web
+package context
 
 import (
 	"code.google.com/p/gorilla/sessions"
@@ -35,6 +35,7 @@ import (
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
+	"github.com/godfried/impendulo/web/webutil"
 	"labix.org/v2/mgo/bson"
 
 	"net/http"
@@ -44,10 +45,9 @@ import (
 
 type (
 	//Context is used to keep track of the current user's session.
-	Context struct {
-		Session    *sessions.Session
-		Browse     *Browse
-		Additional *Browse
+	C struct {
+		Session *sessions.Session
+		Browse  *Browse
 	}
 
 	//Browse is used to keep track of the user's browsing.
@@ -59,9 +59,9 @@ type (
 		Current, Next int
 		DisplayCount  int
 		Level         Level
-		Result        *ResultDesc
+		Result        *Result
 	}
-	ResultDesc struct {
+	Result struct {
 		Type   string
 		Name   string
 		FileID bson.ObjectId
@@ -86,34 +86,34 @@ func init() {
 }
 
 //Close closes a session.
-func (c *Context) Close() {
+func (c *C) Close() {
 	c.save()
 }
 
 //save
-func (c *Context) save() {
+func (c *C) save() {
 	c.Session.Values["browse"] = c.Browse
 }
 
 //Save stores the current session.
-func (c *Context) Save(r *http.Request, w http.ResponseWriter) error {
+func (c *C) Save(r *http.Request, w http.ResponseWriter) error {
 	c.save()
 	return c.Session.Save(r, w)
 }
 
 //IsView checks whether the given view matches the user's current view.
-func (c *Context) IsView(v string) bool {
+func (c *C) IsView(v string) bool {
 	return c.Browse.View == v
 }
 
 //LoggedIn checks whether a user is signed in.
-func (c *Context) LoggedIn() bool {
+func (c *C) LoggedIn() bool {
 	_, e := c.Username()
 	return e == nil
 }
 
 //Username retrieves the current user's username.
-func (c *Context) Username() (string, error) {
+func (c *C) Username() (string, error) {
 	u, ok := c.Session.Values["user"].(string)
 	if !ok {
 		return "", fmt.Errorf("could not retrieve user")
@@ -122,17 +122,17 @@ func (c *Context) Username() (string, error) {
 }
 
 //AddUser sets the currently signed in user.
-func (c *Context) AddUser(u string) {
+func (c *C) AddUser(u string) {
 	c.Session.Values["user"] = u
 }
 
 //AddUser sets the currently signed in user.
-func (c *Context) RemoveUser() {
+func (c *C) RemoveUser() {
 	delete(c.Session.Values, "user")
 }
 
 //AddMessage adds a message to be displayed to the user.
-func (c *Context) AddMessage(m string, isErr bool) {
+func (c *C) AddMessage(m string, isErr bool) {
 	if isErr {
 		c.Session.AddFlash(m, "error")
 	} else {
@@ -141,18 +141,18 @@ func (c *Context) AddMessage(m string, isErr bool) {
 }
 
 //Errors retrieves all error messages.
-func (c *Context) Errors() []interface{} {
+func (c *C) Errors() []interface{} {
 	return c.Session.Flashes("error")
 }
 
 //Successes retrieves all success messages.
-func (c *Context) Successes() []interface{} {
+func (c *C) Successes() []interface{} {
 	return c.Session.Flashes("success")
 }
 
-//LoadContext loads a context from the session.
-func LoadContext(s *sessions.Session) *Context {
-	c := &Context{Session: s}
+//Load loads a context from the session.
+func Load(s *sessions.Session) *C {
+	c := &C{Session: s}
 	if v, ok := c.Session.Values["browse"]; ok {
 		c.Browse = v.(*Browse)
 	} else {
@@ -189,7 +189,7 @@ func (b *Browse) SetDisplayCount(r *http.Request) error {
 }
 
 func (b *Browse) SetUid(r *http.Request) error {
-	id, e := GetString(r, "user-id")
+	id, e := webutil.String(r, "user-id")
 	if e != nil {
 		return nil
 	}
@@ -238,12 +238,11 @@ func (b *Browse) SetPid(r *http.Request) error {
 	b.ClearSubmission()
 	b.IsUser = false
 	b.Pid = pid
-	b.Result.Check(b.Pid)
 	return nil
 }
 
 func (b *Browse) SetResult(r *http.Request) error {
-	s, e := GetString(r, "result")
+	s, e := webutil.String(r, "result")
 	if e != nil {
 		return nil
 	}
@@ -251,7 +250,7 @@ func (b *Browse) SetResult(r *http.Request) error {
 }
 
 func (b *Browse) SetFile(r *http.Request) error {
-	n, e := GetString(r, "file")
+	n, e := webutil.String(r, "file")
 	if e != nil {
 		return nil
 	}
@@ -267,11 +266,11 @@ func (b *Browse) setIndices(r *http.Request, fs []*project.File) error {
 			b.Next = (b.Current + 1) % len(fs)
 		}
 	}()
-	c, e := getIndex(r, "current", len(fs)-1)
+	c, e := webutil.Index(r, "current", len(fs)-1)
 	if e != nil {
 		return e
 	}
-	n, e := getIndex(r, "next", len(fs)-1)
+	n, e := webutil.Index(r, "next", len(fs)-1)
 	if e != nil {
 		return e
 	}
@@ -299,9 +298,10 @@ func (b *Browse) SetFileIndices(r *http.Request) error {
 	if b.File == "" {
 		return nil
 	}
-	fs, e := Snapshots(b.Sid, b.File)
+	fs, e := db.Snapshots(b.Sid, b.File)
 	if e != nil {
-		return e
+		util.Log(e)
+		return nil
 	}
 	if e = b.setIndices(r, fs); e != nil {
 		return b.setTimeIndices(r, fs)
@@ -335,6 +335,7 @@ func (b *Browse) SetLevel(route string) {
 		b.Level = SUBMISSIONS
 	case "displayresult":
 		b.Level = ANALYSIS
+	default:
 	}
 }
 
@@ -358,15 +359,15 @@ func (l Level) Is(level string) bool {
 	}
 }
 
-func NewResultDesc(s string) (*ResultDesc, error) {
-	r := &ResultDesc{}
+func NewResult(s string) (*Result, error) {
+	r := &Result{}
 	if e := r.Set(s); e != nil {
 		return nil, e
 	}
 	return r, nil
 }
 
-func (r *ResultDesc) Set(s string) error {
+func (r *Result) Set(s string) error {
 	r.Type = ""
 	r.Name = ""
 	r.FileID = ""
@@ -386,7 +387,7 @@ func (r *ResultDesc) Set(s string) error {
 	return nil
 }
 
-func (r *ResultDesc) Format() string {
+func (r *Result) Format() string {
 	s := r.Type
 	if r.Name == "" {
 		return s
@@ -398,7 +399,7 @@ func (r *ResultDesc) Format() string {
 	return s + " \u2192 " + r.Date()
 }
 
-func (r *ResultDesc) Date() string {
+func (r *Result) Date() string {
 	f, e := db.File(bson.M{db.ID: r.FileID}, bson.M{db.TIME: 1})
 	if e != nil {
 		return "No File Found"
@@ -406,7 +407,7 @@ func (r *ResultDesc) Date() string {
 	return util.Date(f.Time)
 }
 
-func (r *ResultDesc) Raw() string {
+func (r *Result) Raw() string {
 	s := r.Type
 	if r.Name == "" {
 		return r.Type
@@ -418,23 +419,23 @@ func (r *ResultDesc) Raw() string {
 	return s + "-" + r.FileID.Hex()
 }
 
-func (r *ResultDesc) HasCode() bool {
+func (r *Result) HasCode() bool {
 	return r.Name != ""
 }
 
-func (r *ResultDesc) Update(sid bson.ObjectId, fname string) error {
+func (r *Result) Update(sid bson.ObjectId, fname string) error {
 	if r.FileID == "" {
 		return nil
 	}
 	id, e := db.FileResultId(sid, fname, r.Type, r.Name)
 	if e != nil {
-		return e
+		r.Set(tool.CODE)
 	}
 	r.FileID = id
 	return nil
 }
 
-func (r *ResultDesc) Check(pid bson.ObjectId) {
+func (r *Result) Check(pid bson.ObjectId) {
 	rs := db.ProjectResults(pid)
 	cur := r.Raw()
 	for _, d := range rs {

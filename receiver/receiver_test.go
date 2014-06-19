@@ -31,7 +31,8 @@ import (
 	"fmt"
 
 	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/processing"
+	"github.com/godfried/impendulo/processor"
+	"github.com/godfried/impendulo/processor/mq"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
@@ -83,7 +84,7 @@ func (this *clientSpawner) spawn() (*client, bool) {
 }
 
 func addData(numUsers uint) (map[string]string, error) {
-	if e := db.Add(db.PROJECTS, project.New("Triangle", "user", "Java")); e != nil {
+	if e := db.Add(db.PROJECTS, project.New("Triangle", "user", "Java", "A triangle.")); e != nil {
 		return nil, e
 	}
 	users := make(map[string]string, numUsers)
@@ -260,15 +261,15 @@ func testReceive(spawner *clientSpawner) error {
 		done++
 	}
 	time.Sleep(100 * time.Millisecond)
-	if ie := processing.WaitIdle(); err == nil && ie != nil {
+	if ie := mq.WaitIdle(); err == nil && ie != nil {
 		err = ie
 	}
 	return err
 }
 
 func testFiles(t *testing.T, nF, nU, port uint, mode string, files []file) {
-	go processing.MonitorStatus()
-	go processing.Serve(processing.MAX_PROCS)
+	go processor.MonitorStatus()
+	go processor.Serve(processor.MAX_PROCS)
 	ext := "_" + strconv.Itoa(int(port))
 	db.Setup(db.TEST_CONN + ext)
 	db.DeleteDB(db.TEST_DB + ext)
@@ -289,7 +290,7 @@ func testFiles(t *testing.T, nF, nU, port uint, mode string, files []file) {
 	if e = testReceive(spawner); e != nil {
 		t.Error(e)
 	}
-	if e = processing.Shutdown(); e != nil {
+	if e = processor.Shutdown(); e != nil {
 		t.Error(e)
 	}
 }
@@ -315,18 +316,18 @@ func TestFile(t *testing.T) {
 }
 
 func benchmarkFiles(b *testing.B, nF, nU, nS, nM, port uint, mode string, files []file) {
-	servers := make([]*processing.Server, nS)
+	servers := make([]*processor.Server, nS)
 	var err error
 	for i := 0; i < int(nS); i++ {
-		servers[i], err = processing.NewServer(processing.MAX_PROCS)
+		servers[i], err = processor.NewServer(processor.MAX_PROCS)
 		if err != nil {
 			b.Error(err)
 		}
 		go servers[i].Serve()
 	}
-	monitors := make([]*processing.Monitor, nS)
+	monitors := make([]*processor.Monitor, nS)
 	for i := 0; i < int(nM); i++ {
-		monitors[i], err = processing.NewMonitor()
+		monitors[i], err = processor.NewMonitor()
 		if err != nil {
 			b.Error(err)
 		}

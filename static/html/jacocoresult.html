@@ -1,12 +1,9 @@
-{{define "result"}}
-{{$s := .state.Src}}
-{{$addr := address .Report}}
+{{define "result"}} {{$addr := address .Report}}
 <div class="panel-group" id="jacocoaccordion{{$addr}}">
-  <div class="panel panel-default">
-    <div class="panel-heading">
-      <a class="accordion-toggle" data-toggle="collapse"
-	 data-parent="#jacocoaccordion{{$addr}}" href="#summary{{$addr}}">
-	<h4>Coverage Summary<h4>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <a class="accordion-toggle" data-toggle="collapse" data-parent="#jacocoaccordion{{$addr}}" href="#summary{{$addr}}">
+                <h4>Coverage Summary<h4>
       </a>
     </div>
     <div id="summary{{$addr}}" class="panel-collapse collapse in">

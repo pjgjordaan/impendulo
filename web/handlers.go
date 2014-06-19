@@ -30,6 +30,9 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/web/buffer"
+	"github.com/godfried/impendulo/web/context"
+	"github.com/godfried/impendulo/web/webutil"
 
 	"net/http"
 )
@@ -45,7 +48,7 @@ const (
 type (
 	//Handler is used to handle incoming requests.
 	//It allows for better session management.
-	Handler func(http.ResponseWriter, *http.Request, *Context) error
+	Handler func(http.ResponseWriter, *http.Request, *context.C) error
 )
 
 func init() {
@@ -64,8 +67,8 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		util.Log(e, LOG_HANDLERS)
 	}
 	//Load our context from session
-	c := LoadContext(s)
-	b := new(HttpBuffer)
+	c := context.Load(s)
+	b := new(buffer.B)
 	if e = CheckAccess(r.URL.Path, c, Permissions()); e != nil {
 		c.AddMessage(e.Error(), true)
 		http.Redirect(b, r, getRoute("index"), http.StatusSeeOther)
@@ -95,12 +98,12 @@ func FileHandler(origin string) http.Handler {
 			util.Log(e, LOG_HANDLERS)
 		}
 		//Load our context from session
-		c := LoadContext(s)
-		b := new(HttpBuffer)
+		c := context.Load(s)
+		b := new(buffer.B)
 		e = CheckAccess(r.URL.Path, c, Permissions())
 		var p string
 		if e == nil {
-			p, e = ServePath(r.URL, origin)
+			p, e = webutil.ServePath(r.URL, origin)
 		}
 		if e != nil {
 			c.AddMessage(e.Error(), true)
@@ -120,7 +123,7 @@ func FileHandler(origin string) http.Handler {
 }
 
 //getNav retrieves the navbar to display.
-func getNav(c *Context) string {
+func getNav(c *context.C) string {
 	n, e := c.Username()
 	if e != nil {
 		return "outnavbar"

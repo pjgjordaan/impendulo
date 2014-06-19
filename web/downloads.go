@@ -34,6 +34,8 @@ import (
 	"github.com/godfried/impendulo/tool/mongo"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
+	"github.com/godfried/impendulo/web/context"
+	"github.com/godfried/impendulo/web/webutil"
 
 	"io/ioutil"
 
@@ -71,7 +73,7 @@ func GenerateDownloads(r *pat.Router, d map[string]Downloader) {
 
 //CreateDownload.
 func (d Downloader) CreateDownload() Handler {
-	return func(w http.ResponseWriter, r *http.Request, c *Context) error {
+	return func(w http.ResponseWriter, r *http.Request, c *context.C) error {
 		p, e := d(r)
 		if e != nil {
 			c.AddMessage("could not load file for downloading.", true)
@@ -118,11 +120,11 @@ func LoadSkeleton(r *http.Request) (string, error) {
 
 //ExportData
 func ExportData(r *http.Request) (string, error) {
-	n, e := GetString(r, "db")
+	n, e := webutil.String(r, "db")
 	if e != nil {
 		return "", e
 	}
-	c, e := GetStrings(r, "collections")
+	c, e := webutil.Strings(r, "collections")
 	if e != nil {
 		return "", e
 	}
