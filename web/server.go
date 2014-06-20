@@ -29,6 +29,7 @@ package web
 import (
 	"code.google.com/p/gorilla/pat"
 	"github.com/godfried/impendulo/util"
+
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -79,11 +80,11 @@ func StaticDir() string {
 
 //getRoute retrieves a route for a given name.
 func getRoute(name string) string {
-	u, e := router.GetRoute(name).URL()
-	if e != nil {
+	if u, e := router.GetRoute(name).URL(); e != nil {
 		return "/"
+	} else {
+		return u.Path
 	}
-	return u.Path
 }
 
 //Run starts up the webserver if it is not currently running.

@@ -78,11 +78,10 @@ func (d Downloader) CreateDownload() Handler {
 		if e != nil {
 			c.AddMessage("could not load file for downloading.", true)
 			http.Redirect(w, r, r.Referer(), http.StatusSeeOther)
-		} else {
-			http.ServeFile(w, r, p)
-			os.Remove(p)
+			return e
 		}
-		return e
+		http.ServeFile(w, r, p)
+		return os.Remove(p)
 	}
 }
 

@@ -80,9 +80,9 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if e = c.Save(r, b); e != nil {
 		http.Error(w, e.Error(), http.StatusInternalServerError)
-		return
+	} else {
+		b.Apply(w)
 	}
-	b.Apply(w)
 }
 
 func RedirectHandler(dest string) http.Handler {
@@ -100,25 +100,22 @@ func FileHandler(origin string) http.Handler {
 		//Load our context from session
 		c := context.Load(s)
 		b := new(buffer.B)
-		e = CheckAccess(r.URL.Path, c, Permissions())
 		var p string
-		if e == nil {
+		if e = CheckAccess(r.URL.Path, c, Permissions()); e == nil {
 			p, e = webutil.ServePath(r.URL, origin)
 		}
 		if e != nil {
 			c.AddMessage(e.Error(), true)
 			http.Redirect(b, r, getRoute("index"), http.StatusSeeOther)
+			util.Log(e, LOG_HANDLERS)
 		} else {
 			http.ServeFile(b, r, p)
 		}
-		if e != nil {
-			util.Log(e, LOG_HANDLERS)
-		}
 		if e = c.Save(r, b); e != nil {
 			http.Error(w, e.Error(), http.StatusInternalServerError)
-			return
+		} else {
+			b.Apply(w)
 		}
-		b.Apply(w)
 	})
 }
 

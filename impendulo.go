@@ -34,6 +34,7 @@ import (
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processor"
+	"github.com/godfried/impendulo/processor/mq"
 	"github.com/godfried/impendulo/receiver"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
@@ -72,7 +73,7 @@ func init() {
 		"Change a user's access permissions."+
 			"Available permissions: NONE=0, STUDENT=1, TEACHER=2, ADMIN=3."+
 			"Example: -a=pieter:2.")
-	flag.StringVar(&mqURI, "mq", processor.DEFAULT_AMQP_URI, fmt.Sprintf("Specify the address of the Rabbitmq server (default %s).", processor.DEFAULT_AMQP_URI))
+	flag.StringVar(&mqURI, "mq", mq.DEFAULT_AMQP_URI, fmt.Sprintf("Specify the address of the Rabbitmq server (default %s).", mq.DEFAULT_AMQP_URI))
 
 	pFlags = flag.NewFlagSet("processor", flag.ExitOnError)
 	rFlags = flag.NewFlagSet("receiver", flag.ExitOnError)
@@ -98,7 +99,7 @@ func main() {
 	flag.Parse()
 	util.SetErrorLogging(errLog)
 	util.SetInfoLogging(infoLog)
-	processor.SetAMQP_URI(mqURI)
+	mq.SetAMQP_URI(mqURI)
 	//Handle setup flags
 	if e = backup(backupDB); e != nil {
 		return

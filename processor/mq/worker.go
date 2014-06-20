@@ -26,7 +26,6 @@ package mq
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processor/request"
@@ -110,10 +109,6 @@ const (
 var (
 	amqpURI = DEFAULT_AMQP_URI
 )
-
-func init() {
-	fmt.Sprint()
-}
 
 func SetAMQP_URI(uri string) {
 	amqpURI = uri

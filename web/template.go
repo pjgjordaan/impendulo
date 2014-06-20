@@ -33,76 +33,58 @@ import (
 	"github.com/godfried/impendulo/processor/mq"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
-	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
 
-	"html"
 	"html/template"
 
 	"labix.org/v2/mgo/bson"
 
-	"net/url"
 	"path/filepath"
 	"sort"
 	"strings"
 )
 
-type (
-	view uint
-)
-
 var (
 	funcs = template.FuncMap{
-		"databases":          db.Databases,
-		"projectName":        db.ProjectName,
-		"date":               util.Date,
-		"setBreaks":          func(s string) template.HTML { return template.HTML(setBreaks(s)) },
-		"address":            func(i interface{}) string { return fmt.Sprint(&i) },
-		"base":               filepath.Base,
-		"shortName":          util.ShortName,
-		"sum":                sum,
-		"percent":            percent,
-		"round":              round,
-		"langs":              tool.Langs,
-		"submissionLang":     submissionLang,
-		"sub":                func(id bson.ObjectId) (*project.Submission, error) { return db.Submission(bson.M{db.ID: id}, nil) },
-		"submissionCount":    submissionCount,
-		"getBusy":            mq.GetStatus,
-		"slice":              slice,
-		"adjustment":         adjustment,
-		"tools":              tools,
-		"configtools":        configTools,
-		"unescape":           html.UnescapeString,
-		"escape":             url.QueryEscape,
-		"snapshots":          func(id bson.ObjectId) (int, error) { return db.FileCount(id, project.SRC) },
-		"launches":           func(id bson.ObjectId) (int, error) { return db.FileCount(id, project.LAUNCH) },
-		"usertests":          func(id bson.ObjectId) (int, error) { return db.FileCount(id, project.TEST) },
-		"html":               func(s string) template.HTML { return template.HTML(s) },
-		"string":             func(b []byte) string { return string(bytes.TrimSpace(b)) },
-		"args":               args,
-		"insert":             insert,
-		"isError":            isError,
-		"hasChart":           tool.HasChart,
-		"projectSubmissions": projectSubmissions,
-		"userSubmissions":    userSubmissions,
-		"fileinfos":          _fileinfos,
-		"projects":           projects,
+		"databases":   db.Databases,
+		"projectName": db.ProjectName,
+		"date":        util.Date,
+		"setBreaks":   func(s string) template.HTML { return template.HTML(setBreaks(s)) },
+		"address":     func(i interface{}) string { return fmt.Sprint(&i) },
+		"base":        filepath.Base,
+		"shortName":   util.ShortName,
+		"sum":         sum,
+		"percent":     percent,
+		"round":       round,
+		"langs":       tool.Langs,
+		"sub":         func(id bson.ObjectId) (*project.Submission, error) { return db.Submission(bson.M{db.ID: id}, nil) },
+		"getBusy":     mq.GetStatus,
+		"slice":       slice,
+		"adjustment":  adjustment,
+		"tools":       tools,
+		"snapshots":   func(id bson.ObjectId) (int, error) { return db.FileCount(id, project.SRC) },
+		"launches":    func(id bson.ObjectId) (int, error) { return db.FileCount(id, project.LAUNCH) },
+		"usertests":   func(id bson.ObjectId) (int, error) { return db.FileCount(id, project.TEST) },
+		"html":        func(s string) template.HTML { return template.HTML(s) },
+		"string":      func(b []byte) string { return string(bytes.TrimSpace(b)) },
+		"args":        args,
+		"insert":      insert,
+		"isError":     isError,
+		"hasChart":    tool.HasChart,
+		"fileinfos":   _fileinfos,
+		"projects":    projects,
 		"langProjects": func(l string) ([]*project.Project, error) {
 			return db.Projects(bson.M{db.LANG: l}, nil, db.NAME)
 		},
-		"resultNames":   db.ResultNames,
-		"users":         func() ([]string, error) { return db.Usernames(nil) },
-		"skeletons":     skeletons,
-		"overviewChart": overviewChart,
-		"typeCounts":    db.TypeCounts,
-		"editables":     func() []string { return []string{"Project", "User"} },
-		"permissions":   user.Permissions,
-		"file":          func(id bson.ObjectId) (*project.File, error) { return db.File(bson.M{db.ID: id}, nil) },
-		"toTitle":       util.Title,
-		"addSpaces":     func(s string) string { return strings.Join(util.SplitTitles(s), " ") },
-		"chartTime":     chartTime,
-		"validId":       validId,
+		"resultNames": db.ResultNames,
+		"users":       func() ([]string, error) { return db.Usernames(nil) },
+		"typeCounts":  db.TypeCounts,
+		"file":        func(id bson.ObjectId) (*project.File, error) { return db.File(bson.M{db.ID: id}, nil) },
+		"toTitle":     util.Title,
+		"addSpaces":   func(s string) string { return strings.Join(util.SplitTitles(s), " ") },
+		"chartTime":   chartTime,
+		"validId":     validId,
 		"emptyM": func(m map[string][]interface{}) bool {
 			return len(m) == 0
 		},
@@ -169,22 +151,8 @@ func sortFiles(ids []interface{}) []*project.File {
 		}
 		fs = append(fs, f)
 	}
-	sort.Sort(files(fs))
+	sort.Sort(project.Files(fs))
 	return fs
-}
-
-type files []*project.File
-
-func (f files) Less(i, j int) bool {
-	return f[i].Time >= f[j].Time
-}
-
-func (f files) Swap(i, j int) {
-	f[i], f[j] = f[j], f[i]
-}
-
-func (f files) Len() int {
-	return len(f)
 }
 
 func chartTime(f *project.File) (float64, error) {
@@ -195,32 +163,8 @@ func chartTime(f *project.File) (float64, error) {
 	return util.Round(float64(f.Time-s.Time)/1000.0, 2), nil
 }
 
-func submissionLang(sid bson.ObjectId) (string, error) {
-	s, e := db.Submission(bson.M{db.ID: sid}, nil)
-	if e != nil {
-		return "", e
-	}
-	p, e := db.Project(bson.M{db.ID: s.ProjectId}, nil)
-	if e != nil {
-		return "", e
-	}
-	return strings.ToLower(p.Lang), nil
-}
-
 func projects() ([]*project.Project, error) {
 	return db.Projects(nil, nil, db.NAME)
-}
-
-func skeletons(pid bson.ObjectId) ([]*project.Skeleton, error) {
-	return db.Skeletons(bson.M{db.PROJECTID: pid}, bson.M{db.DATA: 0}, db.NAME)
-}
-
-func userSubmissions(uid string) ([]*project.Submission, error) {
-	return db.Submissions(bson.M{db.USER: uid}, nil, "-"+db.TIME)
-}
-
-func projectSubmissions(pid bson.ObjectId) ([]*project.Submission, error) {
-	return db.Submissions(bson.M{db.PROJECTID: pid}, nil, "-"+db.TIME)
 }
 
 //isError checks whether a result is an ErrorResult.
@@ -252,18 +196,6 @@ func args(values ...interface{}) (Args, error) {
 func insert(a Args, k string, v interface{}) Args {
 	a[k] = v
 	return a
-}
-
-//submissionCount
-func submissionCount(id interface{}) (int, error) {
-	switch t := id.(type) {
-	case bson.ObjectId:
-		return db.Count(db.SUBMISSIONS, bson.M{db.PROJECTID: t})
-	case string:
-		return db.Count(db.SUBMISSIONS, bson.M{db.USER: t})
-	default:
-		return -1, fmt.Errorf("Unknown id type %q.", id)
-	}
 }
 
 //sum calculates the sum of vals.

@@ -177,10 +177,11 @@ func (c *client) sendArchive(f file) error {
 
 func (c *client) sendFile(numFiles uint, files []file) error {
 	var i uint = 0
+outer:
 	for {
 		for _, f := range files {
 			if i == numFiles {
-				return nil
+				break outer
 			}
 			if e := write(c.conn, map[string]interface{}{REQ: SEND, project.TYPE: f.tipe, db.NAME: f.name, db.PKG: f.pkg, db.TIME: util.CurMilis()}); e != nil {
 				return e

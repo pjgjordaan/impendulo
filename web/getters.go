@@ -144,7 +144,7 @@ func getFiles(r *http.Request, c *context.C) (Args, string, error) {
 		util.Log(e)
 		f = []*db.FileInfo{}
 	}
-	if len(f) != 1 {
+	if len(f) != 1 || c.Browse.Level != context.SUBMISSIONS {
 		return Args{"fileInfo": f, "templates": []string{"fileresult"}}, "", nil
 	}
 	c.Browse.File = f[0].Name

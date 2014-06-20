@@ -466,7 +466,7 @@ func getSkeletons(r *http.Request) ([]byte, error) {
 	if e != nil {
 		return nil, e
 	}
-	s, e := skeletons(pid)
+	s, e := db.Skeletons(bson.M{db.PROJECTID: pid}, bson.M{db.DATA: 0}, db.NAME)
 	if e != nil {
 		return nil, e
 	}

@@ -97,10 +97,6 @@ func toolPosters() map[string]Poster {
 	}
 }
 
-func configTools() []string {
-	return []string{junit.NAME, jpf.NAME, pmd.NAME, findbugs.NAME, checkstyle.NAME, mk.NAME}
-}
-
 //tools
 func tools(pid bson.ObjectId) ([]string, error) {
 	p, e := db.Project(bson.M{db.ID: pid}, nil)

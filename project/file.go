@@ -52,7 +52,20 @@ type (
 		Results  bson.M        `bson:"results"`
 		Comments []*Comment    `bson:"comments"`
 	}
+	Files []*File
 )
+
+func (fs Files) Less(i, j int) bool {
+	return fs[i].Time >= fs[j].Time
+}
+
+func (fs Files) Swap(i, j int) {
+	fs[i], fs[j] = fs[j], fs[i]
+}
+
+func (fs Files) Len() int {
+	return len(fs)
+}
 
 const (
 	SRC     Type = "src"

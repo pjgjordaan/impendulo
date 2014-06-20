@@ -160,6 +160,7 @@ func Load(s *sessions.Session) *C {
 		c.Browse.DisplayCount = 10
 		c.Browse.Current = 0
 		c.Browse.Next = 0
+		c.Browse.Result = &Result{Type: tool.CODE}
 	}
 	u, e := c.Username()
 	if e != nil {
@@ -176,6 +177,9 @@ func (b *Browse) ClearSubmission() {
 	b.Current = 0
 	b.Next = 0
 	b.DisplayCount = 10
+	if b.Result == nil {
+		b.Result = &Result{Type: tool.CODE}
+	}
 }
 
 func (b *Browse) SetDisplayCount(r *http.Request) error {
@@ -380,10 +384,10 @@ func (r *Result) Set(s string) error {
 		r.FileID = id
 	}
 	sp = strings.Split(sp[0], ":")
+	r.Type = sp[0]
 	if len(sp) > 1 {
 		r.Name = sp[1]
 	}
-	r.Type = sp[0]
 	return nil
 }
 
@@ -429,7 +433,7 @@ func (r *Result) Update(sid bson.ObjectId, fname string) error {
 	}
 	id, e := db.FileResultId(sid, fname, r.Type, r.Name)
 	if e != nil {
-		r.Set(tool.CODE)
+		return r.Set(tool.CODE)
 	}
 	r.FileID = id
 	return nil

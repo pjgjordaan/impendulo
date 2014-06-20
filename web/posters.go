@@ -92,9 +92,7 @@ func IndexPosters() map[string]bool {
 //GeneratePosts loads post request handlers and adds them to the router.
 func GeneratePosts(router *pat.Router, posts map[string]Poster, indexPosts map[string]bool) {
 	for n, f := range posts {
-		h := f.CreatePost(indexPosts[n])
-		p := "/" + n
-		router.Add("POST", p, Handler(h)).Name(n)
+		router.Add("POST", "/"+n, Handler(f.CreatePost(indexPosts[n]))).Name(n)
 	}
 }
 
