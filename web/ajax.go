@@ -2,7 +2,6 @@ package web
 
 import (
 	"code.google.com/p/gorilla/pat"
-	"code.google.com/p/gorilla/sessions"
 
 	"time"
 
@@ -44,8 +43,9 @@ type (
 )
 
 var (
-	CountsError  = errors.New("unsupported counts request")
-	ResultsError = errors.New("cannot retrieve results")
+	CountsError   = errors.New("unsupported counts request")
+	CommentsError = errors.New("unsupported comments request")
+	ResultsError  = errors.New("cannot retrieve results")
 )
 
 func (s Selects) Len() int {
@@ -84,12 +84,13 @@ func GenerateAJAX(r *pat.Router) {
 		"langs": getLangs, "projects": getProjects, "files": ajaxFiles, "tools": ajaxTools, "jpfsearches": ajaxSearches,
 		"code": ajaxCode, "users": ajaxUsers, "permissions": ajaxPerms, "comparables": ajaxComparables,
 		"tests": ajaxTests, "test-types": testTypes, "filenames": fileNames, "status": ajaxStatus, "counts": ajaxCounts,
+		"comments": ajaxComments,
 	}
 	for n, f := range gets {
 		r.Add("GET", "/"+n, f)
 	}
 	posts := map[string]AJAXPost{
-		"setcontext": ajaxSetContext,
+		"setcontext": ajaxSetContext, "addcomment": addComment,
 	}
 	for n, f := range posts {
 		r.Add("POST", "/"+n, f)
@@ -119,6 +120,23 @@ func ajaxStatus(r *http.Request) ([]byte, error) {
 	}
 }
 
+func ajaxComments(r *http.Request) ([]byte, error) {
+	c, e := commentor(r)
+	if e != nil {
+		return nil, e
+	}
+	return util.JSON(map[string]interface{}{"comments": c.LoadComments()})
+}
+
+func commentor(r *http.Request) (project.Commentor, error) {
+	if id, e := convert.Id(r.FormValue("file-id")); e == nil {
+		return db.File(bson.M{db.ID: id}, bson.M{db.COMMENTS: 1})
+	} else if id, e := convert.Id(r.FormValue("submission-id")); e == nil {
+		return db.Submission(bson.M{db.ID: id}, bson.M{db.COMMENTS: 1})
+	}
+	return nil, CommentsError
+}
+
 func fileNames(r *http.Request) ([]byte, error) {
 	pid, e := convert.Id(r.FormValue("project-id"))
 	if e != nil {
@@ -132,22 +150,47 @@ func fileNames(r *http.Request) ([]byte, error) {
 }
 
 func ajaxSetContext(w http.ResponseWriter, r *http.Request) error {
-	if store == nil {
-		auth, enc, e := util.CookieKeys()
-		if e != nil {
-			return e
-		}
-		store = sessions.NewCookieStore(auth, enc)
-	}
-	s, e := store.Get(r, "impendulo")
+	c, e := loadContext(r)
 	if e != nil {
 		return e
 	}
-	c := context.Load(s)
 	if e := c.Browse.Update(r); e != nil {
 		return e
 	}
 	return c.Save(r, w)
+}
+
+func addComment(w http.ResponseWriter, r *http.Request) error {
+	c, e := loadContext(r)
+	if e != nil {
+		return e
+	}
+	u, e := c.Username()
+	if e != nil {
+		return e
+	}
+	fid, e := convert.Id(r.FormValue("File-id"))
+	if e != nil {
+		return e
+	}
+	start, e := convert.Int(r.FormValue("Start"))
+	if e != nil {
+		return e
+	}
+	end, e := convert.Int(r.FormValue("End"))
+	if e != nil {
+		return e
+	}
+	d, e := webutil.String(r, "Data")
+	if e != nil {
+		return e
+	}
+	f, e := db.File(bson.M{db.ID: fid}, bson.M{db.COMMENTS: 1})
+	if e != nil {
+		return e
+	}
+	f.Comments = append(f.Comments, &project.Comment{Data: d, User: u, Start: start, End: end})
+	return db.Update(db.FILES, bson.M{db.ID: fid}, bson.M{db.SET: bson.M{db.COMMENTS: f.Comments}})
 }
 
 func testTypes(r *http.Request) ([]byte, error) {

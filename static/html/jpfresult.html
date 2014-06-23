@@ -10,7 +10,7 @@
 </h4>
 {{end}} {{$addr := address $report}}
 <div class="panel-group" id="jpfaccordion{{$addr}}">
-    {{if not $report.Success}} {{$uid := .state.Uid}} {{$sid := .state.Sid}} {{$fileName := .state.File}} {{$current := .state.Current}} {{$next := .state.Next}} {{$rid := $report.Id.Hex}}
+    {{if not $report.Success}} {{$rid := $report.Id.Hex}}
     <div class="panel panel-default">
         <div class="panel-heading">
             <a class="accordion-toggle" data-toggle="collapse" data-parent="#jpfaccordion{{$addr}}" href="#errors{{$addr}}">

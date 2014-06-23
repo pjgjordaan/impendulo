@@ -44,8 +44,14 @@ type (
 	}
 
 	Comment struct {
-		User string
-		Data []byte
+		User  string
+		Data  string
+		Start int
+		End   int
+	}
+
+	Commentor interface {
+		LoadComments() []*Comment
 	}
 )
 

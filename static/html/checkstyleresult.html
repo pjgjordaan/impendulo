@@ -1,6 +1,6 @@
 {{define "result"}} {{$report := .Report}} {{if $report.Success}}
 <h4 class="text-success">No problems detected.</h4>
-{{else}} {{$uid := .state.Uid}} {{$sid := .state.Sid}} {{$fileName := .state.File}} {{$current := .state.Current}} {{$next := .state.Next}} {{$file := $report.File $fileName}} {{$rid := $report.Id.Hex}}
+{{else}} {{$fileName := .ctx.Browse.File}} {{$file := $report.File $fileName}} {{$rid := $report.Id.Hex}}
 <h4 class="text-danger">{{$report.Errors}} problems detected.</h4>
 {{$addr := address $report}}
 <div class="panel-group" id="checkstyleaccordion{{$addr}}">

@@ -199,3 +199,7 @@ func (f *File) Rename(n string) {
 	f.Name = n
 	f.Data = bytes.Replace(f.Data, []byte(on), []byte(nn), -1)
 }
+
+func (f *File) LoadComments() []*Comment {
+	return f.Comments
+}

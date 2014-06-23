@@ -570,7 +570,7 @@ function addSubmissionInfo(sid, fc, template, dest) {
     });
 }
 
-if (!String.prototype.format) {
+if (typeof String.prototype.format != 'function') {
     String.prototype.format = function() {
         var args = arguments;
         return this.replace(/{(\d+)}/g, function(match, number) {
@@ -579,6 +579,17 @@ if (!String.prototype.format) {
     };
 }
 
+if (typeof String.prototype.startsWith != 'function') {
+    String.prototype.startsWith = function(str) {
+        return this.slice(0, str.length) == str;
+    };
+}
+
+if (typeof String.prototype.endsWith != 'function') {
+    String.prototype.endsWith = function(str) {
+        return this.slice(-str.length) == str;
+    };
+}
 
 var EditView = {
     init: function() {
@@ -872,4 +883,98 @@ function round(n, p) {
         p = 2
     }
     return +Number(n).toFixed(2);
+}
+
+var CodeView = {
+    init: function(user, fileID) {
+        $(function() {
+            var min = Number($('#code' + fileID + ' .gutter .line').first().html());
+            var max = Number($('#code' + fileID + ' .gutter .line').last().html());
+            $('#modal-code' + fileID + ' .input-line').val(min);
+            $('#modal-code' + fileID + ' .input-line').attr('min', min);
+            $('#modal-code' + fileID + ' .input-line').attr('max', max);
+            $('#code' + fileID + ' .gutter .line').wrap('<a href=""></a>');
+            $('#code' + fileID + ' .gutter a').click(function() {
+                CodeView.commentModal(fileID, Number($(this).find('.line').html()));
+                return false;
+            });
+            CodeView.loadComments(fileID);
+            $('#submit-comment' + fileID).click(function() {
+                CodeView.submitComment(user, fileID);
+            });
+        });
+    },
+    submitComment: function(user, fileID) {
+        $('#modal-code' + fileID + ' .alert p').empty();
+        $('#modal-code' + fileID + ' .alert').hide();
+        var start = Number($('#line-start' + fileID).val());
+        var end = Number($('#line-end' + fileID).val());
+        if (end < start) {
+            $('#modal-code' + fileID + ' .alert p').append('End line cannot be smaller than start line.');
+            $('#modal-code' + fileID + ' .alert').show();
+            return false;
+        }
+        var min = Number($('#code' + fileID + ' .gutter .line').first().html());
+        if (start < min) {
+            $('#modal-code' + fileID + ' .alert p').append('Comment start line cannot be smaller than the first line of the file.');
+            $('#modal-code' + fileID + ' .alert').show();
+            return false;
+        }
+        var max = Number($('#code' + fileID + ' .gutter .line').last().html());
+        if (end > max) {
+            $('#modal-code' + fileID + ' .alert p').append('Comment end line cannot be larger than the last line of the file.');
+            $('#modal-code' + fileID + ' .alert').show();
+            return false;
+        }
+        var comment = {
+            'Data': $('#modal-code' + fileID + ' textarea').val().trim(),
+            'Start': start,
+            'End': end,
+            'File-id': fileID,
+            'User': user
+        }
+        CodeView.addComment(fileID, comment);
+        $.post('addcomment', comment, function(data) {
+            $('#modal-code' + fileID).modal('hide');
+            if (data["error"] !== "none" && !not(data["error"])) {
+                console.log(data["error"]);
+            }
+        });
+        return false;
+    },
+    commentModal: function(fileID, line) {
+        $('#modal-code' + fileID + ' .alert p').empty();
+        $('#modal-code' + fileID + ' .alert').hide();
+        $('#modal-code' + fileID + ' .input-line').val(line);
+        $('#modal-code' + fileID).modal('show');
+    },
+    addComment: function(fileID, comment) {
+        for (var i = comment.Start; i <= comment.End; i++) {
+            CodeView.createTooltip(fileID, i);
+            $('#tooltip-content' + fileID + i).append('<p>' + comment.User + ' >> ' + comment.Data + '</p>');
+        }
+    },
+    createTooltip: function(fileID, num) {
+        if (!$('#tooltip-content' + fileID + num).length) {
+            $('#code' + fileID + ' .code .number' + num).attr('data-toggle', 'tooltip');
+            $('#code' + fileID + ' .code .number' + num).tooltip({
+                html: true,
+                title: function() {
+                    return $('#tooltip-content' + fileID + num).html();
+                },
+                container: 'body'
+            });
+            $('body').append('<div id="tooltip-content' + fileID + num + '" hidden><p></p></div>');
+        }
+    },
+    loadComments: function(fileID) {
+        $.getJSON('comments?file-id=' + fileID, function(data) {
+            if (not(data['comments'])) {
+                return;
+            }
+            for (var i = 0; i < data['comments'].length; i++) {
+                CodeView.addComment(fileID, data['comments'][i]);
+            }
+        });
+    }
 }

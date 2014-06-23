@@ -1,6 +1,6 @@
 {{define "result"}} {{$report := .Report}} {{if $report.Success}}
 <h4 class="text-success">No bugs found</h4>
-{{else}} {{$code := "Code"}} {{$uid := .state.Uid}} {{$sid := .state.Sid}} {{$fileName := .state.File}} {{$current := .state.Current}} {{$next := .state.Next}} {{$rid := $report.Id.Hex}} {{$addr := address $report}}
+{{else}} {{$rid := $report.Id.Hex}} {{$addr := address $report}}
 <h4 class="text-danger">{{$report.Summary.BugCount}} bugs found</h4>
 <div class="panel-group" id="fbaccordion{{$addr}}">
     <div class="panel panel-default">

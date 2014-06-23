@@ -84,4 +84,5 @@ const (
 	SALT        = "salt"
 	ACCESS      = "access"
 	DESCRIPTION = "description"
+	COMMENTS    = "comments"
 )

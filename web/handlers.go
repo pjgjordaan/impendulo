@@ -52,22 +52,45 @@ type (
 )
 
 func init() {
-	auth, enc, e := util.CookieKeys()
-	if e != nil {
+	if e := loadStore(); e != nil {
 		panic(e)
 	}
+}
+
+func loadStore() error {
+	if store != nil {
+		return nil
+	}
+	auth, enc, e := util.CookieKeys()
+	if e != nil {
+		return e
+	}
 	store = sessions.NewCookieStore(auth, enc)
+	return nil
+}
+
+func loadSession(r *http.Request) (*sessions.Session, error) {
+	if e := loadStore(); e != nil {
+		return nil, e
+	}
+	return store.Get(r, "impendulo")
+}
+
+func loadContext(r *http.Request) (*context.C, error) {
+	s, e := loadSession(r)
+	if e != nil {
+		return nil, e
+	}
+	return context.Load(s), nil
 }
 
 //ServeHTTP loads a the current session, handles  the request and
 //then stores the session.
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s, e := store.Get(r, "impendulo")
+	c, e := loadContext(r)
 	if e != nil {
 		util.Log(e, LOG_HANDLERS)
 	}
-	//Load our context from session
-	c := context.Load(s)
 	b := new(buffer.B)
 	if e = CheckAccess(r.URL.Path, c, Permissions()); e != nil {
 		c.AddMessage(e.Error(), true)

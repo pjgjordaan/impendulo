@@ -178,10 +178,15 @@ func isError(i interface{}) bool {
 //will be the value which corresponds to that key in the map. The list must therefore
 //contain an even number of items.
 func args(values ...interface{}) (Args, error) {
+	a := make(Args, len(values)/2)
+	return insert(a, values...)
+}
+
+//insert adds a key-value pair to the specified map.
+func insert(a Args, values ...interface{}) (Args, error) {
 	if len(values)%2 != 0 {
 		return nil, InvalidArgsError
 	}
-	a := make(Args, len(values)/2)
 	for i := 0; i < len(values); i += 2 {
 		if k, ok := values[i].(string); ok {
 			a[k] = values[i+1]
@@ -192,10 +197,8 @@ func args(values ...interface{}) (Args, error) {
 	return a, nil
 }
 
-//insert adds a key-value pair to the specified map.
-func insert(a Args, k string, v interface{}) Args {
-	a[k] = v
-	return a
+func _insert(a Args, values ...interface{}) {
+
 }
 
 //sum calculates the sum of vals.

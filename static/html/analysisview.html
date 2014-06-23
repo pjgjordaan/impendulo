@@ -196,16 +196,16 @@
 </div>
 {{if (eq $rd.Type "Diff")}} {{$data := .currentResult.Create .nextResult}} {{template "result" $data}} {{else}}
 <div class="row">
-    {{$args := args "state" .ctx.Browse}}
+    {{$args := args "ctx" .ctx}}
     <div class="col-md-6">
         {{if isError .currentResult}}
         <p class="text-danger">{{.currentResult.GetReport}}</p>
-        {{else}} {{$args := insert $args "Report" .currentResult.GetReport}} {{template "result" $args}} {{end}}
+        {{else}} {{$args := insert $args "Report" .currentResult.GetReport "FileId" $currentFile.Id.Hex}} {{template "result" $args}} {{end}}
     </div>
     <div class="col-md-6">
         {{if isError .nextResult}}
         <p class="text-danger">{{.nextResult.GetReport}}</p>
-        {{else}} {{$args := insert $args "Report" .nextResult.GetReport}} {{template "result" $args}} {{end}}
+        {{else}} {{$args := insert $args "Report" .nextResult.GetReport "FileId" $nextFile.Id.Hex}} {{template "result" $args}} {{end}}
     </div>
 </div>
 {{if (eq .currentResult.Template "junitresult")}}

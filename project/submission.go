@@ -68,3 +68,7 @@ func NewSubmission(pid bson.ObjectId, u, m string, t int64) *Submission {
 func (s *Submission) Format(p *Project) string {
 	return fmt.Sprintf("%s \u2192 %s \u2192 %s", p.Name, s.User, util.Date(s.Time))
 }
+
+func (s *Submission) LoadComments() []*Comment {
+	return s.Comments
+}
