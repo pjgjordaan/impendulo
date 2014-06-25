@@ -31,8 +31,8 @@ import (
 
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/junit"
+	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
 	"github.com/godfried/impendulo/web/context"
@@ -52,7 +52,7 @@ type (
 	D      []map[string]interface{}
 	avgVal struct {
 		count int
-		val   *tool.ChartVal
+		val   *result.ChartVal
 	}
 )
 
@@ -76,12 +76,7 @@ func Tool(r *context.Result, files []*project.File) (D, error) {
 		if e != nil {
 			continue
 		}
-		switch c.result.Type {
-		case tool.SUMMARY:
-			addAll(c, f)
-		default:
-			addSingle(c, f)
-		}
+		addSingle(c, f)
 	}
 	f, e := db.File(bson.M{db.ID: files[0].Id}, bson.M{db.SUBID: 1})
 	if e != nil {
@@ -94,7 +89,7 @@ func Tool(r *context.Result, files []*project.File) (D, error) {
 		return c.Data, nil
 	}
 	for _, l := range ls {
-		v := []*tool.ChartVal{&tool.ChartVal{Name: "Launches", Y: 0.0, FileId: l.Id}}
+		v := []*result.ChartVal{&result.ChartVal{Name: "Launches", Y: 0.0, FileId: l.Id}}
 		c.Add(l.Time, v)
 	}
 	return c.Data, nil
@@ -105,7 +100,7 @@ func addAll(c *C, f *project.File) {
 		if _, e := convert.Id(id); e != nil {
 			continue
 		}
-		r, e := db.ChartResult(bson.M{db.ID: id}, nil)
+		r, e := db.Charter(bson.M{db.ID: id}, nil)
 		if e != nil {
 			continue
 		}
@@ -118,7 +113,7 @@ func addSingle(c *C, f *project.File) {
 	if _, e := convert.Id(f.Results[c.result.Raw()]); e != nil {
 		return
 	}
-	r, e := db.ChartResult(bson.M{db.ID: f.Results[c.result.Raw()]}, nil)
+	r, e := db.Charter(bson.M{db.ID: f.Results[c.result.Raw()]}, nil)
 	if e != nil {
 		return
 	}
@@ -127,7 +122,7 @@ func addSingle(c *C, f *project.File) {
 }
 
 //Add inserts new coordinates into data used to display a chart.
-func (c *C) Add(t int64, vs []*tool.ChartVal) {
+func (c *C) Add(t int64, vs []*result.ChartVal) {
 	if len(vs) == 0 {
 		return
 	}
@@ -234,7 +229,7 @@ func Project() (D, error) {
 	return d, nil
 }
 
-type scoreFunc func(*project.Submission, *context.Result) (*tool.ChartVal, error)
+type scoreFunc func(*project.Submission, *context.Result) (*result.ChartVal, error)
 
 func Submission(subs []*project.Submission, r *context.Result, score string) (D, error) {
 	if len(subs) == 0 {
@@ -340,7 +335,7 @@ func norm(y, m, d float64) float64 {
 	return (1.0 / (d * math.Sqrt(2*math.Pi))) * math.Exp(-math.Pow(y-m, 2.0)/(2*math.Pow(d, 2.0)))
 }
 
-func finalScore(s *project.Submission, r *context.Result) (*tool.ChartVal, error) {
+func finalScore(s *project.Submission, r *context.Result) (*result.ChartVal, error) {
 	f, rid, e := lastInfo(s.Id, r)
 	if e != nil {
 		return nil, e
@@ -349,8 +344,8 @@ func finalScore(s *project.Submission, r *context.Result) (*tool.ChartVal, error
 	return firstVal(rid, t)
 }
 
-func firstVal(rid bson.ObjectId, t int64) (*tool.ChartVal, error) {
-	r, e := db.ChartResult(bson.M{db.ID: rid}, nil)
+func firstVal(rid bson.ObjectId, t int64) (*result.ChartVal, error) {
+	r, e := db.Charter(bson.M{db.ID: rid}, nil)
 	if e != nil {
 		return nil, e
 	}
@@ -362,7 +357,7 @@ func firstVal(rid bson.ObjectId, t int64) (*tool.ChartVal, error) {
 	return vs[0], nil
 }
 
-func (a *avgVal) add(v *tool.ChartVal) {
+func (a *avgVal) add(v *result.ChartVal) {
 	if a.val == nil {
 		a.count = 0
 		a.val = v
@@ -375,12 +370,12 @@ func (a *avgVal) add(v *tool.ChartVal) {
 	a.count++
 }
 
-func (a *avgVal) chartVal() *tool.ChartVal {
+func (a *avgVal) chartVal() *result.ChartVal {
 	a.val.Y = util.Round(a.val.Y/float64(a.count), 2)
 	return a.val
 }
 
-func averageScore(s *project.Submission, r *context.Result) (*tool.ChartVal, error) {
+func averageScore(s *project.Submission, r *context.Result) (*result.ChartVal, error) {
 	fs, e := db.Files(bson.M{db.SUBID: s.Id, db.TYPE: project.SRC}, bson.M{db.DATA: 0}, 0)
 	if e != nil {
 		return nil, e

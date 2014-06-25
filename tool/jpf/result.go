@@ -28,6 +28,7 @@ import (
 	"fmt"
 
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -36,7 +37,6 @@ const (
 )
 
 type (
-	//Result is a JPF implementation of tool.ToolResult, tool.DisplayResult and tool.ChartResult.
 	Result struct {
 		Id     bson.ObjectId `bson:"_id"`
 		FileId bson.ObjectId `bson:"fileid"`
@@ -47,81 +47,75 @@ type (
 	}
 )
 
-func (this *Result) GetType() string {
-	return this.Type
+func (r *Result) GetType() string {
+	return r.Type
 }
 
-//SetReport is used to change this result's report. This comes in handy
+//SetReport is used to change r result's report. R comes in handy
 //when putting data into/getting data out of GridFS
-func (this *Result) SetReport(report tool.Report) {
+func (r *Result) SetReport(report result.Reporter) {
 	if report == nil {
-		this.Report = nil
+		r.Report = nil
 	} else {
-		this.Report = report.(*Report)
+		r.Report = report.(*Report)
 	}
 }
 
-//OnGridFS determines whether this structure is partially stored on the
+//OnGridFS determines whether r structure is partially stored on the
 //GridFS.
-func (this *Result) OnGridFS() bool {
-	return this.GridFS
+func (r *Result) OnGridFS() bool {
+	return r.GridFS
 }
 
-func (this *Result) GetTestId() bson.ObjectId {
+func (r *Result) GetTestId() bson.ObjectId {
 	return ""
 }
 
-//String allows us to print this struct nicely.
-func (this *Result) String() string {
+//String allows us to print r struct nicely.
+func (r *Result) String() string {
 	return fmt.Sprintf("Id: %q; FileId: %q; Name: %s; \nReport: %s\n",
-		this.Id, this.FileId, this.Name, this.Report)
+		r.Id, r.FileId, r.Name, r.Report)
 }
 
 //GetName
-func (this *Result) GetName() string {
-	return this.Name
+func (r *Result) GetName() string {
+	return r.Name
 }
 
 //GetId
-func (this *Result) GetId() bson.ObjectId {
-	return this.Id
+func (r *Result) GetId() bson.ObjectId {
+	return r.Id
 }
 
 //GetFileId
-func (this *Result) GetFileId() bson.ObjectId {
-	return this.FileId
-}
-
-//Summary is the errors found by JPF.
-func (this *Result) Summary() *tool.Summary {
-	body := fmt.Sprintf("Errors: %d",
-		this.Report.ErrorCount())
-	return &tool.Summary{
-		Name: this.GetName(),
-		Body: body,
-	}
+func (r *Result) GetFileId() bson.ObjectId {
+	return r.FileId
 }
 
 //Success is true if no errors were found.
-func (this *Result) Success() bool {
-	return this.Report.Success()
+func (r *Result) Success() bool {
+	return r.Report.Success()
 }
 
 //GetReport
-func (this *Result) GetReport() tool.Report {
-	return this.Report
+func (r *Result) Reporter() result.Reporter {
+	return r.Report
 }
 
 //ChartVals
-func (this *Result) ChartVals() []*tool.ChartVal {
-	return []*tool.ChartVal{
-		&tool.ChartVal{Name: "Total Errors", Y: float64(this.Report.Total), FileId: this.FileId},
-		&tool.ChartVal{Name: "Unique Errors", Y: float64(this.Report.ErrorCount()), FileId: this.FileId},
+func (r *Result) ChartVals() []*result.ChartVal {
+	return []*result.ChartVal{
+		&result.ChartVal{Name: "Total Errors", Y: float64(r.Report.Total), FileId: r.FileId},
+		&result.ChartVal{Name: "Unique Errors", Y: float64(r.Report.ErrorCount()), FileId: r.FileId},
 	}
 }
 
-func (this *Result) Template() string {
+func (r *Result) Template() string {
 	return "jpfresult"
+}
+
+func (r *Result) Lines() []*result.Line {
+	return r.Report.Lines()
 }
 
 //NewResult creates a new JPF result. The data []byte is in XML format and

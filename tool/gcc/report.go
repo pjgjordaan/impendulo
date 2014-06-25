@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
 	"labix.org/v2/mgo/bson"
 
 	"strconv"
@@ -38,11 +39,11 @@ import (
 
 type (
 	Report struct {
-		Id       bson.ObjectId    `bson:"_id"`
-		Type     tool.CompileType `bson:"type"`
-		Warnings int              `bson:"warnings"`
-		Errors   int              `bson:"errors"`
-		Data     []byte           `bson:"data"`
+		Id       bson.ObjectId      `bson:"_id"`
+		Type     result.CompileType `bson:"type"`
+		Warnings int                `bson:"warnings"`
+		Errors   int                `bson:"errors"`
+		Data     []byte             `bson:"data"`
 	}
 )
 
@@ -61,11 +62,11 @@ func NewReport(id bson.ObjectId, data []byte) (*Report, error) {
 	if e != nil {
 		return nil, e
 	}
-	t := tool.SUCCESS
+	t := result.SUCCESS
 	if ec > 0 {
-		t = tool.ERRORS
+		t = result.ERRORS
 	} else if wc > 0 {
-		t = tool.WARNINGS
+		t = result.WARNINGS
 	}
 	return &Report{
 		Id:       id,
@@ -78,7 +79,7 @@ func NewReport(id bson.ObjectId, data []byte) (*Report, error) {
 
 //Success tells us if compilation finished with no errors or warnings.
 func (r *Report) Success() bool {
-	return r.Type == tool.SUCCESS
+	return r.Type == result.SUCCESS
 }
 
 //Header generates a string which briefly describes the compilation.

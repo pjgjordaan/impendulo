@@ -28,6 +28,7 @@ import (
 	"fmt"
 
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -36,8 +37,6 @@ const (
 )
 
 type (
-	//Result is Checkstyle's implementation of tool.ToolResult, tool.DisplayResult
-	//and tool.ChartResult
 	Result struct {
 		Id     bson.ObjectId `bson:"_id"`
 		FileId bson.ObjectId `bson:"fileid"`
@@ -54,11 +53,11 @@ func (this *Result) GetType() string {
 
 //SetReport is used to change this result's report. This comes in handy
 //when putting data into/getting data out of GridFS
-func (this *Result) SetReport(report tool.Report) {
+func (r *Result) SetReport(report result.Reporter) {
 	if report == nil {
-		this.Report = nil
+		r.Report = nil
 	} else {
-		this.Report = report.(*Report)
+		r.Report = report.(*Report)
 	}
 }
 
@@ -74,72 +73,58 @@ func (this *Result) String() string {
 }
 
 //GetName
-func (this *Result) GetName() string {
-	return this.Name
-}
-
-//Summary is the number of errors Checkstyle found.
-func (this *Result) Summary() *tool.Summary {
-	body := fmt.Sprintf("Errors: %d",
-		this.Report.Errors)
-	return &tool.Summary{
-		Name: this.GetName(),
-		Body: body,
-	}
+func (r *Result) GetName() string {
+	return r.Name
 }
 
 //GetId
-func (this *Result) GetId() bson.ObjectId {
-	return this.Id
+func (r *Result) GetId() bson.ObjectId {
+	return r.Id
 }
 
 //GetFileId
-func (this *Result) GetFileId() bson.ObjectId {
-	return this.FileId
+func (r *Result) GetFileId() bson.ObjectId {
+	return r.FileId
 }
 
-func (this *Result) GetTestId() bson.ObjectId {
+func (r *Result) GetTestId() bson.ObjectId {
 	return ""
 }
 
-//GetReport
-func (this *Result) GetReport() tool.Report {
-	return this.Report
-}
-
-//Success
-func (this *Result) Success() bool {
-	return true
+func (r *Result) Reporter() result.Reporter {
+	return r.Report
 }
 
 //ChartVals
-func (this *Result) ChartVals() []*tool.ChartVal {
-	return []*tool.ChartVal{
-		&tool.ChartVal{Name: "Errors", Y: float64(this.Report.Errors), FileId: this.FileId},
+func (r *Result) ChartVals() []*result.ChartVal {
+	return []*result.ChartVal{
+		&result.ChartVal{Name: "Errors", Y: float64(r.Report.Errors), FileId: r.FileId},
 	}
 }
 
-func (this *Result) Template() string {
+func (r *Result) Template() string {
 	return "checkstyleresult"
+}
+
+func (r *Result) Lines() []*result.Line {
+	return r.Report.Lines()
 }
 
 //NewResult creates a new Checkstyle Result.
 //Any errors returned will be XML errors due to extracting a Report from
 //data.
-func NewResult(fileId bson.ObjectId, data []byte) (res *Result, err error) {
+func NewResult(fileId bson.ObjectId, data []byte) (*Result, error) {
 	id := bson.NewObjectId()
-	report, err := NewReport(id, data)
-	if err != nil {
-		return
+	r, e := NewReport(id, data)
+	if e != nil {
+		return nil, e
 	}
-	gridFS := len(data) > tool.MAX_SIZE
-	res = &Result{
+	return &Result{
 		Id:     id,
 		FileId: fileId,
 		Name:   NAME,
-		GridFS: gridFS,
+		GridFS: len(data) > tool.MAX_SIZE,
 		Type:   NAME,
-		Report: report,
-	}
-	return
+		Report: r,
+	}, nil
 }

@@ -42,6 +42,7 @@ import (
 	"github.com/godfried/impendulo/tool/junit"
 	mk "github.com/godfried/impendulo/tool/make"
 	"github.com/godfried/impendulo/tool/pmd"
+	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
@@ -426,7 +427,7 @@ func runTools(f *project.File, ts []string, allFiles bool) {
 }
 
 //GetResult retrieves a DisplayResult for a given file and result name.
-func GetResult(r *context.Result, fileId bson.ObjectId) (tool.DisplayResult, error) {
+func GetResult(r *context.Result, fileId bson.ObjectId) (result.Displayer, error) {
 	m := bson.M{db.ID: fileId}
 	f, err := db.File(m, nil)
 	if err != nil {
@@ -437,46 +438,35 @@ func GetResult(r *context.Result, fileId bson.ObjectId) (tool.DisplayResult, err
 		return nil, err
 	}
 	switch r.Type {
-	case tool.CODE:
+	case result.CODE:
 		p, err := db.Project(bson.M{db.ID: s.ProjectId}, nil)
 		if err != nil {
 			return nil, err
 		}
-		return tool.NewCodeResult(p.Lang, f.Data), nil
+		return result.NewCode(fileId, p.Lang, f.Data), nil
 	case diff.NAME:
 		return diff.NewResult(f), nil
-	case tool.SUMMARY:
-		r := tool.NewSummaryResult()
-		//Load summary for each available result.
-		for _, id := range f.Results {
-			cur, err := db.ToolResult(bson.M{db.ID: id}, nil)
-			if err != nil {
-				return nil, err
-			}
-			r.AddSummary(cur)
-		}
-		return r, nil
 	default:
 		ival, ok := f.Results[r.Raw()]
 		if !ok {
-			return tool.NewErrorResult(tool.NORESULT, r.Format()), nil
+			return result.NewError(result.NORESULT, r.Format()), nil
 		}
 		switch v := ival.(type) {
 		case bson.ObjectId:
 			//Retrieve result from the db.
-			return db.DisplayResult(bson.M{db.ID: v}, nil)
+			return db.Displayer(bson.M{db.ID: v}, nil)
 		case string:
 			//Error, so create new error result.
-			return tool.NewErrorResult(v, r.Format()), nil
+			return result.NewError(v, r.Format()), nil
 		}
 	}
-	return tool.NewErrorResult(tool.NORESULT, r.Format()), nil
+	return result.NewError(result.NORESULT, r.Format()), nil
 }
 
 //validId
 func validId(rs ...interface{}) (string, error) {
 	for _, i := range rs {
-		if r, ok := i.(tool.ToolResult); ok {
+		if r, ok := i.(result.Tooler); ok {
 			return r.GetId().Hex(), nil
 		}
 	}

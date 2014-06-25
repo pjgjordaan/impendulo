@@ -33,6 +33,7 @@ import (
 	"github.com/godfried/impendulo/processor/mq"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
 
@@ -71,7 +72,7 @@ var (
 		"args":        args,
 		"insert":      insert,
 		"isError":     isError,
-		"hasChart":    tool.HasChart,
+		"hasChart":    result.HasChart,
 		"fileinfos":   _fileinfos,
 		"projects":    projects,
 		"langProjects": func(l string) ([]*project.Project, error) {
@@ -169,7 +170,7 @@ func projects() ([]*project.Project, error) {
 
 //isError checks whether a result is an ErrorResult.
 func isError(i interface{}) bool {
-	_, ok := i.(*tool.ErrorResult)
+	_, ok := i.(*result.Error)
 	return ok
 }
 

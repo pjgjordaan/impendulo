@@ -30,6 +30,7 @@ import (
 	"fmt"
 
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
 
 	"html/template"
 
@@ -247,6 +248,14 @@ func (r *Report) Success() bool {
 //String
 func (r *Report) String() string {
 	return fmt.Sprintf("Id: %q; Summary: %s", r.Id, r.Summary)
+}
+
+func (r *Report) Lines() []*result.Line {
+	lines := make([]*result.Line, 0, len(r.Instances))
+	for _, b := range r.Instances {
+		lines = append(lines, &result.Line{Title: r.PatternMap[b.Type].Description, Description: b.LongMessage, Start: b.Line.Start, End: b.Line.End})
+	}
+	return lines
 }
 
 //String

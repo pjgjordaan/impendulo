@@ -32,6 +32,7 @@ import (
 
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 
@@ -41,7 +42,7 @@ import (
 )
 
 type (
-	//Tool is an implementation of tool.Tool which allows us to run
+	//Tool is an implementation of tool.T which allows us to run
 	//PMD on Java classes.
 	Tool struct {
 		cmd   string
@@ -82,7 +83,7 @@ func (t *Tool) Name() string {
 
 //Run runs PMD on a provided Java source file. PMD writes its output to an XML file which we then read
 //and use to create a PMD Result.
-func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
+func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (result.Tooler, error) {
 	o := filepath.Join(target.Dir, "pmd.xml")
 	a := []string{t.cmd, "pmd", "-f", "xml", "-stress", "-shortnames", "-R", t.rules, "-r", o, "-d", target.Dir}
 	defer os.Remove(o)

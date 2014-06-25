@@ -26,13 +26,12 @@ package jacoco
 
 import (
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 )
 
 type (
-	//Result is an implementation of ToolResult, DisplayResult
-	//and ChartResult for Jacoco coverage results.
 	Result struct {
 		Id       bson.ObjectId `bson:"_id"`
 		FileId   bson.ObjectId `bson:"fileid"`
@@ -45,7 +44,7 @@ type (
 )
 
 //SetReport
-func (r *Result) SetReport(n tool.Report) {
+func (r *Result) SetReport(n result.Reporter) {
 	if n == nil {
 		r.Report = nil
 	} else {
@@ -77,15 +76,7 @@ func (r *Result) GetTestId() bson.ObjectId {
 	return r.TestId
 }
 
-//Summary
-func (r *Result) Summary() *tool.Summary {
-	return &tool.Summary{
-		Name: r.GetName(),
-	}
-}
-
-//GetReport
-func (r *Result) GetReport() tool.Report {
+func (r *Result) Reporter() result.Reporter {
 	return r.Report
 }
 
@@ -102,11 +93,11 @@ func (r *Result) GetType() string {
 }
 
 //ChartVals
-func (r *Result) ChartVals() []*tool.ChartVal {
-	v := make([]*tool.ChartVal, len(r.Report.Counters))
+func (r *Result) ChartVals() []*result.ChartVal {
+	v := make([]*result.ChartVal, len(r.Report.Counters))
 	for i, c := range r.Report.MainCounters {
 		p := util.Round(float64(c.Covered)/float64(c.Covered+c.Missed)*100.0, 2)
-		v[i] = &tool.ChartVal{Name: util.Title(c.Type) + " Coverage", Y: p, FileId: r.FileId}
+		v[i] = &result.ChartVal{Name: util.Title(c.Type) + " Coverage", Y: p, FileId: r.FileId}
 	}
 	return v
 }

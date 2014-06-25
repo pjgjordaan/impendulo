@@ -30,6 +30,7 @@ import (
 	"fmt"
 
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
 	"labix.org/v2/mgo/bson"
 
 	"strconv"
@@ -124,38 +125,50 @@ func init() {
 }
 
 //NewReport generates a new Report from the provided XML data.
-func NewReport(id bson.ObjectId, data []byte) (res *Report, err error) {
-	if err = xml.Unmarshal(data, &res); err != nil {
-		err = tool.NewXMLError(err, "jpf/jpfResult.go")
+func NewReport(id bson.ObjectId, data []byte) (r *Report, e error) {
+	if e = xml.Unmarshal(data, &r); e != nil {
+		e = tool.NewXMLError(e, "jpf/jpfResult.go")
 		return
 	}
-	res.Id = id
+	r.Id = id
 	return
 }
 
+func (r *Report) Lines() []*result.Line {
+	lines := make([]*result.Line, 0, len(r.Errors)*10)
+	for _, e := range r.Errors {
+		for _, t := range e.Threads {
+			for _, f := range t.Frames {
+				lines = append(lines, &result.Line{Title: e.Property, Description: e.Details, Start: f.Line, End: f.Line})
+			}
+		}
+	}
+	return lines
+}
+
 //Errors provided the number of errors found by JPF.
-func (this *Report) ErrorCount() int {
-	return len(this.Errors)
+func (r *Report) ErrorCount() int {
+	return len(r.Errors)
 }
 
 //Success is true if JPF found no errors.
-func (this *Report) Success() bool {
-	return this.ErrorCount() == 0
+func (r *Report) Success() bool {
+	return r.ErrorCount() == 0
 }
 
 //String
-func (this *Report) String() string {
+func (r *Report) String() string {
 	return fmt.Sprintf("Id: %q; Version: %s; \nResult: %q;\n Stats: %s",
-		this.Id, this.Version, this.Errors, this.Stats)
+		r.Id, r.Version, r.Errors, r.Stats)
 }
 
 //String
-func (this *Transition) String() string {
-	return `Transition Id: ` + strconv.Itoa(this.Id) + `; Thread Id: ` + strconv.Itoa(this.ThreadId)
+func (t *Transition) String() string {
+	return `Transition Id: ` + strconv.Itoa(t.Id) + `; Thread Id: ` + strconv.Itoa(t.ThreadId)
 }
 
 //String
-func (this *Statistics) String() string {
+func (s *Statistics) String() string {
 	return fmt.Sprintf("NewStates: %d; VisitedStates: %d; BacktrackedStates: %d; EndStates: %d;",
-		this.NewStates, this.VisitedStates, this.BacktrackedStates, this.EndStates)
+		s.NewStates, s.VisitedStates, s.BacktrackedStates, s.EndStates)
 }

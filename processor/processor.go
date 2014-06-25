@@ -34,6 +34,7 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/javac"
+	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 
@@ -44,9 +45,9 @@ import (
 type (
 	//Processor is used to process individual submissions.
 	Processor interface {
-		ResultName(tool.Tool) string
+		ResultName(tool.T) string
 		Compile(bson.ObjectId, *tool.Target) error
-		Tools() []tool.Tool
+		Tools() []tool.T
 		Process(bson.ObjectId) error
 	}
 	FileProcessor struct {
@@ -57,7 +58,7 @@ type (
 		toolDir  string
 		jpfPath  string
 		compiler tool.Compiler
-		tools    []tool.Tool
+		tools    []tool.T
 	}
 	TestProcessor struct {
 		sub      *project.Submission
@@ -67,7 +68,7 @@ type (
 		srcDir   string
 		toolDir  string
 		compiler tool.Compiler
-		tools    []tool.Tool
+		tools    []tool.T
 	}
 )
 
@@ -251,11 +252,11 @@ func (fp *FileProcessor) Compile(fid bson.ObjectId, t *tool.Target) error {
 	return e
 }
 
-func (fp *FileProcessor) ResultName(t tool.Tool) string {
+func (fp *FileProcessor) ResultName(t tool.T) string {
 	return t.Name()
 }
 
-func (fp *FileProcessor) Tools() []tool.Tool {
+func (fp *FileProcessor) Tools() []tool.T {
 	return fp.tools
 }
 
@@ -305,7 +306,7 @@ func (tp *TestProcessor) Process(fid bson.ObjectId) error {
 	return RunTools(f, t, tp)
 }
 
-func (tp *TestProcessor) ResultName(t tool.Tool) string {
+func (tp *TestProcessor) ResultName(t tool.T) string {
 	return t.Name() + "-" + tp.id.Hex()
 }
 
@@ -314,7 +315,7 @@ func (tp *TestProcessor) Compile(fid bson.ObjectId, t *tool.Target) error {
 	return e
 }
 
-func (tp *TestProcessor) Tools() []tool.Tool {
+func (tp *TestProcessor) Tools() []tool.T {
 	return tp.tools
 }
 
@@ -334,7 +335,7 @@ func RunTools(file *project.File, target *tool.Target, p Processor) error {
 	return nil
 }
 
-func runTool(t tool.Tool, f *project.File, target *tool.Target, n string) error {
+func runTool(t tool.T, f *project.File, target *tool.Target, n string) error {
 	if _, ok := f.Results[n]; ok {
 		return nil
 	}
@@ -343,9 +344,9 @@ func runTool(t tool.Tool, f *project.File, target *tool.Target, n string) error 
 	if e != nil {
 		//Report any errors and store timeouts.
 		if tool.IsTimeout(e) {
-			de = db.AddFileResult(f.Id, n, tool.TIMEOUT)
+			de = db.AddFileResult(f.Id, n, result.TIMEOUT)
 		} else {
-			de = db.AddFileResult(f.Id, n, tool.ERROR)
+			de = db.AddFileResult(f.Id, n, result.ERROR)
 		}
 	} else if r != nil {
 		de = db.AddResult(r, n)

@@ -4,6 +4,7 @@ import (
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/gcc"
+	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 
@@ -49,7 +50,7 @@ func (t *Tool) Name() string {
 	return NAME
 }
 
-func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
+func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (result.Tooler, error) {
 	r, e := tool.RunCommand([]string{t.cmd, "-C", target.Dir, "-f", t.path}, nil, 30*time.Second)
 	if e != nil {
 		if !tool.IsEndError(e) {
@@ -65,5 +66,5 @@ func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, 
 		//Compiler warnings.
 		return gcc.NewResult(fileId, r.StdErr)
 	}
-	return gcc.NewResult(fileId, tool.COMPILE_SUCCESS)
+	return gcc.NewResult(fileId, result.COMPILE_SUCCESS)
 }

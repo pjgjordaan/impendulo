@@ -21,6 +21,7 @@ import (
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/tool/pmd"
+	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
@@ -84,7 +85,7 @@ func GenerateAJAX(r *pat.Router) {
 		"langs": getLangs, "projects": getProjects, "files": ajaxFiles, "tools": ajaxTools, "jpfsearches": ajaxSearches,
 		"code": ajaxCode, "users": ajaxUsers, "permissions": ajaxPerms, "comparables": ajaxComparables,
 		"tests": ajaxTests, "test-types": testTypes, "filenames": fileNames, "status": ajaxStatus, "counts": ajaxCounts,
-		"comments": ajaxComments,
+		"comments": ajaxComments, "fileresults": ajaxFileResults,
 	}
 	for n, f := range gets {
 		r.Add("GET", "/"+n, f)
@@ -128,6 +129,30 @@ func ajaxComments(r *http.Request) ([]byte, error) {
 	return util.JSON(map[string]interface{}{"comments": c.LoadComments()})
 }
 
+func ajaxFileResults(r *http.Request) ([]byte, error) {
+	id, e := convert.Id(r.FormValue("id"))
+	if e != nil {
+		return nil, e
+	}
+	f, e := db.File(bson.M{db.ID: id}, bson.M{db.RESULTS: 1})
+	if e != nil {
+		return nil, e
+	}
+	lines := make(map[string][]*result.Line, len(f.Results)*10)
+	for _, v := range f.Results {
+		rid, e := convert.Id(v)
+		if e != nil {
+			continue
+		}
+		r, e := db.Coder(bson.M{db.ID: rid}, nil)
+		if e != nil {
+			continue
+		}
+		lines[r.GetName()] = r.Lines()
+	}
+	return util.JSON(map[string]interface{}{"fileresults": lines})
+}
+
 func commentor(r *http.Request) (project.Commentor, error) {
 	if id, e := convert.Id(r.FormValue("file-id")); e == nil {
 		return db.File(bson.M{db.ID: id}, bson.M{db.COMMENTS: 1})
@@ -169,19 +194,19 @@ func addComment(w http.ResponseWriter, r *http.Request) error {
 	if e != nil {
 		return e
 	}
-	fid, e := convert.Id(r.FormValue("File-id"))
+	fid, e := convert.Id(r.FormValue("file-id"))
 	if e != nil {
 		return e
 	}
-	start, e := convert.Int(r.FormValue("Start"))
+	start, e := convert.Int(r.FormValue("start"))
 	if e != nil {
 		return e
 	}
-	end, e := convert.Int(r.FormValue("End"))
+	end, e := convert.Int(r.FormValue("end"))
 	if e != nil {
 		return e
 	}
-	d, e := webutil.String(r, "Data")
+	d, e := webutil.String(r, "data")
 	if e != nil {
 		return e
 	}
@@ -274,7 +299,7 @@ func ajaxComparables(r *http.Request) ([]byte, error) {
 	if e != nil {
 		return nil, e
 	}
-	tr, e := db.ToolResult(bson.M{db.ID: id}, nil)
+	tr, e := db.Tooler(bson.M{db.ID: id}, nil)
 	if e != nil {
 		return nil, e
 	}
@@ -348,7 +373,7 @@ func ajaxCode(r *http.Request) ([]byte, error) {
 	}
 	m := bson.M{}
 	if rid, e := convert.Id(r.FormValue("result-id")); e == nil {
-		tr, e := db.ToolResult(bson.M{db.ID: rid}, bson.M{db.FILEID: 1})
+		tr, e := db.Tooler(bson.M{db.ID: rid}, bson.M{db.FILEID: 1})
 		if e != nil {
 			return nil, e
 		}

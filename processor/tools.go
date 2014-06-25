@@ -49,7 +49,7 @@ const (
 	LOG_TOOLS = "processing/tools.go"
 )
 
-func TestTools(p *TestProcessor, tf *project.File) ([]tool.Tool, error) {
+func TestTools(p *TestProcessor, tf *project.File) ([]tool.T, error) {
 	switch tool.Language(p.project.Lang) {
 	case tool.JAVA:
 		return javaTestTools(p, tf)
@@ -60,12 +60,12 @@ func TestTools(p *TestProcessor, tf *project.File) ([]tool.Tool, error) {
 	return nil, fmt.Errorf("no tools found for %s language", p.project.Lang)
 }
 
-func cTestTools(p *TestProcessor, tf *project.File) []tool.Tool {
-	return []tool.Tool{}
+func cTestTools(p *TestProcessor, tf *project.File) []tool.T {
+	return []tool.T{}
 }
 
-func javaTestTools(p *TestProcessor, tf *project.File) ([]tool.Tool, error) {
-	a := make([]tool.Tool, 0, 2)
+func javaTestTools(p *TestProcessor, tf *project.File) ([]tool.T, error) {
+	a := make([]tool.T, 0, 2)
 	target := tool.NewTarget(tf.Name, tf.Package, filepath.Join(p.toolDir, tf.Id.Hex()), tool.JAVA)
 	if e := util.SaveFile(target.FilePath(), tf.Data); e != nil {
 		return nil, e
@@ -88,7 +88,7 @@ func javaTestTools(p *TestProcessor, tf *project.File) ([]tool.Tool, error) {
 
 //Tools retrieves the Impendulo tool suite for a Processor's language.
 //Each tool is already constructed.
-func Tools(p *FileProcessor) ([]tool.Tool, error) {
+func Tools(p *FileProcessor) ([]tool.T, error) {
 	switch tool.Language(p.project.Lang) {
 	case tool.JAVA:
 		return javaTools(p)
@@ -99,15 +99,15 @@ func Tools(p *FileProcessor) ([]tool.Tool, error) {
 	return nil, fmt.Errorf("no tools found for %s language", p.project.Lang)
 }
 
-func cTools(p *FileProcessor) []tool.Tool {
-	return []tool.Tool{}
+func cTools(p *FileProcessor) []tool.T {
+	return []tool.T{}
 }
 
 //javaTools retrieves Impendulo's Java tool suite.
-func javaTools(p *FileProcessor) ([]tool.Tool, error) {
-	a := make([]tool.Tool, 0, 10)
+func javaTools(p *FileProcessor) ([]tool.T, error) {
+	a := make([]tool.T, 0, 10)
 	//Only add tools if they were created successfully
-	var t tool.Tool
+	var t tool.T
 	var e error
 	t, e = checkstyle.New()
 	if e != nil {
@@ -155,7 +155,7 @@ func Compiler(p *FileProcessor) (tool.Compiler, error) {
 }
 
 //JPF creates a new instance of the JPF tool.
-func JPF(p *FileProcessor) (tool.Tool, error) {
+func JPF(p *FileProcessor) (tool.T, error) {
 	//First we need the project's JPF configuration.
 	c, e := db.JPFConfig(bson.M{db.PROJECTID: p.project.Id}, nil)
 	if e != nil {
@@ -165,7 +165,7 @@ func JPF(p *FileProcessor) (tool.Tool, error) {
 }
 
 //PMD creates a new instance of the PMD tool.
-func PMD(p *FileProcessor) (tool.Tool, error) {
+func PMD(p *FileProcessor) (tool.T, error) {
 	//First we need the project's PMD rules.
 	r, e := db.PMDRules(bson.M{db.PROJECTID: p.project.Id}, nil)
 	if e != nil || r == nil || len(r.Rules) == 0 {
@@ -181,7 +181,7 @@ func PMD(p *FileProcessor) (tool.Tool, error) {
 	return pmd.New(r)
 }
 
-func junitTools(p *FileProcessor) ([]tool.Tool, error) {
+func junitTools(p *FileProcessor) ([]tool.T, error) {
 	ts, e := db.JUnitTests(bson.M{db.PROJECTID: p.project.Id, db.TYPE: bson.M{db.NE: junit.USER}}, nil)
 	if e != nil {
 		return nil, e
@@ -193,7 +193,7 @@ func junitTools(p *FileProcessor) ([]tool.Tool, error) {
 	if e = util.Copy(p.toolDir, d); e != nil {
 		return nil, e
 	}
-	tools := make([]tool.Tool, 0, len(ts))
+	tools := make([]tool.T, 0, len(ts))
 	for _, t := range ts {
 		//Save the test files to the submission's tool directory.
 		target := tool.NewTarget(t.Name, t.Package, filepath.Join(p.toolDir, t.Id.Hex()), tool.JAVA)

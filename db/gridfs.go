@@ -26,8 +26,7 @@ package db
 
 import (
 	"encoding/gob"
-
-	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -36,7 +35,7 @@ const (
 )
 
 //HasGridFile checks whether this query needs to get data from GridFS
-func HasGridFile(r tool.ToolResult, sl bson.M) bool {
+func HasGridFile(r result.Tooler, sl bson.M) bool {
 	return (sl == nil || sl[REPORT] == 1) && r.OnGridFS()
 }
 

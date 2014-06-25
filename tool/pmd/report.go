@@ -30,6 +30,7 @@ import (
 	"fmt"
 
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
 
 	"html/template"
 
@@ -90,6 +91,18 @@ func NewReport(id bson.ObjectId, data []byte) (*Report, error) {
 		f.CompressViolations()
 	}
 	return r, nil
+}
+
+func (r *Report) Lines() []*result.Line {
+	lines := make([]*result.Line, 0, len(r.Files)*10)
+	for _, f := range r.Files {
+		for _, v := range f.Violations {
+			for i, s := range v.Starts {
+				lines = append(lines, &result.Line{Title: v.Rule, Description: v.Description, Start: s, End: v.Ends[i]})
+			}
+		}
+	}
+	return lines
 }
 
 //Success is true if no errors were found.

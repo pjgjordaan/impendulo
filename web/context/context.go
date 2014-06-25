@@ -32,7 +32,7 @@ import (
 
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
 	"github.com/godfried/impendulo/web/webutil"
@@ -160,7 +160,7 @@ func Load(s *sessions.Session) *C {
 		c.Browse.DisplayCount = 10
 		c.Browse.Current = 0
 		c.Browse.Next = 0
-		c.Browse.Result = &Result{Type: tool.CODE}
+		c.Browse.Result = &Result{Type: result.CODE}
 	}
 	u, e := c.Username()
 	if e != nil {
@@ -178,7 +178,7 @@ func (b *Browse) ClearSubmission() {
 	b.Next = 0
 	b.DisplayCount = 10
 	if b.Result == nil {
-		b.Result = &Result{Type: tool.CODE}
+		b.Result = &Result{Type: result.CODE}
 	}
 }
 
@@ -433,7 +433,7 @@ func (r *Result) Update(sid bson.ObjectId, fname string) error {
 	}
 	id, e := db.FileResultId(sid, fname, r.Type, r.Name)
 	if e != nil {
-		return r.Set(tool.CODE)
+		return r.Set(result.CODE)
 	}
 	r.FileID = id
 	return nil
@@ -447,5 +447,5 @@ func (r *Result) Check(pid bson.ObjectId) {
 			return
 		}
 	}
-	r.Set(tool.CODE)
+	r.Set(result.CODE)
 }

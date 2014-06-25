@@ -33,6 +33,7 @@ import (
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/javac"
+	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 
@@ -41,7 +42,7 @@ import (
 )
 
 type (
-	//Tool is a tool.Tool used to run Tool tests on a Java source file.
+	//Tool is a tool.T used to run Tool tests on a Java source file.
 	Tool struct {
 		cp, name             string
 		dataLocation         string
@@ -87,7 +88,7 @@ func (t *Tool) Name() string {
 
 //Run runs a JUnit test on the provided Java source file. The source and test files are first
 //compiled and we run the tests via a Java runner class which uses ant to generate XML output.
-func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
+func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (result.Tooler, error) {
 	if t.target.Executable() != target.Executable() {
 		return nil, fmt.Errorf("file executable %s does not match expected executable %s", target.Executable(), t.target.Executable())
 	}

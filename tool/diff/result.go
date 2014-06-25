@@ -27,7 +27,7 @@ package diff
 
 import (
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/util"
 
 	"strings"
@@ -38,7 +38,6 @@ const (
 )
 
 type (
-	//Result is a tool.DisplayResult used to display a diff between two files.
 	Result struct {
 		header, data string
 	}
@@ -74,7 +73,7 @@ func (r *Result) GetName() string {
 }
 
 //GetReport
-func (r *Result) GetReport() tool.Report {
+func (r *Result) Reporter() result.Reporter {
 	return r
 }
 

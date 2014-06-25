@@ -2,6 +2,7 @@ package gcc
 
 import (
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -16,69 +17,62 @@ type (
 	}
 )
 
-func (this *Result) GetTestId() bson.ObjectId {
+func (r *Result) GetTestId() bson.ObjectId {
 	return ""
 }
 
-func (this *Result) GetId() bson.ObjectId {
-	return this.Id
+func (r *Result) GetId() bson.ObjectId {
+	return r.Id
 }
 
-func (this *Result) GetFileId() bson.ObjectId {
-	return this.FileId
+func (r *Result) GetFileId() bson.ObjectId {
+	return r.FileId
 }
 
-func (this *Result) Summary() *tool.Summary {
-	return &tool.Summary{}
-
+func (r *Result) GetName() string {
+	return r.Name
 }
 
-func (this *Result) GetName() string {
-	return this.Name
+func (r *Result) OnGridFS() bool {
+	return r.GridFS
 }
 
-func (this *Result) OnGridFS() bool {
-	return this.GridFS
+func (r *Result) Reporter() result.Reporter {
+	return r.Report
 }
 
-func (this *Result) GetReport() tool.Report {
-	return this.Report
-}
-
-func (this *Result) SetReport(report tool.Report) {
-	this.Report = report.(*Report)
+func (r *Result) SetReport(report result.Reporter) {
+	r.Report = report.(*Report)
 }
 
 //ChartVals
-func (this *Result) ChartVals() []*tool.ChartVal {
-	return []*tool.ChartVal{
-		&tool.ChartVal{Name: "Errors", Y: float64(this.Report.Errors), FileId: this.FileId},
-		&tool.ChartVal{Name: "Warnings", Y: float64(this.Report.Warnings), FileId: this.FileId},
+func (r *Result) ChartVals() []*result.ChartVal {
+	return []*result.ChartVal{
+		&result.ChartVal{Name: "Errors", Y: float64(r.Report.Errors), FileId: r.FileId},
+		&result.ChartVal{Name: "Warnings", Y: float64(r.Report.Warnings), FileId: r.FileId},
 	}
 }
 
-func (this *Result) Template() string {
+func (r *Result) Template() string {
 	return "gccresult"
 }
 
-func (this *Result) GetType() string {
-	return this.Type
+func (r *Result) GetType() string {
+	return r.Type
 }
 
-func NewResult(fileId bson.ObjectId, data []byte) (ret tool.ToolResult, err error) {
-	gridFS := len(data) > tool.MAX_SIZE
+func NewResult(fileId bson.ObjectId, data []byte) (result.Tooler, error) {
 	id := bson.NewObjectId()
-	report, err := NewReport(id, data)
-	if err != nil {
-		return
+	report, e := NewReport(id, data)
+	if e != nil {
+		return nil, e
 	}
-	ret = &Result{
+	return &Result{
 		Id:     id,
 		FileId: fileId,
 		Name:   NAME,
 		Report: report,
-		GridFS: gridFS,
+		GridFS: len(data) > tool.MAX_SIZE,
 		Type:   NAME,
-	}
-	return
+	}, nil
 }

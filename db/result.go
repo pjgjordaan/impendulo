@@ -28,7 +28,6 @@ import (
 	"fmt"
 
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/diff"
 	"github.com/godfried/impendulo/tool/findbugs"
@@ -38,6 +37,7 @@ import (
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/tool/pmd"
+	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
 	"labix.org/v2/mgo"
@@ -219,9 +219,7 @@ func resultType(m bson.M) (string, error) {
 	return h.Type, nil
 }
 
-//ToolResult retrieves a tool.ToolResult matching
-//the given interface and name from the active database.
-func ToolResult(m, sl bson.M) (tool.ToolResult, error) {
+func Tooler(m, sl bson.M) (result.Tooler, error) {
 	t, e := resultType(m)
 	if e != nil {
 		return nil, e
@@ -249,9 +247,7 @@ func ToolResult(m, sl bson.M) (tool.ToolResult, error) {
 	}
 }
 
-//DisplayResult retrieves a tool.DisplayResult matching
-//the given interface and name from the active database.
-func DisplayResult(m, sl bson.M) (tool.DisplayResult, error) {
+func Displayer(m, sl bson.M) (result.Displayer, error) {
 	t, e := resultType(m)
 	if e != nil {
 		return nil, e
@@ -279,7 +275,7 @@ func DisplayResult(m, sl bson.M) (tool.DisplayResult, error) {
 	}
 }
 
-func ChartResult(m, sl bson.M) (tool.ChartResult, error) {
+func Charter(m, sl bson.M) (result.Charter, error) {
 	t, e := resultType(m)
 	if e != nil {
 		return nil, e
@@ -307,8 +303,28 @@ func ChartResult(m, sl bson.M) (tool.ChartResult, error) {
 	}
 }
 
+func Coder(m, sl bson.M) (result.Coder, error) {
+	t, e := resultType(m)
+	if e != nil {
+		return nil, e
+	}
+	m[TYPE] = t
+	switch t {
+	case jpf.NAME:
+		return JPFResult(m, sl)
+	case findbugs.NAME:
+		return FindbugsResult(m, sl)
+	case pmd.NAME:
+		return PMDResult(m, sl)
+	case checkstyle.NAME:
+		return CheckstyleResult(m, sl)
+	default:
+		return nil, fmt.Errorf("Unsupported result type %s.", t)
+	}
+}
+
 //AddResult adds a new result to the active database.
-func AddResult(r tool.ToolResult, n string) error {
+func AddResult(r result.Tooler, n string) error {
 	if r == nil {
 		return fmt.Errorf("can't add nil result")
 	}
@@ -316,7 +332,7 @@ func AddResult(r tool.ToolResult, n string) error {
 		return e
 	}
 	if r.OnGridFS() {
-		if e := AddGridFile(r.GetId(), r.GetReport()); e != nil {
+		if e := AddGridFile(r.GetId(), r.Reporter()); e != nil {
 			return e
 		}
 		r.SetReport(nil)
@@ -337,19 +353,17 @@ func AddFileResult(fid bson.ObjectId, n string, v interface{}) error {
 	return Update(FILES, bson.M{ID: fid}, bson.M{SET: bson.M{RESULTS + "." + n: v}})
 }
 
-//ChartResults retrieves all tool.DisplayResults matching
-//the given file Id from the active database.
-func ChartResults(fid bson.ObjectId) ([]tool.ChartResult, error) {
+func Charters(fid bson.ObjectId) ([]result.Charter, error) {
 	f, e := File(bson.M{ID: fid}, bson.M{DATA: 0})
 	if e != nil {
 		return nil, e
 	}
-	rs := make([]tool.ChartResult, 0, len(f.Results))
+	rs := make([]result.Charter, 0, len(f.Results))
 	for _, id := range f.Results {
 		if _, ok := id.(bson.ObjectId); !ok {
 			continue
 		}
-		r, e := ChartResult(bson.M{ID: id}, nil)
+		r, e := Charter(bson.M{ID: id}, nil)
 		if e != nil {
 			continue
 		}
@@ -416,7 +430,7 @@ func ResultNames(sid bson.ObjectId, fname string) (map[string]map[string][]inter
 		return nil, fmt.Errorf("no results found")
 	}
 	m := ns[0].Value
-	m[tool.CODE] = map[string][]interface{}{}
+	m[result.CODE] = map[string][]interface{}{}
 	m[diff.NAME] = map[string][]interface{}{}
 	return m, nil
 }

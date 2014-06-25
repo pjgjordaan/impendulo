@@ -32,6 +32,7 @@ import (
 
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 
@@ -40,7 +41,7 @@ import (
 )
 
 type (
-	//Findbugs is a tool.Tool used to run Findbugs on Java classes.
+	//Findbugs is a tool.T used to run Findbugs on Java classes.
 	Tool struct {
 		cmd string
 	}
@@ -70,7 +71,7 @@ func (t *Tool) Name() string {
 //Findbugs is run with the following flags: -effort:max, -experimental, -relaxed.
 //The result is written to an XML file which is then read and used to create a
 //Findbugs Result.
-func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
+func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (result.Tooler, error) {
 	//Setup arguments
 	jp, e := config.JAVA.Path()
 	if e != nil {

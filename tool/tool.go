@@ -28,6 +28,9 @@ package tool
 
 import (
 	"bytes"
+
+	"github.com/godfried/impendulo/tool/result"
+
 	"io"
 
 	"labix.org/v2/mgo/bson"
@@ -38,14 +41,14 @@ import (
 )
 
 type (
-	//Tool is an interface which represents various analysis tools used in Impendulo.
-	Tool interface {
+	//T is an interface which represents various analysis tools used in Impendulo.
+	T interface {
 		//Name retrieves the Tool's name.
 		Name() string
 		//Lang retrieves the language which the Tool is used for.
 		Lang() Language
 		//Run runs the tool on a given file.
-		Run(fileId bson.ObjectId, target *Target) (ToolResult, error)
+		Run(fileId bson.ObjectId, target *Target) (result.Tooler, error)
 	}
 	Compiler interface {
 		//Name retrieves the Tool's name.
@@ -53,12 +56,12 @@ type (
 		//Lang retrieves the language which the Tool is used for.
 		Lang() Language
 		//Run runs the tool on a given file.
-		Run(fileId bson.ObjectId, target *Target) (ToolResult, error)
+		Run(fileId bson.ObjectId, target *Target) (result.Tooler, error)
 		AddCP(string)
 	}
 
-	//ExecResult is the result of RunCommand.
-	ExecResult struct {
+	//Result is the result of RunCommand.
+	Result struct {
 		StdOut, StdErr []byte
 	}
 	Language string
@@ -93,19 +96,19 @@ func Supported(l Language) bool {
 }
 
 //HasStdErr checks whether the ExecResult has standard error output.
-func (e *ExecResult) HasStdErr() bool {
+func (e *Result) HasStdErr() bool {
 	return e.StdErr != nil && len(e.StdErr) > 0
 }
 
 //HasStdOut checks whether the ExecResult has standard output.
-func (e *ExecResult) HasStdOut() bool {
+func (e *Result) HasStdOut() bool {
 	return e.StdOut != nil && len(strings.TrimSpace(string(e.StdOut))) > 0
 }
 
 //RunCommand executes a given command given by args and stdin. It terminates
-//when the command finishes execution or times out. An ExecResult containing the
+//when the command finishes execution or times out. A Result containing the
 //command's output is returned.
-func RunCommand(args []string, stdin io.Reader, max time.Duration) (*ExecResult, error) {
+func RunCommand(args []string, stdin io.Reader, max time.Duration) (*Result, error) {
 	c := exec.Command(args[0], args[1:]...)
 	c.Stdin = stdin
 	var so, se bytes.Buffer
@@ -129,6 +132,6 @@ func RunCommand(args []string, stdin io.Reader, max time.Duration) (*ExecResult,
 		if e != nil {
 			e = &EndError{args, e, string(se.Bytes())}
 		}
-		return &ExecResult{StdOut: so.Bytes(), StdErr: se.Bytes()}, e
+		return &Result{StdOut: so.Bytes(), StdErr: se.Bytes()}, e
 	}
 }

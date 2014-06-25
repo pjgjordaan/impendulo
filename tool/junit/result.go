@@ -28,6 +28,7 @@ import (
 	"fmt"
 
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -36,8 +37,6 @@ const (
 )
 
 type (
-	//Result is an implementation of ToolResult, DisplayResult
-	//and ChartResult for JUnit test results.
 	Result struct {
 		Id       bson.ObjectId `bson:"_id"`
 		FileId   bson.ObjectId `bson:"fileid"`
@@ -50,7 +49,7 @@ type (
 )
 
 //SetReport
-func (r *Result) SetReport(report tool.Report) {
+func (r *Result) SetReport(report result.Reporter) {
 	if report == nil {
 		r.Report = nil
 	} else {
@@ -88,31 +87,15 @@ func (r *Result) GetTestId() bson.ObjectId {
 	return r.TestId
 }
 
-//Summary
-func (r *Result) Summary() *tool.Summary {
-	body := fmt.Sprintf("Tests: %d \n Failures: %d \n Errors: %d \n Time: %f",
-		r.Report.Tests, r.Report.Failures, r.Report.Errors, r.Report.Time)
-	return &tool.Summary{
-		Name: r.GetName(),
-		Body: body,
-	}
-}
-
-//GetReport
-func (r *Result) GetReport() tool.Report {
+func (r *Result) Reporter() result.Reporter {
 	return r.Report
 }
 
-//Success
-func (r *Result) Success() bool {
-	return r.Report != nil && r.Report.Success()
-}
-
 //ChartVals
-func (r *Result) ChartVals() []*tool.ChartVal {
-	return []*tool.ChartVal{
-		&tool.ChartVal{Name: "Failures", Y: float64(r.Report.Failures), FileId: r.FileId},
-		&tool.ChartVal{Name: "Errors", Y: float64(r.Report.Errors), FileId: r.FileId},
+func (r *Result) ChartVals() []*result.ChartVal {
+	return []*result.ChartVal{
+		&result.ChartVal{Name: "Failures", Y: float64(r.Report.Failures), FileId: r.FileId},
+		&result.ChartVal{Name: "Errors", Y: float64(r.Report.Errors), FileId: r.FileId},
 	}
 }
 

@@ -28,9 +28,15 @@ import (
 	"encoding/gob"
 	"encoding/xml"
 	"fmt"
+
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
+	"github.com/godfried/impendulo/util"
+
 	"html/template"
+
 	"labix.org/v2/mgo/bson"
+
 	"sort"
 	"strings"
 )
@@ -85,9 +91,21 @@ func NewReport(id bson.ObjectId, data []byte) (res *Report, err error) {
 	return
 }
 
+func (r *Report) Lines() []*result.Line {
+	lines := make([]*result.Line, 0, len(r.Files)*10)
+	for _, f := range r.Files {
+		for _, e := range f.Errors {
+			for _, l := range e.Lines {
+				lines = append(lines, &result.Line{Title: util.ShortName(e.Source), Description: string(e.Message), Start: l, End: l})
+			}
+		}
+	}
+	return lines
+}
+
 //File
-func (this *Report) File(name string) *File {
-	for _, f := range this.Files {
+func (r *Report) File(name string) *File {
+	for _, f := range r.Files {
 		if strings.HasSuffix(f.Name, name) {
 			return f
 		}
@@ -96,39 +114,39 @@ func (this *Report) File(name string) *File {
 }
 
 //Success
-func (this *Report) Success() bool {
-	return this.Errors == 0
+func (r *Report) Success() bool {
+	return r.Errors == 0
 }
 
 //String
-func (this *Report) String() string {
+func (r *Report) String() string {
 	files := ""
-	for _, f := range this.Files {
+	for _, f := range r.Files {
 		files += f.String()
 	}
 	return fmt.Sprintf("Id: %q; Version %s; Errors: %d; \nFiles: %s\n",
-		this.Id, this.Version, this.Errors, files)
+		r.Id, r.Version, r.Errors, files)
 }
 
 //String
-func (this *File) String() string {
+func (f *File) String() string {
 	errs := ""
-	for _, e := range this.Errors {
+	for _, e := range f.Errors {
 		errs += e.String()
 	}
 	return fmt.Sprintf("Name: %s; \nErrors: %s\n",
-		this.Name, errs)
+		f.Name, errs)
 }
 
 //CompressErrors packs all Errors of the same
 //type into a single Error by storing their location seperately.
-func (this *File) CompressErrors() {
+func (f *File) CompressErrors() {
 	indices := make(map[string]int)
-	compressed := make(Errors, 0, len(this.Errors))
-	for _, e := range this.Errors {
+	compressed := make(Errors, 0, len(f.Errors))
+	for _, e := range f.Errors {
 		index, ok := indices[e.Source]
 		if !ok {
-			e.Lines = make([]int, 0, len(this.Errors))
+			e.Lines = make([]int, 0, len(f.Errors))
 			e.Id = bson.NewObjectId()
 			compressed = append(compressed, e)
 			index = len(compressed) - 1
@@ -137,23 +155,23 @@ func (this *File) CompressErrors() {
 		compressed[index].Lines = append(compressed[index].Lines, e.Line)
 	}
 	sort.Sort(compressed)
-	this.Errors = compressed
+	f.Errors = compressed
 }
 
-func (this Errors) Len() int {
-	return len(this)
+func (e Errors) Len() int {
+	return len(e)
 }
 
-func (this Errors) Swap(i, j int) {
-	this[i], this[j] = this[j], this[i]
+func (e Errors) Swap(i, j int) {
+	e[i], e[j] = e[j], e[i]
 }
 
-func (this Errors) Less(i, j int) bool {
-	return this[i].Source < this[j].Source
+func (e Errors) Less(i, j int) bool {
+	return e[i].Source < e[j].Source
 }
 
 //String
-func (this *Error) String() string {
+func (e *Error) String() string {
 	return fmt.Sprintf("Line: %d; Column: %d; Severity: %s; Message: %q; Source: %s\n",
-		this.Line, this.Column, this.Severity, this.Message, this.Source)
+		e.Line, e.Column, e.Severity, e.Message, e.Source)
 }

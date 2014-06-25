@@ -4,14 +4,14 @@
 //Redistribution and use in source and binary forms, with or without modification,
 //are permitted provided that the following conditions are met:
 //
-//  Redistributions of source code must retain the above copyright notice, this
+//  Redistributions of source code must retain the above copyright notice, r
 //  list of conditions and the following disclaimer.
 //
-//  Redistributions in binary form must reproduce the above copyright notice, this
+//  Redistributions in binary form must reproduce the above copyright notice, r
 //  list of conditions and the following disclaimer in the documentation and/or
 //  other materials provided with the distribution.
 //
-//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//R SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 //ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 //WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 //DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
@@ -19,13 +19,14 @@
 //(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
 //LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
 //ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-//(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+//(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF R
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package javac
 
 import (
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -34,9 +35,6 @@ const (
 )
 
 type (
-	//Result is a Javac implementation of tool.ToolResult, tool.DisplayResult
-	//and tool.ChartResult. It contains the result of compiling a Java source
-	//file using the specified Java compiler.
 	Result struct {
 		Id     bson.ObjectId `bson:"_id"`
 		FileId bson.ObjectId `bson:"fileid"`
@@ -47,80 +45,65 @@ type (
 	}
 )
 
-//SetReport is used to change this result's report. This comes in handy
+//SetReport is used to change r result's report. R comes in handy
 //when putting data into/getting data out of GridFS
-func (this *Result) SetReport(report tool.Report) {
+func (r *Result) SetReport(report result.Reporter) {
 	if report == nil {
-		this.Report = nil
+		r.Report = nil
 	} else {
-		this.Report = report.(*Report)
+		r.Report = report.(*Report)
 	}
 }
 
-func (this *Result) GetTestId() bson.ObjectId {
+func (r *Result) GetTestId() bson.ObjectId {
 	return ""
 }
 
 //OnGridFS
-func (this *Result) OnGridFS() bool {
-	return this.GridFS
+func (r *Result) OnGridFS() bool {
+	return r.GridFS
 }
 
 //GetName
-func (this *Result) GetName() string {
-	return this.Name
+func (r *Result) GetName() string {
+	return r.Name
 }
 
 //GetId
-func (this *Result) GetId() bson.ObjectId {
-	return this.Id
+func (r *Result) GetId() bson.ObjectId {
+	return r.Id
 }
 
 //GetFileId
-func (this *Result) GetFileId() bson.ObjectId {
-	return this.FileId
+func (r *Result) GetFileId() bson.ObjectId {
+	return r.FileId
 }
 
-//Summary
-func (this *Result) Summary() *tool.Summary {
-	var body string
-	if this.Report.Success() {
-		body = "Compiled successfully."
-	} else {
-		body = "No compile."
-	}
-	return &tool.Summary{
-		Name: this.GetName(),
-		Body: body,
-	}
-}
-
-//GetReport
-func (this *Result) GetReport() tool.Report {
-	return this.Report
+func (r *Result) Reporter() result.Reporter {
+	return r.Report
 }
 
 //ChartVals
-func (this *Result) ChartVals() []*tool.ChartVal {
+func (r *Result) ChartVals() []*result.ChartVal {
 	var yE, yW float64
-	if this.Report.Errors() {
-		yE = float64(this.Report.Count)
+	if r.Report.Errors() {
+		yE = float64(r.Report.Count)
 	}
-	if this.Report.Warnings() {
-		yW = float64(this.Report.Count)
+	if r.Report.Warnings() {
+		yW = float64(r.Report.Count)
 	}
-	return []*tool.ChartVal{
-		&tool.ChartVal{Name: "Errors", Y: yE, FileId: this.FileId},
-		&tool.ChartVal{Name: "Warnings", Y: yW, FileId: this.FileId},
+	return []*result.ChartVal{
+		&result.ChartVal{Name: "Errors", Y: yE, FileId: r.FileId},
+		&result.ChartVal{Name: "Warnings", Y: yW, FileId: r.FileId},
 	}
 }
 
-func (this *Result) Template() string {
+func (r *Result) Template() string {
 	return "javacresult"
 }
 
-func (this *Result) GetType() string {
-	return this.Type
+func (r *Result) GetType() string {
+	return r.Type
 }
 
 //NewResult

@@ -32,6 +32,7 @@ import (
 
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 
@@ -77,7 +78,7 @@ func (this *Tool) Name() string {
 
 //Run runs checkstyle on the provided Java file. We make use of the configured Checkstyle configuration file.
 //Output is written to an xml file which is then read in and used to create a Checkstyle Result.
-func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
+func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (result.Tooler, error) {
 	o := filepath.Join(target.Dir, "checkstyle.xml")
 	a := []string{t.java, "-jar", t.cmd, "-f", "xml", "-c", t.cfg, "-o", o, "-r", target.Dir}
 	defer os.Remove(o)

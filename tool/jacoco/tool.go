@@ -10,6 +10,7 @@ import (
 	"errors"
 
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 
@@ -35,7 +36,7 @@ var (
 	CodeError   = errors.New("no code found")
 )
 
-func New(baseDir, srcDir string, test, target *tool.Target, testId bson.ObjectId) (tool.Tool, error) {
+func New(baseDir, srcDir string, test, target *tool.Target, testId bson.ObjectId) (tool.T, error) {
 	rd := filepath.Join(baseDir, "target")
 	p, e := NewProject("Jacoco Coverage", srcDir, rd, test)
 	if e != nil {
@@ -58,7 +59,7 @@ func New(baseDir, srcDir string, test, target *tool.Target, testId bson.ObjectId
 	}, nil
 }
 
-func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
+func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (result.Tooler, error) {
 	if t.target.Executable() != target.Executable() {
 		return nil, nil
 	}

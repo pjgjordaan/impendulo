@@ -25,9 +25,8 @@
 package pmd
 
 import (
-	"fmt"
-
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -36,8 +35,6 @@ const (
 )
 
 type (
-	//Result is a PMD implementation of tool.ToolResult,
-	//tool.DisplayResult and tool.ChartResult.
 	Result struct {
 		Id     bson.ObjectId `bson:"_id"`
 		FileId bson.ObjectId `bson:"fileid"`
@@ -50,7 +47,7 @@ type (
 
 //SetReport is used to change this result's report. This comes in handy
 //when putting data into/getting data out of GridFS
-func (r *Result) SetReport(report tool.Report) {
+func (r *Result) SetReport(report result.Reporter) {
 	if report == nil {
 		r.Report = nil
 	} else {
@@ -86,16 +83,7 @@ func (r *Result) GetFileId() bson.ObjectId {
 	return r.FileId
 }
 
-//Summary consists of the number of errors found by PMD.
-func (r *Result) Summary() *tool.Summary {
-	return &tool.Summary{
-		Name: r.GetName(),
-		Body: fmt.Sprintf("Errors: %d", r.Report.Errors),
-	}
-}
-
-//GetReport
-func (r *Result) GetReport() tool.Report {
+func (r *Result) Reporter() result.Reporter {
 	return r.Report
 }
 
@@ -105,14 +93,18 @@ func (r *Result) Success() bool {
 }
 
 //ChartVals gets the number of errors found by PMD.
-func (r *Result) ChartVals() []*tool.ChartVal {
-	return []*tool.ChartVal{
-		&tool.ChartVal{Name: "Errors", Y: float64(r.Report.Errors), FileId: r.FileId},
+func (r *Result) ChartVals() []*result.ChartVal {
+	return []*result.ChartVal{
+		&result.ChartVal{Name: "Errors", Y: float64(r.Report.Errors), FileId: r.FileId},
 	}
 }
 
 func (r *Result) Template() string {
 	return "pmdresult"
+}
+
+func (r *Result) Lines() []*result.Line {
+	return r.Report.Lines()
 }
 
 //NewResult creates a new PMD Result.

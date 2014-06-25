@@ -29,13 +29,13 @@ package javac
 import (
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
 	"labix.org/v2/mgo/bson"
 
 	"time"
 )
 
 type (
-	//Javac is a tool.Tool used to compile Java source files.
 	Tool struct {
 		cmd string
 		cp  string
@@ -71,7 +71,7 @@ func (t *Tool) AddCP(s string) {
 //Run compiles the Java source file specified by t. We compile with maximum warnings and compile
 //classes implicitly loaded by the source code. All compilation results will be stored (success,
 //errors and warnings).
-func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
+func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (result.Tooler, error) {
 	cp := t.cp
 	if cp != "" {
 		cp += ":"
@@ -88,5 +88,5 @@ func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, 
 		//Compiler warnings.
 		return NewResult(fileId, r.StdErr), nil
 	}
-	return NewResult(fileId, tool.COMPILE_SUCCESS), nil
+	return NewResult(fileId, result.COMPILE_SUCCESS), nil
 }

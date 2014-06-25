@@ -33,6 +33,7 @@ import (
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/javac"
+	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 
@@ -41,7 +42,7 @@ import (
 )
 
 type (
-	//Tool is an implementation of tool.Tool which runs a JPF on a Java source file.
+	//Tool is an implementation of tool.T which runs a JPF on a Java source file.
 	//It makes use of runner.JPFRunner to configure and run JPF on a file and
 	//runner.ImpenduloPublisher to output the results as XML.
 	Tool struct {
@@ -112,7 +113,7 @@ func (t *Tool) Name() string {
 //Run runs JPF on a specified Java source file. It uses the Java class runner.JPFRunner to
 //actually run JPF on the source file. If the command was successful, the
 //results are read in from a xml file.
-func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (tool.ToolResult, error) {
+func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (result.Tooler, error) {
 	if t.target.Executable() != target.Executable() {
 		return nil, nil
 	}

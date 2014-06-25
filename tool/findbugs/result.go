@@ -28,6 +28,7 @@ import (
 	"fmt"
 
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -36,8 +37,6 @@ const (
 )
 
 type (
-	//Result is a tool.ToolResult and a tool.DisplayResult.
-	//It is used to store the output of running Findbugs.
 	Result struct {
 		Id     bson.ObjectId `bson:"_id"`
 		FileId bson.ObjectId `bson:"fileid"`
@@ -50,7 +49,7 @@ type (
 
 //SetReport is used to change this result's report. This comes in handy
 //when putting data into/getting data out of GridFS
-func (r *Result) SetReport(report tool.Report) {
+func (r *Result) SetReport(report result.Reporter) {
 	if report == nil {
 		r.Report = nil
 	} else {
@@ -87,26 +86,21 @@ func (r *Result) GetFileId() bson.ObjectId {
 	return r.FileId
 }
 
-//Summary
-func (r *Result) Summary() *tool.Summary {
-	return &tool.Summary{
-		Name: r.GetName(),
-		Body: fmt.Sprintf("Bugs: %d", r.Report.Summary.BugCount),
-	}
-}
-
-//GetReport
-func (r *Result) GetReport() tool.Report {
+func (r *Result) Reporter() result.Reporter {
 	return r.Report
 }
 
+func (r *Result) Lines() []*result.Line {
+	return r.Report.Lines()
+}
+
 //ChartVals
-func (r *Result) ChartVals() []*tool.ChartVal {
-	return []*tool.ChartVal{
-		&tool.ChartVal{Name: "All", Y: float64(r.Report.Summary.BugCount), FileId: r.FileId},
-		&tool.ChartVal{Name: "Priority 1", Y: float64(r.Report.Summary.Priority1), FileId: r.FileId},
-		&tool.ChartVal{Name: "Priority 2", Y: float64(r.Report.Summary.Priority2), FileId: r.FileId},
-		&tool.ChartVal{Name: "Priority 3", Y: float64(r.Report.Summary.Priority3), FileId: r.FileId},
+func (r *Result) ChartVals() []*result.ChartVal {
+	return []*result.ChartVal{
+		&result.ChartVal{Name: "All", Y: float64(r.Report.Summary.BugCount), FileId: r.FileId},
+		&result.ChartVal{Name: "Priority 1", Y: float64(r.Report.Summary.Priority1), FileId: r.FileId},
+		&result.ChartVal{Name: "Priority 2", Y: float64(r.Report.Summary.Priority2), FileId: r.FileId},
+		&result.ChartVal{Name: "Priority 3", Y: float64(r.Report.Summary.Priority3), FileId: r.FileId},
 	}
 }
 

@@ -886,95 +886,188 @@ function round(n, p) {
 }
 
 var CodeView = {
-    init: function(user, fileID) {
+    annotations: false,
+    init: function(user, currentID, nextID) {
         $(function() {
-            var min = Number($('#code' + fileID + ' .gutter .line').first().html());
-            var max = Number($('#code' + fileID + ' .gutter .line').last().html());
-            $('#modal-code' + fileID + ' .input-line').val(min);
-            $('#modal-code' + fileID + ' .input-line').attr('min', min);
-            $('#modal-code' + fileID + ' .input-line').attr('max', max);
-            $('#code' + fileID + ' .gutter .line').wrap('<a href=""></a>');
-            $('#code' + fileID + ' .gutter a').click(function() {
-                CodeView.commentModal(fileID, Number($(this).find('.line').html()));
+            jss.set('.syntaxhighlighter code', {
+                'border-bottom-color': 'white',
+                'border-bottom-width': '0px',
+                'border-bottom-style': 'solid'
+            });
+            $('#checkbox-annotations').bootstrapSwitch();
+            $('#checkbox-annotations').on('switchChange.bootstrapSwitch', CodeView.toggleAnnotations);
+            $('#btn-cfg-annotations').click(function() {
+                $('#modal-annotations').modal('show');
                 return false;
             });
-            CodeView.loadComments(fileID);
-            $('#submit-comment' + fileID).click(function() {
-                CodeView.submitComment(user, fileID);
-            });
+            SyntaxHighlighter.defaults['toolbar'] = false;
+            SyntaxHighlighter.highlight();
+            $('#modal-code #input-user').val(user);
+            $('.gutter .line').wrap('<a href=""></a>');
+            $('.gutter a').click(CodeView.commentModal);
+            $('#submit-comment').click(CodeView.submitComment);
+            CodeView.addFile(currentID);
+            CodeView.addFile(nextID);
         });
     },
-    submitComment: function(user, fileID) {
-        $('#modal-code' + fileID + ' .alert p').empty();
-        $('#modal-code' + fileID + ' .alert').hide();
-        var start = Number($('#line-start' + fileID).val());
-        var end = Number($('#line-end' + fileID).val());
-        if (end < start) {
-            $('#modal-code' + fileID + ' .alert p').append('End line cannot be smaller than start line.');
-            $('#modal-code' + fileID + ' .alert').show();
-            return false;
-        }
-        var min = Number($('#code' + fileID + ' .gutter .line').first().html());
-        if (start < min) {
-            $('#modal-code' + fileID + ' .alert p').append('Comment start line cannot be smaller than the first line of the file.');
-            $('#modal-code' + fileID + ' .alert').show();
-            return false;
-        }
-        var max = Number($('#code' + fileID + ' .gutter .line').last().html());
-        if (end > max) {
-            $('#modal-code' + fileID + ' .alert p').append('Comment end line cannot be larger than the last line of the file.');
-            $('#modal-code' + fileID + ' .alert').show();
-            return false;
-        }
-        var comment = {
-            'Data': $('#modal-code' + fileID + ' textarea').val().trim(),
-            'Start': start,
-            'End': end,
-            'File-id': fileID,
-            'User': user
-        }
-        CodeView.addComment(fileID, comment);
-        $.post('addcomment', comment, function(data) {
-            $('#modal-code' + fileID).modal('hide');
-            if (data["error"] !== "none" && !not(data["error"])) {
-                console.log(data["error"]);
-            }
-        });
+    toggleAnnotations: function() {
+        CodeView.annotations = !CodeView.annotations;
+        $('#btn-cfg-annotations').toggle();
         return false;
     },
-    commentModal: function(fileID, line) {
-        $('#modal-code' + fileID + ' .alert p').empty();
-        $('#modal-code' + fileID + ' .alert').hide();
-        $('#modal-code' + fileID + ' .input-line').val(line);
-        $('#modal-code' + fileID).modal('show');
+    addFile: function(fileID) {
+        $('.fileid' + fileID).attr('fileid', fileID);
+        CodeView.loadComments(fileID);
+        CodeView.loadResults(fileID);
     },
-    addComment: function(fileID, comment) {
-        for (var i = comment.Start; i <= comment.End; i++) {
-            CodeView.createTooltip(fileID, i);
-            $('#tooltip-content' + fileID + i).append('<p>' + comment.User + ' >> ' + comment.Data + '</p>');
+    submitComment: function() {
+        $('#modal-code .alert p').empty();
+        $('#modal-code .alert').hide();
+        var r = CodeView.createComment();
+        if (r[1] !== '') {
+            $('#modal-code .alert p').append(r[1]);
+            $('#modal-code .alert').show();
+        } else if (r[0] !== null) {
+            CodeView.addInfo(r[0]['file-id'], 'Comments', r[0]['user'], r[0]['data'], r[0]['start'], r[0]['end']);
+            $.post('addcomment', r[0], function(data) {
+                $('#modal-code').modal('hide');
+                if (data["error"] !== "none" && !not(data["error"])) {
+                    console.log(data["error"]);
+                }
+            });
+        }
+        return false;
+    },
+    createComment: function() {
+        var data = $('#modal-code textarea').val().trim();
+        if (data === '') {
+            return [null, 'Cannot submit empty comment.']
+        }
+        var start = Number($('#line-start').val());
+        var end = Number($('#line-end').val());
+        if (end < start) {
+            return [null, 'End line cannot be smaller than start line.'];
+        }
+        var min = Number($('#line-start').attr('min'));
+        if (start < min) {
+            return [null, 'Comment start line cannot be smaller than the first line of the file.'];
+        }
+        var max = Number($('#line-start').attr('max'));
+        if (end > max) {
+            return [null, 'Comment end line cannot be larger than the last line of the file.'];
+        }
+        return [{
+            'data': data,
+            'start': start,
+            'end': end,
+            'file-id': $('#input-file-id').val(),
+            'user': $('#input-user').val()
+        }, '']
+    },
+    commentModal: function() {
+        var fileID = $(this).closest('.code').attr('fileid');
+        var line = Number($(this).find('.line').html());
+        var min = Number($('.fileid' + fileID + ' .gutter .line').first().html());
+        var max = Number($('.fileid' + fileID + ' .gutter .line').last().html());
+        $('#modal-code #input-file-id').val(fileID);
+        $('#modal-code .input-line').val(min);
+        $('#modal-code .input-line').attr('min', min);
+        $('#modal-code .input-line').attr('max', max);
+        $('#modal-code .alert p').empty();
+        $('#modal-code textarea').val('');
+        $('#modal-code .alert').hide();
+        $('#modal-code .input-line').val(line);
+        $('#modal-code').modal('show');
+        return false;
+    },
+    addInfo: function(fileID, type, title, content, start, end) {
+        for (var i = start; i <= end; i++) {
+            CodeView.createPopover(fileID, i);
+            $('.fileid' + fileID + ' .code .number' + i).children(':not(.spaces)').addClass('underlineable-' + type);
+            if (!$('#popover-content' + fileID + i + ' .annotation-' + type).length) {
+                $('#popover-content' + fileID + i).append('<div class="annotation-' + type + '" show-annotation="false"><h4>' + type + '</h4></div>');
+            }
+            $('#popover-content' + fileID + i + ' .annotation-' + type).append('<h5>' +
+                title + '</h5><p style="font-size:80%;">' + content + '</p>');
         }
     },
-    createTooltip: function(fileID, num) {
-        if (!$('#tooltip-content' + fileID + num).length) {
-            $('#code' + fileID + ' .code .number' + num).attr('data-toggle', 'tooltip');
-            $('#code' + fileID + ' .code .number' + num).tooltip({
+    createPopover: function(fileID, num) {
+        if (!$('#popover-content' + fileID + num).length) {
+            $('.fileid' + fileID + ' .code .number' + num).attr('data-toggle', 'popover');
+            $('.fileid' + fileID + ' .code .number' + num).popover({
                 html: true,
-                title: function() {
-                    return $('#tooltip-content' + fileID + num).html();
+                trigger: 'hover',
+                placement: 'top',
+                content: function() {
+                    if (!CodeView.annotations) {
+                        return '';
+                    }
+                    var c = '';
+                    $('#popover-content' + fileID + num + ' [show-annotation="true"]').each(function() {
+                        c += $(this).html();
+                    });
+                    return c;
                 },
                 container: 'body'
             });
-            $('body').append('<div id="tooltip-content' + fileID + num + '" hidden><p></p></div>');
+            $('body').append('<div id="popover-content' + fileID + num + '" hidden></div>');
         }
+
     },
     loadComments: function(fileID) {
+        CodeView.addConfiguration('Comments');
         $.getJSON('comments?file-id=' + fileID, function(data) {
-            if (not(data['comments'])) {
+            var cs = data['comments'];
+            if (not(cs)) {
                 return;
             }
-            for (var i = 0; i < data['comments'].length; i++) {
-                CodeView.addComment(fileID, data['comments'][i]);
+            for (var i = 0; i < cs.length; i++) {
+                CodeView.addInfo(fileID, 'Comments', cs[i].User, cs[i].Data, cs[i].Start, cs[i].End);
             }
+        });
+    },
+    loadResults: function(fileID) {
+        $.getJSON('fileresults?id=' + fileID, function(data) {
+            var rs = data['fileresults'];
+            if (not(rs)) {
+                return;
+            }
+            for (var k in rs) {
+                CodeView.addConfiguration(k);
+                for (var i = 0; i < rs[k].length; i++) {
+                    CodeView.addInfo(fileID, k, rs[k][i].Title, rs[k][i].Description, rs[k][i].Start, rs[k][i].End);
+                }
+            }
+        });
+    },
+    addConfiguration: function(name) {
+        if ($('#form-annotations-' + name).length) {
+            return;
+        }
+        $('#modal-annotations .modal-body').append('<form class="form-horizontal" role="form" id="form-annotations-' + name + '"><h5>' + name + '</h5></form>');
+        $('#form-annotations-' + name).append('<div class="form-group"><label for="checkbox-' + name + '" class="col-sm-6 control-label">State</label><div class="col-sm-6"><input type="checkbox" id="checkbox-' + name + '" class="form-control"></div></div>');
+        $('#checkbox-' + name + '').bootstrapSwitch();
+        $('#form-annotations-' + name).append('<div class="form-group"><label for="picker-' + name + '" class="col-sm-6 control-label">Colour</label><div class="col-sm-6"><input type="text" id="picker-' + name + '" class="pick-a-color form-control" value="000"></div></div>');
+        $('#form-annotations-' + name).append('<input type="hidden" id="color-' + name + '" value="000">');
+        $('#form-annotations-' + name).append('<input type="hidden" id="prevcolor-' + name + '" value="000">');
+        $('#picker-' + name).pickAColor();
+        $('<style type="text/css">.line .underlineable-' + name + '.underline-' + name + '{border-bottom-width : 1px !important; border-bottom-style : solid !important;} </style>').appendTo('head');
+        $('#checkbox-' + name + '').on('switchChange.bootstrapSwitch', function() {
+            var ov = $('.annotation-' + name).attr('show-annotation');
+            var nv = $('.annotation-' + name).attr('show-annotation') === 'true' ? 'false' : 'true';
+            $('.annotation-' + name).attr('show-annotation', nv);
+            if (nv === 'true') {
+                $('.underlineable-' + name).addClass('underline-' + name);
+            } else {
+                $('.underlineable-' + name).removeClass('underline-' + name);
+            }
+        });
+        $(".pick-a-color").on("change", function() {
+            var c = $(this).val();
+            $('#color-' + name).val(c);
+            jss.set('.line .underlineable-' + name + '.underline-' + name, {
+                'border-bottom-color': '#' + c + ' !important'
+            });
         });
     }
 }
