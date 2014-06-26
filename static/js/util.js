@@ -889,11 +889,6 @@ var CodeView = {
     annotations: false,
     init: function(user, currentID, nextID) {
         $(function() {
-            jss.set('.syntaxhighlighter code', {
-                'border-bottom-color': 'white',
-                'border-bottom-width': '0px',
-                'border-bottom-style': 'solid'
-            });
             $('#checkbox-annotations').bootstrapSwitch();
             $('#checkbox-annotations').on('switchChange.bootstrapSwitch', CodeView.toggleAnnotations);
             $('#btn-cfg-annotations').click(function() {
@@ -913,6 +908,9 @@ var CodeView = {
     toggleAnnotations: function() {
         CodeView.annotations = !CodeView.annotations;
         $('#btn-cfg-annotations').toggle();
+        if (CodeView.annotations) {
+            $('#btn-cfg-annotations').click();
+        }
         return false;
     },
     addFile: function(fileID) {
@@ -980,39 +978,55 @@ var CodeView = {
         $('#modal-code').modal('show');
         return false;
     },
-    addInfo: function(fileID, type, title, content, start, end) {
+    addInfo: function(fileID, type, title, content, start, end, added) {
         for (var i = start; i <= end; i++) {
+            if (added !== undefined && i > 0 && i <= added.length) {
+                if (added[i - 1][type + title + content] === true) {
+                    continue;
+                } else {
+                    added[i - 1][type + title + content] = true;
+                }
+            }
             CodeView.createPopover(fileID, i);
             $('.fileid' + fileID + ' .code .number' + i).children(':not(.spaces)').addClass('underlineable-' + type);
-            if (!$('#popover-content' + fileID + i + ' .annotation-' + type).length) {
-                $('#popover-content' + fileID + i).append('<div class="annotation-' + type + '" show-annotation="false"><h4>' + type + '</h4></div>');
+            var s = '.popover-content[fileid="' + fileID + '"][linenum="' + i + '"]';
+            if (!$(s + ' .annotation-' + type).length) {
+                $(s).append('<div class="annotation-' + type + '" show-annotation="false"><h4>' + type + '</h4></div>');
             }
-            $('#popover-content' + fileID + i + ' .annotation-' + type).append('<h5>' +
-                title + '</h5><p style="font-size:80%;">' + content + '</p>');
+            if (!$(s + ' .annotation-' + type + ' [annotation-title="' + title + '"]').length) {
+                $(s + ' .annotation-' + type).append('<div annotation-title="' + title + '"><h5>' +
+                    title + '</h5><p style="font-size:80%;"></p>');
+            }
+            $(s + ' .annotation-' + type + ' [annotation-title="' + title + '"] p').append(content + '\n');
         }
     },
     createPopover: function(fileID, num) {
-        if (!$('#popover-content' + fileID + num).length) {
+        if (!$('.popover-content[fileid="' + fileID + '"][linenum="' + num + '"]').length) {
             $('.fileid' + fileID + ' .code .number' + num).attr('data-toggle', 'popover');
             $('.fileid' + fileID + ' .code .number' + num).popover({
                 html: true,
                 trigger: 'hover',
                 placement: 'top',
                 content: function() {
-                    if (!CodeView.annotations) {
-                        return '';
-                    }
-                    var c = '';
-                    $('#popover-content' + fileID + num + ' [show-annotation="true"]').each(function() {
-                        c += $(this).html();
-                    });
-                    return c;
+                    return CodeView.lineContent(fileID, num);
                 },
                 container: 'body'
             });
-            $('body').append('<div id="popover-content' + fileID + num + '" hidden></div>');
+            $('body').append('<div class="popover-content" fileid="' + fileID + '" linenum="' + num + '" hidden></div>');
         }
 
+    },
+    lineContent: function(fileID, num) {
+        if (!CodeView.annotations) {
+            return '';
+        }
+        var c = '';
+        $('.popover-content[fileid="' + fileID + '"][linenum="' + num + '"] [show-annotation="true"]').each(function() {
+            if ($(this).children('div').not('[style*="display: none"]').length) {
+                c += $(this).html();
+            }
+        });
+        return c;
     },
     loadComments: function(fileID) {
         CodeView.addConfiguration('Comments');
@@ -1022,6 +1036,7 @@ var CodeView = {
                 return;
             }
             for (var i = 0; i < cs.length; i++) {
+                CodeView.addAdvancedConfiguration('Comments', cs[i].User);
                 CodeView.addInfo(fileID, 'Comments', cs[i].User, cs[i].Data, cs[i].Start, cs[i].End);
             }
         });
@@ -1032,40 +1047,78 @@ var CodeView = {
             if (not(rs)) {
                 return;
             }
+            var added = Array.apply(null, Array(Number($('.fileid' + fileID + ' .gutter .line').last().html()))).map(function() {
+                return {};
+            });
             for (var k in rs) {
                 CodeView.addConfiguration(k);
                 for (var i = 0; i < rs[k].length; i++) {
-                    CodeView.addInfo(fileID, k, rs[k][i].Title, rs[k][i].Description, rs[k][i].Start, rs[k][i].End);
+                    CodeView.addAdvancedConfiguration(k, rs[k][i].Title);
+                    CodeView.addInfo(fileID, k, rs[k][i].Title, rs[k][i].Description, rs[k][i].Start, rs[k][i].End, added);
                 }
             }
         });
     },
-    addConfiguration: function(name) {
-        if ($('#form-annotations-' + name).length) {
+    addAdvancedConfiguration: function(type, title) {
+        if ($('#accordion-' + type + '-advanced .panel-body [infotitle="' + title + '"]').length) {
             return;
         }
-        $('#modal-annotations .modal-body').append('<form class="form-horizontal" role="form" id="form-annotations-' + name + '"><h5>' + name + '</h5></form>');
-        $('#form-annotations-' + name).append('<div class="form-group"><label for="checkbox-' + name + '" class="col-sm-6 control-label">State</label><div class="col-sm-6"><input type="checkbox" id="checkbox-' + name + '" class="form-control"></div></div>');
-        $('#checkbox-' + name + '').bootstrapSwitch();
-        $('#form-annotations-' + name).append('<div class="form-group"><label for="picker-' + name + '" class="col-sm-6 control-label">Colour</label><div class="col-sm-6"><input type="text" id="picker-' + name + '" class="pick-a-color form-control" value="000"></div></div>');
-        $('#form-annotations-' + name).append('<input type="hidden" id="color-' + name + '" value="000">');
-        $('#form-annotations-' + name).append('<input type="hidden" id="prevcolor-' + name + '" value="000">');
-        $('#picker-' + name).pickAColor();
-        $('<style type="text/css">.line .underlineable-' + name + '.underline-' + name + '{border-bottom-width : 1px !important; border-bottom-style : solid !important;} </style>').appendTo('head');
-        $('#checkbox-' + name + '').on('switchChange.bootstrapSwitch', function() {
-            var ov = $('.annotation-' + name).attr('show-annotation');
-            var nv = $('.annotation-' + name).attr('show-annotation') === 'true' ? 'false' : 'true';
-            $('.annotation-' + name).attr('show-annotation', nv);
+        var c = $('#accordion-' + type + '-advanced .panel-body').length;
+        $('#accordion-' + type + '-advanced .panel-body').append('<div class="form-group"><label class="col-sm-5 control-label" for="checkbox-' + type + '-advanced-' + c + '">' + title + '</label><div class="col-sm-7"><input type="checkbox" id="checkbox-' + type + '-advanced-' + c + '" class="form-control" infotitle="' + title + '" checked></div></div>');
+        $('#accordion-' + type + '-advanced .panel-body [infotitle="' + title + '"]').bootstrapSwitch();
+        $('#accordion-' + type + '-advanced .panel-body [infotitle="' + title + '"]').on('switchChange.bootstrapSwitch', function() {
+            $(' .annotation-' + type + ' [annotation-title="' + title + '"]').toggle();
+            if ($('.annotation-' + type).attr('show-annotation') === 'false') {
+                return;
+            }
+            $('.popover-content .annotation-' + type + ':has([annotation-title="' + title + '"])').each(function() {
+                var c = $(this).closest('.popover-content');
+                var fileID = c.attr('fileid');
+                var line = c.attr('linenum');
+                if ($(this).children('div').not('[style*="display: none"]').length) {
+                    $('.fileid' + fileID + ' .code .number' + line + ' .underlineable-' + type).addClass('underline-' + type);
+                } else {
+                    $('.fileid' + fileID + ' .code .number' + line + ' .underlineable-' + type).removeClass('underline-' + type);
+                }
+            });
+        });
+    },
+    addConfiguration: function(type) {
+        if ($('#modal-form-' + type).length) {
+            return;
+        }
+        $('#modal-annotations .modal-body').append('<form id="modal-form-' + type + '" class="form-horizontal"><h4>' + type + '</h4></form>');
+        $('#modal-form-' + type).append('<div class="form-group"><label class="col-sm-5 control-label" for="checkbox-' + type + '">State</label><div class="col-sm-7"><input type="checkbox" id="checkbox-' + type + '" class="form-control"></div></div>');
+        $('#checkbox-' + type).bootstrapSwitch();
+        $('#modal-form-' + type).append('<div class="form-group"><label class="col-sm-5 control-label" for="picker-' + type + '">Colour</label><div class="col-sm-7"><input type="text" id="picker-' + type + '" class="pick-a-color form-control" value="000"></div></div>');
+        $('#picker-' + type).pickAColor({
+            inlineDropdown: true
+        });
+        $('#modal-form-' + type).append('<input type="hidden" id="color-' + type + '" value="000">');
+        $('#modal-form-' + type).append('<input type="hidden" id="prevcolor-' + type + '" value="000">');
+        $('#modal-form-' + type).append('<div class="panel-group" id="accordion-' + type + '-advanced"><div class="panel panel-default"><div class="panel-heading"><h5 class="panel-title"><a data-toggle="collapse" data-parent="#accordion-' + type + '-advanced" href="#collapse-' + type + '-advanced">Advanced</a></h5></div><div id="collapse-' + type + '-advanced" class="panel-collapse collapse"><div class="panel-body"></div></div></div></div>');
+        $('<style type="text/css">.line .underlineable-' + type + '.underline-' + type + '{border-bottom-width : 1px !important; border-bottom-style : solid !important;} </style>').appendTo('head');
+        $('#checkbox-' + type).on('switchChange.bootstrapSwitch', function() {
+            var ov = $('.annotation-' + type).attr('show-annotation');
+            var nv = $('.annotation-' + type).attr('show-annotation') === 'true' ? 'false' : 'true';
+            $('.annotation-' + type).attr('show-annotation', nv);
             if (nv === 'true') {
-                $('.underlineable-' + name).addClass('underline-' + name);
+                $('.popover-content .annotation-' + type).each(function() {
+                    if ($(this).children('div').not('[style*="display: none"]').length) {
+                        var c = $(this).closest('.popover-content');
+                        var fileID = c.attr('fileid');
+                        var line = c.attr('linenum');
+                        $('.fileid' + fileID + ' .code .number' + line + ' .underlineable-' + type).addClass('underline-' + type);
+                    }
+                });
             } else {
-                $('.underlineable-' + name).removeClass('underline-' + name);
+                $('.underlineable-' + type).removeClass('underline-' + type);
             }
         });
-        $(".pick-a-color").on("change", function() {
+        $('#picker-' + type).on('change', function() {
             var c = $(this).val();
-            $('#color-' + name).val(c);
-            jss.set('.line .underlineable-' + name + '.underline-' + name, {
+            $('#color-' + type).val(c);
+            jss.set('.line .underlineable-' + type + '.underline-' + type, {
                 'border-bottom-color': '#' + c + ' !important'
             });
         });
