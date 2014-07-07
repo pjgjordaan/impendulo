@@ -36,22 +36,19 @@ import (
 func TestJUnitTest(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
-	s, err := Session()
-	if err != nil {
-		t.Error(err)
+	s, e := Session()
+	if e != nil {
+		t.Error(e)
 	}
 	defer s.Close()
 	test := junit.NewTest(bson.NewObjectId(), "name", junit.DEFAULT, &tool.Target{}, junitData, junitData)
-	err = AddJUnitTest(test)
-	if err != nil {
-		t.Error(err)
+	if e = AddJUnitTest(test); e != nil {
+		t.Error(e)
 	}
-	found, err := JUnitTest(bson.M{"_id": test.Id}, nil)
-	if err != nil {
-		t.Error(err)
-	}
-	if !reflect.DeepEqual(test, found) {
-		t.Error("Tests don't match", test, found)
+	if v, e := JUnitTest(bson.M{"_id": test.Id}, nil); e != nil {
+		t.Error(e)
+	} else if !reflect.DeepEqual(test, v) {
+		t.Error("Tests don't match", test, v)
 	}
 }
 

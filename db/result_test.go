@@ -26,10 +26,10 @@ package db
 
 import (
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/tool/javac"
+	"github.com/godfried/impendulo/tool/result"
 
 	"html/template"
 
@@ -64,30 +64,25 @@ func TestResultNames(t *testing.T) {
 func TestResult(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
-	s, err := Session()
-	if err != nil {
-		t.Error(err)
+	s, e := Session()
+	if e != nil {
+		t.Error(e)
 	}
 	defer s.Close()
-	file, err := project.NewFile(bson.NewObjectId(), fileInfo, fileData)
-	if err != nil {
-		t.Error(err)
+	f, e := project.NewFile(bson.NewObjectId(), fileInfo, fileData)
+	if e != nil {
+		t.Error(e)
 	}
-	err = Add(FILES, file)
-	if err != nil {
-		t.Error(err)
+	if e = Add(FILES, f); e != nil {
+		t.Error(e)
 	}
-	res := javac.NewResult(file.Id, fileData)
-	err = AddResult(res, res.GetName())
-	if err != nil {
-		t.Error(err)
+	r := javac.NewResult(f.Id, fileData)
+	if e = AddResult(r, r.GetName()); e != nil {
+		t.Error(e)
 	}
-	matcher := bson.M{"_id": res.GetId()}
-	dbRes, err := ToolResult(matcher, nil)
-	if err != nil {
-		t.Error(err)
-	}
-	if !reflect.DeepEqual(res, dbRes) {
+	if v, e := Tooler(bson.M{"_id": r.GetId()}, nil); e != nil {
+		t.Error(e)
+	} else if !reflect.DeepEqual(r, v) {
 		t.Error("Results not equivalent")
 	}
 }
@@ -142,22 +137,22 @@ func report(name string, id bson.ObjectId) interface{} {
 }
 
 func findbugsReport(id bson.ObjectId) *findbugs.Report {
-	report := new(findbugs.Report)
-	report.Id = id
-	report.Instances = []*findbugs.BugInstance{
-		{
-			Type:     "some bug",
-			Priority: 1,
-			Rank:     2,
+	return &findbugs.Report{
+		Id: id,
+		Instances: []*findbugs.BugInstance{
+			{
+				Type:     "some bug",
+				Priority: 1,
+				Rank:     2,
+			},
 		},
 	}
-	return report
 }
 
 func javacReport(id bson.ObjectId) *javac.Report {
 	return &javac.Report{
 		Id:    id,
-		Type:  tool.ERRORS,
+		Type:  result.ERRORS,
 		Count: 4,
 		Data:  []byte("some errors were found"),
 	}

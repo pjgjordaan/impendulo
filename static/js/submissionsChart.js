@@ -22,39 +22,52 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 var SubmissionsChart = {
-    init: function(tipe, id) {
+    init: function(tipe) {
         $(function() {
-            SubmissionsChart.addResults(tipe, id);
+            SubmissionsChart.addResults(tipe, $('#' + tipe + '-dropdown-label').attr(tipe + 'id'));
             $('#tool').change(function() {
-                SubmissionsChart.load(tipe, id, $(this).val(), $('[name="score"]').val());
+                SubmissionsChart.load(tipe, $('#' + tipe + '-dropdown-label').attr(tipe + 'id'), $(this).val(), $('[name="score"]').val());
                 var params = {
                     'result': $(this).val()
                 };
                 setContext(params);
             });
             $('[name="score"]').change(function() {
-                SubmissionsChart.load(tipe, id, $('#tool').val(), $(this).val());
+                SubmissionsChart.load(tipe, $('#' + tipe + '-dropdown-label').attr(tipe + 'id'), $('#tool').val(), $(this).val());
             });
-            $('.a-' + tipe).on('click', function() {
+
+            $('#dropdown-' + tipe + ' > ul >  li > a').on('click', function() {
+                var tool = $('#tool').val();
                 var id = $(this).attr(tipe + 'id');
-                SubmissionsChart.load(tipe, id, $('#tool').val(), $('[name="score"]').val());
+                SubmissionsChart.addResults(tipe, id, tool);
                 var params = {};
                 params[tipe + '-id'] = id;
                 setContext(params);
                 $('#' + tipe + '-dropdown-label').html('<h4><small>' + tipe + '</small> ' + $(this).text() + ' <span class="caret"></span></h4>');
+                $('#' + tipe + '-dropdown-label').attr(tipe + 'id', id);
             });
         });
     },
 
-    addResults: function(tipe, id) {
+
+    addResults: function(tipe, id, result) {
         var d = '#tool';
         $(d).empty();
         $.getJSON('results?' + tipe + '-id=' + id, function(data) {
             var r = data['results'];
+            if (not(r)) {
+                console.log(data);
+                return;
+            }
             for (var i = 0; i < r.length; i++) {
                 $(d).append('<option value="' + r[i].Id + '">' + r[i].Name + '</option>');
             }
-            SubmissionsChart.load(tipe, id, r[0].Id, $('[name="score"]').val());
+            if (result !== undefined && $(d + ' option[value="' + result + '"]').length) {
+                $(d).val(result);
+            } else {
+                result = r[0].Id
+            }
+            SubmissionsChart.load(tipe, id, result, $('[name="score"]').val());
         });
     },
 

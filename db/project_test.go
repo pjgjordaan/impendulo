@@ -26,8 +26,10 @@ package db
 
 import (
 	"bytes"
+
 	"github.com/godfried/impendulo/project"
 	"labix.org/v2/mgo/bson"
+
 	"reflect"
 	"testing"
 )
@@ -35,26 +37,22 @@ import (
 func TestRemoveFile(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
-	s, err := Session()
-	if err != nil {
-		t.Error(err)
+	s, e := Session()
+	if e != nil {
+		t.Error(e)
 	}
 	defer s.Close()
-	f, err := project.NewFile(bson.NewObjectId(), fileInfo, fileData)
-	if err != nil {
-		t.Error(err)
+	f, e := project.NewFile(bson.NewObjectId(), fileInfo, fileData)
+	if e != nil {
+		t.Error(e)
 	}
-	err = Add(FILES, f)
-	if err != nil {
-		t.Error(err)
+	if e = Add(FILES, f); e != nil {
+		t.Error(e)
 	}
-	err = RemoveFileById(f.Id)
-	if err != nil {
-		t.Error(err)
+	if e = RemoveFileById(f.Id); e != nil {
+		t.Error(e)
 	}
-	matcher := bson.M{"_id": f.Id}
-	f, err = File(matcher, nil)
-	if f != nil || err == nil {
+	if f, e = File(bson.M{"_id": f.Id}, nil); f != nil || e == nil {
 		t.Error("File not deleted")
 	}
 }
@@ -62,48 +60,40 @@ func TestRemoveFile(t *testing.T) {
 func TestFile(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
-	s, err := Session()
-	if err != nil {
-		t.Error(err)
+	s, e := Session()
+	if e != nil {
+		t.Error(e)
 	}
 	defer s.Close()
-	f, err := project.NewFile(bson.NewObjectId(), fileInfo, fileData)
-	if err != nil {
-		t.Error(err)
+	f, e := project.NewFile(bson.NewObjectId(), fileInfo, fileData)
+	if e != nil {
+		t.Error(e)
 	}
-	err = Add(FILES, f)
-	if err != nil {
-		t.Error(err)
+	if e = Add(FILES, f); e != nil {
+		t.Error(e)
 	}
-	matcher := bson.M{"_id": f.Id}
-	dbFile, err := File(matcher, nil)
-	if err != nil {
-		t.Error(err)
-	}
-	if !f.Equals(dbFile) {
-		t.Error("Files not equivalent", f.String() == dbFile.String(), bytes.Equal(f.Data, dbFile.Data))
+	if v, e := File(bson.M{"_id": f.Id}, nil); e != nil {
+		t.Error(e)
+	} else if !f.Equals(v) {
+		t.Error("Files not equivalent", f.String() == v.String(), bytes.Equal(f.Data, v.Data))
 	}
 }
 
 func TestSubmission(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
-	s, err := Session()
-	if err != nil {
-		t.Error(err)
+	s, e := Session()
+	if e != nil {
+		t.Error(e)
 	}
 	defer s.Close()
 	sub := project.NewSubmission(bson.NewObjectId(), "user", project.FILE_MODE, 1000)
-	err = Add(SUBMISSIONS, sub)
-	if err != nil {
-		t.Error(err)
+	if e = Add(SUBMISSIONS, sub); e != nil {
+		t.Error(e)
 	}
-	matcher := bson.M{"_id": sub.Id}
-	dbSub, err := Submission(matcher, nil)
-	if err != nil {
-		t.Error(err)
-	}
-	if !reflect.DeepEqual(sub, dbSub) {
+	if v, e := Submission(bson.M{"_id": sub.Id}, nil); e != nil {
+		t.Error(e)
+	} else if !reflect.DeepEqual(sub, v) {
 		t.Error("Submissions not equivalent")
 	}
 }

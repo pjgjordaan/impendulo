@@ -76,5 +76,4 @@ func TestCount(t *testing.T) {
 	if n != 10 {
 		t.Errorf("Invalid count %q, should be %q", n, 10)
 	}
-
 }

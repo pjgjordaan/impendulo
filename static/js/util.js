@@ -978,6 +978,7 @@ var CodeView = {
         $('#modal-code').modal('show');
         return false;
     },
+
     addInfo: function(fileID, type, title, content, start, end, added) {
         for (var i = start; i <= end; i++) {
             if (added !== undefined && i > 0 && i <= added.length) {
@@ -995,11 +996,12 @@ var CodeView = {
             }
             if (!$(s + ' .annotation-' + type + ' [annotation-title="' + title + '"]').length) {
                 $(s + ' .annotation-' + type).append('<div annotation-title="' + title + '"><h5>' +
-                    title + '</h5><p style="font-size:80%;"></p>');
+                    title + '</h5><p class="annotation-content"></p>');
             }
-            $(s + ' .annotation-' + type + ' [annotation-title="' + title + '"] p').append(content + '\n');
+            $(s + ' .annotation-' + type + ' [annotation-title="' + title + '"] p.annotation-content').append(content + '<br>');
         }
     },
+
     createPopover: function(fileID, num) {
         if (!$('.popover-content[fileid="' + fileID + '"][linenum="' + num + '"]').length) {
             $('.fileid' + fileID + ' .code .number' + num).attr('data-toggle', 'popover');
@@ -1016,6 +1018,7 @@ var CodeView = {
         }
 
     },
+
     lineContent: function(fileID, num) {
         if (!CodeView.annotations) {
             return '';
@@ -1028,6 +1031,7 @@ var CodeView = {
         });
         return c;
     },
+
     loadComments: function(fileID) {
         CodeView.addConfiguration('Comments');
         $.getJSON('comments?file-id=' + fileID, function(data) {
@@ -1041,6 +1045,7 @@ var CodeView = {
             }
         });
     },
+
     loadResults: function(fileID) {
         $.getJSON('fileresults?id=' + fileID, function(data) {
             var rs = data['fileresults'];
@@ -1059,6 +1064,7 @@ var CodeView = {
             }
         });
     },
+
     addAdvancedConfiguration: function(type, title) {
         if ($('#accordion-' + type + '-advanced .panel-body [infotitle="' + title + '"]').length) {
             return;
@@ -1083,6 +1089,7 @@ var CodeView = {
             });
         });
     },
+
     addConfiguration: function(type) {
         if ($('#modal-form-' + type).length) {
             return;

@@ -26,6 +26,7 @@ package db
 
 import (
 	"github.com/godfried/impendulo/user"
+
 	"reflect"
 	"testing"
 )
@@ -33,21 +34,18 @@ import (
 func TestUser(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
-	s, err := Session()
-	if err != nil {
-		t.Error(err)
+	s, e := Session()
+	if e != nil {
+		t.Error(e)
 	}
 	defer s.Close()
 	u := user.New("uname", "pword")
-	err = Add(USERS, u)
-	if err != nil {
-		t.Error(err)
+	if e = Add(USERS, u); e != nil {
+		t.Error(e)
 	}
-	found, err := User("uname")
-	if err != nil {
-		t.Error(err)
-	}
-	if !reflect.DeepEqual(u, found) {
-		t.Error("Users not equivalent", u, found)
+	if v, e := User("uname"); e != nil {
+		t.Error(e)
+	} else if !reflect.DeepEqual(u, v) {
+		t.Error("Users not equivalent", u, v)
 	}
 }

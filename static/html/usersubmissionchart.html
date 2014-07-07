@@ -2,15 +2,16 @@
 <!-- !-->
 {{template "breadcrumb" .}}
 <ul class="nav nav-tabs">
-    <li class="dropdown">
-        <a href="#" data-toggle="dropdown" role="button" id="user-dropdown-label" class="dropdown-toggle">
+    <li class="dropdown" id="dropdown-user">
+        <a href="#" data-toggle="dropdown" role="button" id="user-dropdown-label" userid="{{.ctx.Browse.Uid}}">
             <h4>
-	<small>user</small> {{.ctx.Browse.Uid}} <span class="caret"></span>
-      </h4> 
+	      <small>user</small> {{.ctx.Browse.Uid}} <span class="caret"></span>
+	    </h4> 
         </a>
         <ul class="dropdown-menu" role="menu" aria-labelledby="user-dropdown-label">
             {{$users := users}} {{range $users}}
-            <li><a class="a-user" userid="{{.}}" href="" onclick="return false;">{{.}}</a>
+            <li role="presentation">
+                <a userid="{{.}}" tabindex="-1" role="menuitem" href="#">{{.}}</a>
             </li>
             {{end}}
         </ul>
@@ -18,9 +19,11 @@
 </ul>
 {{$uid := .ctx.Browse.Uid}}
 <ul class="nav nav-pills">
-    <li><a href="getsubmissions">Table</a>
+    <li>
+        <a href="getsubmissions">Table</a>
     </li>
-    <li class="active"><a>Chart</a>
+    <li class="active">
+        <a>Chart</a>
     </li>
 </ul>
 <div class="row">
@@ -43,7 +46,7 @@
     </div>
 </div>
 <script>
-    SubmissionsChart.init('user', '{{$uid}}');
+    SubmissionsChart.init('user');
 </script>
 <div id="submissions-chart" xmlns:xlink="http://www.w3.org/1999/xlink"></div>
 {{end}}

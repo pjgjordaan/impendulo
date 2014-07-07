@@ -26,9 +26,11 @@ package db
 
 import (
 	"bytes"
+
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
 	"labix.org/v2/mgo/bson"
+
 	"reflect"
 	"testing"
 )
@@ -36,37 +38,34 @@ import (
 func TestResultGridFS(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
-	s, err := Session()
-	if err != nil {
-		t.Error(err)
+	s, e := Session()
+	if e != nil {
+		t.Error(e)
 	}
 	defer s.Close()
-	file, err := project.NewFile(bson.NewObjectId(), fileInfo, fileData)
-	if err != nil {
-		t.Error(err)
+	file, e := project.NewFile(bson.NewObjectId(), fileInfo, fileData)
+	if e != nil {
+		t.Error(e)
 	}
-	err = Add(FILES, file)
-	if err != nil {
-		t.Error(err)
+	if e = Add(FILES, file); e != nil {
+		t.Error(e)
 	}
-	results := []tool.ToolResult{
+	results := []result.Tooler{
 		checkstyleResult(file.Id, true),
 		findbugsResult(file.Id, true),
 		javacResult(file.Id, true),
 	}
-	for _, res := range results {
-		err = AddResult(res, res.GetName())
-		if err != nil {
-			t.Error(err)
+	for _, r := range results {
+		if e = AddResult(r, r.GetName()); e != nil {
+			t.Error(e)
 		}
-		matcher := bson.M{"_id": res.GetId()}
-		dbRes, err := ToolResult(matcher, nil)
-		if err != nil {
-			t.Error(err)
+		v, e := Tooler(bson.M{"_id": r.GetId()}, nil)
+		if e != nil {
+			t.Error(e)
 		}
-		res.SetReport(report(res.GetName(), res.GetId()))
-		if !reflect.DeepEqual(res, dbRes) {
-			t.Error("Results not equivalent", dbRes)
+		r.SetReport(report(r.GetName(), r.GetId()))
+		if !reflect.DeepEqual(r, v) {
+			t.Error("Results not equivalent", v)
 		}
 	}
 }
@@ -74,22 +73,20 @@ func TestResultGridFS(t *testing.T) {
 func TestGridFS(t *testing.T) {
 	Setup(TEST_CONN)
 	defer DeleteDB(TEST_DB)
-	s, err := Session()
-	if err != nil {
-		t.Error(err)
+	s, e := Session()
+	if e != nil {
+		t.Error(e)
 	}
 	defer s.Close()
 	id := bson.NewObjectId()
-	err = AddGridFile(id, grandPrix)
-	if err != nil {
-		t.Error(err)
+	if e = AddGridFile(id, grandPrix); e != nil {
+		t.Error(e)
 	}
-	var ret []byte
-	err = GridFile(id, &ret)
-	if err != nil {
-		t.Error(err)
+	var d []byte
+	if e = GridFile(id, &d); e != nil {
+		t.Error(e)
 	}
-	if !bytes.Equal(grandPrix, ret) {
+	if !bytes.Equal(grandPrix, d) {
 		t.Error("Data not equal.")
 	}
 }

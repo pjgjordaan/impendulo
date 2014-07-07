@@ -31,6 +31,7 @@ import (
 
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/result"
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
 
 	"strconv"
@@ -139,7 +140,8 @@ func (r *Report) Lines() []*result.Line {
 	for _, e := range r.Errors {
 		for _, t := range e.Threads {
 			for _, f := range t.Frames {
-				lines = append(lines, &result.Line{Title: e.Property, Description: e.Details, Start: f.Line, End: f.Line})
+				d := "Thread " + t.Name + ": " + t.Status + " at " + f.Details
+				lines = append(lines, &result.Line{Title: util.ShortName(e.Property), Description: d, Start: f.Line, End: f.Line})
 			}
 		}
 	}

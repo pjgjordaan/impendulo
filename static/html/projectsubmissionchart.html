@@ -2,15 +2,18 @@
 <!-- !-->
 {{template "breadcrumb" .}}
 <ul class="nav nav-tabs">
-    <li class="dropdown">
-        <a href="#" data-toggle="dropdown" role="button" id="project-dropdown-label" class="dropdown-toggle">
+    <li class="dropdown" id="dropdown-project">
+        <a href="#" data-toggle="dropdown" role="button" id="project-dropdown-label" projectid="{{.ctx.Browse.Pid.Hex}}">
             <h4>
-	<small>project</small> {{projectName .ctx.Browse.Pid}} <span class="caret"></span>
-      </h4> 
+	      <small>project</small> {{projectName .ctx.Browse.Pid}} <span class="caret"></span>
+	    </h4> 
         </a>
         <ul class="dropdown-menu" role="menu" aria-labelledby="project-dropdown-label">
             {{$projects := projects}} {{range $projects}}
-            <li><a class="a-project" projectid="{{.Id.Hex}}" href="" onclick="return false;">{{.Name}}</a>
+            <li role="presentation">
+                <a projectid="{{.Id.Hex}}" tabindex="-1" role="menuitem" href="#">
+		{{.Name}}
+	      </a>
             </li>
             {{end}}
         </ul>
@@ -18,9 +21,11 @@
 </ul>
 {{$pid := .ctx.Browse.Pid.Hex}}
 <ul class="nav nav-pills">
-    <li><a href="getsubmissions">Table</a>
+    <li>
+        <a href="getsubmissions">Table</a>
     </li>
-    <li class="active"><a>Chart</a>
+    <li class="active">
+        <a>Chart</a>
     </li>
 </ul>
 <div class="row">
@@ -43,7 +48,7 @@
     </div>
 </div>
 <script>
-    SubmissionsChart.init('user', '{{$pid}}');
+    SubmissionsChart.init('project');
 </script>
 <div id="submissions-chart" xmlns:xlink="http://www.w3.org/1999/xlink">
 </div>
