@@ -3,6 +3,8 @@ package webutil
 import (
 	"fmt"
 
+	"labix.org/v2/mgo/bson"
+
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
 
@@ -53,6 +55,23 @@ func String(r *http.Request, n string) (string, error) {
 		return "", fmt.Errorf("invalid value for %s", n)
 	}
 	return vs[0], nil
+}
+
+func Id(r *http.Request, n string) (bson.ObjectId, error) {
+	v := r.FormValue(n)
+	if strings.TrimSpace(v) != "" {
+		return convert.Id(v)
+	}
+	if r.Form == nil {
+		if e := r.ParseForm(); e != nil {
+			return "", e
+		}
+	}
+	vs, ok := r.Form[n]
+	if !ok || len(vs) == 0 || vs[0] == "" {
+		return "", fmt.Errorf("invalid value for %s", n)
+	}
+	return convert.Id(vs[0])
 }
 
 func Index(r *http.Request, n string, maxSize int) (int, error) {

@@ -26,16 +26,15 @@ package charts
 
 import (
 	"errors"
-	"fmt"
 	"math"
 
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
 	"github.com/godfried/impendulo/web/context"
+	"github.com/godfried/impendulo/web/stats"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -50,6 +49,7 @@ type (
 	}
 
 	D      []map[string]interface{}
+	I      map[string]string
 	avgVal struct {
 		count int
 		val   *result.ChartVal
@@ -59,7 +59,6 @@ type (
 var (
 	NoFilesError       = errors.New("no files to load chart for")
 	NoSubmissionsError = errors.New("no submissions to create chart for")
-	NoValuesError      = errors.New("no values found")
 )
 
 func Tool(r *context.Result, files []*project.File) (D, error) {
@@ -229,58 +228,62 @@ func Project() (D, error) {
 	return d, nil
 }
 
-type scoreFunc func(*project.Submission, *context.Result) (*result.ChartVal, error)
-
-func Submission(subs []*project.Submission, r *context.Result, score string) (D, error) {
+func Submission(subs []*project.Submission, x *context.Result, y *context.Result) (D, I, error) {
 	if len(subs) == 0 {
-		return nil, NoSubmissionsError
-	}
-	var f scoreFunc
-	switch score {
-	case "final":
-		f = finalScore
-	case "average":
-		f = averageScore
-	default:
-		return nil, fmt.Errorf("unsupported score type %s", score)
+		return nil, nil, NoSubmissionsError
 	}
 	d := NewData()
+	calc := stats.NewCalc()
+	names := make(map[bson.ObjectId]string)
+	info := I{"x": x.Format(), "y": y.Format()}
 	for _, s := range subs {
-		n, e := db.ProjectName(s.ProjectId)
+		n, ok := names[s.ProjectId]
+		if !ok {
+			var e error
+			if n, e = db.ProjectName(s.ProjectId); e != nil {
+				continue
+			}
+			names[s.ProjectId] = n
+		}
+		xVal, xN, e := calc.Calc(x, s)
 		if e != nil {
+			util.Log(e)
 			continue
 		}
-		sc, e := db.FileCount(s.Id, project.SRC)
+		yVal, yN, e := calc.Calc(y, s)
 		if e != nil {
+			util.Log(e)
 			continue
 		}
-		lc, e := db.FileCount(s.Id, project.LAUNCH)
-		if e != nil {
-			continue
+		if _, ok := info["x-unit"]; !ok {
+			info["x-unit"] = xN
 		}
-		v, e := f(s, r)
-		if e != nil {
-			continue
+		if _, ok := info["y-unit"]; !ok {
+			info["y-unit"] = yN
 		}
 		p := map[string]interface{}{
-			"snapshots": sc, "launches": lc, "project": n,
-			"key": s.Id.Hex(), "user": s.User, "time": v.X, "y": v.Y,
-			"description": v.Name,
+			"key": s.Id.Hex(), "user": s.User, "x": xVal, "y": yVal,
+			"project": n,
 		}
-
 		d = append(d, p)
 	}
 	prev := -1
 	outliers := make(map[int]util.E, len(d))
-	var stdDev, mean float64
 	for len(outliers)-prev > 0 {
-		mean = calcMean(d, outliers)
-		stdDev = calcStdDeviation(d, outliers, mean)
+		mean := calcMean(d, outliers)
+		stdDev := calcStdDeviation(d, outliers, mean)
 		prev = len(outliers)
 		addOutliers(d, outliers, mean, stdDev)
 	}
-	max := mean + 3*stdDev
-	min := mean - 3*stdDev
+	if len(outliers) == 0 {
+		return d, info, nil
+	}
+	mean := calcMean(d, outliers)
+	stdDev := calcStdDeviation(d, outliers, mean)
+	n := float64(len(d))
+	inv := 0.5 * (2.82843 * stdDev * util.ErfInverse((n-0.5)/n, 100))
+	min := mean - inv
+	max := mean + inv
 	for i, _ := range outliers {
 		y := d[i]["y"].(float64)
 		if y < min {
@@ -290,7 +293,7 @@ func Submission(subs []*project.Submission, r *context.Result, score string) (D,
 		}
 		d[i]["outlier"] = y
 	}
-	return d, nil
+	return d, info, nil
 }
 
 func calcMean(vals []map[string]interface{}, outliers map[int]util.E) float64 {
@@ -318,130 +321,15 @@ func calcStdDeviation(vals []map[string]interface{}, outliers map[int]util.E, me
 }
 
 func addOutliers(vals []map[string]interface{}, outliers map[int]util.E, mean, stdDev float64) {
-	max := mean + 3*stdDev
-	min := mean - 3*stdDev
 	for i, c := range vals {
 		if _, ok := outliers[i]; ok {
 			continue
 		}
 		y := c["y"].(float64)
-		if y < min || y > max {
+		z := math.Abs(mean-y) / stdDev
+		p := (1 - math.Erf(z/math.Sqrt(2))) * float64(len(vals))
+		if p < 0.5 {
 			outliers[i] = util.E{}
 		}
 	}
-}
-
-func norm(y, m, d float64) float64 {
-	return (1.0 / (d * math.Sqrt(2*math.Pi))) * math.Exp(-math.Pow(y-m, 2.0)/(2*math.Pow(d, 2.0)))
-}
-
-func finalScore(s *project.Submission, r *context.Result) (*result.ChartVal, error) {
-	f, rid, e := lastInfo(s.Id, r)
-	if e != nil {
-		return nil, e
-	}
-	t := (f.Time - s.Time) / 1000.0
-	return firstVal(rid, t)
-}
-
-func firstVal(rid bson.ObjectId, t int64) (*result.ChartVal, error) {
-	r, e := db.Charter(bson.M{db.ID: rid}, nil)
-	if e != nil {
-		return nil, e
-	}
-	vs := r.ChartVals()
-	if len(vs) == 0 || vs[0] == nil {
-		return nil, NoValuesError
-	}
-	vs[0].X = t
-	return vs[0], nil
-}
-
-func (a *avgVal) add(v *result.ChartVal) {
-	if a.val == nil {
-		a.count = 0
-		a.val = v
-	} else {
-		a.val.Y += v.Y
-		if v.X > a.val.X {
-			a.val.X = v.X
-		}
-	}
-	a.count++
-}
-
-func (a *avgVal) chartVal() *result.ChartVal {
-	a.val.Y = util.Round(a.val.Y/float64(a.count), 2)
-	return a.val
-}
-
-func averageScore(s *project.Submission, r *context.Result) (*result.ChartVal, error) {
-	fs, e := db.Files(bson.M{db.SUBID: s.Id, db.TYPE: project.SRC}, bson.M{db.DATA: 0}, 0)
-	if e != nil {
-		return nil, e
-	}
-	if len(fs) == 0 {
-		return nil, fmt.Errorf("no src files in submission %s", s.Id.Hex())
-	}
-	var ts []*project.File
-	if r.Name != "" && db.Contains(db.TESTS, bson.M{db.NAME: r.Name + ".java", db.TYPE: junit.USER}) {
-		ts, e = db.Files(bson.M{db.SUBID: s.Id, db.NAME: r.Name + ".java", db.TYPE: project.TEST}, bson.M{db.DATA: 0}, 0, "-"+db.TIME)
-		if e != nil {
-			return nil, e
-		}
-	}
-	cv := new(avgVal)
-	for i, f := range fs {
-		ft := (f.Time - s.Time) / 1000.0
-		if id, e := convert.GetId(fs[i].Results, r.Raw()); e == nil {
-			v, e := firstVal(id, ft)
-			if e == nil {
-				cv.add(v)
-			}
-			continue
-		}
-		for _, t := range ts {
-			if id, e := convert.GetId(f.Results, r.Raw()+"-"+t.Id.Hex()); e == nil {
-				v, e := firstVal(id, ft)
-				if e != nil {
-					continue
-				}
-				cv.add(v)
-				r.FileID = t.Id
-				break
-			}
-		}
-	}
-	if cv.val == nil {
-		return nil, fmt.Errorf("no chartvals for %s", r.Format())
-	}
-	return cv.chartVal(), nil
-}
-
-func lastInfo(sid bson.ObjectId, r *context.Result) (*project.File, bson.ObjectId, error) {
-	fs, e := db.Files(bson.M{db.SUBID: sid, db.TYPE: project.SRC}, bson.M{db.DATA: 0}, 0, "-"+db.TIME)
-	if e != nil {
-		return nil, "", e
-	}
-	if len(fs) == 0 {
-		return nil, "", fmt.Errorf("no src files in submission %s", sid.Hex())
-	}
-	var ts []*project.File
-	if r.Name != "" && db.Contains(db.TESTS, bson.M{db.NAME: r.Name + ".java", db.TYPE: junit.USER}) {
-		ts, e = db.Files(bson.M{db.SUBID: sid, db.NAME: r.Name + ".java", db.TYPE: project.TEST}, bson.M{db.DATA: 0}, 0, "-"+db.TIME)
-		if e != nil {
-			return nil, "", e
-		}
-	}
-	for i, f := range fs {
-		if id, e := convert.GetId(fs[i].Results, r.Raw()); e == nil {
-			return fs[i], id, nil
-		}
-		for _, t := range ts {
-			if id, e := convert.GetId(f.Results, r.Raw()+"-"+t.Id.Hex()); e == nil {
-				return fs[i], id, nil
-			}
-		}
-	}
-	return nil, "", fmt.Errorf("no results found for %s", r.Format())
 }

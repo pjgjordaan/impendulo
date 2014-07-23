@@ -57,7 +57,7 @@ func InstallPath() (string, error) {
 	}
 	p := os.Getenv("GOPATH")
 	if p == "" {
-		return "", errors.GoPathError
+		return "", errors.GoPath
 	}
 	installPath = filepath.Join(p, "src", "github.com", "godfried", "impendulo")
 	return installPath, nil

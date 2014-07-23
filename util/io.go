@@ -51,6 +51,10 @@ type (
 	copier struct {
 		dest, src string
 	}
+
+	finder struct {
+		l, n string
+	}
 )
 
 //ReadData reads data from a reader until io.EOF or []byte("eof") is encountered.
@@ -229,4 +233,23 @@ func Extension(n string) (string, string) {
 	default:
 		return strings.Join(s[0:len(s)-1], "."), s[len(s)-1]
 	}
+}
+
+func (f *finder) walk(p string, i os.FileInfo, e error) error {
+	if e != nil {
+		return e
+	}
+	if i.IsDir() && strings.HasSuffix(p, f.n) {
+		f.l = p
+		return errors.Found
+	}
+	return nil
+}
+
+func LocateDirectory(src, name string) (string, error) {
+	f := &finder{n: name}
+	if e := filepath.Walk(src, f.walk); e != nil && e != errors.Found {
+		return "", e
+	}
+	return f.l, nil
 }

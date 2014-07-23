@@ -25,8 +25,6 @@
 package tool
 
 import (
-	"fmt"
-
 	"github.com/godfried/impendulo/util"
 
 	"path/filepath"
@@ -71,10 +69,6 @@ func (t *Target) Executable() string {
 	} else {
 		return t.Name
 	}
-}
-
-func (t *Target) String() string {
-	return fmt.Sprintf("Exec: %s Path: %s", t.Executable(), t.FilePath())
 }
 
 //NewTarget

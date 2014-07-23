@@ -27,6 +27,7 @@ import (
 	"github.com/godfried/impendulo/util/convert"
 	"github.com/godfried/impendulo/web/charts"
 	"github.com/godfried/impendulo/web/context"
+	"github.com/godfried/impendulo/web/stats"
 	"github.com/godfried/impendulo/web/webutil"
 	"labix.org/v2/mgo/bson"
 
@@ -80,12 +81,12 @@ func (a AJAXPost) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func GenerateAJAX(r *pat.Router) {
 	gets := map[string]AJAXGet{
-		"chart": getChart, "usernames": getUsernames, "collections": collections, "pmdrules": ajaxRules,
+		"chart-data": getChart, "usernames": getUsernames, "collections": collections, "pmdrules": ajaxRules,
 		"skeletons": getSkeletons, "submissions": submissions, "results": ajaxResults, "jpflisteners": ajaxListeners,
 		"langs": getLangs, "projects": getProjects, "files": ajaxFiles, "tools": ajaxTools, "jpfsearches": ajaxSearches,
 		"code": ajaxCode, "users": ajaxUsers, "permissions": ajaxPerms, "comparables": ajaxComparables,
 		"tests": ajaxTests, "test-types": testTypes, "filenames": fileNames, "status": ajaxStatus, "counts": ajaxCounts,
-		"comments": ajaxComments, "fileresults": ajaxFileResults,
+		"comments": ajaxComments, "fileresults": ajaxFileResults, "chart-options": ajaxChartOptions,
 	}
 	for n, f := range gets {
 		r.Add("GET", "/"+n, f)
@@ -130,7 +131,7 @@ func ajaxComments(r *http.Request) ([]byte, error) {
 }
 
 func ajaxFileResults(r *http.Request) ([]byte, error) {
-	id, e := convert.Id(r.FormValue("id"))
+	id, e := webutil.Id(r, "id")
 	if e != nil {
 		return nil, e
 	}
@@ -154,16 +155,16 @@ func ajaxFileResults(r *http.Request) ([]byte, error) {
 }
 
 func commentor(r *http.Request) (project.Commentor, error) {
-	if id, e := convert.Id(r.FormValue("file-id")); e == nil {
+	if id, e := webutil.Id(r, "file-id"); e == nil {
 		return db.File(bson.M{db.ID: id}, bson.M{db.COMMENTS: 1})
-	} else if id, e := convert.Id(r.FormValue("submission-id")); e == nil {
+	} else if id, e := webutil.Id(r, "submission-id"); e == nil {
 		return db.Submission(bson.M{db.ID: id}, bson.M{db.COMMENTS: 1})
 	}
 	return nil, CommentsError
 }
 
 func fileNames(r *http.Request) ([]byte, error) {
-	pid, e := convert.Id(r.FormValue("project-id"))
+	pid, e := webutil.Id(r, "project-id")
 	if e != nil {
 		return nil, e
 	}
@@ -194,7 +195,7 @@ func addComment(w http.ResponseWriter, r *http.Request) error {
 	if e != nil {
 		return e
 	}
-	fid, e := convert.Id(r.FormValue("file-id"))
+	fid, e := webutil.Id(r, "file-id")
 	if e != nil {
 		return e
 	}
@@ -223,30 +224,40 @@ func testTypes(r *http.Request) ([]byte, error) {
 }
 
 func ajaxCounts(r *http.Request) ([]byte, error) {
-	if sid, e := convert.Id(r.FormValue("submission-id")); e == nil {
-		return submissionCounts(sid)
+	if sid, e := webutil.Id(r, "submission-id"); e == nil {
+		s, e := db.Submission(bson.M{db.ID: sid}, bson.M{db.PROJECTID: 1})
+		if e != nil {
+			return nil, e
+		}
+		return util.JSON(map[string]interface{}{"counts": submissionCounts(sid, stats.ProjectTestCases(s.ProjectId))})
 	}
 	return nil, CountsError
 }
 
-func submissionCounts(sid bson.ObjectId) ([]byte, error) {
-	all, e := db.Count(db.FILES, bson.M{db.SUBID: sid})
+func submissionCounts(sid bson.ObjectId, projectTests int) map[string]interface{} {
+	c, e := stats.SubmissionTestCases(sid)
 	if e != nil {
-		return nil, e
+		util.Log(e)
 	}
-	s, e := db.Count(db.FILES, bson.M{db.SUBID: sid, db.TYPE: project.SRC})
+	st, e := stats.TestStats(sid, projectTests)
 	if e != nil {
-		return nil, e
+		util.Log(e)
+		st = stats.NewTest(0)
 	}
-	l, e := db.Count(db.FILES, bson.M{db.SUBID: sid, db.TYPE: project.LAUNCH})
-	if e != nil {
-		return nil, e
+	counts := map[string]interface{}{"testcases": c, "passed": util.Round(st.Passed(), 2)}
+	tipes := []project.Type{project.ALL, project.SRC, project.LAUNCH, project.TEST}
+	for _, t := range tipes {
+		m := bson.M{db.SUBID: sid}
+		if t != project.ALL {
+			m[db.TYPE] = t
+		}
+		c, e := db.Count(db.FILES, m)
+		if e != nil {
+			util.Log(e)
+		}
+		counts[t.String()] = c
 	}
-	t, e := db.Count(db.FILES, bson.M{db.SUBID: sid, db.TYPE: project.TEST})
-	if e != nil {
-		return nil, e
-	}
-	return util.JSON(map[string]interface{}{"counts": map[string]int{"all": all, "source": s, "launch": l, "test": t}})
+	return counts
 }
 
 func ajaxListeners(r *http.Request) ([]byte, error) {
@@ -273,11 +284,32 @@ func ajaxRules(r *http.Request) ([]byte, error) {
 	return util.JSON(map[string]interface{}{"rules": rs})
 }
 
+func ajaxChartOptions(r *http.Request) ([]byte, error) {
+	var rs []string
+	if pid, e := webutil.Id(r, "project-id"); e == nil {
+		rs = db.ProjectResults(pid)
+	} else if u, e := webutil.String(r, "user-id"); e == nil {
+		rs = db.UserResults(u)
+	} else {
+		return nil, ResultsError
+	}
+	sort.Strings(rs)
+	other := []string{"Time", util.Title(project.SRC.String()), util.Title(project.LAUNCH.String()), util.Title(project.TEST.String()), "Testcases", "Passed"}
+	ops := make(Selects, len(rs)+len(other))
+	for i, o := range other {
+		ops[i] = &Select{Id: o, Name: o}
+	}
+	for i, r := range rs {
+		ops[i+len(other)] = &Select{Id: r, Name: strings.Replace(r, ":", " \u2192 ", -1)}
+	}
+	return util.JSON(map[string]interface{}{"options": ops})
+}
+
 //ajaxResults retrieves the names  of all results found within a particular
 //project or by a particular user.
 func ajaxResults(r *http.Request) ([]byte, error) {
 	var rs []string
-	if pid, e := convert.Id(r.FormValue("project-id")); e == nil {
+	if pid, e := webutil.Id(r, "project-id"); e == nil {
 		rs = db.ProjectResults(pid)
 	} else if u, e := webutil.String(r, "user-id"); e == nil {
 		rs = db.UserResults(u)
@@ -295,7 +327,7 @@ func ajaxResults(r *http.Request) ([]byte, error) {
 //ajaxComparables retrieves other results which a given result
 //can be compared to, i.e. different unit tests.
 func ajaxComparables(r *http.Request) ([]byte, error) {
-	id, e := convert.Id(r.FormValue("id"))
+	id, e := webutil.Id(r, "id")
 	if e != nil {
 		return nil, e
 	}
@@ -364,7 +396,7 @@ func ajaxUsers(r *http.Request) ([]byte, error) {
 
 //ajaxCode loads code for a given src file or test.
 func ajaxCode(r *http.Request) ([]byte, error) {
-	if tid, e := convert.Id(r.FormValue("test-id")); e == nil {
+	if tid, e := webutil.Id(r, "test-id"); e == nil {
 		t, e := db.JUnitTest(bson.M{db.ID: tid}, bson.M{db.TEST: 1})
 		if e != nil {
 			return nil, e
@@ -372,14 +404,14 @@ func ajaxCode(r *http.Request) ([]byte, error) {
 		return util.JSON(map[string]interface{}{"code": string(t.Test)})
 	}
 	m := bson.M{}
-	if rid, e := convert.Id(r.FormValue("result-id")); e == nil {
+	if rid, e := webutil.Id(r, "result-id"); e == nil {
 		tr, e := db.Tooler(bson.M{db.ID: rid}, bson.M{db.FILEID: 1})
 		if e != nil {
 			return nil, e
 		}
 		m[db.ID] = tr.GetFileId()
 	}
-	if id, e := convert.Id(r.FormValue("file-id")); e == nil {
+	if id, e := webutil.Id(r, "file-id"); e == nil {
 		m[db.ID] = id
 	}
 	if n, e := webutil.String(r, "tool-name"); e == nil {
@@ -389,7 +421,7 @@ func ajaxCode(r *http.Request) ([]byte, error) {
 		}
 		if d.FileID != "" {
 			m[db.ID] = d.FileID
-		} else if pid, e := convert.Id(r.FormValue("project-id")); e == nil {
+		} else if pid, e := webutil.Id(r, "project-id"); e == nil {
 			return loadTestCode(pid, d.Name)
 		} else {
 			return nil, fmt.Errorf("could not load code for %s", d.Format())
@@ -427,7 +459,7 @@ func collections(r *http.Request) ([]byte, error) {
 //getProjects loads a list of projects.
 func getProjects(r *http.Request) ([]byte, error) {
 	m := bson.M{}
-	if pid, e := convert.Id(r.FormValue("id")); e == nil {
+	if pid, e := webutil.Id(r, "id"); e == nil {
 		m[db.ID] = pid
 	}
 	p, e := db.Projects(m, nil)
@@ -439,7 +471,7 @@ func getProjects(r *http.Request) ([]byte, error) {
 
 //ajaxTools loads a list of available tools for a given project.
 func ajaxTools(r *http.Request) ([]byte, error) {
-	pid, e := convert.Id(r.FormValue("project-id"))
+	pid, e := webutil.Id(r, "project-id")
 	if e != nil {
 		return nil, e
 	}
@@ -452,10 +484,10 @@ func ajaxTools(r *http.Request) ([]byte, error) {
 
 func ajaxFiles(r *http.Request) ([]byte, error) {
 	m := bson.M{}
-	if sid, e := convert.Id(r.FormValue("submission-id")); e == nil {
+	if sid, e := webutil.Id(r, "submission-id"); e == nil {
 		m[db.SUBID] = sid
 	}
-	if id, e := convert.Id(r.FormValue("id")); e == nil {
+	if id, e := webutil.Id(r, "id"); e == nil {
 		m[db.ID] = id
 	}
 	format, _ := webutil.String(r, "format")
@@ -498,21 +530,29 @@ func nestedFiles(m bson.M) (map[project.Type]map[string][]*project.File, error) 
 
 func submissions(r *http.Request) ([]byte, error) {
 	m := bson.M{}
-	if sid, e := convert.Id(r.FormValue("id")); e == nil {
+	if sid, e := webutil.Id(r, "id"); e == nil {
 		m[db.ID] = sid
 	}
-	if pid, e := convert.Id(r.FormValue("project-id")); e == nil {
+	if pid, e := webutil.Id(r, "project-id"); e == nil {
 		m[db.PROJECTID] = pid
 	}
-	s, e := db.Submissions(m, nil)
-	if e != nil {
+	ss, e := db.Submissions(m, nil)
+	if e != nil || len(ss) == 0 {
 		return nil, e
 	}
-	return util.JSON(map[string]interface{}{"submissions": s})
+	if r.FormValue("counts") != "true" {
+		return util.JSON(map[string]interface{}{"submissions": ss})
+	}
+	cs := make(map[string]map[string]interface{})
+	pc := stats.ProjectTestCases(ss[0].ProjectId)
+	for _, s := range ss {
+		cs[s.Id.Hex()] = submissionCounts(s.Id, pc)
+	}
+	return util.JSON(map[string]interface{}{"submissions": ss, "counts": cs})
 }
 
 func getUsernames(r *http.Request) ([]byte, error) {
-	pid, e := convert.Id(r.FormValue("project-id"))
+	pid, e := webutil.Id(r, "project-id")
 	var u []string
 	if e != nil {
 		u, e = db.Usernames(nil)
@@ -530,7 +570,7 @@ func getLangs(r *http.Request) ([]byte, error) {
 }
 
 func getSkeletons(r *http.Request) ([]byte, error) {
-	pid, e := convert.Id(r.FormValue("project-id"))
+	pid, e := webutil.Id(r, "project-id")
 	if e != nil {
 		return nil, e
 	}
@@ -543,10 +583,10 @@ func getSkeletons(r *http.Request) ([]byte, error) {
 
 func ajaxTests(r *http.Request) ([]byte, error) {
 	m := bson.M{}
-	if pid, e := convert.Id(r.FormValue("project-id")); e == nil {
+	if pid, e := webutil.Id(r, "project-id"); e == nil {
 		m[db.PROJECTID] = pid
 	}
-	if id, e := convert.Id(r.FormValue("id")); e == nil {
+	if id, e := webutil.Id(r, "id"); e == nil {
 		m[db.ID] = id
 	}
 	t, e := db.JUnitTests(m, bson.M{db.TEST: 0, db.DATA: 0})
@@ -598,15 +638,22 @@ func overviewChart(r *http.Request) ([]byte, error) {
 }
 
 func submissionChart(r *http.Request) ([]byte, error) {
-	rn, e := webutil.String(r, "result")
+	x, e := webutil.String(r, "x")
 	if e != nil {
 		return nil, e
 	}
-	rd, e := context.NewResult(rn)
+	xd, e := context.NewResult(x)
 	if e != nil {
 		return nil, e
 	}
-	m := bson.M{}
+	y, e := webutil.String(r, "y")
+	if e != nil {
+		return nil, e
+	}
+	yd, e := context.NewResult(y)
+	if e != nil {
+		return nil, e
+	}
 	t, e := webutil.String(r, "submission-type")
 	if e != nil {
 		return nil, e
@@ -615,10 +662,7 @@ func submissionChart(r *http.Request) ([]byte, error) {
 	if e != nil {
 		return nil, e
 	}
-	sc, e := webutil.String(r, "score")
-	if e != nil {
-		return nil, e
-	}
+	m := bson.M{}
 	switch t {
 	case "project":
 		pid, e := convert.Id(id)
@@ -635,15 +679,15 @@ func submissionChart(r *http.Request) ([]byte, error) {
 	if e != nil {
 		return nil, e
 	}
-	c, e := charts.Submission(s, rd, sc)
+	d, i, e := charts.Submission(s, xd, yd)
 	if e != nil {
 		return nil, e
 	}
-	return util.JSON(map[string]interface{}{"chart": c})
+	return util.JSON(map[string]interface{}{"chart-data": d, "chart-info": i})
 }
 
 func fileChart(r *http.Request) ([]byte, error) {
-	sid, e := convert.Id(r.FormValue("submission-id"))
+	sid, e := webutil.Id(r, "submission-id")
 	if e != nil {
 		return nil, e
 	}
@@ -690,7 +734,7 @@ func _fileChart(s, fn string, r *context.Result) (charts.D, error) {
 	if e != nil {
 		return nil, e
 	} else if r.FileID != "" {
-		r.FileID = findTestId(id)
+		r.FileID = db.UserTestId(id)
 	}
 	fs, e := db.Files(bson.M{db.NAME: fn, db.SUBID: id}, bson.M{db.DATA: 0}, 0, db.TIME)
 	if e != nil {
@@ -709,17 +753,4 @@ func _cmpChart(sid bson.ObjectId, cmp, fn string) (charts.D, error) {
 		return nil, e
 	}
 	return charts.Tool(r, fs)
-}
-
-func findTestId(sid bson.ObjectId) bson.ObjectId {
-	ts, e := db.Files(bson.M{db.SUBID: sid, db.TYPE: project.TEST}, bson.M{db.ID: 1}, 0, "-"+db.TIME)
-	if e != nil {
-		return ""
-	}
-	for _, t := range ts {
-		if db.Contains(db.RESULTS, bson.M{db.TESTID: t.Id}) {
-			return t.Id
-		}
-	}
-	return ""
 }

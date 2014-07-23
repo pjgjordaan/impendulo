@@ -85,4 +85,5 @@ const (
 	ACCESS      = "access"
 	DESCRIPTION = "description"
 	COMMENTS    = "comments"
+	TESTCASES   = "testcases"
 )

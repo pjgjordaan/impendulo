@@ -29,7 +29,7 @@ var OverviewChart = {
                 'type': 'overview',
                 'view': tipe,
             };
-            $.getJSON('chart', params, function(data) {
+            $.getJSON('chart-data', params, function(data) {
                 OverviewChart.create(data['chart'], tipe);
             });
         });

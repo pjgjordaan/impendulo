@@ -3,17 +3,10 @@
 {{template "breadcrumb" .}}
 <ul class="nav nav-tabs">
     <li class="dropdown">
-        <a href="#" data-toggle="dropdown" role="button" id="project-dropdown-label" class="dropdown-toggle">
-            <h4>
-	<small>project</small> 
-	{{projectName .ctx.Browse.Pid}} <span class="caret"></span>
-      </h4> 
+        <a href="#" data-toggle="dropdown" role="button" id="project-dropdown-label" class="dropdown-toggle" projectid="{{.ctx.Browse.Pid.Hex}}">
+            <h4><small>project</small> {{projectName .ctx.Browse.Pid}} <span class="caret"></span></h4> 
         </a>
-        <ul class="dropdown-menu" role="menu" aria-labelledby="project-dropdown-label">
-            {{$projects := projects}} {{range $projects}}
-            <li><a href="getsubmissions?project-id={{.Id.Hex}}">{{.Name}}</a>
-            </li>
-            {{end}}
+        <ul class="dropdown-menu" role="menu" aria-labelledby="project-dropdown-label" id="project-list">
         </ul>
     </li>
 </ul>
@@ -33,38 +26,15 @@
             <th>Created</th>
             <th>Snapshots</th>
             <th>Launches</th>
-            <th>Tests</th>
+            <th>User Tests</th>
+            <th>User Testcases</th>
+            <th>Tests Passed</th>
         </tr>
     </thead>
     <tbody data-link="row" class="rowlink">
-        {{range .subRes}} {{$subId := .Id.Hex}}
-        <tr>
-            <td>
-                <a href="getfiles?submission-id={{$subId}}">
-		  {{.User}}
-		</a>
-            </td>
-            <td>
-                {{date .Time}}
-            </td>
-            <td>
-                {{snapshots .Id}}
-            </td>
-            <td>
-                {{launches .Id}}
-            </td>
-            <td>
-                {{usertests .Id}}
-            </td>
-        </tr>
-        {{end}}
     </tbody>
 </table>
 <script>
-    $(function() {
-        $("#table-submissions").tablesorter({
-            theme: 'bootstrap'
-        });
-    });
+    ProjectSubmissionsView.init();
 </script>
 {{end}}

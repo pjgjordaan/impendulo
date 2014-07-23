@@ -60,9 +60,10 @@ type (
 const (
 	OK           = "ok"
 	SEND         = "send"
-	LOGIN        = "begin"
-	LOGOUT       = "end"
-	REQ          = "req"
+	LOGIN        = "login"
+	LOGOUT       = "logout"
+	REQUEST      = "request"
+	REGISTER     = "register"
 	PROJECTS     = "projects"
 	NEW          = "submission_new"
 	CONTINUE     = "submission_continue"
@@ -98,7 +99,7 @@ func (s *SubmissionHandler) End(e error) {
 //processing its Submission and reading Files from it.
 func (s *SubmissionHandler) Handle() error {
 	var e error
-	if e = s.Login(); e != nil {
+	if e = s.Setup(); e != nil {
 		return e
 	}
 	if e = s.LoadInfo(); e != nil {
@@ -119,41 +120,22 @@ func (s *SubmissionHandler) Handle() error {
 	return nil
 }
 
-//Login authenticates a Submission.
-//It validates the user's credentials and permissions.
-func (s *SubmissionHandler) Login() error {
-	i, e := util.ReadJSON(s.conn)
+//Setup initialises a Submission.
+//It either logs a user in or registers a new user.
+func (s *SubmissionHandler) Setup() error {
+	j, e := util.ReadJSON(s.conn)
 	if e != nil {
 		return e
 	}
-	r, e := convert.GetString(i, REQ)
-	if e != nil {
-		return e
-	} else if r != LOGIN {
-		return fmt.Errorf("Invalid request %q, expected %q", r, LOGIN)
-	}
-	//Read user details
-	s.submission.User, e = convert.GetString(i, db.USER)
-	if e != nil {
+	if e = s.login(j); e != nil {
 		return e
 	}
-	pw, e := convert.GetString(i, user.PWORD)
-	if e != nil {
-		return e
-	}
-	m, e := convert.GetString(i, project.MODE)
+	m, e := convert.GetString(j, project.MODE)
 	if e != nil {
 		return e
 	}
 	if e = s.submission.SetMode(m); e != nil {
 		return e
-	}
-	u, e := db.User(s.submission.User)
-	if e != nil {
-		return e
-	}
-	if !util.Validate(u.Password, u.Salt, pw) {
-		return fmt.Errorf("%q used invalid username or password", s.submission.User)
 	}
 	//Send a list of available projects to the user.
 	ps, e := db.Projects(nil, nil, db.NAME)
@@ -172,6 +154,39 @@ func (s *SubmissionHandler) Login() error {
 	return s.writeJSON(pi)
 }
 
+func (s *SubmissionHandler) login(m map[string]interface{}) error {
+	r, e := convert.GetString(m, REQUEST)
+	if e != nil {
+		return e
+	}
+	un, e := convert.GetString(m, db.USER)
+	if e != nil {
+		return e
+	}
+	p, e := convert.GetString(m, user.PWORD)
+	if e != nil {
+		return e
+	}
+	switch r {
+	case LOGIN:
+		u, e := db.User(un)
+		if e != nil {
+			return e
+		}
+		if !util.Validate(u.Password, u.Salt, p) {
+			return fmt.Errorf("%q used invalid username or password", un)
+		}
+	case REGISTER:
+		if e = db.Add(db.USERS, user.New(un, p)); e != nil {
+			return fmt.Errorf("user %s already exists", un)
+		}
+	default:
+		return fmt.Errorf("invalid start request %q expected %s or %s", r, LOGIN, REGISTER)
+	}
+	s.submission.User = un
+	return nil
+}
+
 //LoadInfo reads the Json request info.
 //A new submission is then created or an existing one resumed
 //depending on the request.
@@ -180,7 +195,7 @@ func (s *SubmissionHandler) LoadInfo() error {
 	if e != nil {
 		return e
 	}
-	r, e := convert.GetString(i, REQ)
+	r, e := convert.GetString(i, REQUEST)
 	if e != nil {
 		return e
 	}
@@ -241,7 +256,7 @@ func (s *SubmissionHandler) Read() (bool, error) {
 		return false, e
 	}
 	//Get the type of request
-	r, e := convert.GetString(i, REQ)
+	r, e := convert.GetString(i, REQUEST)
 	if e != nil {
 		return false, e
 	}
@@ -258,7 +273,7 @@ func (s *SubmissionHandler) Read() (bool, error) {
 		if e = s.write(OK); e != nil {
 			return false, e
 		}
-		delete(i, REQ)
+		delete(i, REQUEST)
 		var f *project.File
 		//Create a new file
 		switch s.submission.Mode {

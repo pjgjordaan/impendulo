@@ -25,6 +25,7 @@
 package db
 
 import (
+	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
 	mk "github.com/godfried/impendulo/tool/make"
@@ -160,4 +161,17 @@ func AddMakefile(mf *mk.Makefile) error {
 		return &AddError{"makefile", e}
 	}
 	return nil
+}
+
+func UserTestId(sid bson.ObjectId) bson.ObjectId {
+	ts, e := Files(bson.M{SUBID: sid, TYPE: project.TEST}, bson.M{ID: 1}, 0, "-"+TIME)
+	if e != nil {
+		return ""
+	}
+	for _, t := range ts {
+		if Contains(RESULTS, bson.M{TESTID: t.Id}) {
+			return t.Id
+		}
+	}
+	return ""
 }

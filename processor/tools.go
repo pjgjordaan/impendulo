@@ -217,5 +217,4 @@ func junitTools(p *FileProcessor) ([]tool.T, error) {
 		tools = append(tools, ju)
 	}
 	return tools, nil
-
 }

@@ -45,6 +45,19 @@
 <body>
     <section id="content">
         {{template "content" .}}
+        <div id="loading-image" style="display: none;">
+            <img src="/static/images/ajax-loader.gif"></img>
+        </div>
+        <script type="text/javascript">
+            jQuery(function($) {
+                $(document).ajaxComplete(function() {
+                    $("#loading-image").hide();
+                });
+                $(document).ajaxSend(function() {
+                    $("#loading-image").show();
+                });
+            });
+        </script>
     </section>
 </body>
 <script>

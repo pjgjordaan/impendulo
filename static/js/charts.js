@@ -91,7 +91,7 @@ var ResultChart = {
             'result': vals.result,
             'submission-id': vals.sid
         };
-        $.getJSON('chart', params, function(data) {
+        $.getJSON('chart-data', params, function(data) {
             ResultChart.CURRENT_TIME = round(vals.currentTime);
             ResultChart.NEXT_TIME = round(vals.nextTime);
             ResultChart.CURRENT_USER = vals.uid;

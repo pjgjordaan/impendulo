@@ -1131,3 +1131,35 @@ var CodeView = {
         });
     }
 }
+
+var ProjectSubmissionsView = {
+    init: function() {
+        $.getJSON('projects', function(data) {
+            if (not(data['projects'])) {
+                return;
+            }
+            var ps = data['projects'];
+            for (var i = 0; i < ps.length; i++) {
+                $('#project-list').append('<li role="presentation"><a tabindex="-1" role="menuitem" href="getsubmissions?project-id=' + ps[i].Id + '">' + ps[i].Name + '</a></li>');
+            }
+        });
+        ProjectSubmissionsView.load();
+    },
+    load: function() {
+        var pid = $('#project-dropdown-label').attr('projectid');
+        $.getJSON('submissions?counts=true&project-id=' + pid, function(data) {
+            if (not(data['submissions']) || not(data['counts'])) {
+                return;
+            }
+            var s = data['submissions'];
+            var c = data['counts'];
+
+            for (var i = 0; i < s.length; i++) {
+                $('#table-submissions > tbody').append('<tr submissionid="' + s[i].Id + '"><td><a href="getfiles?submission-id=' + s[i].Id + '">' + s[i].User + '</a></td><td>' + new Date(s[i].Time).toLocaleString() + '</td><td>' + c[s[i].Id]['source'] + '</td><td>' + c[s[i].Id]['launch'] + '</td><td>' + c[s[i].Id]['test'] + '</td><td>' + c[s[i].Id]['testcases'] + '</td><td>' + c[s[i].Id]['passed'] + ' %</td></tr>');
+            }
+            $("#table-submissions").tablesorter({
+                theme: 'bootstrap'
+            });
+        });
+    }
+}

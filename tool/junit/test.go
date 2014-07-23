@@ -45,7 +45,8 @@ type (
 		//The test file
 		Test []byte `bson:"test"`
 		//The data files needed for the test stored in a zip archive
-		Data []byte `bson:"data"`
+		Data      []byte `bson:"data"`
+		TestCases int    `bson:"testcases"`
 	}
 
 	Type     int

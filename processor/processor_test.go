@@ -24,7 +24,7 @@ func TestProcessFile(t *testing.T) {
 	if e := db.Add(db.SUBMISSIONS, s); e != nil {
 		t.Error(e)
 	}
-	f := &project.File{bson.NewObjectId(), s.Id, "Triangle.java", "triangle", project.SRC, s.Time + 100, srcBytes, bson.M{}, []*project.Comment{}}
+	f := &project.File{bson.NewObjectId(), s.Id, "Triangle.java", "triangle", project.SRC, s.Time + 100, srcBytes, bson.M{}, []*project.Comment{}, 0}
 	if e := db.Add(db.FILES, f); e != nil {
 		t.Error(e)
 	}
@@ -33,15 +33,15 @@ func TestProcessFile(t *testing.T) {
 		t.Errorf("Could not zip map %q", e)
 	}
 	target := &tool.Target{Name: "Triangle", Package: "triangle", Ext: "java"}
-	test := &junit.Test{bson.NewObjectId(), p.Id, "AllTests.java", "testing", p.Time + 50, junit.DEFAULT, target, testBytes, dataBytes}
+	test := &junit.Test{bson.NewObjectId(), p.Id, "AllTests.java", "testing", p.Time + 50, junit.DEFAULT, target, testBytes, dataBytes, 0}
 	if e := db.Add(db.TESTS, test); e != nil {
 		t.Error(e)
 	}
-	ut := &junit.Test{bson.NewObjectId(), p.Id, "UserTests.java", "testing", p.Time + 150, junit.USER, target, userTestBytes, dataBytes}
+	ut := &junit.Test{bson.NewObjectId(), p.Id, "UserTests.java", "testing", p.Time + 150, junit.USER, target, userTestBytes, dataBytes, 0}
 	if e := db.Add(db.TESTS, ut); e != nil {
 		t.Error(e)
 	}
-	tf := &project.File{bson.NewObjectId(), s.Id, "UserTests.java", "testing", project.TEST, s.Time + 200, userTestBytes, bson.M{}, []*project.Comment{}}
+	tf := &project.File{bson.NewObjectId(), s.Id, "UserTests.java", "testing", project.TEST, s.Time + 200, userTestBytes, bson.M{}, []*project.Comment{}, 0}
 	if e := db.Add(db.FILES, tf); e != nil {
 		t.Error(e)
 	}

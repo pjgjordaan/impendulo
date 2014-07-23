@@ -113,7 +113,7 @@ func (c *client) login(port uint) (bson.ObjectId, error) {
 	if e != nil {
 		return "", e
 	}
-	if e = write(c.conn, map[string]interface{}{REQ: LOGIN, db.USER: c.uname, db.PWORD: c.pword, project.MODE: c.mode}); e != nil {
+	if e = write(c.conn, map[string]interface{}{REQUEST: LOGIN, db.USER: c.uname, db.PWORD: c.pword, project.MODE: c.mode}); e != nil {
 		return "", e
 	}
 	d, e := util.ReadData(c.conn)
@@ -131,7 +131,7 @@ func (c *client) login(port uint) (bson.ObjectId, error) {
 }
 
 func (c *client) create(projectId bson.ObjectId) error {
-	if e := write(c.conn, map[string]interface{}{REQ: NEW, db.PROJECTID: projectId, db.TIME: util.CurMilis()}); e != nil {
+	if e := write(c.conn, map[string]interface{}{REQUEST: NEW, db.PROJECTID: projectId, db.TIME: util.CurMilis()}); e != nil {
 		return e
 	}
 	d, e := util.ReadData(c.conn)
@@ -142,7 +142,7 @@ func (c *client) create(projectId bson.ObjectId) error {
 }
 
 func (c *client) logout() error {
-	if e := write(c.conn, map[string]interface{}{REQ: LOGOUT}); e != nil {
+	if e := write(c.conn, map[string]interface{}{REQUEST: LOGOUT}); e != nil {
 		return e
 	}
 	return readOk(c.conn)
@@ -160,7 +160,7 @@ func (c *client) send(numFiles uint, files []file) error {
 }
 
 func (c *client) sendArchive(f file) error {
-	if e := write(c.conn, map[string]interface{}{REQ: SEND, project.TYPE: f.tipe, db.NAME: f.name, db.PKG: f.pkg}); e != nil {
+	if e := write(c.conn, map[string]interface{}{REQUEST: SEND, project.TYPE: f.tipe, db.NAME: f.name, db.PKG: f.pkg}); e != nil {
 		return e
 	}
 	if e := readOk(c.conn); e != nil {
@@ -183,7 +183,7 @@ outer:
 			if i == numFiles {
 				break outer
 			}
-			if e := write(c.conn, map[string]interface{}{REQ: SEND, project.TYPE: f.tipe, db.NAME: f.name, db.PKG: f.pkg, db.TIME: util.CurMilis()}); e != nil {
+			if e := write(c.conn, map[string]interface{}{REQUEST: SEND, project.TYPE: f.tipe, db.NAME: f.name, db.PKG: f.pkg, db.TIME: util.CurMilis()}); e != nil {
 				return e
 			}
 			if e := readOk(c.conn); e != nil {

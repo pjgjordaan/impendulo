@@ -42,17 +42,26 @@ type (
 	Type string
 	//File stores a single file's data from a submission.
 	File struct {
-		Id       bson.ObjectId `bson:"_id"`
-		SubId    bson.ObjectId `bson:"subid"`
-		Name     string        `bson:"name"`
-		Package  string        `bson:"package"`
-		Type     Type          `bson:"type"`
-		Time     int64         `bson:"time"`
-		Data     []byte        `bson:"data"`
-		Results  bson.M        `bson:"results"`
-		Comments []*Comment    `bson:"comments"`
+		Id        bson.ObjectId `bson:"_id"`
+		SubId     bson.ObjectId `bson:"subid"`
+		Name      string        `bson:"name"`
+		Package   string        `bson:"package"`
+		Type      Type          `bson:"type"`
+		Time      int64         `bson:"time"`
+		Data      []byte        `bson:"data"`
+		Results   bson.M        `bson:"results"`
+		Comments  []*Comment    `bson:"comments"`
+		TestCases int           `bson:"testcases"`
 	}
 	Files []*File
+)
+
+const (
+	SRC     Type = "src"
+	LAUNCH  Type = "launch"
+	ARCHIVE Type = "archive"
+	TEST    Type = "test"
+	ALL     Type = "all"
 )
 
 func (fs Files) Less(i, j int) bool {
@@ -67,12 +76,24 @@ func (fs Files) Len() int {
 	return len(fs)
 }
 
-const (
-	SRC     Type = "src"
-	LAUNCH  Type = "launch"
-	ARCHIVE Type = "archive"
-	TEST    Type = "test"
-)
+func ParseType(n string) (Type, error) {
+	n = strings.ToLower(n)
+	switch n {
+	case "source":
+		return SRC, nil
+	case "src", "launch", "archive", "test", "all":
+		return Type(n), nil
+	default:
+		return Type(""), fmt.Errorf("unknown file type %s", n)
+	}
+}
+
+func (t Type) String() string {
+	if t == SRC {
+		return "source"
+	}
+	return string(t)
+}
 
 //String
 func (f *File) String() string {
@@ -103,7 +124,7 @@ func (f *File) CanProcess() bool {
 //NewFile
 func NewFile(sid bson.ObjectId, m map[string]interface{}, d []byte) (*File, error) {
 	tp, e := convert.GetString(m, TYPE)
-	if e != nil && errors.IsCastError(e) {
+	if e != nil && errors.IsCast(e) {
 		return nil, e
 	}
 	n, e := convert.GetString(m, NAME)

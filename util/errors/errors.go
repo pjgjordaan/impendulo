@@ -52,7 +52,8 @@ type (
 )
 
 var (
-	GoPathError = errors.New("GOPATH is not set.")
+	GoPath = errors.New("GOPATH is not set.")
+	Found  = errors.New("directory was found")
 )
 
 func (w *Writer) Write(p []byte) (int, error) {
@@ -79,7 +80,7 @@ func (c *cast) Error() string {
 	return fmt.Sprintf("casting error: %q to %q.", c.value, c.tipe)
 }
 
-func IsCastError(e error) bool {
+func IsCast(e error) bool {
 	_, ok := e.(*cast)
 	return ok
 }

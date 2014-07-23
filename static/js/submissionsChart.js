@@ -24,66 +24,75 @@
 var SubmissionsChart = {
     init: function(tipe) {
         $(function() {
-            SubmissionsChart.addResults(tipe, $('#' + tipe + '-dropdown-label').attr(tipe + 'id'));
-            $('#tool').change(function() {
-                SubmissionsChart.load(tipe, $('#' + tipe + '-dropdown-label').attr(tipe + 'id'), $(this).val(), $('[name="score"]').val());
-                var params = {
-                    'result': $(this).val()
-                };
-                setContext(params);
+            SubmissionsChart.addOptions(tipe, $('#' + tipe + '-dropdown-label').attr(tipe + 'id'));
+            $('.select-chart').change(function() {
+                $('#submissions-chart').empty();
+                SubmissionsChart.load(tipe, $('#' + tipe + '-dropdown-label').attr(tipe + 'id'), $('#x').val(), $('#y').val());
             });
-            $('[name="score"]').change(function() {
-                SubmissionsChart.load(tipe, $('#' + tipe + '-dropdown-label').attr(tipe + 'id'), $('#tool').val(), $(this).val());
-            });
-
-            $('#dropdown-' + tipe + ' > ul >  li > a').on('click', function() {
-                var tool = $('#tool').val();
-                var id = $(this).attr(tipe + 'id');
-                SubmissionsChart.addResults(tipe, id, tool);
-                var params = {};
-                params[tipe + '-id'] = id;
-                setContext(params);
-                $('#' + tipe + '-dropdown-label').html('<h4><small>' + tipe + '</small> ' + $(this).text() + ' <span class="caret"></span></h4>');
-                $('#' + tipe + '-dropdown-label').attr(tipe + 'id', id);
+            $.getJSON(tipe + 's', function(data) {
+                if (not(data[tipe + 's'])) {
+                    return;
+                }
+                var ts = data[tipe + 's'];
+                for (var i = 0; i < ts.length; i++) {
+                    var id = ts[i].Id ? ts[i].Id : ts[i].Name;
+                    $('#' + tipe + '-list').append('<li role="presentation"><a tabindex="-1" role="menuitem" href="#" ' + tipe + 'id="' + id + '">' + ts[i].Name + '</a></li>');
+                }
+                $('#' + tipe + '-list a').on('click', function() {
+                    $('#submissions-chart').empty();
+                    var id = $(this).attr(tipe + 'id');
+                    var params = {};
+                    params[tipe + '-id'] = id;
+                    setContext(params);
+                    $('#' + tipe + '-dropdown-label').attr(tipe + 'id', $(this).attr(tipe + 'id'));
+                    $('#' + tipe + '-dropdown-label h4').html('<small>' + tipe + '</small> ' + $(this).html() + ' <span class="caret"></span>');
+                    SubmissionsChart.addOptions(tipe, id);
+                });
             });
         });
     },
 
 
-    addResults: function(tipe, id, result) {
-        var d = '#tool';
-        $(d).empty();
-        $.getJSON('results?' + tipe + '-id=' + id, function(data) {
-            var r = data['results'];
-            if (not(r)) {
+    addOptions: function(tipe, id) {
+        var x = $('#x').val();
+        var y = $('#y').val();
+        $('.select-chart').empty();
+        $.getJSON('chart-options?' + tipe + '-id=' + id, function(data) {
+            var o = data['options'];
+            if (not(o)) {
                 console.log(data);
                 return;
             }
-            for (var i = 0; i < r.length; i++) {
-                $(d).append('<option value="' + r[i].Id + '">' + r[i].Name + '</option>');
+            for (var i = 0; i < o.length; i++) {
+                $('.select-chart').append('<option value="' + o[i].Id + '">' + o[i].Name + '</option>');
             }
-            if (result !== undefined && $(d + ' option[value="' + result + '"]').length) {
-                $(d).val(result);
-            } else {
-                result = r[0].Id
+            if (x === undefined || x === null || $('#x option[value="' + x + '"]').length) {
+                x = o[0].Id;
             }
-            SubmissionsChart.load(tipe, id, result, $('[name="score"]').val());
+            $('#x').val(x);
+            if (y === undefined || y === null || $('#y option[value="' + y + '"]').length) {
+                y = o[o.length - 1].Id;
+            }
+            $('#y').val(y);
+            SubmissionsChart.load(tipe, id, x, y);
         });
     },
 
-    load: function(tipe, id, r, score) {
+    load: function(tipe, id, x, y) {
         var params = {
             'type': 'submission',
             'id': id,
-            'result': r,
-            'submission-type': tipe,
-            'score': score
+            'x': x,
+            'y': y,
+            'submission-type': tipe
         };
-        $.getJSON('chart', params, function(data) {
-            SubmissionsChart.create(data['chart'], tipe);
+        $.getJSON('chart-data', params, function(data) {
+            SubmissionsChart.create(data['chart-data'], data['chart-info'], tipe);
+            $('#checkbox-outliers').click(function() {
+                SubmissionsChart.create(data['chart-data'], data['chart-info'], tipe);
+            });
         });
     },
-
 
     extent: function(data, f) {
         var e = d3.extent(data, f);
@@ -104,57 +113,31 @@ var SubmissionsChart = {
         return e;
     },
 
-    create: function(chartData, tipe) {
-        if (chartData === null || chartData === undefined || chartData.length === 0) {
+    create: function(chartData, chartInfo, tipe) {
+        $('#submissions-chart').empty();
+        if (not(chartData) || not(chartInfo)) {
             return;
         }
-        $('#submissions-chart').empty();
         var m = [10, 150, 100, 100];
         var w = 1100 - m[1] - m[3];
         var h = 480 - m[0] - m[2];
-        var tipes = ['Launches', 'Snapshots'];
         var radius = 10;
-        var chartColour = function(tipe) {
-            return d3.scale.category10()
-                .domain(tipes)(tipe);
-        };
         var y = d3.scale.linear()
-            .domain(SubmissionsChart.extent(chartData, getY))
+            .domain(SubmissionsChart.extent(chartData, SubmissionsChart.getY))
             .range([h, 0]);
 
         var x = d3.scale.linear()
-            .domain(SubmissionsChart.extent(chartData, getTime))
+            .domain(SubmissionsChart.extent(chartData, getX))
             .range([0, w]);
 
-        var rs = d3.scale.linear()
-            .domain([0, d3.max(chartData, function(d) {
-                return d.snapshots;
-            })])
-            .range([0, radius]);
-
-        var rl = function(offset) {
-            var outerRadius = Math.sqrt(offset * offset + radius * radius);
-            return d3.scale.linear()
-                .domain([0, d3.max(chartData, function(d) {
-                    return d.launches;
-                })])
-                .range([offset, outerRadius])
-        };
-
-        chartData = chartData.map(function(d) {
-            d.rs = rs(d.snapshots);
-            d.rlSmall = rl(0)(d.launches);
-            d.rlBig = rl(d.rs)(d.launches);
-            return d;
-        });
-
-        var loadDate = function(d, i) {
-            return x(getTime(d));
+        var loadX = function(d) {
+            return x(getX(d));
         };
 
         var loadY = function(d) {
-            return y(getY(d));
+            return y(SubmissionsChart.getY(d));
         }
+
         var xAxis = d3.svg.axis()
             .scale(x)
             .ticks(7)
@@ -177,6 +160,7 @@ var SubmissionsChart = {
 
         var zoom = d3.behavior.zoom()
             .x(x)
+            .y(y)
             .on('zoom', function() {
                 var duration = 1000;
                 var ease = 'linear';
@@ -199,7 +183,7 @@ var SubmissionsChart = {
                     .duration(duration)
                     .ease(ease)
                     .attr('transform', function(d) {
-                        return 'translate(' + loadDate(d) + ',' + loadY(d) + ')';
+                        return 'translate(' + loadX(d) + ',' + loadY(d) + ')';
                     });
 
             });
@@ -215,18 +199,21 @@ var SubmissionsChart = {
             .attr('transform', 'translate(0,' + h + ')')
             .call(xAxis);
 
+        var yTitle = chartInfo['y-unit'] === '' ? chartInfo['y'] : chartInfo['y'] + ' (' + chartInfo['y-unit'] + ')';
+        var xTitle = chartInfo['x-unit'] === '' ? chartInfo['x'] : chartInfo['x'] + ' (' + chartInfo['x-unit'] + ')';
+
         chart.append('text')
             .attr('x', w / 2)
             .attr('y', h + 40)
             .attr('font-size', '20px')
             .style('text-anchor', 'middle')
-            .text('Running Time (s)');
+            .text(xTitle);
 
         chart.append('text')
             .attr('font-size', '20px')
             .attr('transform', 'translate(' + (w + 120) + ',' + (h * 0.6) + ')rotate(90)')
             .style('text-anchor', 'middle')
-            .text(chartData[0]["description"]);
+            .text(yTitle);
 
         chart.append('svg:g')
             .attr('class', 'y axis')
@@ -253,29 +240,23 @@ var SubmissionsChart = {
                 return 'getfiles?submission-id=' + d.key;
             })
             .attr('class', 'link')
+            .attr('fill', SubmissionsChart.colour)
             .attr('transform', function(d) {
-                return 'translate(' + loadDate(d) + ',' + loadY(d) + ')';
+                return 'translate(' + loadX(d) + ',' + loadY(d) + ')';
             });
 
         sub.append('svg:circle')
-            .attr('class', 'launches')
-            .attr('key', 'chartLaunches')
-            .attr('fill', chartColour('Launches'))
-            .attr('r', SubmissionsChart.rlBig);
-
-
-        sub.append('svg:circle')
-            .attr('class', 'snapshots')
-            .attr('key', 'chartSnapshots')
-            .attr('fill', chartColour('Snapshots'))
-            .attr('r', SubmissionsChart.rSnapshot);
+            .attr('fill', SubmissionsChart.colour)
+            .attr('r', 5);
 
         $('.link').tooltip({
             html: true,
             title: function() {
                 var d = this.__data__;
                 var yVal = d.outlier ? d.outlier : d.y;
-                return '<ul class="list-unstyled list-left"><li><strong>' + d.user + '\'s ' + d.project + '</strong></li><li>' + d.description + '<span class="span-right">' + yVal + '</span></li><li>Time<span class="span-right">' + d.time + 's</span></li><li>Snapshots<span class="span-right">' + d.snapshots + '</span></li><li>Launches<span class="span-right">' + d.launches + '</span></li></ul><div style="clear: both;"></div>';
+                yVal = chartInfo['y-unit'] === '' ? yVal : yVal + ' ' + chartInfo['y-unit'];
+                var xVal = chartInfo['x-unit'] === '' ? d.x : d.x + ' ' + chartInfo['x-unit'];
+                return '<ul class="list-unstyled list-left"><li><strong>' + d.user + '\'s ' + d.project + '</strong></li><li>' + chartInfo.y + '<span class="span-right">' + yVal + '</span></li><li>' + chartInfo.x + '<span class="span-right">' + xVal + '</span></li></ul><div style="clear: both;"></div>';
             },
             container: 'body'
         });
@@ -284,139 +265,17 @@ var SubmissionsChart = {
             .attr('class', 'title')
             .attr('dy', '-1.0em')
             .attr('style', function(d) {
-                var s = 'text-anchor: middle; fill: ';
-                return d.outlier ? s + 'red;' : s + 'black;';
+                return 'text-anchor: middle; fill: ' + SubmissionsChart.colour(d) + ';';
             })
             .attr('font-size', '10px')
             .text(function(d) {
                 return tipe === 'project' ? d.user : d.project;
             });
-
-        var legend = chart.append('g')
-            .attr('class', 'legend')
-            .attr('height', 100)
-            .attr('width', 100)
-            .attr('transform', 'translate(-100,0)');
-
-        var legendElements = legend.selectAll('g')
-            .data(tipes)
-            .enter()
-            .append('g');
-
-        legendElements.append('text')
-            .attr('class', 'clickable')
-            .attr('x', 20)
-            .attr('y', function(d, i) {
-                return i * 20 + 60;
-            })
-            .attr('key', SubmissionsChart.legendKey)
-            .attr('font-size', '12px')
-            .text(function(d) {
-                return d;
-            })
-            .on('click', SubmissionsChart.toggleVisibility);
-
-        legendElements.append('rect')
-            .attr('class', 'legendrect clickable')
-            .attr('x', 0)
-            .attr('y', function(d, i) {
-                return i * 20 + 50;
-            })
-            .attr('key', SubmissionsChart.legendKey)
-            .attr('width', 15)
-            .attr('height', 15)
-            .style('fill', chartColour)
-            .on('click', SubmissionsChart.toggleVisibility);
-
     },
-
-    toggleVisibility: function(d) {
-        var duration = 500;
-        var ease = 'linear';
-        var visibleSnapshots = d3.select('[key=legendSnapshots]').style('opacity') === '1';
-        var visibleLaunches = d3.select('[key=legendLaunches]').style('opacity') === '1'
-        var legendOpacity = 1.0;
-        if (d === 'Launches') {
-            legendOpacity = visibleLaunches ? 0.3 : 1.0;
-        } else {
-            legendOpacity = visibleSnapshots ? 0.3 : 1.0;
-        }
-        if (visibleSnapshots && visibleLaunches) {
-            if (d === 'Snapshots') {
-                SubmissionsChart.hideSnapshots();
-                SubmissionsChart.smallLaunches();
-            } else {
-                SubmissionsChart.hideLaunches();
-            }
-        } else if (visibleSnapshots) {
-            if (d === 'Snapshots') {
-                SubmissionsChart.hideSnapshots();
-            } else {
-                SubmissionsChart.bigLaunches();
-                SubmissionsChart.showSnapshots();
-            }
-        } else if (visibleLaunches) {
-            if (d === 'Snapshots') {
-                SubmissionsChart.bigLaunches();
-                SubmissionsChart.showSnapshots();
-            } else {
-                SubmissionsChart.hideLaunches()
-            }
-        } else {
-            if (d === 'Snapshots') {
-                SubmissionsChart.showSnapshots();
-            } else {
-                SubmissionsChart.smallLaunches()
-            }
-        }
-        d3.selectAll('[key=legend' + d + ']')
-            .transition()
-            .duration(duration)
-            .ease(ease)
-            .style('opacity', legendOpacity);
+    colour: function(d) {
+        return d.outlier ? 'red' : 'black';
     },
-
-    legendKey: function(d) {
-        return 'legend' + d;
-    },
-
-    rSnapshot: function(d) {
-        return d.rs;
-    },
-
-    rlSmall: function(d) {
-        return d.rlSmall;
-    },
-
-    rlBig: function(d) {
-        return d.rlBig;
-    },
-
-    setRadius: function(key, r) {
-        d3.selectAll('[key=chart' + key + ']')
-            .transition()
-            .duration(500)
-            .ease('linear')
-            .attr('r', r);
-    },
-
-    hideSnapshots: function() {
-        SubmissionsChart.setRadius('Snapshots', 0);
-    },
-    showSnapshots: function() {
-        SubmissionsChart.setRadius('Snapshots', SubmissionsChart.rSnapshot);
-    },
-
-    hideLaunches: function() {
-        SubmissionsChart.setRadius('Launches', 0);
-    },
-
-
-    smallLaunches: function() {
-        SubmissionsChart.setRadius('Launches', SubmissionsChart.rlSmall);
-    },
-
-    bigLaunches: function() {
-        SubmissionsChart.setRadius('Launches', SubmissionsChart.rlBig);
+    getY: function(d) {
+        return d.outlier && $('#checkbox-outliers').prop('checked') ? d.outlier : d.y;
     }
 };
