@@ -92,9 +92,10 @@ var (
 		"emptyS": func(s []interface{}) bool {
 			return len(s) == 0
 		},
-		"empty":     func(s string) bool { return strings.TrimSpace(s) == "" },
-		"sortFiles": sortFiles,
-		"project":   func(id bson.ObjectId) (*project.Project, error) { return db.Project(bson.M{db.ID: id}, nil) },
+		"empty":       func(s string) bool { return strings.TrimSpace(s) == "" },
+		"sortFiles":   sortFiles,
+		"project":     func(id bson.ObjectId) (*project.Project, error) { return db.Project(bson.M{db.ID: id}, nil) },
+		"configtools": configTools,
 	}
 	templateDir      string
 	baseTemplates    []string

@@ -17,3 +17,28 @@ func ErfInverse(z float64, n int) float64 {
 	}
 	return e
 }
+
+func Round(x float64, prec int) float64 {
+	p := math.Pow(10, float64(prec))
+	r := x * p
+	if r < 0.0 {
+		r -= 0.5
+	} else {
+		r += 0.5
+	}
+	return float64(int64(r)) / p
+}
+
+func Min(a, b int) int {
+	if a > b {
+		a = b
+	}
+	return a
+}
+
+func Max(a, b int) int {
+	if a < b {
+		a = b
+	}
+	return a
+}

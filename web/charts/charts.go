@@ -270,16 +270,16 @@ func Submission(subs []*project.Submission, x *context.Result, y *context.Result
 	prev := -1
 	outliers := make(map[int]util.E, len(d))
 	for len(outliers)-prev > 0 {
-		mean := calcMean(d, outliers)
-		stdDev := calcStdDeviation(d, outliers, mean)
+		mean := mean(d, outliers)
+		stdDev := stdDeviation(d, outliers, mean)
 		prev = len(outliers)
 		addOutliers(d, outliers, mean, stdDev)
 	}
 	if len(outliers) == 0 {
 		return d, info, nil
 	}
-	mean := calcMean(d, outliers)
-	stdDev := calcStdDeviation(d, outliers, mean)
+	mean := mean(d, outliers)
+	stdDev := stdDeviation(d, outliers, mean)
 	n := float64(len(d))
 	inv := 0.5 * (2.82843 * stdDev * util.ErfInverse((n-0.5)/n, 100))
 	min := mean - inv
@@ -296,7 +296,7 @@ func Submission(subs []*project.Submission, x *context.Result, y *context.Result
 	return d, info, nil
 }
 
-func calcMean(vals []map[string]interface{}, outliers map[int]util.E) float64 {
+func mean(vals []map[string]interface{}, outliers map[int]util.E) float64 {
 	mean := 0.0
 	for i, c := range vals {
 		if _, ok := outliers[i]; ok {
@@ -308,7 +308,7 @@ func calcMean(vals []map[string]interface{}, outliers map[int]util.E) float64 {
 	return mean
 }
 
-func calcStdDeviation(vals []map[string]interface{}, outliers map[int]util.E, mean float64) float64 {
+func stdDeviation(vals []map[string]interface{}, outliers map[int]util.E, mean float64) float64 {
 	stdDev := 0.0
 	for i, c := range vals {
 		if _, ok := outliers[i]; ok {

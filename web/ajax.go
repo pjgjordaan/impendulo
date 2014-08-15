@@ -86,7 +86,7 @@ func GenerateAJAX(r *pat.Router) {
 		"langs": getLangs, "projects": getProjects, "files": ajaxFiles, "tools": ajaxTools, "jpfsearches": ajaxSearches,
 		"code": ajaxCode, "users": ajaxUsers, "permissions": ajaxPerms, "comparables": ajaxComparables,
 		"tests": ajaxTests, "test-types": testTypes, "filenames": fileNames, "status": ajaxStatus, "counts": ajaxCounts,
-		"comments": ajaxComments, "fileresults": ajaxFileResults, "chart-options": ajaxChartOptions,
+		"comments": ajaxComments, "fileresults": ajaxFileResults, "chart-options": ajaxChartOptions, "assignments": ajaxAssignments,
 	}
 	for n, f := range gets {
 		r.Add("GET", "/"+n, f)
@@ -294,7 +294,7 @@ func ajaxChartOptions(r *http.Request) ([]byte, error) {
 		return nil, ResultsError
 	}
 	sort.Strings(rs)
-	other := []string{"Time", util.Title(project.SRC.String()), util.Title(project.LAUNCH.String()), util.Title(project.TEST.String()), "Testcases", "Passed"}
+	other := []string{"Time", "Lines", util.Title(project.SRC.String()), util.Title(project.LAUNCH.String()), util.Title(project.TEST.String()), "Testcases", "Passed"}
 	ops := make(Selects, len(rs)+len(other))
 	for i, o := range other {
 		ops[i] = &Select{Id: o, Name: o}
@@ -379,6 +379,41 @@ func ajaxComparables(r *http.Request) ([]byte, error) {
 //ajaxPerms retrieves the different user permission levels.
 func ajaxPerms(r *http.Request) ([]byte, error) {
 	return util.JSON(map[string]interface{}{"permissions": user.PermissionInfos()})
+}
+
+func ajaxAssignments(r *http.Request) ([]byte, error) {
+	m := bson.M{}
+	if id, e := webutil.Id(r, "id"); e == nil {
+		m[db.ID] = id
+	}
+	if pid, e := webutil.Id(r, "project-id"); e == nil {
+		m[db.PROJECTID] = pid
+	}
+	sm := bson.M{}
+	if t, e := webutil.Int64(r, "max-start"); e == nil {
+		sm[db.LT] = t
+	}
+	if t, e := webutil.Int64(r, "min-start"); e == nil {
+		sm[db.GT] = t
+	}
+	if len(sm) > 0 {
+		m[db.START] = sm
+	}
+	em := bson.M{}
+	if t, e := webutil.Int64(r, "max-end"); e == nil {
+		em[db.LT] = t
+	}
+	if t, e := webutil.Int64(r, "min-end"); e == nil {
+		em[db.GT] = t
+	}
+	if len(em) > 0 {
+		m[db.START] = em
+	}
+	a, e := db.Assignments(m, nil)
+	if e != nil {
+		return nil, e
+	}
+	return util.JSON(map[string]interface{}{"assignments": a})
 }
 
 //ajaxUsers retrieves a list of users.
@@ -535,6 +570,19 @@ func submissions(r *http.Request) ([]byte, error) {
 	}
 	if pid, e := webutil.Id(r, "project-id"); e == nil {
 		m[db.PROJECTID] = pid
+	}
+	if aid, e := webutil.Id(r, "assignment-id"); e == nil {
+		m[db.ASSIGNMENTID] = aid
+	}
+	tm := bson.M{}
+	if start, e := webutil.Int64(r, "time-start"); e == nil && start > 0 {
+		tm[db.GT] = start
+	}
+	if end, e := webutil.Int64(r, "time-end"); e == nil && end > 0 {
+		tm[db.LT] = end
+	}
+	if len(tm) > 0 {
+		m[db.TIME] = tm
 	}
 	ss, e := db.Submissions(m, nil)
 	if e != nil || len(ss) == 0 {

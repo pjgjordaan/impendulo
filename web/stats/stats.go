@@ -33,6 +33,7 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/junit"
+	"github.com/godfried/impendulo/tool/wc"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
 	"github.com/godfried/impendulo/web/context"
@@ -56,6 +57,7 @@ type (
 
 const (
 	TIME      Type = "time"
+	LINES     Type = "lines"
 	PASSED    Type = "passed"
 	TESTCASES Type = "testcases"
 )
@@ -91,7 +93,7 @@ func (c *C) Calc(rd *context.Result, s *project.Submission) (float64, string, er
 func ParseType(n string) (Type, error) {
 	n = strings.ToLower(n)
 	switch n {
-	case "time", "passed", "testcases":
+	case "time", "passed", "testcases", "lines":
 		return Type(n), nil
 	default:
 		return Type(""), fmt.Errorf("unknown stats type %s", n)
@@ -117,11 +119,16 @@ func calc(t Type, s *project.Submission, projectTests int) (float64, string, err
 		if e != nil {
 			return -1, "", e
 		}
-		return float64(d), "seconds", e
+		return float64(d), "seconds", nil
+	case LINES:
+		l, e := Lines(s.Id)
+		if e != nil {
+			return -1, "", e
+		}
+		return float64(l), "lines", nil
 	default:
 		return -1, "", fmt.Errorf("unknown calc type %s", t)
 	}
-
 }
 
 func NewTest(total int) *Test {
@@ -382,4 +389,12 @@ func lastResultId(sid bson.ObjectId, r *context.Result) (bson.ObjectId, error) {
 		}
 	}
 	return "", fmt.Errorf("no results found for %s", r.Format())
+}
+
+func Lines(sid bson.ObjectId) (int64, error) {
+	f, e := db.LastFile(bson.M{db.SUBID: sid, db.TYPE: project.SRC}, bson.M{db.DATA: 1})
+	if e != nil {
+		return -1, nil
+	}
+	return wc.Lines(f.Data)
 }

@@ -26,8 +26,6 @@ package util
 
 import (
 	"github.com/godfried/impendulo/util/errors"
-
-	"math"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -116,36 +114,11 @@ func ShortName(n string) string {
 	return strings.Join(e[c-2:], ".")
 }
 
-func Min(a, b int) int {
-	if a > b {
-		a = b
-	}
-	return a
-}
-
-func Max(a, b int) int {
-	if a < b {
-		a = b
-	}
-	return a
-}
-
 func Title(s string) string {
 	if len(s) < 2 {
 		return strings.ToUpper(s)
 	}
 	return strings.ToUpper(s[:1]) + strings.ToLower(s[1:])
-}
-
-func Round(x float64, prec int) float64 {
-	p := math.Pow(10, float64(prec))
-	r := x * p
-	if r < 0.0 {
-		r -= 0.5
-	} else {
-		r += 0.5
-	}
-	return float64(int64(r)) / p
 }
 
 func SplitTitles(titles string) []string {

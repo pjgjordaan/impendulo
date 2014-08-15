@@ -14,6 +14,13 @@
         <ul class="dropdown-menu" role="menu">
         </ul>
     </div>
+    <div id="assignments" class="btn-group">
+        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+            Choose Assignment <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu" role="menu">
+        </ul>
+    </div>
     <div id="submissions" class="btn-group">
         <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
             Choose Submission <span class="caret"></span>
@@ -131,6 +138,51 @@
         <div class="panel-heading">
             <h4 class="panel-title">
 	<a data-toggle="collapse" data-parent="#accordion"
+	   href="#assignment-panel">
+	  Edit Assignment
+	</a>
+      </h4>
+        </div>
+        <div id="assignment-panel" class="panel-collapse collapse">
+            <div class="panel-body">
+                <form class="form-horizontal" role="form" action="editassignment" method="post">
+                    <div class="form-group">
+                        <label class="col-lg-offset-3 col-lg-2 control-label" for="assignment-project">Project</label>
+                        <div class="col-lg-3">
+                            <select class="form-control assignment-input" name="assignment-project" id="assignment-project">
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-lg-offset-3 col-lg-2 control-label" for="assignment-user">User</label>
+                        <div class="col-lg-3">
+                            <select class="form-control assignment-input" name="assignment-user" id="assignment-user">
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-lg-offset-3 col-lg-2 control-label" for="assignment-name">Name</label>
+                        <div class="col-lg-3">
+                            <input type="text" class="form-control assignment-input" name="assignment-name" id="assignment-name">
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-lg-offset-5 col-lg-3">
+                            <button type="submit" class="btn btn-default">
+                                <span class="glyphicon glyphicon-upload"></span> Update
+                            </button>
+                        </div>
+                    </div>
+                    <input type="hidden" name="assignment-id" id="assignment-id" class="assignment-input">
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h4 class="panel-title">
+	<a data-toggle="collapse" data-parent="#accordion"
 	   href="#submission-panel">
 	  Edit Submission
 	</a>
@@ -150,6 +202,13 @@
                         <label class="col-lg-offset-3 col-lg-2 control-label" for="submission-user">User</label>
                         <div class="col-lg-3">
                             <select class="form-control  submission-input" name="submission-user" id="submission-user">
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-lg-offset-3 col-lg-2 control-label" for="submission-assignment">Assignment</label>
+                        <div class="col-lg-3">
+                            <select class="form-control  submission-input" name="submission-assignment" id="submission-assignment">
                             </select>
                         </div>
                     </div>

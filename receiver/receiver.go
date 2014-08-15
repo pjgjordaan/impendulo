@@ -53,6 +53,10 @@ type (
 
 	ProjectInfo struct {
 		Project     *project.Project
+		Assignments []*AssignmentInfo
+	}
+	AssignmentInfo struct {
+		Assignment  *project.Assignment
 		Submissions []*project.Submission
 	}
 )
@@ -69,6 +73,14 @@ const (
 	CONTINUE     = "submission_continue"
 	LOG_RECEIVER = "receiver/receiver.go"
 )
+
+func NewProjectInfo(p *project.Project) *ProjectInfo {
+	return &ProjectInfo{Project: p, Assignments: make([]*AssignmentInfo, 0, 1)}
+}
+
+func (p *ProjectInfo) Add(a *project.Assignment, subs []*project.Submission) {
+	p.Assignments = append(p.Assignments, &AssignmentInfo{Assignment: a, Submissions: subs})
+}
 
 //Spawn creates a new ConnHandler of type SubmissionHandler.
 func (s *SubmissionSpawner) Spawn() ConnHandler {
@@ -137,19 +149,27 @@ func (s *SubmissionHandler) Setup() error {
 	if e = s.submission.SetMode(m); e != nil {
 		return e
 	}
+	t := util.CurMilis()
 	//Send a list of available projects to the user.
-	ps, e := db.Projects(nil, nil, db.NAME)
+	as, e := db.Assignments(bson.M{db.START: bson.M{db.LT: t}, db.END: bson.M{db.GT: t}}, nil, db.PROJECTID)
 	if e != nil {
 		return e
 	}
-	pi := make([]*ProjectInfo, 0, len(ps))
-	for _, p := range ps {
-		ss, e := db.Submissions(bson.M{db.USER: s.submission.User, db.PROJECTID: p.Id}, nil)
+	pi := make([]*ProjectInfo, 0, len(as))
+	for _, a := range as {
+		if len(pi) == 0 || pi[len(pi)-1].Project.Id != a.ProjectId {
+			p, e := db.Project(bson.M{db.ID: a.ProjectId}, nil)
+			if e != nil {
+				util.Log(e)
+				continue
+			}
+			pi = append(pi, NewProjectInfo(p))
+		}
+		ss, e := db.Submissions(bson.M{db.USER: s.submission.User, db.ASSIGNMENTID: a.Id}, nil)
 		if e != nil {
 			util.Log(e)
-			continue
 		}
-		pi = append(pi, &ProjectInfo{p, ss})
+		pi[len(pi)-1].Add(a, ss)
 	}
 	return s.writeJSON(pi)
 }
@@ -212,11 +232,12 @@ func (s *SubmissionHandler) LoadInfo() error {
 //Submission info is read from the subInfo map and used to create a new
 //submission in the db.
 func (s *SubmissionHandler) createSubmission(subInfo map[string]interface{}) error {
-	ps, e := convert.GetString(subInfo, db.PROJECTID)
+	var e error
+	s.submission.AssignmentId, e = convert.GetId(subInfo, db.ASSIGNMENTID)
 	if e != nil {
 		return e
 	}
-	s.submission.ProjectId, e = convert.Id(ps)
+	s.submission.ProjectId, e = convert.GetId(subInfo, db.PROJECTID)
 	if e != nil {
 		return e
 	}
@@ -227,7 +248,7 @@ func (s *SubmissionHandler) createSubmission(subInfo map[string]interface{}) err
 	if e = db.Add(db.SUBMISSIONS, s.submission); e != nil {
 		return e
 	}
-	return s.writeJSON(s.submission)
+	return s.write(OK)
 }
 
 //continueSubmission is used when a client wishes to continue with a previous submission.

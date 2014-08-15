@@ -60,8 +60,8 @@ var (
 		"archiveview", "submitarchive", "logout",
 	}
 	teacher = []string{
-		"skeletonview", "addskeleton", "projectview",
-		"addproject", "runtoolsview", "runtools", "configview",
+		"skeletonview", "addskeleton", "assignmentview", "createassignment",
+		"projectview", "addproject", "runtoolsview", "runtools", "configview",
 	}
 	admin = []string{
 		"deleteprojects", "deleteusers", "deleteresults", "deleteview",
@@ -69,7 +69,7 @@ var (
 		"importdata", "exportdb.zip", "statusview", "evaluatesubmissionsview",
 		"evaluatesubmissions", "logs", "editdbview", "loadproject", "editproject",
 		"loaduser", "edituser", "loadsubmission", "editsubmission", "loadfile",
-		"editfile", "edittest", "renamefiles", "renameview",
+		"editfile", "edittest", "renamefiles", "renameview", "editassignment",
 	}
 
 	homeViews = []string{
@@ -80,7 +80,7 @@ var (
 	}
 	submitViews = []string{
 		"skeletonview", "archiveview", "projectview",
-		"configview",
+		"configview", "assignmentview",
 	}
 	registerViews = []string{"registerview"}
 	downloadViews = []string{"projectdownloadview", "intloladownloadview", "testdownloadview"}

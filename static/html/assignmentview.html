@@ -1,0 +1,63 @@
+{{define "view"}}
+<h3 class="heading">Create Assignment</h3>
+<form class="form-horizontal" action="createassignment" method="post" id="assignment-form">
+    <div class="form-group">
+        <label class="col-lg-offset-3 col-lg-2 control-label" for="assignment-name">
+            Name
+        </label>
+        <div class="col-lg-3">
+            <input class="form-control" name="assignment-name" type="text" id="assignment-name" placeholder="Assignment Name" required>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-lg-offset-3 col-lg-2 control-label" for="project-id">Project</label>
+        <div class="col-lg-3">
+            <select class="form-control" name="project-id" id="project-id">
+            </select>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-lg-offset-3 col-lg-2 control-label" for="datetimepicker-start">
+            Start
+        </label>
+        <div class="col-lg-3">
+            <div class="input-group">
+                <input type="text" class="form-control date" id="datetimepicker-start" required>
+                <span class="input-group-btn" id="span-start">
+		<a  class="btn btn-default" type="button">
+		  <span class="glyphicon glyphicon-calendar"></span>
+                </a>
+                </span>
+            </div>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-lg-offset-3 col-lg-2 control-label" for="datetimepicker-end">
+            End
+        </label>
+        <div class="col-lg-3">
+            <div class="input-group">
+                <input type="text" class="form-control date" id="datetimepicker-end" required>
+                <span class="input-group-btn" id="span-end">
+		<a  class="btn btn-default" type="button">
+		  <span class="glyphicon glyphicon-calendar"></span>
+                </a>
+                </span>
+            </div>
+        </div>
+    </div>
+    <div class="form-group">
+        <div class="col-lg-offset-5 col-lg-3">
+            <button type="submit" class="btn btn-default">
+                <span class="glyphicon glyphicon-upload"></span> Submit
+            </button>
+        </div>
+    </div>
+    <input type="hidden" name="assignment-start" value="0">
+    <input type="hidden" name="assignment-end" value="0">
+</form>
+<script type="text/javascript" language="javascript" src="/static/js/assignmentView.js"></script>
+<script>
+    AssignmentView.init();
+</script>
+{{end}}

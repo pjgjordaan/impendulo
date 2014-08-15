@@ -114,6 +114,36 @@ func FileNames(m interface{}) ([]string, error) {
 	return ns, nil
 }
 
+func Assignment(m, sl interface{}) (*project.Assignment, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
+	}
+	defer s.Close()
+	var a *project.Assignment
+	if e = s.DB("").C(ASSIGNMENTS).Find(m).Select(sl).One(&a); e != nil {
+		return nil, &GetError{"assignment", e, m}
+	}
+	return a, nil
+}
+
+func Assignments(m, sl interface{}, sort ...string) ([]*project.Assignment, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
+	}
+	defer s.Close()
+	q := s.DB("").C(ASSIGNMENTS).Find(m)
+	if len(sort) > 0 {
+		q = q.Sort(sort...)
+	}
+	var a []*project.Assignment
+	if e = q.Select(sl).All(&a); e != nil {
+		return nil, &GetError{"assignments", e, m}
+	}
+	return a, nil
+}
+
 //Submission retrieves a submission matching m from the active database.
 func Submission(m, sl interface{}) (*project.Submission, error) {
 	s, e := Session()
@@ -209,7 +239,7 @@ func Skeletons(m, sl interface{}, sort ...string) ([]*project.Skeleton, error) {
 }
 
 //RemoveFileById removes a file matching the given id from the active database.
-func RemoveFileById(id interface{}) error {
+func RemoveFileById(id bson.ObjectId) error {
 	f, e := File(bson.M{ID: id}, bson.M{RESULTS: 1})
 	if e != nil {
 		return e
@@ -225,7 +255,7 @@ func RemoveFileById(id interface{}) error {
 
 //RemoveSubmissionById removes a submission matching
 //the given id from the active database.
-func RemoveSubmissionById(id interface{}) error {
+func RemoveSubmissionById(id bson.ObjectId) error {
 	fs, e := Files(bson.M{SUBID: id}, bson.M{ID: 1}, 0)
 	if e != nil {
 		return e
@@ -238,17 +268,30 @@ func RemoveSubmissionById(id interface{}) error {
 	return RemoveById(SUBMISSIONS, id)
 }
 
-//RemoveProjectById removes a project matching
-//the given id from the active database.
-func RemoveProjectById(id interface{}) error {
-	pm := bson.M{PROJECTID: id}
-	is := bson.M{ID: 1}
-	ss, e := Submissions(pm, is)
+func RemoveAssignmentById(id bson.ObjectId) error {
+	ss, e := Submissions(bson.M{ASSIGNMENTID: id}, bson.M{ID: 1})
 	if e != nil {
 		return e
 	}
 	for _, s := range ss {
 		if e = RemoveSubmissionById(s.Id); e != nil {
+			return e
+		}
+	}
+	return RemoveById(ASSIGNMENTS, id)
+}
+
+//RemoveProjectById removes a project matching
+//the given id from the active database.
+func RemoveProjectById(id interface{}) error {
+	pm := bson.M{PROJECTID: id}
+	is := bson.M{ID: 1}
+	as, e := Assignments(pm, is)
+	if e != nil {
+		return e
+	}
+	for _, a := range as {
+		if e = RemoveAssignmentById(a.Id); e != nil {
 			return e
 		}
 	}

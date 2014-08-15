@@ -74,7 +74,7 @@ func defaultPosters() map[string]Poster {
 		"deletesubmissions": DeleteSubmissions, "deleteresults": DeleteResults, "deleteskeletons": DeleteSkeletons,
 		"importdata": ImportData, "renamefiles": RenameFiles, "login": Login, "register": Register,
 		"logout": Logout, "editproject": EditProject, "edituser": EditUser, "editsubmission": EditSubmission,
-		"editfile": EditFile, "edittest": EditTest,
+		"editfile": EditFile, "edittest": EditTest, "createassignment": CreateAssignment, "editassignment": EditAssignment,
 	}
 }
 
@@ -110,8 +110,35 @@ func (p Poster) CreatePost(index bool) Handler {
 	}
 }
 
+func CreateAssignment(r *http.Request, c *context.C) (string, error) {
+	pid, e := webutil.Id(r, "project-id")
+	if e != nil {
+		return "Could not read project id.", e
+	}
+	n, e := webutil.String(r, "assignment-name")
+	if e != nil {
+		return "Could not read assignment name.", e
+	}
+	un, e := c.Username()
+	if e != nil {
+		return "Could not retrieve user.", e
+	}
+	s, e := webutil.Int64(r, "assignment-start")
+	if e != nil {
+		return "Could not read assignment start.", e
+	}
+	end, e := webutil.Int64(r, "assignment-end")
+	if e != nil {
+		return "Could not read assignment end.", e
+	}
+	if e = db.Add(db.ASSIGNMENTS, project.NewAssignment(pid, n, un, s, end)); e != nil {
+		return "Could not add assignment.", e
+	}
+	return "Successfully added assignment.", nil
+}
+
 func AddSkeleton(r *http.Request, c *context.C) (string, error) {
-	pid, e := convert.Id(r.FormValue("project-id"))
+	pid, e := webutil.Id(r, "project-id")
 	if e != nil {
 		return "Could not read project id.", e
 	}
@@ -131,7 +158,7 @@ func AddSkeleton(r *http.Request, c *context.C) (string, error) {
 
 //SubmitArchive adds an Intlola archive to the database.
 func SubmitArchive(r *http.Request, c *context.C) (string, error) {
-	pid, e := convert.Id(r.FormValue("project-id"))
+	pid, e := webutil.Id(r, "project-id")
 	if e != nil {
 		return "Could not read project id.", e
 	}
@@ -145,7 +172,7 @@ func SubmitArchive(r *http.Request, c *context.C) (string, error) {
 	}
 	//We need to create a submission for this archive so that
 	//it can be added to the db and so that it can be processed
-	s := project.NewSubmission(pid, u, project.ARCHIVE_MODE, util.CurMilis())
+	s := project.NewSubmission(pid, "", u, project.ARCHIVE_MODE, util.CurMilis())
 	if e = db.Add(db.SUBMISSIONS, s); e != nil {
 		return "Could not create submission.", e
 	}
@@ -296,7 +323,7 @@ func DeleteResults(r *http.Request, c *context.C) (string, error) {
 
 //EditProject is used to modify a project's metadata.
 func EditProject(r *http.Request, c *context.C) (string, error) {
-	pid, e := convert.Id(r.FormValue("project-id"))
+	pid, e := webutil.Id(r, "project-id")
 	if e != nil {
 		return "Could not read project id.", e
 	}
@@ -326,9 +353,37 @@ func EditProject(r *http.Request, c *context.C) (string, error) {
 	return "Successfully edited project.", nil
 }
 
+func EditAssignment(r *http.Request, c *context.C) (string, error) {
+	aid, e := webutil.Id(r, "assignment-id")
+	if e != nil {
+		return "Could not read assignment id.", e
+	}
+	a, e := db.Assignment(bson.M{db.ID: aid}, nil)
+	if e != nil {
+		return "Could not load assignment.", e
+	}
+	m := bson.M{}
+	if pid, e := webutil.Id(r, "assignment-project"); e == nil && a.ProjectId != pid && db.Contains(db.PROJECTS, bson.M{db.ID: pid}) {
+		m[db.PROJECTID] = pid
+	}
+	if u, e := webutil.String(r, "assignment-user"); e == nil && a.User != u && db.Contains(db.USERS, bson.M{db.ID: u}) {
+		m[db.USER] = u
+	}
+	if n, e := webutil.String(r, "assignment-name"); e == nil && a.Name != n {
+		m[db.NAME] = n
+	}
+	if len(m) == 0 {
+		return "Nothing to update", nil
+	}
+	if e = db.Update(db.ASSIGNMENTS, bson.M{db.ID: aid}, bson.M{db.SET: m}); e != nil {
+		return "Could not edit assignment.", e
+	}
+	return "Successfully edited assignment.", nil
+}
+
 //EditSubmission
 func EditSubmission(r *http.Request, c *context.C) (string, error) {
-	sid, e := convert.Id(r.FormValue("submission-id"))
+	sid, e := webutil.Id(r, "submission-id")
 	if e != nil {
 		return "Could not read submission id.", e
 	}
@@ -337,8 +392,11 @@ func EditSubmission(r *http.Request, c *context.C) (string, error) {
 		return "Could not load submission.", e
 	}
 	sm := bson.M{}
-	if pid, e := convert.Id(r.FormValue("submission-project")); e == nil && s.ProjectId != pid && db.Contains(db.PROJECTS, bson.M{db.ID: pid}) {
+	if pid, e := webutil.Id(r, "submission-project"); e == nil && s.ProjectId != pid && db.Contains(db.PROJECTS, bson.M{db.ID: pid}) {
 		sm[db.PROJECTID] = pid
+	}
+	if aid, e := webutil.Id(r, "submission-assignment"); e == nil && s.AssignmentId != aid {
+		sm[db.ASSIGNMENTID] = aid
 	}
 	if u, e := webutil.String(r, "submission-user"); e == nil && s.User != u && db.Contains(db.USERS, bson.M{db.ID: u}) {
 		sm[db.USER] = u
@@ -354,7 +412,7 @@ func EditSubmission(r *http.Request, c *context.C) (string, error) {
 
 //EditFile
 func EditFile(r *http.Request, c *context.C) (string, error) {
-	fid, e := convert.Id(r.FormValue("file-id"))
+	fid, e := webutil.Id(r, "file-id")
 	if e != nil {
 		return "Could not read file id.", e
 	}
@@ -379,7 +437,7 @@ func EditFile(r *http.Request, c *context.C) (string, error) {
 }
 
 func EditTest(r *http.Request, c *context.C) (string, error) {
-	tid, e := convert.Id(r.FormValue("test-id"))
+	tid, e := webutil.Id(r, "test-id")
 	if e != nil {
 		return "Could not read test id.", e
 	}
@@ -388,7 +446,7 @@ func EditTest(r *http.Request, c *context.C) (string, error) {
 		return "Could not load test.", e
 	}
 	sm := bson.M{}
-	if pid, e := convert.Id(r.FormValue("test-project")); e == nil && pid != t.ProjectId && db.Contains(db.PROJECTS, bson.M{db.ID: pid}) {
+	if pid, e := webutil.Id(r, "test-project"); e == nil && pid != t.ProjectId && db.Contains(db.PROJECTS, bson.M{db.ID: pid}) {
 		sm[db.PROJECTID] = pid
 	}
 	if n, e := webutil.String(r, "test-name"); e == nil && t.Name != n {
@@ -397,7 +455,6 @@ func EditTest(r *http.Request, c *context.C) (string, error) {
 	if p, e := webutil.String(r, "test-package"); e == nil && t.Package != p {
 		sm[db.PKG] = p
 	}
-
 	if tn, e := webutil.String(r, "test-target-name"); e == nil {
 		tp, _ := webutil.String(r, "test-target-package")
 		if t.Target == nil || (tp != t.Target.Package || tn != t.Target.FullName()) {
@@ -464,7 +521,7 @@ func EditUser(r *http.Request, c *context.C) (string, error) {
 	if e != nil {
 		return "Could not read new username.", e
 	}
-	a, e := convert.Int(r.FormValue("user-perm"))
+	a, e := webutil.Int(r, "user-perm")
 	if e != nil {
 		return "Could not read user access level.", e
 	}
@@ -507,7 +564,7 @@ func ImportData(r *http.Request, c *context.C) (string, error) {
 }
 
 func RenameFiles(r *http.Request, c *context.C) (string, error) {
-	pid, e := convert.Id(r.FormValue("project-id"))
+	pid, e := webutil.Id(r, "project-id")
 	if e != nil {
 		return "Could not read project.", e
 	}

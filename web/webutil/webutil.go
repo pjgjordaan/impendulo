@@ -57,25 +57,32 @@ func String(r *http.Request, n string) (string, error) {
 	return vs[0], nil
 }
 
+func Int(r *http.Request, n string) (int, error) {
+	v, e := String(r, n)
+	if e != nil {
+		return -1, e
+	}
+	return convert.Int(v)
+}
+
+func Int64(r *http.Request, n string) (int64, error) {
+	v, e := String(r, n)
+	if e != nil {
+		return -1, e
+	}
+	return convert.Int64(v)
+}
+
 func Id(r *http.Request, n string) (bson.ObjectId, error) {
-	v := r.FormValue(n)
-	if strings.TrimSpace(v) != "" {
-		return convert.Id(v)
+	v, e := String(r, n)
+	if e != nil {
+		return "", e
 	}
-	if r.Form == nil {
-		if e := r.ParseForm(); e != nil {
-			return "", e
-		}
-	}
-	vs, ok := r.Form[n]
-	if !ok || len(vs) == 0 || vs[0] == "" {
-		return "", fmt.Errorf("invalid value for %s", n)
-	}
-	return convert.Id(vs[0])
+	return convert.Id(v)
 }
 
 func Index(r *http.Request, n string, maxSize int) (int, error) {
-	i, e := convert.Int(r.FormValue(n))
+	i, e := Int(r, n)
 	if e != nil {
 		return -1, e
 	}

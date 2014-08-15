@@ -34,12 +34,13 @@ import (
 type (
 	//Submission is used for individual project submissions
 	Submission struct {
-		Id        bson.ObjectId `bson:"_id"`
-		ProjectId bson.ObjectId `bson:"projectid"`
-		User      string        `bson:"user"`
-		Mode      string        `bson:"mode"`
-		Time      int64         `bson:"time"`
-		Comments  []*Comment    `bson:"comments"`
+		Id           bson.ObjectId `bson:"_id"`
+		ProjectId    bson.ObjectId `bson:"projectid"`
+		AssignmentId bson.ObjectId `bson:"assignmentid"`
+		User         string        `bson:"user"`
+		Mode         string        `bson:"mode"`
+		Time         int64         `bson:"time"`
+		Comments     []*Comment    `bson:"comments"`
 	}
 )
 
@@ -61,8 +62,8 @@ func (s *Submission) String() string {
 }
 
 //NewSubmission
-func NewSubmission(pid bson.ObjectId, u, m string, t int64) *Submission {
-	return &Submission{bson.NewObjectId(), pid, u, m, t, []*Comment{}}
+func NewSubmission(pid, aid bson.ObjectId, u, m string, t int64) *Submission {
+	return &Submission{bson.NewObjectId(), pid, aid, u, m, t, []*Comment{}}
 }
 
 func (s *Submission) Format(p *Project) string {

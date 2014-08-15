@@ -38,7 +38,7 @@ type (
 		Id        bson.ObjectId `bson:"_id"`
 		ProjectId bson.ObjectId `bson:"projectid"`
 		Name      string        `bson:"name"`
-		Package   string        `bson:"pkg"`
+		Package   string        `bson:"package"`
 		Time      int64         `bson:"time"`
 		Type      Type          `bson:"type"`
 		Target    *tool.Target  `bson:"target"`

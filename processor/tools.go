@@ -195,6 +195,9 @@ func junitTools(p *FileProcessor) ([]tool.T, error) {
 	}
 	tools := make([]tool.T, 0, len(ts))
 	for _, t := range ts {
+		if t.Target == nil {
+			continue
+		}
 		//Save the test files to the submission's tool directory.
 		target := tool.NewTarget(t.Name, t.Package, filepath.Join(p.toolDir, t.Id.Hex()), tool.JAVA)
 		if e = util.SaveFile(target.FilePath(), t.Test); e != nil {

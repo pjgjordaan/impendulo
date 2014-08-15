@@ -48,28 +48,21 @@ type (
 //ExportData exports data from collections in the specified database
 //to a specified location as a zip file. This makes use of the mongoexport utility.
 func ExportData(db string, cols []string) (string, error) {
-	fs := make(map[string][]byte, len(cols))
-	for _, col := range cols {
-		o := filepath.Join(os.TempDir(), col+".json")
-		_, e := tool.RunCommand([]string{"mongoexport", "-d", db, "-c", col, "-o", o}, nil, 30*time.Second)
-		if e != nil {
-			return "", e
-		}
-		f, e := os.Open(o)
-		if e != nil {
-			return "", e
-		}
-		d, e := ioutil.ReadAll(f)
-		if e != nil {
-			return "", e
-		}
-		fs[col+".json"] = d
-	}
-	zs, e := util.ZipMap(fs)
+	d, e := ioutil.TempDir("", "collections")
 	if e != nil {
 		return "", e
 	}
-	return util.SaveTemp(zs)
+	//defer os.RemoveAll(d)
+	for _, c := range cols {
+		if _, e := tool.RunCommand([]string{"mongoexport", "-d", db, "-c", c, "-o", filepath.Join(d, c+".json")}, nil, 10*time.Minute); e != nil {
+			return "", e
+		}
+	}
+	z, e := util.ZipDir(d)
+	if e != nil {
+		return "", e
+	}
+	return util.SaveTemp(z)
 }
 
 //ImportData imports collections stored in a zip file
