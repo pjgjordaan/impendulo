@@ -38,19 +38,60 @@ type (
 	//number of files and submissions being processed.
 	S struct {
 		FileCount   int
-		Submissions map[string]map[string]util.E
+		Submissions map[string]*SubInfo
+	}
+	SubInfo struct {
+		Src     util.Set
+		Test    util.Set
+		Archive util.Set
 	}
 )
 
+func NewSubInfo() *SubInfo {
+	return &SubInfo{Src: util.NewSet(), Test: util.NewSet(), Archive: util.NewSet()}
+}
+
+func (s *SubInfo) Empty() bool {
+	return len(s.Src) == 0 && len(s.Test) == 0 && len(s.Archive) == 0
+}
+
+func (s *SubInfo) Add(r *request.R) error {
+	switch r.Type {
+	case request.SRC_ADD:
+		s.Src.Add(r.FileId.Hex())
+	case request.TEST_ADD:
+		s.Test.Add(r.FileId.Hex())
+	case request.ARCHIVE_ADD:
+		s.Archive.Add(r.FileId.Hex())
+	default:
+		return fmt.Errorf("unsupported type %s", r.Type)
+	}
+	return nil
+}
+
+func (s *SubInfo) Remove(r *request.R) error {
+	switch r.Type {
+	case request.SRC_REMOVE:
+		delete(s.Src, r.FileId.Hex())
+	case request.TEST_REMOVE:
+		delete(s.Test, r.FileId.Hex())
+	case request.ARCHIVE_REMOVE:
+		delete(s.Archive, r.FileId.Hex())
+	default:
+		return fmt.Errorf("unsupported type %s", r.Type)
+	}
+	return nil
+}
+
 func New() *S {
-	return &S{FileCount: 0, Submissions: make(map[string]map[string]util.E)}
+	return &S{FileCount: 0, Submissions: make(map[string]*SubInfo)}
 }
 
 func (s *S) Update(r *request.R) error {
 	switch r.Type {
-	case request.FILE_ADD:
+	case request.SRC_ADD:
 		return s.addFile(r)
-	case request.FILE_REMOVE:
+	case request.SRC_REMOVE:
 		return s.removeFile(r)
 	case request.SUBMISSION_START:
 		return s.addSubmission(r)
@@ -63,9 +104,9 @@ func (s *S) Update(r *request.R) error {
 
 func (s *S) removeSubmission(r *request.R) error {
 	sk := r.SubId.Hex()
-	if fm, ok := s.Submissions[sk]; !ok {
+	if si, ok := s.Submissions[sk]; !ok {
 		return fmt.Errorf("submission %s does not exist", sk)
-	} else if len(fm) > 0 {
+	} else if !si.Empty() {
 		return fmt.Errorf("submission %s still has active files", sk)
 	}
 	delete(s.Submissions, sk)
@@ -77,34 +118,28 @@ func (s *S) addSubmission(r *request.R) error {
 	if _, ok := s.Submissions[sk]; ok {
 		return fmt.Errorf("submission %s already exists", sk)
 	}
-	s.Submissions[sk] = make(map[string]util.E)
+	s.Submissions[sk] = NewSubInfo()
 	return nil
 }
 
 func (s *S) addFile(r *request.R) error {
-	sk, fk := r.SubId.Hex(), r.FileId.Hex()
-	fm, ok := s.Submissions[sk]
-	if !ok {
-		return fmt.Errorf("submission %s does not exist for file %s", sk, fk)
+	sk := r.SubId.Hex()
+	if si, ok := s.Submissions[sk]; !ok {
+		return fmt.Errorf("submission %s does not exist", sk)
+	} else if e := si.Add(r); e != nil {
+		return e
 	}
-	if _, ok = fm[fk]; ok {
-		return fmt.Errorf("file %s exists for submission %s", fk, sk)
-	}
-	fm[fk] = util.E{}
 	s.FileCount++
 	return nil
 }
 
 func (s *S) removeFile(r *request.R) error {
-	sk, fk := r.SubId.Hex(), r.FileId.Hex()
-	fm, ok := s.Submissions[sk]
-	if !ok {
-		return fmt.Errorf("submission %s does not exist for file %s", sk, fk)
+	sk := r.SubId.Hex()
+	if si, ok := s.Submissions[sk]; !ok {
+		return fmt.Errorf("submission %s does not exist", sk)
+	} else if e := si.Remove(r); e != nil {
+		return e
 	}
-	if _, ok = fm[fk]; !ok {
-		return fmt.Errorf("file %s does not exist for submission %s", fk, sk)
-	}
-	delete(fm, fk)
 	s.FileCount--
 	return nil
 }

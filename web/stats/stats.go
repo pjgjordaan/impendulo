@@ -64,6 +64,7 @@ const (
 
 var (
 	NoValuesError = errors.New("no values found")
+	NoTestsError  = errors.New("no tests for project")
 )
 
 func NewCalc() *C {
@@ -149,6 +150,9 @@ func (t *Test) Passed() float64 {
 }
 
 func TestStats(sid bson.ObjectId, projectTests int) (*Test, error) {
+	if projectTests == 0 {
+		return nil, NoTestsError
+	}
 	s, e := db.Submission(bson.M{db.ID: sid}, bson.M{db.PROJECTID: 1})
 	if e != nil {
 		return nil, e
@@ -158,7 +162,7 @@ func TestStats(sid bson.ObjectId, projectTests int) (*Test, error) {
 		return nil, e
 	}
 	if len(ts) == 0 {
-		return nil, fmt.Errorf("no tests for project")
+		return nil, NoTestsError
 	}
 	n, _ := util.Extension(ts[0].Name)
 	f, e := resultFile(sid, junit.NAME+":"+n)
@@ -397,4 +401,60 @@ func Lines(sid bson.ObjectId) (int64, error) {
 		return -1, nil
 	}
 	return wc.Lines(f.Data)
+}
+
+func TypeNames() []string {
+	return []string{"assignments", "submissions", string(PASSED), string(project.SRC), string(project.LAUNCH), string(project.TEST)}
+}
+
+func TypeCounts(id interface{}) map[string]interface{} {
+	c := make(map[string]interface{})
+	testCases := 0
+	var m string
+	switch t := id.(type) {
+	case string:
+		m = db.USER
+	case bson.ObjectId:
+		m = db.PROJECTID
+		testCases = ProjectTestCases(t)
+	default:
+		return c
+	}
+	ss, e := db.Submissions(bson.M{m: id}, nil)
+	if e != nil {
+		return c
+	}
+	c["submissions"] = len(ss)
+	sc, lc, tc, ps := 0, 0, 0, 0.0
+	pc := 0
+	am := util.NewSet()
+	for _, s := range ss {
+		am.Add(s.AssignmentId.Hex())
+		if c, e := db.FileCount(s.Id, project.SRC); e == nil {
+			sc += c
+		}
+		if c, e := db.FileCount(s.Id, project.LAUNCH); e == nil {
+			lc += c
+		}
+		if c, e := db.FileCount(s.Id, project.TEST); e == nil {
+			tc += c
+		}
+		if m == db.USER {
+			testCases = ProjectTestCases(s.ProjectId)
+		}
+		if c, _, e := calc(PASSED, s, testCases); e == nil {
+			ps += c
+			pc++
+		}
+	}
+	c["assignments"] = len(am)
+	if pc == 0 {
+		c[string(PASSED)] = "N/A"
+	} else {
+		c[string(PASSED)] = util.Round(ps/float64(pc), 2)
+	}
+	c[string(project.SRC)] = sc
+	c[string(project.LAUNCH)] = lc
+	c[string(project.TEST)] = tc
+	return c
 }

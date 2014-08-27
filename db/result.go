@@ -50,6 +50,10 @@ type (
 	}
 )
 
+var (
+	NoResultsError = fmt.Errorf("no results found")
+)
+
 //CheckstyleResult retrieves a Result matching
 //the given interface from the active database.
 func CheckstyleResult(m, sl bson.M) (*checkstyle.Result, error) {
@@ -373,7 +377,7 @@ func Charters(fid bson.ObjectId) ([]result.Charter, error) {
 }
 
 //AllResultNames retrieves all result names for a given project.
-func ResultNames(sid bson.ObjectId, fname string) (map[string]map[string][]interface{}, error) {
+func ResultNames(sid bson.ObjectId, fname string) (map[string]map[string][]string, error) {
 	mr := &mgo.MapReduce{
 		Map: `function() {
 	var emitted = {};
@@ -390,17 +394,12 @@ func ResultNames(sid bson.ObjectId, fname string) (map[string]map[string][]inter
                 continue;
             }
             emitted[r] = true;
-            o = {};
-            o[t] = {};
-            if(n === ''){
-                emit("", o);
-                continue;           
-            }
-            o[t][n] = [];
-            if(o.id !== ''){
-                o[t][n].push(id);
-            }
-            emit('', o);		
+            o = {
+                type: t,
+                name: n,
+                fileid: id,
+            };
+            emit("", o);
 	}
 	
 };`,
@@ -408,9 +407,18 @@ func ResultNames(sid bson.ObjectId, fname string) (map[string]map[string][]inter
         var r = {};
         var added = {};
         for(i in values){
-            for(k in values[i]){
-                r[k] = values[i][k];
-            }    
+            var t = values[i].type;
+            var n = values[i].name;
+            var id = values[i].fileid;
+            if(!(t in r)){
+                r[t] = {};
+            }
+            if(n !== '' && !(n in r)){
+                r[t][n] = [];
+            }
+            if(id !== ''){
+                r[t][n].push(id);
+            }
        }
        return r;
 };`,
@@ -421,17 +429,22 @@ func ResultNames(sid bson.ObjectId, fname string) (map[string]map[string][]inter
 	}
 	defer s.Close()
 	var ns []*struct {
-		Value map[string]map[string][]interface{} `bson:"value"`
+		Value map[string]map[string][]string `bson:"value"`
 	}
+	//var f *project.File
+	//s.DB("").C(FILES).Find(bson.M{SUBID: sid, NAME: fname}).
+	//	Select(bson.M{RESULTS: 1}).One(&f)
+	//fmt.Println(f.Results)
 	if _, e := s.DB("").C(FILES).Find(bson.M{SUBID: sid, NAME: fname}).
 		Select(bson.M{NAME: 1, RESULTS: 1}).MapReduce(mr, &ns); e != nil {
 		return nil, e
 	} else if len(ns) == 0 {
-		return nil, fmt.Errorf("no results found")
+		return nil, NoResultsError
 	}
 	m := ns[0].Value
-	m[result.CODE] = map[string][]interface{}{}
-	m[diff.NAME] = map[string][]interface{}{}
+	m[result.CODE] = map[string][]string{}
+	m[diff.NAME] = map[string][]string{}
+	//fmt.Println(m)
 	return m, nil
 }
 

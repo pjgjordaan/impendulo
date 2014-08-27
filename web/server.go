@@ -29,6 +29,7 @@ package web
 import (
 	"code.google.com/p/gorilla/pat"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/web/ajax"
 
 	"net/http"
 	"path/filepath"
@@ -57,7 +58,7 @@ func init() {
 	GenerateGets(router, Getters(), Views())
 	GeneratePosts(router, Posters(), IndexPosters())
 	GenerateViews(router, Views())
-	GenerateAJAX(router)
+	ajax.Generate(router)
 	router.Add("GET", "/static/", FileHandler(StaticDir()))
 	router.Add("GET", "/static", RedirectHandler("/static/"))
 	router.Add("GET", "/logs/", FileHandler(logs))

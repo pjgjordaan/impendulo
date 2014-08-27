@@ -35,9 +35,6 @@ import (
 	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/diff"
 	"github.com/godfried/impendulo/tool/findbugs"
-	"github.com/godfried/impendulo/tool/gcc"
-	"github.com/godfried/impendulo/tool/jacoco"
-	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
 	mk "github.com/godfried/impendulo/tool/make"
@@ -51,7 +48,6 @@ import (
 	"labix.org/v2/mgo/bson"
 
 	"net/http"
-	"sort"
 	"strings"
 )
 
@@ -95,37 +91,6 @@ func toolPosters() map[string]Poster {
 		"createfindbugs":   CreateFindbugs,
 		"createcheckstyle": CreateCheckstyle,
 		"createmake":       CreateMake,
-	}
-}
-
-func configTools() []string {
-	return []string{junit.NAME, jpf.NAME, pmd.NAME, findbugs.NAME, checkstyle.NAME, mk.NAME}
-}
-
-//tools
-func tools(pid bson.ObjectId) ([]string, error) {
-	p, e := db.Project(bson.M{db.ID: pid}, nil)
-	if e != nil {
-		return nil, e
-	}
-	switch tool.Language(p.Lang) {
-	case tool.JAVA:
-		ts := []string{pmd.NAME, findbugs.NAME, checkstyle.NAME, javac.NAME}
-		if _, e := db.JPFConfig(bson.M{db.PROJECTID: pid}, bson.M{db.ID: 1}); e == nil {
-			ts = append(ts, jpf.NAME)
-		}
-		if js, e := db.JUnitTests(bson.M{db.PROJECTID: pid}, bson.M{db.NAME: 1}); e == nil {
-			for _, j := range js {
-				n, _ := util.Extension(j.Name)
-				ts = append(ts, jacoco.NAME+":"+n, junit.NAME+":"+n)
-			}
-		}
-		sort.Strings(ts)
-		return ts, nil
-	case tool.C:
-		return []string{mk.NAME, gcc.NAME}, nil
-	default:
-		return nil, fmt.Errorf("unknown language %s", p.Lang)
 	}
 }
 
@@ -318,7 +283,7 @@ func RunTools(r *http.Request, c *context.C) (string, error) {
 	if e != nil {
 		return "Could not read tool.", e
 	}
-	all, e := tools(pid)
+	all, e := db.ProjectTools(pid)
 	allTools := e == nil && len(all) == len(ts)
 	us, e := webutil.Strings(r, "users")
 	if e != nil {
@@ -489,4 +454,8 @@ func getTestType(r *http.Request) (junit.Type, error) {
 	default:
 		return -1, fmt.Errorf("unsupported test type %s", v)
 	}
+}
+
+func configTools() []string {
+	return []string{junit.NAME, jpf.NAME, pmd.NAME, findbugs.NAME, checkstyle.NAME, mk.NAME}
 }

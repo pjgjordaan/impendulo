@@ -43,14 +43,14 @@ import (
 )
 
 type (
-	//Processor is used to process individual submissions.
-	Processor interface {
+	//P is used to process individual submissions.
+	P interface {
 		ResultName(tool.T) string
 		Compile(bson.ObjectId, *tool.Target) error
 		Tools() []tool.T
 		Process(bson.ObjectId) error
 	}
-	FileProcessor struct {
+	FileP struct {
 		sub      *project.Submission
 		project  *project.Project
 		rootDir  string
@@ -60,7 +60,7 @@ type (
 		compiler tool.Compiler
 		tools    []tool.T
 	}
-	TestProcessor struct {
+	TestP struct {
 		sub      *project.Submission
 		project  *project.Project
 		id       bson.ObjectId
@@ -76,9 +76,9 @@ const (
 	LOG_PROCESSOR = "processing/processor.go"
 )
 
-//NewFileProcessor creates a Processor and sets up the environment and
+//NewFileP creates a P and sets up the environment and
 //tools for it.
-func NewFileProcessor(sid bson.ObjectId) (*FileProcessor, error) {
+func NewFileP(sid bson.ObjectId) (*FileP, error) {
 	s, e := db.Submission(bson.M{db.ID: sid}, nil)
 	if e != nil {
 		return nil, e
@@ -88,7 +88,7 @@ func NewFileProcessor(sid bson.ObjectId) (*FileProcessor, error) {
 		return nil, e
 	}
 	d := filepath.Join(os.TempDir(), s.Id.Hex())
-	fp := &FileProcessor{
+	fp := &FileP{
 		sub:     s,
 		project: p,
 		rootDir: d,
@@ -107,8 +107,8 @@ func NewFileProcessor(sid bson.ObjectId) (*FileProcessor, error) {
 	return fp, nil
 }
 
-//Process listens for a submission's incoming files and processes them.
-func (fp *FileProcessor) Start(fc chan bson.ObjectId, dc chan util.E) {
+//Start listens for a submission's incoming files and processes them.
+func (fp *FileP) Start(fc chan bson.ObjectId, dc chan util.E) {
 	util.Log("Processing submission", fp.sub, LOG_PROCESSOR)
 	//Processing loop.
 processing:
@@ -133,7 +133,7 @@ processing:
 	dc <- util.E{}
 }
 
-func (fp *FileProcessor) Process(fid bson.ObjectId) error {
+func (fp *FileP) Process(fid bson.ObjectId) error {
 	//Retrieve file and process it.
 	f, e := db.File(bson.M{db.ID: fid}, nil)
 	if e != nil {
@@ -141,17 +141,18 @@ func (fp *FileProcessor) Process(fid bson.ObjectId) error {
 	}
 	switch f.Type {
 	case project.TEST:
-		return fp.ProcessTest(f)
+		return fp.Test(f)
 	case project.ARCHIVE:
-		return fp.ProcessArchive(f)
+		return fp.Archive(f)
 	case project.SRC:
-		return fp.ProcessSource(f)
+		return fp.Source(f)
+	default:
+		return fmt.Errorf("cannot process file type %s", f.Type)
 	}
-	return fmt.Errorf("cannot process file type %s", f.Type)
 }
 
 //ProcessFile extracts archives and runs tools on source files.
-func (fp *FileProcessor) ProcessSource(f *project.File) error {
+func (fp *FileP) Source(f *project.File) error {
 	util.Log("Processing file:", f.Id, LOG_PROCESSOR)
 	defer util.Log("Processed file:", f.Id, LOG_PROCESSOR)
 	//Create a target for the tools to run on and save the file.
@@ -163,7 +164,7 @@ func (fp *FileProcessor) ProcessSource(f *project.File) error {
 	return nil
 }
 
-func (fp *FileProcessor) ProcessTest(test *project.File) error {
+func (fp *FileP) Test(test *project.File) error {
 	t := tool.NewTarget(test.Name, test.Package, fp.srcDir, tool.Language(fp.project.Lang))
 	if e := util.SaveFile(t.FilePath(), test.Data); e != nil {
 		return e
@@ -176,10 +177,11 @@ func (fp *FileProcessor) ProcessTest(test *project.File) error {
 	if e = fp.Compile(test.Id, t); e != nil {
 		return e
 	}
-	tp, e := NewTestProcessor(test, fp)
+	tp, e := NewTestP(test, fp)
 	if e != nil {
 		return e
 	}
+	//we want to run the test on all of the submission's source files.
 	fs, e := db.Files(bson.M{db.SUBID: test.SubId, db.TYPE: project.SRC}, bson.M{db.ID: 1}, 0)
 	if e != nil {
 		return e
@@ -192,15 +194,15 @@ func (fp *FileProcessor) ProcessTest(test *project.File) error {
 	return nil
 }
 
-//Extract extracts files from an archive, stores and processes them.
-func (fp *FileProcessor) ProcessArchive(a *project.File) error {
+//Archive extracts files from an archive, stores and processes them.
+func (fp *FileP) Archive(a *project.File) error {
 	//Extract and store the files.
 	m, e := util.UnzipToMap(a.Data)
 	if e != nil {
 		return e
 	}
 	for n, d := range m {
-		if e = fp.processArchive(n, d); e != nil {
+		if e = fp.archive(n, d); e != nil {
 			util.Log(e, LOG_PROCESSOR)
 		}
 	}
@@ -208,17 +210,23 @@ func (fp *FileProcessor) ProcessArchive(a *project.File) error {
 	return db.RemoveFileById(a.Id)
 }
 
-func (fp *FileProcessor) processArchive(name string, data []byte) error {
+func (fp *FileP) archive(name string, data []byte) error {
 	f, e := fp.StoreFile(name, data)
 	if e != nil {
 		return e
 	}
-	if e := mq.ChangeStatus(request.AddFile(f.Id, fp.sub.Id)); e != nil {
+	r, e := request.AddFile(f)
+	if e != nil {
+		return e
+	}
+	if e := mq.ChangeStatus(r); e != nil {
 		return e
 	}
 	e = fp.Process(f.Id)
-	se := mq.ChangeStatus(request.RemoveFile(f.Id, fp.sub.Id))
-	if e == nil && se != nil {
+	if r, e = request.RemoveFile(f); e != nil {
+		return e
+	}
+	if se := mq.ChangeStatus(r); e == nil && se != nil {
 		e = se
 	}
 	return e
@@ -226,7 +234,7 @@ func (fp *FileProcessor) processArchive(name string, data []byte) error {
 
 //StoreFile creates a new project.File given an encoded file name and file data.
 //The new project.File is then saved in the database.
-func (fp *FileProcessor) StoreFile(n string, d []byte) (*project.File, error) {
+func (fp *FileP) StoreFile(n string, d []byte) (*project.File, error) {
 	f, e := project.ParseName(n)
 	if e != nil {
 		return nil, e
@@ -243,7 +251,7 @@ func (fp *FileProcessor) StoreFile(n string, d []byte) (*project.File, error) {
 }
 
 //Compile compiles a file, stores the result and returns any errors which may have occured.
-func (fp *FileProcessor) Compile(fid bson.ObjectId, t *tool.Target) error {
+func (fp *FileP) Compile(fid bson.ObjectId, t *tool.Target) error {
 	r, e := fp.compiler.Run(fid, t)
 	//We want to store the result if it is a compilation error
 	if e == nil || tool.IsCompileError(e) {
@@ -252,15 +260,15 @@ func (fp *FileProcessor) Compile(fid bson.ObjectId, t *tool.Target) error {
 	return e
 }
 
-func (fp *FileProcessor) ResultName(t tool.T) string {
+func (fp *FileP) ResultName(t tool.T) string {
 	return t.Name()
 }
 
-func (fp *FileProcessor) Tools() []tool.T {
+func (fp *FileP) Tools() []tool.T {
 	return fp.tools
 }
 
-func NewTestProcessor(tf *project.File, fp *FileProcessor) (*TestProcessor, error) {
+func NewTestP(tf *project.File, fp *FileP) (*TestP, error) {
 	d := filepath.Join(fp.rootDir, tf.Id.Hex())
 	td := filepath.Join(d, "tools")
 	c, e := javac.New("")
@@ -278,7 +286,7 @@ func NewTestProcessor(tf *project.File, fp *FileProcessor) (*TestProcessor, erro
 	if e = os.MkdirAll(srcDir, util.DPERM); e != nil {
 		return nil, e
 	}
-	tp := &TestProcessor{
+	tp := &TestP{
 		sub:      fp.sub,
 		project:  fp.project,
 		id:       tf.Id,
@@ -294,7 +302,7 @@ func NewTestProcessor(tf *project.File, fp *FileProcessor) (*TestProcessor, erro
 	return tp, nil
 }
 
-func (tp *TestProcessor) Process(fid bson.ObjectId) error {
+func (tp *TestP) Process(fid bson.ObjectId) error {
 	f, e := db.File(bson.M{db.ID: fid}, nil)
 	if e != nil {
 		return e
@@ -306,16 +314,16 @@ func (tp *TestProcessor) Process(fid bson.ObjectId) error {
 	return RunTools(f, t, tp)
 }
 
-func (tp *TestProcessor) ResultName(t tool.T) string {
+func (tp *TestP) ResultName(t tool.T) string {
 	return t.Name() + "-" + tp.id.Hex()
 }
 
-func (tp *TestProcessor) Compile(fid bson.ObjectId, t *tool.Target) error {
+func (tp *TestP) Compile(fid bson.ObjectId, t *tool.Target) error {
 	_, e := tp.compiler.Run(fid, t)
 	return e
 }
 
-func (tp *TestProcessor) Tools() []tool.T {
+func (tp *TestP) Tools() []tool.T {
 	return tp.tools
 }
 
@@ -323,19 +331,20 @@ func (tp *TestProcessor) Tools() []tool.T {
 //there is already a result for it present. This makes it possible to
 //rerun old tools or add new tools and run them on old files without having
 //to rerun all the tools.
-func RunTools(file *project.File, target *tool.Target, p Processor) error {
+func RunTools(file *project.File, target *tool.Target, p P) error {
 	if e := p.Compile(file.Id, target); e != nil {
 		return e
 	}
 	for _, t := range p.Tools() {
-		if e := runTool(t, file, target, p.ResultName(t)); e != nil {
+		if e := RunTool(t, file, target, p.ResultName(t)); e != nil {
 			util.Log(e, LOG_PROCESSOR)
 		}
 	}
 	return nil
 }
 
-func runTool(t tool.T, f *project.File, target *tool.Target, n string) error {
+//RunTool runs a specified tool on a file. The target specifies where the file is stored.
+func RunTool(t tool.T, f *project.File, target *tool.Target, n string) error {
 	if _, ok := f.Results[n]; ok {
 		return nil
 	}
@@ -354,5 +363,7 @@ func runTool(t tool.T, f *project.File, target *tool.Target, n string) error {
 	if e == nil && de != nil {
 		e = de
 	}
+	//tf, _ := db.File(bson.M{db.ID: f.Id}, bson.M{db.RESULTS: 1})
+	//fmt.Println(tf.Results)
 	return de
 }

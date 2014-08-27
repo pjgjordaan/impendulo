@@ -304,7 +304,11 @@ func AddFile(f *project.File, k string) error {
 	if !f.CanProcess() {
 		return nil
 	}
-	m, e := json.Marshal(request.AddFile(f.Id, f.SubId))
+	r, e := request.AddFile(f)
+	if e != nil {
+		return e
+	}
+	m, e := json.Marshal(r)
 	if e != nil {
 		return e
 	}

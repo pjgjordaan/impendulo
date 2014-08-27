@@ -63,7 +63,7 @@ var (
 		"getBusy":     mq.GetStatus,
 		"slice":       slice,
 		"adjustment":  adjustment,
-		"tools":       tools,
+		"tools":       db.ProjectTools,
 		"snapshots":   func(id bson.ObjectId) (int, error) { return db.FileCount(id, project.SRC) },
 		"launches":    func(id bson.ObjectId) (int, error) { return db.FileCount(id, project.LAUNCH) },
 		"usertests":   func(id bson.ObjectId) (int, error) { return db.FileCount(id, project.TEST) },
@@ -80,19 +80,18 @@ var (
 		},
 		"resultNames": db.ResultNames,
 		"users":       func() ([]string, error) { return db.Usernames(nil) },
-		"typeCounts":  db.TypeCounts,
 		"file":        func(id bson.ObjectId) (*project.File, error) { return db.File(bson.M{db.ID: id}, nil) },
 		"toTitle":     util.Title,
 		"addSpaces":   func(s string) string { return strings.Join(util.SplitTitles(s), " ") },
 		"chartTime":   chartTime,
 		"validId":     validId,
-		"emptyM": func(m map[string][]interface{}) bool {
+		"emptyM": func(m map[string][]string) bool {
 			return len(m) == 0
 		},
-		"emptyS": func(s []interface{}) bool {
-			return len(s) == 0
+		"emptyS": func(s []string) bool {
+			return len(s) == 0 || emptyString(s[0])
 		},
-		"empty":       func(s string) bool { return strings.TrimSpace(s) == "" },
+		"empty":       emptyString,
 		"sortFiles":   sortFiles,
 		"project":     func(id bson.ObjectId) (*project.Project, error) { return db.Project(bson.M{db.ID: id}, nil) },
 		"configtools": configTools,
@@ -101,6 +100,10 @@ var (
 	baseTemplates    []string
 	InvalidArgsError = errors.New("invalid args call")
 )
+
+func emptyString(s string) bool {
+	return strings.TrimSpace(s) == ""
+}
 
 func _fileinfos(sid bson.ObjectId) ([]*db.FileInfo, error) {
 	return db.FileInfos(bson.M{db.SUBID: sid, db.TYPE: bson.M{db.IN: []project.Type{project.SRC, project.TEST}}})

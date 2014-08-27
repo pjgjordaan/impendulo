@@ -5,63 +5,20 @@
     <li><a href="projectchart">Chart</a>
     </li>
 </ul>
-<table id="table-projects" class="table table-hover table-striped tablesorter">
+<table id="table-project" class="table table-hover table-striped tablesorter">
     <thead>
         <tr class="info">
             <th>Name</th>
             <th></th>
             <th>Created</th>
             <th>Language</th>
-            <th>Submissions</th>
-            <th>Snapshots</th>
-            <th>Launches</th>
         </tr>
     </thead>
     <tbody data-link="row" class="rowlink">
-        {{$projects := projects}} {{range $projects}} {{$counts := typeCounts .Id}}
-        <tr>
-            <td>
-                <a href="getsubmissions?project-id={{.Id.Hex}}">
-		  {{.Name}}
-		</a>
-            </td>
-            <td class="rowlink-skip">
-                <a href="#" class="a-info">
-                    <span class="glyphicon
-                    glyphicon-info-sign"></span>
-                    <p hidden>{{.Description}}</p>
-                </a>
-            </td>
-            <td>
-                {{date .Time}}
-            </td>
-            <td>
-                {{.Lang}}
-            </td>
-            <td>
-                {{index $counts 0}}
-            </td>
-            <td>
-                {{index $counts 1}}
-            </td>
-            <td>
-                {{index $counts 2}}
-            </td>
-        </tr>
-        {{end}}
     </tbody>
 </table>
+<script type="text/javascript" language="javascript" src="/static/js/overview.js"></script>
 <script>
-    $(function() {
-        $("#table-projects").tablesorter({
-            theme: 'bootstrap'
-        });
-        $('.a-info').popover({
-            content: function() {
-                var d = $(this).find('p').html();
-                return d === '' ? 'No description' : d;
-            }
-        })
-    });
+    Overview.setup('project');
 </script>
 {{end}}

@@ -313,8 +313,8 @@ func (l *Loader) Consume(d amqp.Delivery, ch *amqp.Channel) (e error) {
 
 func (r *Redoer) Consume(d amqp.Delivery, ch *amqp.Channel) (e error) {
 	defer func() {
-		if r := recover(); r != nil {
-			e = r.(error)
+		if rec := recover(); rec != nil {
+			e = rec.(error)
 		}
 		d.Ack(false)
 	}()
@@ -331,7 +331,11 @@ func (r *Redoer) Consume(d amqp.Delivery, ch *amqp.Channel) (e error) {
 		if !f.CanProcess() {
 			continue
 		}
-		r.requestChan <- request.AddFile(f.Id, sid)
+		var req *request.R
+		if req, e = request.AddFile(f); e != nil {
+			return
+		}
+		r.requestChan <- req
 	}
 	r.requestChan <- request.StopSubmission(sid)
 	return

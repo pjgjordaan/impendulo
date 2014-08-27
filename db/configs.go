@@ -25,12 +25,22 @@
 package db
 
 import (
+	"fmt"
 	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/checkstyle"
+	"github.com/godfried/impendulo/tool/findbugs"
+	"github.com/godfried/impendulo/tool/gcc"
+	"github.com/godfried/impendulo/tool/jacoco"
+	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
 	mk "github.com/godfried/impendulo/tool/make"
 	"github.com/godfried/impendulo/tool/pmd"
+	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
+	"sort"
 )
 
 //JPFConfig retrieves a JPF configuration matching m from the active database.
@@ -174,4 +184,30 @@ func UserTestId(sid bson.ObjectId) bson.ObjectId {
 		}
 	}
 	return ""
+}
+
+func ProjectTools(pid bson.ObjectId) ([]string, error) {
+	p, e := Project(bson.M{ID: pid}, nil)
+	if e != nil {
+		return nil, e
+	}
+	switch tool.Language(p.Lang) {
+	case tool.JAVA:
+		ts := []string{pmd.NAME, findbugs.NAME, checkstyle.NAME, javac.NAME}
+		if _, e := JPFConfig(bson.M{PROJECTID: pid}, bson.M{ID: 1}); e == nil {
+			ts = append(ts, jpf.NAME)
+		}
+		if js, e := JUnitTests(bson.M{PROJECTID: pid}, bson.M{NAME: 1}); e == nil {
+			for _, j := range js {
+				n, _ := util.Extension(j.Name)
+				ts = append(ts, jacoco.NAME+":"+n, junit.NAME+":"+n)
+			}
+		}
+		sort.Strings(ts)
+		return ts, nil
+	case tool.C:
+		return []string{mk.NAME, gcc.NAME}, nil
+	default:
+		return nil, fmt.Errorf("unknown language %s", p.Lang)
+	}
 }

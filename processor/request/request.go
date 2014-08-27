@@ -29,6 +29,8 @@ package request
 import (
 	"fmt"
 
+	"github.com/godfried/impendulo/project"
+
 	"labix.org/v2/mgo/bson"
 )
 
@@ -45,8 +47,12 @@ type (
 const (
 	SUBMISSION_START Type = iota
 	SUBMISSION_STOP
-	FILE_ADD
-	FILE_REMOVE
+	SRC_ADD
+	TEST_ADD
+	ARCHIVE_ADD
+	SRC_REMOVE
+	TEST_REMOVE
+	ARCHIVE_REMOVE
 )
 
 func (t Type) String() string {
@@ -55,10 +61,18 @@ func (t Type) String() string {
 		return "SUBMISSION_START REQUEST"
 	case SUBMISSION_STOP:
 		return "SUBMISSION_STOP REQUEST"
-	case FILE_ADD:
-		return "FILE_ADD REQUEST"
-	case FILE_REMOVE:
-		return "FILE_REMOVE REQUEST"
+	case SRC_ADD:
+		return "SRC_ADD REQUEST"
+	case SRC_REMOVE:
+		return "SRC_REMOVE REQUEST"
+	case ARCHIVE_ADD:
+		return "ARCHIVE_ADD REQUEST"
+	case ARCHIVE_REMOVE:
+		return "ARCHIVE_REMOVE REQUEST"
+	case TEST_ADD:
+		return "TEST_ADD REQUEST"
+	case TEST_REMOVE:
+		return "TEST_REMOVE REQUEST"
 	default:
 		return fmt.Sprintf("UNKNOWN REQUEST %d", t)
 	}
@@ -66,7 +80,7 @@ func (t Type) String() string {
 
 func (r *R) Valid() error {
 	switch r.Type {
-	case SUBMISSION_START, SUBMISSION_STOP, FILE_ADD, FILE_REMOVE:
+	case SUBMISSION_START, SUBMISSION_STOP, SRC_ADD, SRC_REMOVE, ARCHIVE_ADD, ARCHIVE_REMOVE, TEST_ADD, TEST_REMOVE:
 		if !bson.IsObjectIdHex(r.SubId.Hex()) {
 			return fmt.Errorf("Request Submission ID %s is not a valid ObjectId", r.SubId.Hex())
 		} else if !bson.IsObjectIdHex(r.FileId.Hex()) {
@@ -86,10 +100,28 @@ func StartSubmission(sid bson.ObjectId) *R {
 	return &R{SubId: sid, FileId: sid, Type: SUBMISSION_START}
 }
 
-func AddFile(fid, sid bson.ObjectId) *R {
-	return &R{SubId: sid, FileId: fid, Type: FILE_ADD}
+func AddFile(f *project.File) (*R, error) {
+	switch f.Type {
+	case project.SRC:
+		return &R{SubId: f.SubId, FileId: f.Id, Type: SRC_ADD}, nil
+	case project.TEST:
+		return &R{SubId: f.SubId, FileId: f.Id, Type: TEST_ADD}, nil
+	case project.ARCHIVE:
+		return &R{SubId: f.SubId, FileId: f.Id, Type: ARCHIVE_ADD}, nil
+	default:
+		return nil, fmt.Errorf("unknown type %s", f.Type)
+	}
 }
 
-func RemoveFile(fid, sid bson.ObjectId) *R {
-	return &R{SubId: sid, FileId: fid, Type: FILE_REMOVE}
+func RemoveFile(f *project.File) (*R, error) {
+	switch f.Type {
+	case project.SRC:
+		return &R{SubId: f.SubId, FileId: f.Id, Type: SRC_REMOVE}, nil
+	case project.TEST:
+		return &R{SubId: f.SubId, FileId: f.Id, Type: TEST_REMOVE}, nil
+	case project.ARCHIVE:
+		return &R{SubId: f.SubId, FileId: f.Id, Type: ARCHIVE_REMOVE}, nil
+	default:
+		return nil, fmt.Errorf("unknown type %s", f.Type)
+	}
 }

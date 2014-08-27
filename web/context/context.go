@@ -34,12 +34,10 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/util"
-	"github.com/godfried/impendulo/util/convert"
 	"github.com/godfried/impendulo/web/webutil"
 	"labix.org/v2/mgo/bson"
 
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -53,31 +51,66 @@ type (
 	//Browse is used to keep track of the user's browsing.
 	Browse struct {
 		IsUser          bool
-		Pid, Sid        bson.ObjectId
+		Pid, Aid, Sid   bson.ObjectId
 		Uid, File, View string
-		//ChildFile                  string
-		Current, Next int
-		DisplayCount  int
-		Level         Level
-		Result        *Result
+		Current, Next   int
+		DisplayCount    int
+		Level           Level
+		Result          *Result
 	}
 	Level  int
 	Setter func(*http.Request) error
 )
 
 const (
-	HOME Level = iota
+	STORE_NAME       = "impendulo"
+	HOME       Level = iota
 	PROJECTS
 	USERS
+	ASSIGNMENTS
 	SUBMISSIONS
 	FILES
 	ANALYSIS
 )
 
+var (
+	store sessions.Store
+)
+
 func init() {
+	if e := loadStore(); e != nil {
+		panic(e)
+	}
 	//Register these so that they can be saved with the session.
 	gob.Register(new(Browse))
 	gob.Register(new(bson.ObjectId))
+}
+
+func loadStore() error {
+	if store != nil {
+		return nil
+	}
+	auth, enc, e := util.CookieKeys()
+	if e != nil {
+		return e
+	}
+	store = sessions.NewCookieStore(auth, enc)
+	return nil
+}
+
+func loadSession(r *http.Request) (*sessions.Session, error) {
+	if e := loadStore(); e != nil {
+		return nil, e
+	}
+	return store.Get(r, STORE_NAME)
+}
+
+func Load(r *http.Request) (*C, error) {
+	s, e := loadSession(r)
+	if e != nil {
+		return nil, e
+	}
+	return load(s), nil
 }
 
 //Close closes a session.
@@ -146,7 +179,7 @@ func (c *C) Successes() []interface{} {
 }
 
 //Load loads a context from the session.
-func Load(s *sessions.Session) *C {
+func load(s *sessions.Session) *C {
 	c := &C{Session: s}
 	if v, ok := c.Session.Values["browse"]; ok {
 		c.Browse = v.(*Browse)
@@ -178,7 +211,7 @@ func (b *Browse) ClearSubmission() {
 }
 
 func (b *Browse) SetDisplayCount(r *http.Request) error {
-	i, e := convert.Int(r.FormValue("displaycount"))
+	i, e := webutil.Int(r, "displaycount")
 	if e == nil {
 		b.DisplayCount = i + 10
 	} else {
@@ -198,39 +231,8 @@ func (b *Browse) SetUid(r *http.Request) error {
 	return nil
 }
 
-func (b *Browse) SetSid(r *http.Request) error {
-	id, e := convert.Id(r.FormValue("submission-id"))
-	if e != nil {
-		return nil
-	}
-	b.ClearSubmission()
-	s, e := db.Submission(bson.M{db.ID: id}, bson.M{db.PROJECTID: 1, db.USER: 1})
-	if e != nil {
-		return e
-	}
-	p, e := db.Project(bson.M{db.ID: s.ProjectId}, nil)
-	if e != nil {
-		return e
-	}
-	b.Sid = id
-	b.Pid = s.ProjectId
-	b.Uid = s.User
-	b.File = p.Name + ".java"
-	return b.Result.Update(b.Sid, b.File)
-}
-
-func (b *Browse) Submissions() ([]*project.Submission, error) {
-	m := bson.M{}
-	if b.IsUser {
-		m[db.USER] = b.Uid
-	} else {
-		m[db.PROJECTID] = b.Pid
-	}
-	return db.Submissions(m, nil, "-"+db.TIME)
-}
-
 func (b *Browse) SetPid(r *http.Request) error {
-	pid, e := convert.Id(r.FormValue("project-id"))
+	pid, e := webutil.Id(r, "project-id")
 	if e != nil {
 		return nil
 	}
@@ -238,6 +240,52 @@ func (b *Browse) SetPid(r *http.Request) error {
 	b.IsUser = false
 	b.Pid = pid
 	return nil
+}
+
+func (b *Browse) SetAid(r *http.Request) error {
+	id, e := webutil.Id(r, "assignment-id")
+	if e != nil {
+		return nil
+	}
+	b.ClearSubmission()
+	a, e := db.Assignment(bson.M{db.ID: id}, nil)
+	if e != nil {
+		return e
+	}
+	p, e := db.Project(bson.M{db.ID: a.ProjectId}, nil)
+	if e != nil {
+		return e
+	}
+	b.Aid = id
+	b.Pid = p.Id
+	b.File = p.Name + ".java"
+	return nil
+}
+
+func (b *Browse) SetSid(r *http.Request) error {
+	id, e := webutil.Id(r, "submission-id")
+	if e != nil {
+		return nil
+	}
+	b.ClearSubmission()
+	s, e := db.Submission(bson.M{db.ID: id}, nil)
+	if e != nil {
+		return e
+	}
+	a, e := db.Assignment(bson.M{db.ID: s.AssignmentId}, nil)
+	if e != nil {
+		return e
+	}
+	p, e := db.Project(bson.M{db.ID: a.ProjectId}, nil)
+	if e != nil {
+		return e
+	}
+	b.Sid = id
+	b.Aid = a.Id
+	b.Pid = p.Id
+	b.Uid = s.User
+	b.File = p.Name + ".java"
+	return b.Result.Update(b.Sid, b.File)
 }
 
 func (b *Browse) SetResult(r *http.Request) error {
@@ -256,6 +304,21 @@ func (b *Browse) SetFile(r *http.Request) error {
 	b.File = n
 	b.Current = 0
 	b.Next = 0
+	return nil
+}
+
+func (b *Browse) SetFileIndices(r *http.Request) error {
+	if b.File == "" {
+		return nil
+	}
+	fs, e := db.Snapshots(b.Sid, b.File)
+	if e != nil {
+		util.Log(e)
+		return nil
+	}
+	if e = b.setIndices(r, fs); e != nil {
+		return b.setTimeIndices(r, fs)
+	}
 	return nil
 }
 
@@ -279,7 +342,7 @@ func (b *Browse) setIndices(r *http.Request, fs []*project.File) error {
 }
 
 func (b *Browse) setTimeIndices(r *http.Request, fs []*project.File) error {
-	t, e := strconv.ParseInt(r.FormValue("time"), 10, 64)
+	t, e := webutil.Int64(r, "time")
 	if e != nil {
 		return nil
 	}
@@ -293,29 +356,24 @@ func (b *Browse) setTimeIndices(r *http.Request, fs []*project.File) error {
 	return fmt.Errorf("no file found at time %d", t)
 }
 
-func (b *Browse) SetFileIndices(r *http.Request) error {
-	if b.File == "" {
-		return nil
-	}
-	fs, e := db.Snapshots(b.Sid, b.File)
-	if e != nil {
-		util.Log(e)
-		return nil
-	}
-	if e = b.setIndices(r, fs); e != nil {
-		return b.setTimeIndices(r, fs)
-	}
-	return nil
-}
-
 func (b *Browse) Update(r *http.Request) error {
-	setters := []Setter{b.SetPid, b.SetUid, b.SetSid, b.SetFile, b.SetResult, b.SetFileIndices, b.SetDisplayCount}
+	setters := []Setter{b.SetPid, b.SetUid, b.SetAid, b.SetSid, b.SetFile, b.SetResult, b.SetFileIndices, b.SetDisplayCount}
 	for _, s := range setters {
 		if e := s(r); e != nil {
 			return e
 		}
 	}
 	return nil
+}
+
+func (b *Browse) Submissions() ([]*project.Submission, error) {
+	m := bson.M{}
+	if b.IsUser {
+		m[db.USER] = b.Uid
+	} else {
+		m[db.PROJECTID] = b.Pid
+	}
+	return db.Submissions(m, nil, "-"+db.TIME)
 }
 
 func (b *Browse) SetLevel(route string) {
@@ -326,6 +384,8 @@ func (b *Browse) SetLevel(route string) {
 		b.Level = PROJECTS
 	case "userresult":
 		b.Level = USERS
+	case "getassignments":
+		b.Level = ASSIGNMENTS
 	case "getsubmissions":
 		b.Level = SUBMISSIONS
 	case "getfiles":
@@ -349,6 +409,8 @@ func (l Level) Is(level string) bool {
 		return l == USERS
 	case "submissions":
 		return l == SUBMISSIONS
+	case "assignments":
+		return l == ASSIGNMENTS
 	case "files":
 		return l == FILES
 	case "analysis":

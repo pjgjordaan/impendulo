@@ -5,41 +5,17 @@
     <li><a href="userchart">Chart</a>
     </li>
 </ul>
-<table id="table-users" class="table table-hover table-striped tablesorter">
+<table id="table-user" class="table table-hover table-striped tablesorter">
     <thead>
         <tr class="info">
             <th>User</th>
-            <th>Submissions</th>
-            <th>Snapshots</th>
-            <th>Launches</th>
         </tr>
     </thead>
     <tbody data-link="row" class="rowlink">
-        {{$users := users}} {{range $users}} {{$counts := typeCounts .}}
-        <tr>
-            <td>
-                <a href="getsubmissions?user-id={{.}}">
-	   {{.}}
-	 </a>
-            </td>
-            <td>
-                {{index $counts 0}}
-            </td>
-            <td>
-                {{index $counts 1}}
-            </td>
-            <td>
-                {{index $counts 2}}
-            </td>
-        </tr>
-        {{end}}
     </tbody>
 </table>
+<script type="text/javascript" language="javascript" src="/static/js/overview.js"></script>
 <script>
-    $(function() {
-        $("#table-users").tablesorter({
-            theme: 'bootstrap'
-        });
-    });
+    Overview.setup('user');
 </script>
 {{end}}

@@ -59,6 +59,7 @@ type (
 var (
 	NoFilesError       = errors.New("no files to load chart for")
 	NoSubmissionsError = errors.New("no submissions to create chart for")
+	NoAssignmentsError = errors.New("no assignments to create chart for")
 )
 
 func Tool(r *context.Result, files []*project.File) (D, error) {
@@ -200,12 +201,9 @@ func User() (D, error) {
 	}
 	d := NewData()
 	for _, u := range us {
-		c := db.TypeCounts(u.Name)
-		p := map[string]interface{}{
-			"key": u.Name, "submissions": c[0],
-			"snapshots": c[1], "launches": c[2],
-		}
-		d = append(d, p)
+		vals := stats.TypeCounts(u.Name)
+		vals["key"] = u.Name
+		d = append(d, vals)
 	}
 	return d, nil
 }
@@ -217,15 +215,97 @@ func Project() (D, error) {
 	}
 	d := NewData()
 	for _, p := range ps {
-		c := db.TypeCounts(p.Id)
-		v := map[string]interface{}{
-			"key": p.Name, "submissions": c[0],
-			"snapshots": c[1], "launches": c[2],
-			"id": p.Id,
-		}
-		d = append(d, v)
+		vals := stats.TypeCounts(p.Id)
+		vals["key"] = p.Name
+		vals["id"] = p.Id
+		d = append(d, vals)
 	}
 	return d, nil
+}
+
+func Assignment(as []*project.Assignment, x *context.Result, y *context.Result) (D, I, error) {
+	if len(as) == 0 {
+		return nil, nil, NoAssignmentsError
+	}
+	d := NewData()
+	calc := stats.NewCalc()
+	names := make(map[bson.ObjectId]string)
+	info := I{"x": x.Format(), "y": y.Format()}
+	for _, a := range as {
+		n, ok := names[a.ProjectId]
+		if !ok {
+			var e error
+			if n, e = db.ProjectName(a.ProjectId); e != nil {
+				continue
+			}
+			names[a.ProjectId] = n
+		}
+		subs, e := db.Submissions(bson.M{db.ASSIGNMENTID: a.Id}, nil)
+		if e != nil {
+			continue
+		}
+		count, xTotal, yTotal := 0, 0.0, 0.0
+		for _, s := range subs {
+			xVal, xN, e := calc.Calc(x, s)
+			if e != nil {
+				util.Log(e)
+				continue
+			}
+			yVal, yN, e := calc.Calc(y, s)
+			if e != nil {
+				util.Log(e)
+				continue
+			}
+			count++
+			xTotal += xVal
+			yTotal += yVal
+			if _, ok := info["x-unit"]; !ok {
+				info["x-unit"] = xN
+			}
+			if _, ok := info["y-unit"]; !ok {
+				info["y-unit"] = yN
+			}
+		}
+		if count == 0 {
+			continue
+		}
+		p := map[string]interface{}{
+			"key": a.Id.Hex(), "x": xTotal / float64(count), "y": yTotal / float64(count),
+			"project": n,
+		}
+		d = append(d, p)
+	}
+	AddOutliers(d)
+	return d, info, nil
+}
+
+func AddOutliers(d D) {
+	prev := -1
+	outliers := make(map[int]util.E, len(d))
+	for len(outliers)-prev > 0 {
+		mean := mean(d, outliers)
+		stdDev := stdDeviation(d, outliers, mean)
+		prev = len(outliers)
+		addOutliers(d, outliers, mean, stdDev)
+	}
+	if len(outliers) == 0 {
+		return
+	}
+	mean := mean(d, outliers)
+	stdDev := stdDeviation(d, outliers, mean)
+	n := float64(len(d))
+	inv := 0.5 * (2.82843 * stdDev * util.ErfInverse((n-0.5)/n, 100))
+	min := mean - inv
+	max := mean + inv
+	for i, _ := range outliers {
+		y := d[i]["y"].(float64)
+		if y < min {
+			d[i]["y"] = int(min)
+		} else if y > max {
+			d[i]["y"] = int(max)
+		}
+		d[i]["outlier"] = y
+	}
 }
 
 func Submission(subs []*project.Submission, x *context.Result, y *context.Result) (D, I, error) {
@@ -267,32 +347,7 @@ func Submission(subs []*project.Submission, x *context.Result, y *context.Result
 		}
 		d = append(d, p)
 	}
-	prev := -1
-	outliers := make(map[int]util.E, len(d))
-	for len(outliers)-prev > 0 {
-		mean := mean(d, outliers)
-		stdDev := stdDeviation(d, outliers, mean)
-		prev = len(outliers)
-		addOutliers(d, outliers, mean, stdDev)
-	}
-	if len(outliers) == 0 {
-		return d, info, nil
-	}
-	mean := mean(d, outliers)
-	stdDev := stdDeviation(d, outliers, mean)
-	n := float64(len(d))
-	inv := 0.5 * (2.82843 * stdDev * util.ErfInverse((n-0.5)/n, 100))
-	min := mean - inv
-	max := mean + inv
-	for i, _ := range outliers {
-		y := d[i]["y"].(float64)
-		if y < min {
-			d[i]["y"] = int(min)
-		} else if y > max {
-			d[i]["y"] = int(max)
-		}
-		d[i]["outlier"] = y
-	}
+	AddOutliers(d)
 	return d, info, nil
 }
 

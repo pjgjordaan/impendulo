@@ -50,7 +50,7 @@ var (
 	none = []string{
 		"index", "", "homeview", "projectresult",
 		"userresult", "displayresult",
-		"getfiles", "favicon.ico", "getsubmissions", "submissionschartview",
+		"getfiles", "favicon.ico", "getsubmissions", "getassignments", "assignmentschart", "submissionschartview",
 		"static", "userchart", "projectchart",
 	}
 	student = []string{
@@ -76,7 +76,7 @@ var (
 		"homeview", "userresult", "projectresult",
 		"userchart", "projectchart",
 		"displayresult", "getfiles", "submissionschartview",
-		"getsubmissions",
+		"getsubmissions", "getassignments", "assignmentschart",
 	}
 	submitViews = []string{
 		"skeletonview", "archiveview", "projectview",

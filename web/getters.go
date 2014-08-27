@@ -58,9 +58,9 @@ func Getters() map[string]Getter {
 //defaultGetters loads the default getters.
 func defaultGetters() map[string]Getter {
 	return map[string]Getter{
-		"configview":    configView,
-		"displayresult": displayResult, "getfiles": getFiles,
-		"submissionschartview": submissionsChartView, "getsubmissions": getSubmissions,
+		"configview": configView, "assignmentschart": assignmentsChart,
+		"displayresult": displayResult, "getfiles": getFiles, "getassignments": getAssignments,
+		"submissionschartview": submissionsChart, "getsubmissions": getSubmissions,
 	}
 }
 
@@ -110,19 +110,16 @@ func configView(r *http.Request, c *context.C) (Args, string, error) {
 	return Args{"tool": t, "templates": []string{"configview", toolTemplate(t)}}, "", nil
 }
 
+func getAssignments(r *http.Request, c *context.C) (Args, string, error) {
+	if e := c.Browse.Update(r); e != nil {
+		return nil, "Could not load assignments.", e
+	}
+	return Args{"templates": []string{"projectassignmentsview"}}, "", nil
+}
+
 //getSubmissions displays a list of submissions.
 func getSubmissions(r *http.Request, c *context.C) (Args, string, error) {
 	if e := c.Browse.Update(r); e != nil {
-		return nil, "Could not load submissions.", e
-	}
-	var m bson.M
-	if !c.Browse.IsUser {
-		m = bson.M{db.PROJECTID: c.Browse.Pid}
-	} else {
-		m = bson.M{db.USER: c.Browse.Uid}
-	}
-	s, e := db.Submissions(m, nil, "-"+db.TIME)
-	if e != nil {
 		return nil, "Could not load submissions.", e
 	}
 	t := make([]string, 1)
@@ -131,7 +128,7 @@ func getSubmissions(r *http.Request, c *context.C) (Args, string, error) {
 	} else {
 		t[0] = "projectsubmissionresult"
 	}
-	return Args{"subRes": s, "templates": t}, "", nil
+	return Args{"templates": t}, "", nil
 }
 
 //getFiles diplays information about files.
@@ -202,7 +199,7 @@ func _displayResult(r *http.Request, c *context.C) (Args, error) {
 	}, nil
 }
 
-func submissionsChartView(r *http.Request, c *context.C) (Args, string, error) {
+func submissionsChart(r *http.Request, c *context.C) (Args, string, error) {
 	if e := c.Browse.Update(r); e != nil {
 		return nil, "could not update state", e
 	}
@@ -213,4 +210,11 @@ func submissionsChartView(r *http.Request, c *context.C) (Args, string, error) {
 		t[0] = "projectsubmissionchart"
 	}
 	return Args{"templates": t}, "", nil
+}
+
+func assignmentsChart(r *http.Request, c *context.C) (Args, string, error) {
+	if e := c.Browse.Update(r); e != nil {
+		return nil, "could not update state", e
+	}
+	return Args{"templates": []string{"projectassignmentschart"}}, "", nil
 }

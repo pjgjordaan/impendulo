@@ -26,6 +26,7 @@ package util
 
 import (
 	"github.com/godfried/impendulo/util/errors"
+
 	"os"
 	"os/user"
 	"path/filepath"
@@ -35,12 +36,26 @@ import (
 
 //empty
 type (
-	E struct{}
+	E   struct{}
+	Set map[string]E
 )
 
 var (
 	baseDir, installPath string
 )
+
+func NewSet() Set {
+	return make(map[string]E)
+}
+
+func (s Set) Contains(k string) bool {
+	_, ok := s[k]
+	return ok
+}
+
+func (s Set) Add(k string) {
+	s[k] = E{}
+}
 
 //InstallPath retrieves the location where Impendulo is currently installed.
 //It first checks for the IMPENDULO_PATH environment variable otherwise the

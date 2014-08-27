@@ -391,36 +391,6 @@ func ProjectName(i interface{}) (string, error) {
 	return p.Name, nil
 }
 
-func TypeCounts(id interface{}) []int {
-	c := []int{0, 0, 0}
-	var m string
-	switch id.(type) {
-	case string:
-		m = USER
-	case bson.ObjectId:
-		m = PROJECTID
-	default:
-		return c
-	}
-	ss, e := Submissions(bson.M{m: id}, nil)
-	if e != nil {
-		return c
-	}
-	c[0] = len(ss)
-	if c[0] == 0 {
-		return c
-	}
-	for _, s := range ss {
-		if sc, e := FileCount(s.Id, project.SRC); e == nil {
-			c[1] += sc
-		}
-		if l, e := FileCount(s.Id, project.LAUNCH); e == nil {
-			c[2] += l
-		}
-	}
-	return c
-}
-
 func ProjectUsernames(pid bson.ObjectId) ([]string, error) {
 	ss, e := Submissions(bson.M{PROJECTID: pid}, nil)
 	if e != nil {
