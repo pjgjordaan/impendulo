@@ -407,3 +407,16 @@ func ProjectUsernames(pid bson.ObjectId) ([]string, error) {
 	}
 	return ns, nil
 }
+
+func UserAssignmentIds(u string) ([]bson.ObjectId, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
+	}
+	defer s.Close()
+	var ids []bson.ObjectId
+	if e = s.DB("").C(SUBMISSIONS).Find(bson.M{USER: u}).Distinct(ASSIGNMENTID, &ids); e != nil {
+		return nil, &GetError{"assignment ids", e, u}
+	}
+	return ids, nil
+}

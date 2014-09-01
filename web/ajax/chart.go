@@ -100,11 +100,32 @@ func assignmentChart(r *http.Request) ([]byte, error) {
 	if e != nil {
 		return nil, e
 	}
-	id, e := webutil.Id(r, "id")
+	t, e := webutil.String(r, "assignment-type")
 	if e != nil {
 		return nil, e
 	}
-	a, e := db.Assignments(bson.M{db.PROJECTID: id}, nil)
+	id, e := webutil.String(r, "id")
+	if e != nil {
+		return nil, e
+	}
+	m := bson.M{}
+	switch t {
+	case "project":
+		pid, e := convert.Id(id)
+		if e != nil {
+			return nil, e
+		}
+		m[db.PROJECTID] = pid
+	case "user":
+		aids, e := db.UserAssignmentIds(id)
+		if e != nil {
+			return nil, e
+		}
+		m[db.ID] = bson.M{db.IN: aids}
+	default:
+		return nil, fmt.Errorf("invalid submission chart type %s", t)
+	}
+	a, e := db.Assignments(m, nil)
 	if e != nil {
 		return nil, e
 	}

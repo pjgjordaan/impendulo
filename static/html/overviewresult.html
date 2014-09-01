@@ -2,13 +2,12 @@
 <ul class="nav nav-pills">
     <li class="active"><a>Table</a>
     </li>
-    <li><a href="userchart">Chart</a>
+    <li><a href="overviewchart">Chart</a>
     </li>
 </ul>
-<table id="table-user" class="table table-hover table-striped tablesorter">
+<table id="table-overview" class="table table-hover table-striped tablesorter">
     <thead>
         <tr class="info">
-            <th>User</th>
         </tr>
     </thead>
     <tbody data-link="row" class="rowlink">
@@ -16,6 +15,9 @@
 </table>
 <script type="text/javascript" language="javascript" src="/static/js/overview.js"></script>
 <script>
-    Overview.setup('user');
+    var isUser = '{{.ctx.Browse.IsUser}}' === 'true';
+    var tipe = isUser ? 'user' : 'project';
+    var names = isUser ? ['Name'] : ['Name', '', 'Created', 'Language'];
+    Overview.setup(tipe, names);
 </script>
 {{end}}

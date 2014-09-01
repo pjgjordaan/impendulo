@@ -431,10 +431,6 @@ func ResultNames(sid bson.ObjectId, fname string) (map[string]map[string][]strin
 	var ns []*struct {
 		Value map[string]map[string][]string `bson:"value"`
 	}
-	//var f *project.File
-	//s.DB("").C(FILES).Find(bson.M{SUBID: sid, NAME: fname}).
-	//	Select(bson.M{RESULTS: 1}).One(&f)
-	//fmt.Println(f.Results)
 	if _, e := s.DB("").C(FILES).Find(bson.M{SUBID: sid, NAME: fname}).
 		Select(bson.M{NAME: 1, RESULTS: 1}).MapReduce(mr, &ns); e != nil {
 		return nil, e
@@ -444,7 +440,6 @@ func ResultNames(sid bson.ObjectId, fname string) (map[string]map[string][]strin
 	m := ns[0].Value
 	m[result.CODE] = map[string][]string{}
 	m[diff.NAME] = map[string][]string{}
-	//fmt.Println(m)
 	return m, nil
 }
 

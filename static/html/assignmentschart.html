@@ -2,11 +2,9 @@
 <!-- !-->
 {{template "breadcrumb" .}}
 <ul class="nav nav-tabs">
-    <li class="dropdown">
-        <a href="#" data-toggle="dropdown" role="button" id="project-dropdown-label" projectid="{{.ctx.Browse.Pid.Hex}}" class="dropdown-toggle">
-            <h4><small>project</small> {{projectName .ctx.Browse.Pid}} <span class="caret"></span></h4> 
-        </a>
-        <ul class="dropdown-menu" role="menu" aria-labelledby="project-dropdown-label" id="project-list"></ul>
+    <li class="dropdown" id="type-dropdown">
+        <a href="#" data-toggle="dropdown" role="button" id="type-dropdown-label" class="dropdown-toggle"></a>
+        <ul class="dropdown-menu" role="menu" aria-labelledby="type-dropdown-label"></ul>
     </li>
 </ul>
 <ul class="nav nav-pills">
@@ -35,9 +33,15 @@
     </div>
 </div>
 <script type="text/javascript" language="javascript" src="/static/js/assignment.js"></script>
+{{if .ctx.Browse.IsUser}}
 <script>
-    AssignmentsChart.init('project');
+    AssignmentsChart.init('user', "{{.ctx.Browse.Uid}}");
 </script>
+{{else}}
+<script>
+    AssignmentsChart.init('project', "{{.ctx.Browse.Pid.Hex}}");
+</script>
+{{end}}
 <div id="assignments-chart" xmlns:xlink="http://www.w3.org/1999/xlink">
 </div>
 {{end}}

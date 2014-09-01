@@ -1,0 +1,15 @@
+{{define "view"}} {{template "breadcrumb" .}}
+<ul class="nav nav-pills">
+    <li><a href="overviewresult">Table</a>
+    </li>
+    <li class="active"><a>Chart</a>
+    </li>
+</ul>
+<div id="overview-chart" class="overview-chart" xmlns:xlink="http://www.w3.org/1999/xlink"></div>
+<script type="text/javascript" language="javascript" src="/static/js/overview.js"></script>
+<script>
+    var isUser = '{{.ctx.Browse.IsUser}}' === 'true';
+    var tipe = isUser ? 'user' : 'project';
+    OverviewChart.init(tipe);
+</script>
+{{end}}

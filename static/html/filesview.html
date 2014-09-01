@@ -1,0 +1,42 @@
+{{define "view"}}
+<!-- !-->
+{{template "breadcrumb" .}}
+<ul class="nav nav-tabs">
+    <li class="dropdown" id="project-dropdown">
+        <a href="#" data-toggle="dropdown" role="button" id="project-dropdown-label" class="dropdown-toggle">
+        </a>
+        <ul class="dropdown-menu" role="menu" aria-labelledby="project-dropdown-label">
+        </ul>
+    </li>
+    <li class="dropdown" id="user-dropdown">
+        <a href="#" data-toggle="dropdown" role="button" id="user-dropdown-label" class="dropdown-toggle">
+        </a>
+        <ul class="dropdown-menu" role="menu" aria-labelledby="user-dropdown-label">
+        </ul>
+    </li>
+    <li class="dropdown" id="assignment-dropdown">
+        <a href="#" data-toggle="dropdown" role="button" id="assignment-dropdown-label" class="dropdown-toggle">
+        </a>
+        <ul class="dropdown-menu" role="menu" aria-labelledby="assignment-dropdown-label">
+        </ul>
+    </li>
+    <li class="dropdown" id="submission-dropdown">
+        <a href="#" data-toggle="dropdown" role="button" id="submission-dropdown-label" class="dropdown-toggle">
+        </a>
+        <ul class="dropdown-menu" role="menu" aria-labelledby="submission-dropdown-label">
+        </ul>
+    </li>
+</ul>
+<ul class="list-unstyled" id="files-list">
+</ul>
+<script type="text/javascript" language="javascript" src="/static/js/file.js"></script>
+<script>
+    var isUser = '{{.ctx.Browse.IsUser}}' === 'true';
+    var sid = '{{.ctx.Browse.Sid.Hex}}';
+    var aid = '{{.ctx.Browse.Aid.Hex}}';
+    var uid = '{{.ctx.Browse.Uid}}';
+    var pid = '{{.ctx.Browse.Pid.Hex}}';
+    var tipe = isUser ? 'user' : 'project';
+    FilesView.init(sid, aid, pid, uid, tipe);
+</script>
+{{end}}

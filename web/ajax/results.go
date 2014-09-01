@@ -19,6 +19,22 @@ import (
 	"strings"
 )
 
+func ResultNames(r *http.Request) ([]byte, error) {
+	sid, e := webutil.Id(r, "submission-id")
+	if e != nil {
+		return nil, e
+	}
+	f, e := webutil.String(r, "filename")
+	if e != nil {
+		return nil, e
+	}
+	rs, e := db.ResultNames(sid, f)
+	if e != nil {
+		return nil, e
+	}
+	return util.JSON(map[string]interface{}{"resultnames": rs})
+}
+
 //Results retrieves the names  of all results found within a particular
 //project or by a particular user.
 func Results(r *http.Request) ([]byte, error) {

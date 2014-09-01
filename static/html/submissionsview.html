@@ -2,18 +2,23 @@
 <!-- !-->
 {{template "breadcrumb" .}}
 <ul class="nav nav-tabs">
-    <li class="dropdown">
-        <a href="#" data-toggle="dropdown" role="button" id="project-dropdown-label" class="dropdown-toggle" projectid="{{.ctx.Browse.Pid.Hex}}">
-            <h4><small>project</small> {{projectName .ctx.Browse.Pid}} <span class="caret"></span></h4> 
-        </a>
-        <ul class="dropdown-menu" role="menu" aria-labelledby="project-dropdown-label" id="project-list">
-        </ul>
+    <li class="dropdown" id="project-dropdown">
+        <a href="#" data-toggle="dropdown" role="button" id="project-dropdown-label" class="dropdown-toggle"></a>
+        <ul class="dropdown-menu" role="menu" aria-labelledby="project-dropdown-label"></ul>
+    </li>
+    <li class="dropdown" id="user-dropdown">
+        <a href="#" data-toggle="dropdown" role="button" id="user-dropdown-label" class="dropdown-toggle"></a>
+        <ul class="dropdown-menu" role="menu" aria-labelledby="user-dropdown-label"></ul>
+    </li>
+    <li class="dropdown" id="assignment-dropdown">
+        <a href="#" data-toggle="dropdown" role="button" id="assignment-dropdown-label" class="dropdown-toggle"></a>
+        <ul class="dropdown-menu" role="menu" aria-labelledby="assignment-dropdown-label"></ul>
     </li>
 </ul>
 <ul class="nav nav-pills">
     <li class="active"><a>Table</a></a>
     </li>
-    <li><a href="submissionschartview">Chart</a>
+    <li><a href="submissionschart">Chart</a>
     </li>
 </ul>
 <!-- Here we display a table of the different submissions within this project --
@@ -59,7 +64,12 @@
 <table id="table-submissions" class="table table-hover table-striped tablesorter">
     <thead>
         <tr class="info">
+            {{if .ctx.Browse.IsUser}}
+            <th>Project</th>
+            {{else}}
             <th>User</th>
+            {{end}}
+            <th>Assignment</th>
             <th>Date</th>
             <th>Time</th>
             <th>Snapshots</th>
@@ -72,8 +82,13 @@
     <tbody data-link="row" class="rowlink">
     </tbody>
 </table>
-<script type="text/javascript" language="javascript" src="/static/js/projectSubmissionView.js"></script>
+<script type="text/javascript" language="javascript" src="/static/js/submission.js"></script>
 <script>
-    ProjectSubmissionsView.init();
+    var isUser = '{{.ctx.Browse.IsUser}}' === 'true';
+    var aid = '{{.ctx.Browse.Aid.Hex}}';
+    var uid = isUser ? '{{.ctx.Browse.Uid}}' : '';
+    var pid = isUser ? '' : '{{.ctx.Browse.Pid.Hex}}';
+    var tipe = isUser ? 'user' : 'project';
+    SubmissionsView.init(aid, pid, uid, tipe);
 </script>
 {{end}}

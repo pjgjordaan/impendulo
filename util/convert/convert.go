@@ -34,6 +34,17 @@ import (
 	"strconv"
 )
 
+func Bool(i interface{}) (bool, error) {
+	switch v := i.(type) {
+	case bool:
+		return v, nil
+	case string:
+		return strconv.ParseBool(v)
+	default:
+		return false, errors.NewCast("bool", i)
+	}
+}
+
 //Id tries to read a bson.ObjectId from a string.
 func Id(i interface{}) (bson.ObjectId, error) {
 	switch v := i.(type) {

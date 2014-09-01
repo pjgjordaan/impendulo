@@ -338,3 +338,7 @@ p.annotation-content {
     /*image height/2 */
     margin-top: -8px;
 }
+.nav.nav-pills {
+    padding-top: 5px;
+    padding-bottom: 5px;
+}

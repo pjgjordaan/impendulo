@@ -69,23 +69,41 @@ var CreateAssignment = {
     }
 };
 
-var AssignmentView = {
-    init: function() {
+var AssignmentsView = {
+    tipe: '',
+    init: function(tipe, id) {
+        AssignmentsView.tipe = tipe;
         $(function() {
-            AssignmentView.addPickers();
-            $('#button-filter').on('click', AssignmentView.load);
-            $.getJSON('projects', function(data) {
-                if (not(data['projects'])) {
+            AssignmentsView.addPickers();
+            $('#button-filter').on('click', AssignmentsView.load);
+            $.getJSON(AssignmentsView.tipe + 's', function(data) {
+                if (not(data[AssignmentsView.tipe + 's'])) {
                     return;
                 }
-                var ps = data['projects'];
-                for (var i = 0; i < ps.length; i++) {
-                    $('#project-list').append('<li role="presentation"><a tabindex="-1" role="menuitem" href="getassignments?project-id=' + ps[i].Id + '">' + ps[i].Name + '</a></li>');
+                var ts = data[AssignmentsView.tipe + 's'];
+                for (var i = 0; i < ts.length; i++) {
+                    var tid = AssignmentsView.tipe === 'user' ? ts[i].Name : ts[i].Id;
+                    $('#type-dropdown ul.dropdown-menu').append('<li role="presentation"><a tabindex="-1" role="menuitem" href="#" ' + AssignmentsView.tipe + 'id="' + tid + '">' + ts[i].Name + '</a></li>');
+                    if (id === tid) {
+                        $('#type-dropdown-label').attr(AssignmentsView.tipe + 'id', tid);
+                        $('#type-dropdown-label').append('<h4><small>' + AssignmentsView.tipe + '</small> ' + ts[i].Name + ' <span class="caret"></span></h4>');
+                    }
                 }
+                $('#type-dropdown ul.dropdown-menu a').on('click', function() {
+                    $('#table-assignments > tbody').empty();
+                    var tid = $(this).attr(AssignmentsView.tipe + 'id');
+                    var params = {};
+                    params[AssignmentsView.tipe + '-id'] = tid;
+                    setContext(params);
+                    $('#type-dropdown-label').attr(AssignmentsView.tipe + 'id', tid);
+                    $('#type-dropdown-label h4').html('<small>' + AssignmentsView.tipe + '</small> ' + $(this).html() + ' <span class="caret"></span>');
+                    AssignmentsView.load();
+                });
+                AssignmentsView.load();
             });
-            AssignmentView.load();
         });
     },
+
     addPickers: function() {
         $('#datetimepicker-start').datetimepicker({
             onShow: function(ct) {
@@ -101,9 +119,10 @@ var AssignmentView = {
                 });
             }
         });
-        AssignmentView.pickerButton('start');
-        AssignmentView.pickerButton('end');
+        AssignmentsView.pickerButton('start');
+        AssignmentsView.pickerButton('end');
     },
+
     pickerButton: function(n) {
         $('#span-' + n).attr('showing', false);
         $('#span-' + n).click(function() {
@@ -116,6 +135,7 @@ var AssignmentView = {
             $(this).attr('showing', !s);
         });
     },
+
     time: function(s) {
         var val = $(s).val();
         if (!val) {
@@ -127,15 +147,16 @@ var AssignmentView = {
         }
         return d.getTime();
     },
+
     load: function() {
         $('#table-assignments > tbody').empty();
-        var pid = $('#project-dropdown-label').attr('projectid');
+        var tid = $('#type-dropdown-label').attr(AssignmentsView.tipe + 'id');
         var params = {
             'counts': true,
-            'project-id': pid,
-            'min-start': AssignmentView.time('#datetimepicker-start'),
-            'max-end': AssignmentView.time('#datetimepicker-end')
-        }
+            'min-start': AssignmentsView.time('#datetimepicker-start'),
+            'max-end': AssignmentsView.time('#datetimepicker-end')
+        };
+        params[AssignmentsView.tipe + '-id'] = tid;
         $.getJSON('assignments', params, function(data) {
             if (not(data['assignments']) || not(data['counts'])) {
                 return;
@@ -145,7 +166,7 @@ var AssignmentView = {
             for (var i = 0; i < a.length; i++) {
                 var s = new Date(a[i].Start);
                 var e = new Date(a[i].End);
-                $('#table-assignments > tbody').append('<tr assignmentid="' + a[i].Id + '"><td><a href="getsubmissions?assignment-id=' + a[i].Id + '">' + a[i].Name + '</a></td><td>' + s.toLocaleDateString() + '</td><td>' + s.toLocaleTimeString() + '</td><td>' + e.toLocaleDateString() + '</td><td>' + e.toLocaleTimeString() + '</td><td>' + c[a[i].Id]['submissions'] + '</td><td>' + c[a[i].Id]['source'] + '</td><td>' + c[a[i].Id]['launch'] + '</td><td>' + c[a[i].Id]['test'] + '</td><td>' + c[a[i].Id]['testcases'] + '</td><td>' + c[a[i].Id]['passed'] + ' %</td></tr>');
+                $('#table-assignments > tbody').append('<tr assignmentid="' + a[i].Id + '"><td><a href="submissionsview?assignment-id=' + a[i].Id + '">' + a[i].Name + '</a></td><td>' + s.toLocaleDateString() + '</td><td>' + s.toLocaleTimeString() + '</td><td>' + e.toLocaleDateString() + '</td><td>' + e.toLocaleTimeString() + '</td><td>' + c[a[i].Id]['submissions'] + '</td><td>' + c[a[i].Id]['source'] + '</td><td>' + c[a[i].Id]['launch'] + '</td><td>' + c[a[i].Id]['test'] + '</td><td>' + c[a[i].Id]['testcases'] + '</td><td>' + c[a[i].Id]['passed'] + ' %</td></tr>');
             }
             $("#table-submissions").tablesorter({
                 theme: 'bootstrap',
@@ -156,12 +177,12 @@ var AssignmentView = {
 };
 
 var AssignmentsChart = {
-    init: function(tipe) {
+    init: function(tipe, id) {
         $(function() {
-            AssignmentsChart.addOptions(tipe, $('#' + tipe + '-dropdown-label').attr(tipe + 'id'));
+            AssignmentsChart.addOptions(tipe, id);
             $('.select-chart').change(function() {
                 $('#assignments-chart').empty();
-                AssignmentsChart.load(tipe, $('#' + tipe + '-dropdown-label').attr(tipe + 'id'), $('#x').val(), $('#y').val());
+                AssignmentsChart.load(tipe, $('#type-dropdown-label').attr(tipe + 'id'), $('#x').val(), $('#y').val());
             });
             $.getJSON(tipe + 's', function(data) {
                 if (not(data[tipe + 's'])) {
@@ -169,23 +190,26 @@ var AssignmentsChart = {
                 }
                 var ts = data[tipe + 's'];
                 for (var i = 0; i < ts.length; i++) {
-                    var id = ts[i].Id ? ts[i].Id : ts[i].Name;
-                    $('#' + tipe + '-list').append('<li role="presentation"><a tabindex="-1" role="menuitem" href="#" ' + tipe + 'id="' + id + '">' + ts[i].Name + '</a></li>');
+                    var tid = ts[i].Id ? ts[i].Id : ts[i].Name;
+                    $('#type-dropdown ul.dropdown-menu').append('<li role="presentation"><a tabindex="-1" role="menuitem" href="#" ' + tipe + 'id="' + tid + '">' + ts[i].Name + '</a></li>');
+                    if (id === tid) {
+                        $('#type-dropdown-label').attr(tipe + 'id', tid);
+                        $('#type-dropdown-label').append('<h4><small>' + tipe + '</small> ' + ts[i].Name + ' <span class="caret"></span></h4>');
+                    }
                 }
-                $('#' + tipe + '-list a').on('click', function() {
+                $('#type-dropdown ul.dropdown-menu a').on('click', function() {
                     $('#assignments-chart').empty();
-                    var id = $(this).attr(tipe + 'id');
+                    var tid = $(this).attr(tipe + 'id');
                     var params = {};
-                    params[tipe + '-id'] = id;
+                    params[tipe + '-id'] = tid;
                     setContext(params);
-                    $('#' + tipe + '-dropdown-label').attr(tipe + 'id', $(this).attr(tipe + 'id'));
-                    $('#' + tipe + '-dropdown-label h4').html('<small>' + tipe + '</small> ' + $(this).html() + ' <span class="caret"></span>');
-                    AssignmentsChart.addOptions(tipe, id);
+                    $('#type-dropdown-label').attr(tipe + 'id', tid);
+                    $('#type-dropdown-label h4').html('<small>' + tipe + '</small> ' + $(this).html() + ' <span class="caret"></span>');
+                    AssignmentsChart.addOptions(tipe, tid);
                 });
             });
         });
     },
-
 
     addOptions: function(tipe, id) {
         var x = $('#x').val();
@@ -194,7 +218,6 @@ var AssignmentsChart = {
         $.getJSON('chart-options?' + tipe + '-id=' + id, function(data) {
             var o = data['options'];
             if (not(o)) {
-                console.log(data);
                 return;
             }
             for (var i = 0; i < o.length; i++) {
@@ -310,7 +333,7 @@ var AssignmentsChart = {
                     .call(yAxis);
                 chartBody.selectAll('.link')
                     .attr('xlink:href', function(d) {
-                        return 'getsubmissions?assignment-id=' + d.key;
+                        return 'submissionsview?assignment-id=' + d.key;
                     })
                     .attr('class', 'link')
                     .transition()
@@ -371,7 +394,7 @@ var AssignmentsChart = {
             .enter()
             .append('svg:a')
             .attr('xlink:href', function(d) {
-                return 'getsubmissions?assignment-id=' + d.key;
+                return 'submissionsview?assignment-id=' + d.key;
             })
             .attr('class', 'link')
             .attr('fill', AssignmentsChart.colour)
@@ -403,7 +426,7 @@ var AssignmentsChart = {
             })
             .attr('font-size', '10px')
             .text(function(d) {
-                return tipe === 'project' ? d.user : d.project;
+                return tipe === 'project' ? d.name : d.project + ' ' + d.name;
             });
     },
     colour: function(d) {

@@ -143,7 +143,7 @@ func adjustment(files []*project.File, i int) int {
 	return i - s/2
 }
 
-func sortFiles(ids []interface{}) []*project.File {
+func sortFiles(ids []string) []*project.File {
 	fs := make([]*project.File, 0, len(ids))
 	for _, s := range ids {
 		id, e := convert.Id(s)

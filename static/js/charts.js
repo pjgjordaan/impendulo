@@ -164,7 +164,7 @@ var ResultChart = {
             .range([0, w]);
 
         var loadLink = function(d) {
-            return 'displayresult?time=' + d.time + '&result=' + d.rid + '&submission-id=' + d.sid;
+            return 'resultsview?time=' + d.time + '&result=' + d.rid + '&submission-id=' + d.sid;
         };
         var loadX = function(d, i) {
             return x(getX(d));

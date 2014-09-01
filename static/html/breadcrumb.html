@@ -11,18 +11,25 @@
     <li class="active">Users</li>
     {{else}} {{if .ctx.Browse.IsUser}}
     <li>
-        <a href="userresult">Users</a>
+        <a href="overviewresult?isuser=true">Users</a>
     </li>
     {{else}}
     <li>
-        <a href="projectresult">Projects</a>
+        <a href="overviewresult?isuser=false">Projects</a>
     </li>
-    {{end}} {{if .ctx.Browse.Level.Is "submissions"}}
+    {{end}} {{if .ctx.Browse.Level.Is "assignments"}}
+    <li class="active">
+        Assignments
+    </li>
+    {{else}}
+    <li><a href="assignmentsview">Assignments</a>
+    </li>
+    {{if .ctx.Browse.Level.Is "submissions"}}
     <li class="active">
         Submissions
     </li>
     {{else}}
-    <li><a href="getsubmissions">Submissions</a>
+    <li><a href="submissionsview">Submissions</a>
     </li>
     {{if .ctx.Browse.Level.Is "files"}}
     <li class="active">
@@ -35,6 +42,6 @@
     <li class="active">
         Tools
     </li>
-    {{end}} {{end}} {{end}} {{end}}
+    {{end}} {{end}} {{end}} {{end}}{{end}}
 </ul>
 {{end}}

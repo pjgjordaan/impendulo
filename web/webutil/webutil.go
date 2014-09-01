@@ -39,6 +39,14 @@ func Strings(r *http.Request, n string) ([]string, error) {
 	return r.Form[n], nil
 }
 
+func Bool(r *http.Request, n string) (bool, error) {
+	v, e := String(r, n)
+	if e != nil {
+		return false, e
+	}
+	return convert.Bool(v)
+}
+
 //String retrieves a string value from a request form.
 func String(r *http.Request, n string) (string, error) {
 	v := r.FormValue(n)

@@ -1,50 +1,38 @@
-{{define "pager"}}
-{{$current := .ctx.Browse.Current}}
-{{$next := .ctx.Browse.Next}}
-{{$fileName := .ctx.Browse.File}}
-{{$sliced := slice .files $current}}
-{{$adjustment := adjustment .files $current}}
+{{define "pager"}} {{$current := .ctx.Browse.Current}} {{$next := .ctx.Browse.Next}} {{$fileName := .ctx.Browse.File}} {{$sliced := slice .files $current}} {{$adjustment := adjustment .files $current}}
 <ul id="filepager" class="pagination">
-  {{$prev := sum $current -1}}
-  <li>
-    <a href="displayresult?current=0&next=1">
+    {{$prev := sum $current -1}}
+    <li>
+        <a href="resultsview?current=0&next=1">
       &laquo;
     </a>
-  </li>
-  <li>
-    <a href="displayresult?current={{$prev}}&next={{$current}}">
+    </li>
+    <li>
+        <a href="resultsview?current={{$prev}}&next={{$current}}">
       &lsaquo;
     </a>
-  </li>
-  {{range $index, $file := $sliced}}
-  {{$actual := sum $index $adjustment}}
-  {{$actualNext := sum $actual 1}}
-  {{if eq $actual $current}} 
-  <li class="active">
-    <a id="file{{$actual}}"
-       href="displayresult?current={{$actual}}&next={{$actualNext}}">
+    </li>
+    {{range $index, $file := $sliced}} {{$actual := sum $index $adjustment}} {{$actualNext := sum $actual 1}} {{if eq $actual $current}}
+    <li class="active">
+        <a id="file{{$actual}}" href="resultsview?current={{$actual}}&next={{$actualNext}}">
       {{$actualNext}}
     </a>
-  </li>
-  {{else}}
-  <li>
-    <a id="file{{$actual}}"
-       href="displayresult?current={{$actual}}&next={{$actualNext}}">
+    </li>
+    {{else}}
+    <li>
+        <a id="file{{$actual}}" href="resultsview?current={{$actual}}&next={{$actualNext}}">
       {{$actualNext}}
     </a>
-  </li>
-  {{end}}
-  {{end}}
-  {{$nextnext := sum $next 1}}
-  <li>
-    <a href="displayresult?current={{$next}}&next={{$nextnext}}">
+    </li>
+    {{end}} {{end}} {{$nextnext := sum $next 1}}
+    <li>
+        <a href="resultsview?current={{$next}}&next={{$nextnext}}">
       &rsaquo;
     </a>
-  </li>
-  <li>
-    <a href="displayresult?current={{sum (len .files) -1}}&next=0">
+    </li>
+    <li>
+        <a href="resultsview?current={{sum (len .files) -1}}&next=0">
       &raquo;
     </a>
-  </li>
+    </li>
 </ul>
 {{end}}

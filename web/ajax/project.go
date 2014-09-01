@@ -1,8 +1,6 @@
 package ajax
 
 import (
-	"fmt"
-
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
@@ -13,6 +11,18 @@ import (
 
 	"net/http"
 )
+
+func FileInfos(r *http.Request) ([]byte, error) {
+	sid, e := webutil.Id(r, "submission-id")
+	if e != nil {
+		return nil, e
+	}
+	fs, e := db.FileInfos(bson.M{db.SUBID: sid, db.TYPE: bson.M{db.IN: []project.Type{project.SRC, project.TEST}}})
+	if e != nil {
+		return nil, e
+	}
+	return util.JSON(map[string]interface{}{"fileinfos": fs})
+}
 
 func FileNames(r *http.Request) ([]byte, error) {
 	pid, e := webutil.Id(r, "project-id")
@@ -34,25 +44,18 @@ func Assignments(r *http.Request) ([]byte, error) {
 	if pid, e := webutil.Id(r, "project-id"); e == nil {
 		m[db.PROJECTID] = pid
 	}
-	sm := bson.M{}
-	if t, e := webutil.Int64(r, "max-start"); e == nil && t > 0 {
-		sm[db.LT] = t
+	if u, e := webutil.String(r, "user-id"); e == nil {
+		aids, e := db.UserAssignmentIds(u)
+		if e != nil {
+			return nil, e
+		}
+		m[db.ID] = bson.M{db.IN: aids}
 	}
-	if t, e := webutil.Int64(r, "min-start"); e == nil && t > 0 {
-		sm[db.GT] = t
-	}
-	if len(sm) > 0 {
+	if sm := loadTimes(r, "start"); len(sm) > 0 {
 		m[db.START] = sm
 	}
-	em := bson.M{}
-	if t, e := webutil.Int64(r, "max-end"); e == nil && t > 0 {
-		em[db.LT] = t
-	}
-	if t, e := webutil.Int64(r, "min-end"); e == nil && t > 0 {
-		em[db.GT] = t
-	}
-	if len(em) > 0 {
-		m[db.START] = em
+	if em := loadTimes(r, "end"); len(em) > 0 {
+		m[db.END] = em
 	}
 	as, e := db.Assignments(m, nil)
 	if e != nil {
@@ -64,10 +67,20 @@ func Assignments(r *http.Request) ([]byte, error) {
 	cs := make(map[string]map[string]interface{})
 	pc := stats.ProjectTestCases(as[0].ProjectId)
 	for _, a := range as {
-		fmt.Println(a)
 		cs[a.Id.Hex()] = assignmentCounts(a.Id, pc)
 	}
 	return util.JSON(map[string]interface{}{"assignments": as, "counts": cs})
+}
+
+func loadTimes(r *http.Request, n string) bson.M {
+	m := bson.M{}
+	if t, e := webutil.Int64(r, "max-"+n); e == nil && t > 0 {
+		m[db.LT] = t
+	}
+	if t, e := webutil.Int64(r, "min-"+n); e == nil && t > 0 {
+		m[db.GT] = t
+	}
+	return m
 }
 
 //Projects loads a list of projects.
@@ -137,17 +150,13 @@ func Submissions(r *http.Request) ([]byte, error) {
 	if pid, e := webutil.Id(r, "project-id"); e == nil {
 		m[db.PROJECTID] = pid
 	}
+	if u, e := webutil.String(r, "user-id"); e == nil {
+		m[db.USER] = u
+	}
 	if aid, e := webutil.Id(r, "assignment-id"); e == nil {
 		m[db.ASSIGNMENTID] = aid
 	}
-	tm := bson.M{}
-	if start, e := webutil.Int64(r, "time-start"); e == nil && start > 0 {
-		tm[db.GT] = start
-	}
-	if end, e := webutil.Int64(r, "time-end"); e == nil && end > 0 {
-		tm[db.LT] = end
-	}
-	if len(tm) > 0 {
+	if tm := loadTimes(r, "time"); len(tm) > 0 {
 		m[db.TIME] = tm
 	}
 	ss, e := db.Submissions(m, nil)

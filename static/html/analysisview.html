@@ -1,61 +1,24 @@
 {{define "view"}} {{$currentFile := .currentFile}} {{$nextFile := .nextFile}} {{$current := .ctx.Browse.Current}} {{$next := .ctx.Browse.Next}} {{$project := projectName .ctx.Browse.Pid}} {{$rd := .ctx.Browse.Result}} {{$fileName := .ctx.Browse.File}} {{template "breadcrumb" .}}
 <ul class="nav nav-tabs">
-    <li class="dropdown">
-        <a href="#" data-toggle="dropdown" role="button" id="project-dropdown-label" class="dropdown-toggle">
-            <h4>
-	<small>project</small> {{$project}} <span class="caret"></span> 
-      </h4>
-        </a>
-        <ul class="dropdown-menu" role="menu" aria-labelledby="project-dropdown-label">
-            {{$projects := projects}} {{range $projects}}
-            <li><a href="getsubmissions?project-id={{.Id.Hex}}">{{.Name}}</a>
-            </li>
-            {{end}}
-        </ul>
+    <li class="dropdown" id="project-dropdown">
+        <a href="#" data-toggle="dropdown" role="button" id="project-dropdown-label" class="dropdown-toggle"></a>
+        <ul class="dropdown-menu" role="menu" aria-labelledby="project-dropdown-label"></ul>
     </li>
-    <li class="dropdown">
-        <a class="dropdown-toggle no-decoration" data-toggle="dropdown" href="#">
-            <h4>
-	<small>user</small> {{.ctx.Browse.Uid}} <span class="caret"></span>
-      </h4> 
-        </a>
-        <ul class="dropdown-menu" role="menu">
-            {{$users := users}} {{range $users}}
-            <li><a href="getsubmissions?user-id={{.}}">{{.}}</a>
-            </li>
-            {{end}}
-        </ul>
+    <li class="dropdown" id="user-dropdown">
+        <a href="#" data-toggle="dropdown" role="button" id="user-dropdown-label" class="dropdown-toggle"></a>
+        <ul class="dropdown-menu" role="menu"></ul>
     </li>
-    <li class="dropdown">
-        <a href="#" data-toggle="dropdown" role="button" id="submission-dropdown-label" class="dropdown-toggle">
-            <h4>
-	{{$sub := sub .ctx.Browse.Sid}}
-	<small>submission</small> {{date $sub.Time}} <span class="caret"></span> 
-      </h4>
-        </a>
-        <ul class="dropdown-menu" role="menu" aria-labelledby="submission-dropdown-label">
-            {{$subs := .ctx.Browse.Submissions}} {{range $subs}}
-            <li><a href="displayresult?submission-id={{.Id.Hex}}">
-	  {{.Format (project .ProjectId)}}
-      </a>
-            </li>
-            {{end}}
-        </ul>
+    <li class="dropdown" id="assignment-dropdown">
+        <a href="#" data-toggle="dropdown" role="button" id="assignment-dropdown-label" class="dropdown-toggle"></a>
+        <ul class="dropdown-menu" role="menu" aria-labelledby="assignment-dropdown-label"></ul>
     </li>
-    <li class="dropdown">
-        <a href="#" data-toggle="dropdown" role="button" id="file-dropdown-label" class="dropdown-toggle">
-            <h4>
-	<small>file</small> {{.ctx.Browse.File}} <span class="caret"></span> 
-      </h4>
-        </a>
-        <ul class="dropdown-menu" role="menu" aria-labelledby="file-dropdown-label">
-            {{$files := fileinfos .ctx.Browse.Sid}} {{range $files}}
-            <li><a href="displayresult?file={{.Name}}">
-	  {{.Name}}
-      </a>
-            </li>
-            {{end}}
-        </ul>
+    <li class="dropdown" id="submission-dropdown">
+        <a href="#" data-toggle="dropdown" role="button" id="submission-dropdown-label" class="dropdown-toggle"></a>
+        <ul class="dropdown-menu" role="menu" aria-labelledby="submission-dropdown-label"></ul>
+    </li>
+    <li class="dropdown" id="file-dropdown">
+        <a href="#" data-toggle="dropdown" role="button" id="file-dropdown-label" class="dropdown-toggle"></a>
+        <ul class="dropdown-menu" role="menu" aria-labelledby="file-dropdown-label"></ul>
     </li>
     <li class="dropdown">
         <a href="#" data-toggle="dropdown" role="button" id="tool-dropdown-label" class="dropdown-toggle">
@@ -66,7 +29,7 @@
         <ul class="dropdown-menu" role="menu" aria-labelledby="tool-dropdown-label">
             {{$results := .results}} {{range $k, $v := $results}} {{if emptyM $v}}
             <li>
-                <a href="displayresult?result={{$k}}">
+                <a href="resultsview?result={{$k}}">
 		  {{$k}}
 		</a>
             </li>
@@ -76,7 +39,7 @@
                 <ul class="dropdown-menu" role="menu">
                     {{range $k2, $v2 := $v}} {{if emptyS $v2}}
                     <li>
-                        <a href="displayresult?result={{$k}}:{{$k2}}">
+                        <a href="resultsview?result={{$k}}:{{$k2}}">
 		    {{$k2}}
 		  </a>
                     </li>
@@ -86,7 +49,7 @@
                         <ul class="dropdown-menu" role="menu">
                             {{$files := sortFiles $v2}} {{range $files}}
                             <li>
-                                <a href="displayresult?result={{$k}}:{{$k2}}-{{.Id.Hex}}">
+                                <a href="resultsview?result={{$k}}:{{$k2}}-{{.Id.Hex}}">
 				  {{date .Time}}
 				</a>
                             </li>
@@ -106,7 +69,7 @@
 </h4>
 <script>
     $('#a-toolcode').click(function() {
-        Analysis.showToolCode('{{$rd.Raw}}', '{{.ctx.Browse.Pid.Hex}}', '{{$rd.Format}}');
+        AnalysisView.showToolCode('{{$rd.Raw}}', '{{.ctx.Browse.Pid.Hex}}', '{{$rd.Format}}');
         return false;
     });
 </script>
@@ -149,7 +112,7 @@
         {{template "pager" .}}
     </div>
     <div class="col-md-3">
-        <form role="form" class="form-padded form-inline" action="displayresult" method="get">
+        <form role="form" class="form-padded form-inline" action="resultsview" method="get">
             <div class="form-group">
                 <label class="sr-only" for="current">First File</label>
                 <select class="form-control" name="current" id="current">
@@ -194,6 +157,17 @@
         </dl>
     </div>
 </div>
+<script type="text/javascript" language="javascript" src="/static/js/analysis.js"></script>
+<script>
+    var isUser = '{{.ctx.Browse.IsUser}}' === 'true';
+    var fn = '{{.ctx.Browse.File}}';
+    var sid = '{{.ctx.Browse.Sid.Hex}}';
+    var aid = '{{.ctx.Browse.Aid.Hex}}';
+    var uid = '{{.ctx.Browse.Uid}}';
+    var pid = '{{.ctx.Browse.Pid.Hex}}';
+    var tipe = isUser ? 'user' : 'project';
+    AnalysisView.init(fn, sid, aid, pid, uid, tipe);
+</script>
 {{if (eq $rd.Type "Diff")}} {{$data := .currentResult.Create .nextResult}} {{template "result" $data}} {{else}} {{if (eq $rd.Type "Code")}}
 <div class="row">
     <div class="col-md-4">
@@ -235,7 +209,7 @@
     <div class="col-md-5">
     </div>
     <div class="col-md-2">
-        <a class="btn btn-block btn-info" href="displayresult?displaycount={{.ctx.Browse.DisplayCount}}">
+        <a class="btn btn-block btn-info" href="resultsview?displaycount={{.ctx.Browse.DisplayCount}}">
             <span class="glyphicon glyphicon-chevron-down"></span>
             More
             <span class="glyphicon glyphicon-chevron-down"></span> 
@@ -297,6 +271,7 @@
         </div>
     </div>
 </div>
+<script type="text/javascript" language="javascript" src="/static/js/code.js"></script>
 <script>
     CodeView.init('{{.ctx.Username}}', '{{$currentFile.Id.Hex}}', '{{$nextFile.Id.Hex}}');
 </script>

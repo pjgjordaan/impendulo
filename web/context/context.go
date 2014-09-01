@@ -38,7 +38,6 @@ import (
 	"labix.org/v2/mgo/bson"
 
 	"net/http"
-	"strings"
 )
 
 type (
@@ -64,7 +63,8 @@ type (
 
 const (
 	STORE_NAME       = "impendulo"
-	HOME       Level = iota
+	_          Level = iota
+	HOME
 	PROJECTS
 	USERS
 	ASSIGNMENTS
@@ -307,6 +307,15 @@ func (b *Browse) SetFile(r *http.Request) error {
 	return nil
 }
 
+func (b *Browse) SetIsUser(r *http.Request) error {
+	u, e := webutil.Bool(r, "isuser")
+	if e != nil {
+		return nil
+	}
+	b.IsUser = u
+	return nil
+}
+
 func (b *Browse) SetFileIndices(r *http.Request) error {
 	if b.File == "" {
 		return nil
@@ -357,7 +366,7 @@ func (b *Browse) setTimeIndices(r *http.Request, fs []*project.File) error {
 }
 
 func (b *Browse) Update(r *http.Request) error {
-	setters := []Setter{b.SetPid, b.SetUid, b.SetAid, b.SetSid, b.SetFile, b.SetResult, b.SetFileIndices, b.SetDisplayCount}
+	setters := []Setter{b.SetIsUser, b.SetPid, b.SetUid, b.SetAid, b.SetSid, b.SetFile, b.SetResult, b.SetFileIndices, b.SetDisplayCount}
 	for _, s := range setters {
 		if e := s(r); e != nil {
 			return e
@@ -380,42 +389,46 @@ func (b *Browse) SetLevel(route string) {
 	switch route {
 	case "homeview":
 		b.Level = HOME
-	case "projectresult":
-		b.Level = PROJECTS
-	case "userresult":
-		b.Level = USERS
-	case "getassignments":
+	case "overviewresult", "overviewchart":
+		if b.IsUser {
+			b.Level = USERS
+		} else {
+			b.Level = PROJECTS
+		}
+	case "assignmentsview", "assignmentschart":
 		b.Level = ASSIGNMENTS
-	case "getsubmissions":
+	case "submissionsview", "submissionschart":
 		b.Level = SUBMISSIONS
-	case "getfiles":
+	case "filesview":
 		b.Level = FILES
-	case "getsubmissionschart":
-		b.Level = SUBMISSIONS
-	case "displayresult":
+	case "resultsview":
 		b.Level = ANALYSIS
 	default:
 	}
 }
 
-func (l Level) Is(level string) bool {
-	level = strings.ToLower(level)
-	switch level {
-	case "home":
-		return l == HOME
-	case "projects":
-		return l == PROJECTS
-	case "users":
-		return l == USERS
-	case "submissions":
-		return l == SUBMISSIONS
-	case "assignments":
-		return l == ASSIGNMENTS
-	case "files":
-		return l == FILES
-	case "analysis":
-		return l == ANALYSIS
+func (l Level) String() string {
+	switch l {
+	case HOME:
+		return "home"
+	case PROJECTS:
+		return "projects"
+	case USERS:
+		return "users"
+	case SUBMISSIONS:
+		return "submissions"
+	case ASSIGNMENTS:
+		return "assignments"
+	case FILES:
+		return "files"
+	case ANALYSIS:
+		return "analysis"
 	default:
-		return false
+		return "unknown"
 	}
+
+}
+
+func (l Level) Is(level string) bool {
+	return l.String() == level
 }

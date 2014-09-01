@@ -28,7 +28,6 @@ import (
 	"code.google.com/p/gorilla/pat"
 
 	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
 	"github.com/godfried/impendulo/web/context"
 	"github.com/godfried/impendulo/web/webutil"
@@ -58,9 +57,7 @@ func Getters() map[string]Getter {
 //defaultGetters loads the default getters.
 func defaultGetters() map[string]Getter {
 	return map[string]Getter{
-		"configview": configView, "assignmentschart": assignmentsChart,
-		"displayresult": displayResult, "getfiles": getFiles, "getassignments": getAssignments,
-		"submissionschartview": submissionsChart, "getsubmissions": getSubmissions,
+		"configview": configView, "resultsview": resultsView,
 	}
 }
 
@@ -110,47 +107,8 @@ func configView(r *http.Request, c *context.C) (Args, string, error) {
 	return Args{"tool": t, "templates": []string{"configview", toolTemplate(t)}}, "", nil
 }
 
-func getAssignments(r *http.Request, c *context.C) (Args, string, error) {
-	if e := c.Browse.Update(r); e != nil {
-		return nil, "Could not load assignments.", e
-	}
-	return Args{"templates": []string{"projectassignmentsview"}}, "", nil
-}
-
-//getSubmissions displays a list of submissions.
-func getSubmissions(r *http.Request, c *context.C) (Args, string, error) {
-	if e := c.Browse.Update(r); e != nil {
-		return nil, "Could not load submissions.", e
-	}
-	t := make([]string, 1)
-	if c.Browse.IsUser {
-		t[0] = "usersubmissionresult"
-	} else {
-		t[0] = "projectsubmissionresult"
-	}
-	return Args{"templates": t}, "", nil
-}
-
-//getFiles diplays information about files.
-func getFiles(r *http.Request, c *context.C) (Args, string, error) {
-	if e := c.Browse.Update(r); e != nil {
-		return nil, "Could not retrieve files.", e
-	}
-	f, e := _fileinfos(c.Browse.Sid)
-	if e != nil {
-		util.Log(e)
-		f = []*db.FileInfo{}
-	}
-	if len(f) != 1 || c.Browse.Level != context.SUBMISSIONS {
-		return Args{"fileInfo": f, "templates": []string{"fileresult"}}, "", nil
-	}
-	c.Browse.File = f[0].Name
-	return displayResult(r, c)
-}
-
-//displayResult displays a tool's result.
-func displayResult(r *http.Request, c *context.C) (Args, string, error) {
-	a, e := _displayResult(r, c)
+func resultsView(r *http.Request, c *context.C) (Args, string, error) {
+	a, e := _resultsView(r, c)
 	if e != nil {
 		return nil, "Could not load results.", e
 	}
@@ -158,7 +116,7 @@ func displayResult(r *http.Request, c *context.C) (Args, string, error) {
 	return a, "", nil
 }
 
-func _displayResult(r *http.Request, c *context.C) (Args, error) {
+func _resultsView(r *http.Request, c *context.C) (Args, error) {
 	e := c.Browse.Update(r)
 	if e != nil {
 		return nil, e
@@ -197,24 +155,4 @@ func _displayResult(r *http.Request, c *context.C) (Args, error) {
 		"files": fs, "currentFile": cf, "currentResult": cr, "results": rs,
 		"nextFile": nf, "nextResult": nr, "templates": t,
 	}, nil
-}
-
-func submissionsChart(r *http.Request, c *context.C) (Args, string, error) {
-	if e := c.Browse.Update(r); e != nil {
-		return nil, "could not update state", e
-	}
-	t := make([]string, 1)
-	if c.Browse.IsUser {
-		t[0] = "usersubmissionchart"
-	} else {
-		t[0] = "projectsubmissionchart"
-	}
-	return Args{"templates": t}, "", nil
-}
-
-func assignmentsChart(r *http.Request, c *context.C) (Args, string, error) {
-	if e := c.Browse.Update(r); e != nil {
-		return nil, "could not update state", e
-	}
-	return Args{"templates": []string{"projectassignmentschart"}}, "", nil
 }

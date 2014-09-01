@@ -48,10 +48,9 @@ var (
 		"registerview", "register", "login",
 	}
 	none = []string{
-		"index", "", "homeview", "projectresult",
-		"userresult", "displayresult",
-		"getfiles", "favicon.ico", "getsubmissions", "getassignments", "assignmentschart", "submissionschartview",
-		"static", "userchart", "projectchart",
+		"index", "", "homeview", "overviewresult", "resultsview", "filesview", "favicon.ico",
+		"submissionsview", "assignmentsview", "assignmentschart",
+		"submissionschart", "static", "overviewchart",
 	}
 	student = []string{
 		"testdownloadview", "test.zip",
@@ -73,10 +72,9 @@ var (
 	}
 
 	homeViews = []string{
-		"homeview", "userresult", "projectresult",
-		"userchart", "projectchart",
-		"displayresult", "getfiles", "submissionschartview",
-		"getsubmissions", "getassignments", "assignmentschart",
+		"homeview", "overviewresult", "overviewchart",
+		"resultsview", "filesview", "submissionschart",
+		"submissionsview", "assignmentsview", "assignmentschart",
 	}
 	submitViews = []string{
 		"skeletonview", "archiveview", "projectview",
@@ -144,6 +142,9 @@ func GenerateViews(r *pat.Router, views map[string]string) {
 //LoadView loads a view so that it is accessible in our web app.
 func LoadView(n, v string) Handler {
 	return func(w http.ResponseWriter, r *http.Request, c *context.C) error {
+		if e := c.Browse.Update(r); e != nil {
+			return e
+		}
 		c.Browse.View = v
 		if c.Browse.View == "home" {
 			c.Browse.SetLevel(n)

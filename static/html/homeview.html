@@ -1,15 +1,14 @@
-{{define "view"}}
-{{template "breadcrumb" .}}
+{{define "view"}} {{template "breadcrumb" .}}
 <div class="jumbotron">
-  <h2>Explore Impendulo</h2>
-  <p>Browse through our code snapshot analysis</p>
-  <p>
-    <a class="btn btn-default btn-inverse btn-lg" href="projectresult">
-      <span class="glyphicon glyphicon-tasks"></span> Projects
-    </a>
-    <a class="btn btn-default btn-inverse btn-lg" href="userresult">
-     <span class="glyphicon glyphicon-user"></span> Users
-    </a>
-  </p>
+    <h2>Explore Impendulo</h2>
+    <p>Browse through our code snapshot analysis</p>
+    <p>
+        <a class="btn btn-default btn-inverse btn-lg" href="overviewresult?isuser=false">
+            <span class="glyphicon glyphicon-tasks"></span> Projects
+        </a>
+        <a class="btn btn-default btn-inverse btn-lg" href="overviewresult?isuser=true">
+            <span class="glyphicon glyphicon-user"></span> Users
+        </a>
+    </p>
 </div>
 {{end}}

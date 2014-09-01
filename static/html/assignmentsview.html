@@ -2,12 +2,9 @@
 <!-- !-->
 {{template "breadcrumb" .}}
 <ul class="nav nav-tabs">
-    <li class="dropdown">
-        <a href="#" data-toggle="dropdown" role="button" id="project-dropdown-label" class="dropdown-toggle" projectid="{{.ctx.Browse.Pid.Hex}}">
-            <h4><small>project</small> {{projectName .ctx.Browse.Pid}} <span class="caret"></span></h4> 
-        </a>
-        <ul class="dropdown-menu" role="menu" aria-labelledby="project-dropdown-label" id="project-list">
-        </ul>
+    <li class="dropdown" id="type-dropdown">
+        <a href="#" data-toggle="dropdown" role="button" id="type-dropdown-label" class="dropdown-toggle"></a>
+        <ul class="dropdown-menu" role="menu" aria-labelledby="type-dropdown-label"></ul>
     </li>
 </ul>
 <ul class="nav nav-pills">
@@ -16,9 +13,6 @@
     <li><a href="assignmentschart">Chart</a>
     </li>
 </ul>
-<!-- Here we display a table of the different submissions within this project --
-  -- . Included are users' names and date to allow us to differentiate between --
-  -- submissions. -->
 <div class="container">
     <div class="row">
         <div class="col-sm-3">
@@ -54,6 +48,15 @@
                 </button>
             </div>
         </div>
+        <div class="col-sm-3">
+            <form method="get" action="submissionsview?type=all">
+                <div class="form-group">
+                    <button type="submit" class="btn btn-default" id="button-all">
+                        View All Submissions
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 <table id="table-assignments" class="table table-hover table-striped tablesorter">
@@ -76,7 +79,12 @@
     </tbody>
 </table>
 <script type="text/javascript" language="javascript" src="/static/js/assignment.js"></script>
+{{if .ctx.Browse.IsUser}}
 <script>
-    AssignmentView.init();
+    AssignmentsView.init('user', "{{.ctx.Browse.Uid}}");
 </script>
-{{end}}
+{{else}}
+<script>
+    AssignmentsView.init('project', "{{.ctx.Browse.Pid.Hex}}");
+</script>
+{{end}} {{end}}

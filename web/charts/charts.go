@@ -271,7 +271,7 @@ func Assignment(as []*project.Assignment, x *context.Result, y *context.Result) 
 		}
 		p := map[string]interface{}{
 			"key": a.Id.Hex(), "x": xTotal / float64(count), "y": yTotal / float64(count),
-			"project": n,
+			"project": n, "name": a.Name,
 		}
 		d = append(d, p)
 	}
