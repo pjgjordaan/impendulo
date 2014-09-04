@@ -54,13 +54,13 @@ var (
 	}
 	student = []string{
 		"testdownloadview", "test.zip",
-		"projectdownloadview", "skeleton.zip",
+		"skeletondownloadview", "skeleton.zip",
 		"intloladownloadview", "intlola.zip",
-		"archiveview", "submitarchive", "logout",
+		"newarchive", "addarchive", "logout",
 	}
 	teacher = []string{
-		"skeletonview", "addskeleton", "assignmentview", "createassignment",
-		"projectview", "addproject", "runtoolsview", "runtools", "configview",
+		"newskeleton", "addskeleton", "newassignment", "addassignment",
+		"newproject", "addproject", "runtoolsview", "runtools", "newconfig",
 	}
 	admin = []string{
 		"deleteprojects", "deleteusers", "deleteresults", "deleteview",
@@ -77,11 +77,11 @@ var (
 		"submissionsview", "assignmentsview", "assignmentschart",
 	}
 	submitViews = []string{
-		"skeletonview", "archiveview", "projectview",
-		"configview", "assignmentview",
+		"newskeleton", "newarchive", "newproject",
+		"newconfig", "newassignment",
 	}
 	registerViews = []string{"registerview"}
-	downloadViews = []string{"projectdownloadview", "intloladownloadview", "testdownloadview"}
+	downloadViews = []string{"skeletondownloadview", "intloladownloadview", "testdownloadview"}
 	statusViews   = []string{"statusview"}
 	toolViews     = []string{"runtoolsview", "evaluatesubmissionsview"}
 	dataViews     = []string{

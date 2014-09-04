@@ -2,6 +2,7 @@ package processor
 
 import (
 	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/processor/file"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/junit"
@@ -20,7 +21,11 @@ func TestProcessFile(t *testing.T) {
 	if e := db.Add(db.PROJECTS, p); e != nil {
 		t.Error(e)
 	}
-	s := project.NewSubmission(p.Id, "student", project.FILE_MODE, p.Time+100)
+	a := project.NewAssignment(p.Id, "Honours 2014", "User", 1000, 10000)
+	if e := db.Add(db.ASSIGNMENTS, a); e != nil {
+		t.Error(e)
+	}
+	s := project.NewSubmission(p.Id, a.Id, "student", project.FILE_MODE, p.Time+100)
 	if e := db.Add(db.SUBMISSIONS, s); e != nil {
 		t.Error(e)
 	}
@@ -45,15 +50,15 @@ func TestProcessFile(t *testing.T) {
 	if e := db.Add(db.FILES, tf); e != nil {
 		t.Error(e)
 	}
-	proc, e := NewFileProcessor(s.Id)
+	w, e := file.New(s.Id)
 	if e != nil {
 		t.Error(e)
 		return
 	}
-	if e = proc.Process(f.Id); e != nil {
+	if e = w.Process(f.Id); e != nil {
 		t.Error(e)
 	}
-	if e = proc.Process(tf.Id); e != nil {
+	if e = w.Process(tf.Id); e != nil {
 		t.Error(e)
 	}
 }

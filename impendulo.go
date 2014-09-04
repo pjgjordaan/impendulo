@@ -34,6 +34,7 @@ import (
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processor"
+	"github.com/godfried/impendulo/processor/monitor"
 	"github.com/godfried/impendulo/processor/mq"
 	"github.com/godfried/impendulo/receiver"
 	"github.com/godfried/impendulo/user"
@@ -190,6 +191,6 @@ func runFileReceiver(p uint) {
 //runFileProcessor runs the file processing server.
 func runFileProcessor(n uint) {
 	pFlags.Parse(os.Args[2:])
-	go processor.MonitorStatus()
+	go monitor.Start()
 	processor.Serve(n)
 }

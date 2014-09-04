@@ -22,15 +22,13 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package processor
+package file
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/findbugs"
@@ -43,68 +41,33 @@ import (
 	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/util"
 	"labix.org/v2/mgo/bson"
+
+	"path/filepath"
 )
 
 const (
-	LOG_TOOLS = "processing/tools.go"
+	LOG_T = "processor/file/tools.go"
 )
 
-func TestTools(p *TestP, tf *project.File) ([]tool.T, error) {
-	switch tool.Language(p.project.Lang) {
-	case tool.JAVA:
-		return javaTestTools(p, tf)
-	case tool.C:
-		return cTestTools(p, tf), nil
-	}
-	//Only Java is supported so far...
-	return nil, fmt.Errorf("no tools found for %s language", p.project.Lang)
-}
-
-func cTestTools(p *TestP, tf *project.File) []tool.T {
-	return []tool.T{}
-}
-
-func javaTestTools(p *TestP, tf *project.File) ([]tool.T, error) {
-	a := make([]tool.T, 0, 2)
-	target := tool.NewTarget(tf.Name, tf.Package, filepath.Join(p.toolDir, tf.Id.Hex()), tool.JAVA)
-	if e := util.SaveFile(target.FilePath(), tf.Data); e != nil {
-		return nil, e
-	}
-	t, e := db.JUnitTest(bson.M{db.PROJECTID: p.project.Id, db.NAME: tf.Name, db.TYPE: junit.USER}, bson.M{db.TARGET: 1})
-	if e != nil {
-		return nil, e
-	}
-	ju, e := junit.New(target, t.Target, p.toolDir, tf.Id)
-	if e != nil {
-		return nil, e
-	}
-	a = append(a, ju)
-	ja, e := jacoco.New(p.rootDir, p.srcDir, target, t.Target, tf.Id)
-	if e != nil {
-		return nil, e
-	}
-	return append(a, ja), nil
-}
-
-//Tools retrieves the Impendulo tool suite for a Processor's language.
+//Tools retrieves the Impendulo tool suite for a Worker's language.
 //Each tool is already constructed.
-func Tools(p *FileP) ([]tool.T, error) {
-	switch tool.Language(p.project.Lang) {
+func Tools(w *Worker) ([]tool.T, error) {
+	switch tool.Language(w.project.Lang) {
 	case tool.JAVA:
-		return javaTools(p)
+		return javaTools(w)
 	case tool.C:
-		return cTools(p), nil
+		return cTools(w), nil
 	}
 	//Only Java is supported so far...
-	return nil, fmt.Errorf("no tools found for %s language", p.project.Lang)
+	return nil, fmt.Errorf("no tools found for %s language", w.project.Lang)
 }
 
-func cTools(p *FileP) []tool.T {
+func cTools(w *Worker) []tool.T {
 	return []tool.T{}
 }
 
 //javaTools retrieves Impendulo's Java tool suite.
-func javaTools(p *FileP) ([]tool.T, error) {
+func javaTools(w *Worker) ([]tool.T, error) {
 	a := make([]tool.T, 0, 10)
 	//Only add tools if they were created successfully
 	var t tool.T
@@ -119,18 +82,18 @@ func javaTools(p *FileP) ([]tool.T, error) {
 		return nil, e
 	}
 	a = append(a, t)
-	t, e = JPF(p)
+	t, e = JPF(w)
 	if e != nil {
-		util.Log(e, LOG_TOOLS)
+		util.Log(e, LOG_T)
 	} else {
 		a = append(a, t)
 	}
-	t, e = PMD(p)
+	t, e = PMD(w)
 	if e != nil {
 		return nil, e
 	}
 	a = append(a, t)
-	ts, e := junitTools(p)
+	ts, e := junitTools(w)
 	if e != nil {
 		return nil, e
 	}
@@ -138,38 +101,38 @@ func javaTools(p *FileP) ([]tool.T, error) {
 }
 
 //Compiler retrieves a compiler for a Processor's language.
-func Compiler(p *FileP) (tool.Compiler, error) {
-	l := tool.Language(p.project.Lang)
+func Compiler(w *Worker) (tool.Compiler, error) {
+	l := tool.Language(w.project.Lang)
 	switch l {
 	case tool.JAVA:
 		return javac.New("")
 	case tool.C:
-		m, e := db.Makefile(bson.M{db.PROJECTID: p.project.Id}, nil)
+		m, e := db.Makefile(bson.M{db.PROJECTID: w.project.Id}, nil)
 		if e != nil {
 			return gcc.New()
 		} else {
-			return mk.New(m, p.toolDir)
+			return mk.New(m, w.toolDir)
 		}
 	}
 	return nil, fmt.Errorf("no compiler found for %s language", l)
 }
 
 //JPF creates a new instance of the JPF tool.
-func JPF(p *FileP) (tool.T, error) {
+func JPF(w *Worker) (tool.T, error) {
 	//First we need the project's JPF configuration.
-	c, e := db.JPFConfig(bson.M{db.PROJECTID: p.project.Id}, nil)
+	c, e := db.JPFConfig(bson.M{db.PROJECTID: w.project.Id}, nil)
 	if e != nil {
 		return nil, e
 	}
-	return jpf.New(c, p.toolDir)
+	return jpf.New(c, w.toolDir)
 }
 
 //PMD creates a new instance of the PMD tool.
-func PMD(p *FileP) (tool.T, error) {
+func PMD(w *Worker) (tool.T, error) {
 	//First we need the project's PMD rules.
-	r, e := db.PMDRules(bson.M{db.PROJECTID: p.project.Id}, nil)
+	r, e := db.PMDRules(bson.M{db.PROJECTID: w.project.Id}, nil)
 	if e != nil || r == nil || len(r.Rules) == 0 {
-		r, e = pmd.DefaultRules(p.project.Id)
+		r, e = pmd.DefaultRules(w.project.Id)
 		if e != nil {
 			return nil, e
 		}
@@ -181,8 +144,8 @@ func PMD(p *FileP) (tool.T, error) {
 	return pmd.New(r)
 }
 
-func junitTools(p *FileP) ([]tool.T, error) {
-	ts, e := db.JUnitTests(bson.M{db.PROJECTID: p.project.Id, db.TYPE: bson.M{db.NE: junit.USER}}, nil)
+func junitTools(w *Worker) ([]tool.T, error) {
+	ts, e := db.JUnitTests(bson.M{db.PROJECTID: w.project.Id, db.TYPE: bson.M{db.NE: junit.USER}}, nil)
 	if e != nil {
 		return nil, e
 	}
@@ -190,7 +153,7 @@ func junitTools(p *FileP) ([]tool.T, error) {
 	if e != nil {
 		return nil, e
 	}
-	if e = util.Copy(p.toolDir, d); e != nil {
+	if e = util.Copy(w.toolDir, d); e != nil {
 		return nil, e
 	}
 	tools := make([]tool.T, 0, len(ts))
@@ -199,7 +162,7 @@ func junitTools(p *FileP) ([]tool.T, error) {
 			continue
 		}
 		//Save the test files to the submission's tool directory.
-		target := tool.NewTarget(t.Name, t.Package, filepath.Join(p.toolDir, t.Id.Hex()), tool.JAVA)
+		target := tool.NewTarget(t.Name, t.Package, filepath.Join(w.toolDir, t.Id.Hex()), tool.JAVA)
 		if e = util.SaveFile(target.FilePath(), t.Test); e != nil {
 			return nil, e
 		}
@@ -208,12 +171,12 @@ func junitTools(p *FileP) ([]tool.T, error) {
 				return nil, e
 			}
 		}
-		ja, e := jacoco.New(p.rootDir, p.srcDir, target, t.Target, t.Id)
+		ja, e := jacoco.New(w.rootDir, w.srcDir, target, t.Target, t.Id)
 		if e != nil {
 			return nil, e
 		}
 		tools = append(tools, ja)
-		ju, e := junit.New(target, t.Target, p.toolDir, t.Id)
+		ju, e := junit.New(target, t.Target, w.toolDir, t.Id)
 		if e != nil {
 			return nil, e
 		}

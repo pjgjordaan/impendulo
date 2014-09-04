@@ -57,7 +57,7 @@ func Getters() map[string]Getter {
 //defaultGetters loads the default getters.
 func defaultGetters() map[string]Getter {
 	return map[string]Getter{
-		"configview": configView, "resultsview": resultsView,
+		"newconfig": newConfig, "resultsview": resultsView,
 	}
 }
 
@@ -98,13 +98,12 @@ func (g Getter) CreateGet(name, view string) Handler {
 	}
 }
 
-//configView loads a tool's configuration page.
-func configView(r *http.Request, c *context.C) (Args, string, error) {
+func newConfig(r *http.Request, c *context.C) (Args, string, error) {
 	t, e := webutil.String(r, "tool")
 	if e != nil {
 		t = "none"
 	}
-	return Args{"tool": t, "templates": []string{"configview", toolTemplate(t)}}, "", nil
+	return Args{"tool": t, "templates": []string{"newconfig", toolTemplate(t)}}, "", nil
 }
 
 func resultsView(r *http.Request, c *context.C) (Args, string, error) {

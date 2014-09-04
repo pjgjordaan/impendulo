@@ -69,12 +69,12 @@ func Posters() map[string]Poster {
 //defaultPosters loads the default posters.
 func defaultPosters() map[string]Poster {
 	return map[string]Poster{
-		"addproject": AddProject, "addskeleton": AddSkeleton, "submitarchive": SubmitArchive,
+		"addproject": AddProject, "addskeleton": AddSkeleton, "addarchive": AddArchive,
 		"runtools": RunTools, "deleteprojects": DeleteProjects, "deleteusers": DeleteUsers,
 		"deletesubmissions": DeleteSubmissions, "deleteresults": DeleteResults, "deleteskeletons": DeleteSkeletons,
 		"importdata": ImportData, "renamefiles": RenameFiles, "login": Login, "register": Register,
 		"logout": Logout, "editproject": EditProject, "edituser": EditUser, "editsubmission": EditSubmission,
-		"editfile": EditFile, "edittest": EditTest, "createassignment": CreateAssignment, "editassignment": EditAssignment,
+		"editfile": EditFile, "edittest": EditTest, "addassignment": AddAssignment, "editassignment": EditAssignment,
 	}
 }
 
@@ -110,7 +110,7 @@ func (p Poster) CreatePost(index bool) Handler {
 	}
 }
 
-func CreateAssignment(r *http.Request, c *context.C) (string, error) {
+func AddAssignment(r *http.Request, c *context.C) (string, error) {
 	pid, e := webutil.Id(r, "project-id")
 	if e != nil {
 		return "Could not read project id.", e
@@ -156,8 +156,7 @@ func AddSkeleton(r *http.Request, c *context.C) (string, error) {
 	return "Successfully added skeleton.", nil
 }
 
-//SubmitArchive adds an Intlola archive to the database.
-func SubmitArchive(r *http.Request, c *context.C) (string, error) {
+func AddArchive(r *http.Request, c *context.C) (string, error) {
 	pid, e := webutil.Id(r, "project-id")
 	if e != nil {
 		return "Could not read project id.", e

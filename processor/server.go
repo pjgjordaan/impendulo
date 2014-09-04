@@ -30,7 +30,7 @@ import (
 	"container/list"
 	"fmt"
 
-	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/processor/monitor"
 	"github.com/godfried/impendulo/processor/mq"
 	"github.com/godfried/impendulo/processor/request"
 	"github.com/godfried/impendulo/util"
@@ -40,16 +40,6 @@ import (
 )
 
 type (
-
-	//Helper is used to help handle a submission's files.
-	Helper struct {
-		subId                bson.ObjectId
-		testChan, fileChan   chan bson.ObjectId
-		fileQueue, testQueue *list.List
-		doneChan             chan util.E
-		started              bool
-		done                 bool
-	}
 
 	//Server is our processing server which receives and processes submissions and files.
 	Server struct {
@@ -67,19 +57,8 @@ const (
 
 var (
 	defaultServer *Server
-	MAX_PROCS     = max(runtime.NumCPU()-1, 1)
+	MAX_PROCS     = util.Maxuint(runtime.NumCPU()-1, 1)
 )
-
-//max is a convenience function to find the largest of two integers.
-func max(a, b int) uint {
-	if a < 0 {
-		a = 0
-	}
-	if b > a {
-		a = b
-	}
-	return uint(a)
-}
 
 //Serve launches the default Server. It listens on the configured AMQP URI and
 //spawns at most maxProcs goroutines in order to process submissions.
@@ -99,10 +78,10 @@ func Shutdown() error {
 	if e := defaultServer.Shutdown(); e != nil {
 		return e
 	}
-	if e := mq.StopProducers(); e != nil {
+	if e := mq.ShutdownProducers(); e != nil {
 		return e
 	}
-	return ShutdownMonitor()
+	return monitor.Shutdown()
 }
 
 //NewServer constructs a new Server instance which will listen on the coinfigured
@@ -133,7 +112,7 @@ func (s *Server) Serve() {
 	go mq.H(s.starter)
 	go mq.H(s.submitter)
 	go mq.H(s.redoer)
-	hm := make(map[bson.ObjectId]*Helper)
+	hm := make(map[bson.ObjectId]*Handler)
 	sq := list.New()
 	var busy uint = 0
 	//Begin monitoring processing status
@@ -162,7 +141,7 @@ func (s *Server) Serve() {
 				if !ok {
 					util.Log(fmt.Errorf("no submission %q found to end", r.SubId))
 				} else {
-					//If the submission has finished, set the submission's Helper to done
+					//If the submission has finished, set the submission's Handler to done
 					//and if it has already started, remove it from the queue.
 					h.SetDone()
 					if h.started {
@@ -175,7 +154,7 @@ func (s *Server) Serve() {
 				} else {
 					//This is a new submission so we initialise it.
 					sq.PushBack(r.SubId)
-					hm[r.SubId] = NewHelper(r.SubId)
+					hm[r.SubId] = NewHandler(r.SubId)
 					if e := mq.ChangeStatus(r); e != nil {
 						util.Log(e)
 					}
@@ -209,119 +188,4 @@ func (s *Server) Shutdown() error {
 		return e
 	}
 	return s.redoer.Shutdown()
-}
-
-//NewHelper creates a new Helper for the specified
-//Submission.
-func NewHelper(sid bson.ObjectId) *Helper {
-	return &Helper{
-		subId:     sid,
-		fileChan:  make(chan bson.ObjectId),
-		testChan:  make(chan bson.ObjectId),
-		fileQueue: list.New(),
-		testQueue: list.New(),
-		doneChan:  make(chan util.E),
-		started:   false,
-		done:      false,
-	}
-}
-
-func (h *Helper) AddFile(r *request.R) {
-	switch r.Type {
-	case request.SRC_ADD, request.ARCHIVE_ADD:
-		if h.started {
-			h.fileChan <- r.FileId
-		} else {
-			h.fileQueue.PushBack(r.FileId)
-		}
-	case request.TEST_ADD:
-		if h.started {
-			h.testChan <- r.FileId
-		} else {
-			h.testQueue.PushBack(r.FileId)
-		}
-	}
-}
-
-//SetDone indicates that this submission will receive no more files.
-func (h *Helper) SetDone() {
-	if h.started {
-		//If it has started send on its channel.
-		h.doneChan <- util.E{}
-	} else {
-		//Otherwise simply set done to true.
-		h.done = true
-	}
-}
-
-//Handle helps manage the files a submission receives.
-//It spawns a new Processor which runs in a seperate goroutine
-//and receives files to process from this Helper.
-//fq is the queue of files the submission has received
-//prior to the start of processing.
-func (h *Helper) Handle(onDone chan util.E) {
-	defer func() {
-		if e := mq.ChangeStatus(request.StopSubmission(h.subId)); e != nil {
-			util.Log(e, LOG_SERVER)
-		}
-		onDone <- util.E{}
-	}()
-	p, e := NewFileP(h.subId)
-	if e != nil {
-		util.Log(e, LOG_SERVER)
-		return
-	}
-	pc := make(chan bson.ObjectId)
-	sc := make(chan util.E)
-	go p.Start(pc, sc)
-	busy := false
-	for {
-		if !busy {
-			if fid := h.nextFile(); fid != "" {
-				pc <- fid
-				busy = true
-			} else if h.done {
-				sc <- util.E{}
-				<-sc
-				return
-			}
-		}
-		select {
-		case fid := <-h.fileChan:
-			//Add new files to the queue.
-			h.fileQueue.PushBack(fid)
-		case fid := <-h.testChan:
-			//Add new files to the queue.
-			h.testQueue.PushBack(fid)
-		case fid := <-pc:
-			if e := removeFile(fid); e != nil {
-				util.Log(e)
-			}
-			busy = false
-		case <-h.doneChan:
-			//Submission will receive no more files.
-			h.done = true
-		}
-	}
-}
-
-func (h *Helper) nextFile() bson.ObjectId {
-	if h.fileQueue.Len() > 0 {
-		return h.fileQueue.Remove(h.fileQueue.Front()).(bson.ObjectId)
-	} else if h.done && h.testQueue.Len() > 0 {
-		return h.testQueue.Remove(h.testQueue.Front()).(bson.ObjectId)
-	}
-	return ""
-}
-
-func removeFile(fid bson.ObjectId) error {
-	f, e := db.File(bson.M{db.ID: fid}, bson.M{db.DATA: 0, db.RESULTS: 0})
-	if e != nil {
-		return e
-	}
-	r, e := request.RemoveFile(f)
-	if e != nil {
-		return e
-	}
-	return mq.ChangeStatus(r)
 }

@@ -4,39 +4,15 @@
 <h4 class="text-danger">{{$report.Errors}} problems detected.</h4>
 {{$addr := address $report}}
 <div class="panel-group" id="checkstyleaccordion{{$addr}}">
-    {{range $file.Errors}} {{$errorAddress := address .}} {{$errorMsg := .Message}} {{$errorName := shortName .Source}}
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <a class="accordion-toggle" data-toggle="collapse" data-parent="#checkstyleaccordion{{$addr}}" href="#error{{$errorAddress}}">
-                <h5 class="text-center">{{$errorName}}</h5>
-            </a>
-        </div>
-        <div id="error{{$errorAddress}}" class="panel-collapse collapse">
-            <div class="accordion-inner">
-                <dl class="dl-horizontal">
-                    <dt>Locations</dt>
-                    <dd>
-                        {{$id := .Id.Hex}} {{range $i, $line := .Lines}} {{$laddress := address .}}
-                        <a href="#" id="line{{$laddress}}">
-			  Line {{$line}};
-			</a>
-                        <script>
-                            var id = 'line{{$laddress}}';
-                            var info = {};
-                            info.title = '{{$errorName}}';
-                            info.content = '{{$errorMsg}}';
-                            AnalysisView.addCodeModal(id, '{{$rid}}', info, '{{$line}}', '{{$line}}');
-                        </script>
-                        {{end}}
-                    </dd>
-                    <dt>Severity</dt>
-                    <dd>{{.Severity}}</dd>
-                    <dt>Description</dt>
-                    <dd>{{.Message}}</dd>
-                </dl>
-            </div>
-        </div>
-    </div>
-    {{end}}
 </div>
-{{end}} {{end}}
+{{range $file.Errors}} {{$errorName := shortName .Source}} {{$package := package $errorName}} {{$class := class $errorName}}{{$msg := .Message}}
+<script type="text/javascript" language="javascript" src="/static/js/checkstyle.js"></script>
+<script>
+    var eid = "error{{.Id.Hex}}";
+    CheckstyleResult.addFile("checkstyleaccordion{{$addr}}", eid, "{{$package}}", "{{$class}}", "{{.Severity}}", "{{$msg}}");
+</script>
+{{range .Lines}}
+<script>
+    CheckstyleResult.addLine("{{$rid}}", eid, "{{.}}", "{{$errorName}}", "{{$msg}}");
+</script>
+{{end}} {{end}} {{end}} {{end}}

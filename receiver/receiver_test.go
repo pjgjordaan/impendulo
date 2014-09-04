@@ -32,6 +32,7 @@ import (
 
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processor"
+	"github.com/godfried/impendulo/processor/monitor"
 	"github.com/godfried/impendulo/processor/mq"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/user"
@@ -84,7 +85,11 @@ func (this *clientSpawner) spawn() (*client, bool) {
 }
 
 func addData(numUsers uint) (map[string]string, error) {
-	if e := db.Add(db.PROJECTS, project.New("Triangle", "user", "Java", "A triangle.")); e != nil {
+	p := project.New("Triangle", "user", "Java", "A triangle.")
+	if e := db.Add(db.PROJECTS, p); e != nil {
+		return nil, e
+	}
+	if e := db.Add(db.ASSIGNMENTS, project.NewAssignment(p.Id, "an assignment", "user", util.CurMilis(), util.CurMilis()+10000)); e != nil {
 		return nil, e
 	}
 	users := make(map[string]string, numUsers)
@@ -107,31 +112,31 @@ func receive(port uint) {
 	<-started
 }
 
-func (c *client) login(port uint) (bson.ObjectId, error) {
+func (c *client) login(port uint) (*project.Assignment, error) {
 	var e error
 	c.conn, e = net.Dial("tcp", fmt.Sprintf(":%d", port))
 	if e != nil {
-		return "", e
+		return nil, e
 	}
 	if e = write(c.conn, map[string]interface{}{REQUEST: LOGIN, db.USER: c.uname, db.PWORD: c.pword, project.MODE: c.mode}); e != nil {
-		return "", e
+		return nil, e
 	}
 	d, e := util.ReadData(c.conn)
 	if e != nil {
-		return "", e
+		return nil, e
 	}
 	var infos []*ProjectInfo
 	if e = json.Unmarshal(d, &infos); e != nil {
-		return "", e
+		return nil, e
 	}
 	if len(infos) == 0 {
-		return "", errors.New("No projects found.")
+		return nil, errors.New("No projects found.")
 	}
-	return infos[0].Project.Id, nil
+	return infos[0].Assignments[0].Assignment, nil
 }
 
-func (c *client) create(projectId bson.ObjectId) error {
-	if e := write(c.conn, map[string]interface{}{REQUEST: NEW, db.PROJECTID: projectId, db.TIME: util.CurMilis()}); e != nil {
+func (c *client) create(a *project.Assignment) error {
+	if e := write(c.conn, map[string]interface{}{REQUEST: NEW, db.PROJECTID: a.ProjectId, db.ASSIGNMENTID: a.Id, db.TIME: util.CurMilis()}); e != nil {
 		return e
 	}
 	d, e := util.ReadData(c.conn)
@@ -240,11 +245,11 @@ func testReceive(spawner *clientSpawner) error {
 			defer func() {
 				errChan <- e
 			}()
-			var pid bson.ObjectId
-			if pid, e = c.login(spawner.rport); e != nil {
+			var a *project.Assignment
+			if a, e = c.login(spawner.rport); e != nil {
 				return
 			}
-			if e = c.create(pid); e != nil {
+			if e = c.create(a); e != nil {
 				return
 			}
 			if e = c.send(spawner.numFiles, spawner.files); e != nil {
@@ -269,7 +274,7 @@ func testReceive(spawner *clientSpawner) error {
 }
 
 func testFiles(t *testing.T, nF, nU, port uint, mode string, files []file) {
-	go processor.MonitorStatus()
+	go monitor.Start()
 	go processor.Serve(processor.MAX_PROCS)
 	ext := "_" + strconv.Itoa(int(port))
 	db.Setup(db.TEST_CONN + ext)
@@ -326,13 +331,13 @@ func benchmarkFiles(b *testing.B, nF, nU, nS, nM, port uint, mode string, files 
 		}
 		go servers[i].Serve()
 	}
-	monitors := make([]*processor.Monitor, nS)
+	monitors := make([]*monitor.M, nS)
 	for i := 0; i < int(nM); i++ {
-		monitors[i], err = processor.NewMonitor()
+		monitors[i], err = monitor.New()
 		if err != nil {
 			b.Error(err)
 		}
-		go monitors[i].Monitor()
+		go monitors[i].Start()
 	}
 	ext := "_" + strconv.Itoa(int(port))
 	db.Setup(db.TEST_CONN + ext)

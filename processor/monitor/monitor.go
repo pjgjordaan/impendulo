@@ -22,7 +22,7 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package processor
+package monitor
 
 import (
 	"github.com/godfried/impendulo/processor/mq"
@@ -33,9 +33,9 @@ import (
 
 type (
 
-	//Monitor is used to keep track of and change Impendulo's processing
+	//M is used to keep track of and change Impendulo's processing
 	//status.
-	Monitor struct {
+	M struct {
 		statusChan              chan status.S
 		requestChan             chan *request.R
 		idleChan                chan util.E
@@ -44,26 +44,37 @@ type (
 )
 
 var (
-	monitor *Monitor
+	defualt *M
 )
 
-//MonitorStatus begins keeping track of Impendulo's current processing status.
-func MonitorStatus() error {
+//Start begins keeping track of Impendulo's current processing status.
+func Start() error {
 	var e error
-	if monitor != nil {
-		if e = monitor.Shutdown(); e != nil {
+	if defualt != nil {
+		if e = defualt.Shutdown(); e != nil {
 			return e
 		}
 	}
-	if monitor, e = NewMonitor(); e != nil {
+	if defualt, e = New(); e != nil {
 		return e
 	}
-	go monitor.Monitor()
+	go defualt.Start()
 	return nil
 }
 
-//NewMonitor
-func NewMonitor() (*Monitor, error) {
+func Shutdown() error {
+	if defualt == nil {
+		return nil
+	}
+	if e := defualt.Shutdown(); e != nil {
+		return e
+	}
+	defualt = nil
+	return nil
+}
+
+//New
+func New() (*M, error) {
 	sc := make(chan status.S)
 	rc := make(chan *request.R)
 	ic := make(chan util.E)
@@ -79,12 +90,12 @@ func NewMonitor() (*Monitor, error) {
 	if e != nil {
 		return nil, e
 	}
-	return &Monitor{changer: c, waiter: w, loader: l, statusChan: sc, requestChan: rc, idleChan: ic}, nil
+	return &M{changer: c, waiter: w, loader: l, statusChan: sc, requestChan: rc, idleChan: ic}, nil
 }
 
-//Monitor begins a new monitoring session for this Monitor.
+//Start begins a new monitoring session for this Monitor.
 //It handles status updates and requests.
-func (m *Monitor) Monitor() {
+func (m *M) Start() {
 	go mq.H(m.changer)
 	go mq.H(m.loader)
 	go mq.H(m.waiter)
@@ -117,7 +128,7 @@ func (m *Monitor) Monitor() {
 	}
 }
 
-func (m *Monitor) notifyWaiting(n int) (e error) {
+func (m *M) notifyWaiting(n int) (e error) {
 	defer func() {
 		if r := recover(); r != nil {
 			e = r.(error)
@@ -129,20 +140,8 @@ func (m *Monitor) notifyWaiting(n int) (e error) {
 	return
 }
 
-//ShutdownMonitor
-func ShutdownMonitor() error {
-	if monitor == nil {
-		return nil
-	}
-	if e := monitor.Shutdown(); e != nil {
-		return e
-	}
-	monitor = nil
-	return nil
-}
-
 //Shutdown stops this Monitor
-func (m *Monitor) Shutdown() error {
+func (m *M) Shutdown() error {
 	close(m.statusChan)
 	close(m.requestChan)
 	close(m.idleChan)
@@ -150,7 +149,7 @@ func (m *Monitor) Shutdown() error {
 }
 
 //shutdownHandlers stops all the MesageHandlers used by this Monitor.
-func (m *Monitor) shutdownHandlers() error {
+func (m *M) shutdownHandlers() error {
 	if e := m.waiter.Shutdown(); e != nil {
 		return e
 	}

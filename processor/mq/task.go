@@ -215,8 +215,8 @@ func (p *Producer) Shutdown() error {
 	return nil
 }
 
-//StopProducers shuts all active producers down.
-func StopProducers() error {
+//ShutdownProducers shuts all active producers down.
+func ShutdownProducers() error {
 	for _, p := range producers {
 		if p == nil {
 			continue

@@ -317,6 +317,10 @@ var SubmissionsChart = {
 var SubmissionsView = {
     init: function(aid, pid, uid, tipe) {
         $(function() {
+            $("#table-submissions").tablesorter({
+                theme: 'bootstrap',
+                dateFormat: 'ddmmyyyy'
+            });
             SubmissionsView.addPickers();
             $('#button-filter').on('click', SubmissionsView.load);
             $.getJSON('projects', function(data) {
@@ -435,14 +439,26 @@ var SubmissionsView = {
             var c = data['counts'];
             for (var i = 0; i < s.length; i++) {
                 var d = new Date(s[i].Time);
-                var tname = s[i].User;
+                var uname = s[i].User;
                 var aname = '';
-                $('#table-submissions > tbody').append('<tr submissionid="' + s[i].Id + '"><td><a href="filesview?submission-id=' + s[i].Id + '">' + tname + '</a></td><td>' + aname + '</td><td>' + d.toLocaleDateString() + '</td><td>' + d.toLocaleTimeString() + '</td><td>' + c[s[i].Id]['source'] + '</td><td>' + c[s[i].Id]['launch'] + '</td><td>' + c[s[i].Id]['test'] + '</td><td>' + c[s[i].Id]['testcases'] + '</td><td>' + c[s[i].Id]['passed'] + ' %</td></tr>');
+                var pname = '';
+                $('#assignment-dropdown > ul > li > a[assignmentid]').each(function() {
+                    var a = $(this).attr('assignmentid');
+                    if (a === s[i].AssignmentId) {
+                        aname = $(this).html();
+                        return false;
+                    }
+                });
+                $('#project-dropdown > ul > li > a[projectid]').each(function() {
+                    var p = $(this).attr('projectid');
+                    if (p === s[i].ProjectId) {
+                        pname = $(this).html();
+                        return false;
+                    }
+                });
+                $('#table-submissions > tbody').append('<tr submissionid="' + s[i].Id + '"><td><a href="filesview?submission-id=' + s[i].Id + '">' + pname + '</a></td><td>' + uname + '</td><td>' + aname + '</td><td>' + d.toLocaleDateString() + '</td><td>' + d.toLocaleTimeString() + '</td><td>' + c[s[i].Id]['source'] + '</td><td>' + c[s[i].Id]['launch'] + '</td><td>' + c[s[i].Id]['test'] + '</td><td>' + c[s[i].Id]['testcases'] + '</td><td>' + c[s[i].Id]['passed'] + ' %</td></tr>');
             }
-            $("#table-submissions").tablesorter({
-                theme: 'bootstrap',
-                dateFormat: 'ddmmyyyy'
-            });
+            $('#table-submissions').trigger('update');
         });
     }
 }

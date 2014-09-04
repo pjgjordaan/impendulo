@@ -75,10 +75,7 @@ var AnalysisView = {
         var id = 'toolcode-modal';
         var s = '#' + id;
         if ($(s).length > 0) {
-            $(s).modal('show');
-            $(s).on('shown.bs.modal', function(e) {
-                line.scrollIntoView();
-            });
+            AnalysisView.scrollTo(s);
             return;
         }
         $.getJSON('code?tool-name=' + name + '&project-id=' + pid, function(data) {
@@ -86,27 +83,18 @@ var AnalysisView = {
             SyntaxHighlighter.defaults['toolbar'] = false;
             SyntaxHighlighter.defaults['class-name'] = 'error';
             SyntaxHighlighter.highlight();
-            $(s).modal('show');
-            $(s).on('shown.bs.modal', function(e) {
-                $(s).animate({
-                    scrollTop: $(s).offset()
-                });
-            });
+            AnalysisView.scrollTo(s);
             return false;
         });
     },
 
     addCodeModal: function(dest, resultId, bug, start, end) {
+        var id = 'bug-modal';
+        var s = '#' + id;
+        if ($(s).length === 0) {
+            $('<div id="' + id + '" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="' + id + 'label" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="' + id + 'label"><br><small></small></h4></div><div class="modal-body"></div></div></div></div>').appendTo('body');
+        }
         $('#' + dest).click(function() {
-            var id = 'bug-modal';
-            var s = '#' + id;
-            if ($(s).length > 0) {
-                $(s).modal('show');
-                $(s).on('shown.bs.modal', function(e) {
-                    line.scrollIntoView();
-                });
-                return false;
-            }
             $.getJSON('code?result-id=' + resultId, function(data) {
                 var h = 'highlight: [';
                 for (var i = start; i < end; i++) {
@@ -114,21 +102,22 @@ var AnalysisView = {
                 }
                 h = h + end + '];'
                 var preClass = 'brush: java; ' + h;
-                jQuery('<div id="' + id + '" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="' + id + 'label" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="' + id + 'label">' + bug.title + '<br><small>' + bug.content + '</small></h4></div><div class="modal-body"><script class="' + preClass + '" type="syntaxhighlighter"><![CDATA[' + data.code + ']]></script></div></div></div></div>').appendTo('body');
+                $(s + 'label').html(bug.title + '<br><small>' + bug.content + '</small>');
+                $(s + ' .modal-body').html('<script class="' + preClass + '" type="syntaxhighlighter"><![CDATA[' + data.code + ']]></script>');
                 SyntaxHighlighter.defaults['toolbar'] = false;
                 SyntaxHighlighter.defaults['class-name'] = 'error';
                 SyntaxHighlighter.highlight();
                 $(s).find('.highlighted').attr('style', 'background-color: #ff7777 !important;');
-                $(s).modal('show');
-                $(s).on('shown.bs.modal', function(e) {
-                    var offset = $(s).find('.highlighted').offset();
-                    var offsetParent = $(s).offset();
-                    $(s).animate({
-                        scrollTop: offset.top - offsetParent.top
-                    });
-                });
+                AnalysisView.scrollTo(s);
             });
             return false;
+        });
+    },
+    scrollTo: function(s) {
+        $(s).modal('show');
+        $(s).on('shown.bs.modal', function(e) {
+            var p = $(s).find('.highlighted').position();
+            $(s).scrollTop(p.top);
         });
     }
 }

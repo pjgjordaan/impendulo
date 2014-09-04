@@ -42,3 +42,11 @@ func Max(a, b int) int {
 	}
 	return a
 }
+
+func Maxuint(a, b int) uint {
+	m := Max(a, b)
+	if m < 0 {
+		m = 0
+	}
+	return uint(m)
+}

@@ -1,4 +1,4 @@
-package processor
+package monitor
 
 import (
 	"fmt"
@@ -72,8 +72,8 @@ loop:
 			if doneCount >= nProducers {
 				break loop
 			}
-		case request.FILE_ADD:
-			r.Type = request.FILE_REMOVE
+		case request.SRC_ADD:
+			r.Type = request.SRC_REMOVE
 			if e = mq.ChangeStatus(r); e != nil {
 				t.Error(e)
 			}
