@@ -1,3 +1,7 @@
+body,
+html {
+    height: 100%
+}
 .dropdown-narrow {
     display: inline-block;
 }
@@ -341,4 +345,11 @@ p.annotation-content {
 .nav.nav-pills {
     padding-top: 5px;
     padding-bottom: 5px;
+}
+.panel-overflow.panel-group .panel {
+    overflow: visible;
+}
+.col-centered {
+    float: none;
+    margin: 0 auto;
 }

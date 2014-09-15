@@ -33,8 +33,8 @@ import (
 )
 
 type (
-	//Project represents a Impendulo project.
-	Project struct {
+	//P represents a Impendulo project.
+	P struct {
 		Id          bson.ObjectId `bson:"_id"`
 		Name        string        `bson:"name"`
 		User        string        `bson:"user"`
@@ -56,18 +56,18 @@ type (
 )
 
 //TypeName
-func (p *Project) TypeName() string {
+func (p *P) TypeName() string {
 	return "project"
 }
 
 //String
-func (p *Project) String() string {
-	return "Type: project.Project; Id: " + p.Id.Hex() +
+func (p *P) String() string {
+	return "Type: project.P; Id: " + p.Id.Hex() +
 		"; Name: " + p.Name + "; User: " + p.User +
 		"; Lang: " + p.Lang + "; Time: " + util.Date(p.Time)
 }
 
 //New
-func New(n, u, l, d string) *Project {
-	return &Project{Id: bson.NewObjectId(), Name: n, User: u, Lang: l, Time: util.CurMilis(), Description: d}
+func New(n, u, l, d string) *P {
+	return &P{Id: bson.NewObjectId(), Name: n, User: u, Lang: l, Time: util.CurMilis(), Description: d}
 }

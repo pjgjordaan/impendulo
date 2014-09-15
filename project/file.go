@@ -206,19 +206,41 @@ func ParseName(n string) (*File, error) {
 	return &File{Id: bson.NewObjectId(), Type: tp, Name: fn, Package: pkg, Time: t, Comments: []*Comment{}}, nil
 }
 
+func ParseFile(n string, d []byte) (*File, error) {
+	f, e := ParseName(n)
+	if e != nil {
+		return nil, e
+	}
+	f.Data = d
+	if pkg := util.GetPackageB(f.Data); pkg != f.Package {
+		f.ChangePackage(pkg, f.Package)
+	}
+	return f, nil
+}
+
 //isOutFolder
 func isOutFolder(a string) bool {
 	return a == SRC_DIR || a == BIN_DIR
 }
 
-func (f *File) Rename(n string) {
-	if !strings.HasSuffix(n, "java") {
-		n += ".java"
+func (f *File) Rename(p, n string) {
+	if n != f.Name {
+		if !strings.HasSuffix(n, "java") {
+			n += ".java"
+		}
+		on, _ := util.Extension(f.Name)
+		nn, _ := util.Extension(n)
+		f.Data = bytes.Replace(f.Data, []byte(on), []byte(nn), -1)
+		f.Name = nn
 	}
-	on, _ := util.Extension(f.Name)
-	nn, _ := util.Extension(n)
-	f.Name = n
-	f.Data = bytes.Replace(f.Data, []byte(on), []byte(nn), -1)
+	if p != f.Package {
+		f.ChangePackage(f.Package, p)
+	}
+}
+
+func (f *File) ChangePackage(o, n string) {
+	f.Data = bytes.Replace(f.Data, []byte("package "+o+";"), []byte("package "+n+";"), -1)
+	f.Package = n
 }
 
 func (f *File) LoadComments() []*Comment {

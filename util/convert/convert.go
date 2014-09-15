@@ -60,17 +60,21 @@ func Id(i interface{}) (bson.ObjectId, error) {
 	return "", errors.NewCast("id", i)
 }
 
+func String(i interface{}) (string, error) {
+	switch v := i.(type) {
+	case string:
+		return v, nil
+	}
+	return fmt.Sprint(i), nil
+}
+
 //GetString converts a value in a map to a string.
 func GetString(m map[string]interface{}, k string) (string, error) {
 	i, ok := m[k]
 	if !ok {
 		return "", errors.NewMissing(k)
 	}
-	switch v := i.(type) {
-	case string:
-		return v, nil
-	}
-	return fmt.Sprint(i), nil
+	return String(i)
 }
 
 //GetInt converts a value in a map to an int.

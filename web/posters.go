@@ -72,7 +72,7 @@ func defaultPosters() map[string]Poster {
 		"addproject": AddProject, "addskeleton": AddSkeleton, "addarchive": AddArchive,
 		"runtools": RunTools, "deleteprojects": DeleteProjects, "deleteusers": DeleteUsers,
 		"deletesubmissions": DeleteSubmissions, "deleteresults": DeleteResults, "deleteskeletons": DeleteSkeletons,
-		"importdata": ImportData, "renamefiles": RenameFiles, "login": Login, "register": Register,
+		"deletetests": DeleteTests, "importdata": ImportData, "renamefiles": RenameFiles, "login": Login, "register": Register,
 		"logout": Logout, "editproject": EditProject, "edituser": EditUser, "editsubmission": EditSubmission,
 		"editfile": EditFile, "edittest": EditTest, "addassignment": AddAssignment, "editassignment": EditAssignment,
 	}
@@ -115,6 +115,10 @@ func AddAssignment(r *http.Request, c *context.C) (string, error) {
 	if e != nil {
 		return "Could not read project id.", e
 	}
+	sid, e := webutil.Id(r, "skeleton-id")
+	if e != nil {
+		return "Could not read skeleton id.", e
+	}
 	n, e := webutil.String(r, "assignment-name")
 	if e != nil {
 		return "Could not read assignment name.", e
@@ -131,7 +135,7 @@ func AddAssignment(r *http.Request, c *context.C) (string, error) {
 	if e != nil {
 		return "Could not read assignment end.", e
 	}
-	if e = db.Add(db.ASSIGNMENTS, project.NewAssignment(pid, n, un, s, end)); e != nil {
+	if e = db.Add(db.ASSIGNMENTS, project.NewAssignment(pid, sid, n, un, s, end)); e != nil {
 		return "Could not add assignment.", e
 	}
 	return "Successfully added assignment.", nil
@@ -161,6 +165,10 @@ func AddArchive(r *http.Request, c *context.C) (string, error) {
 	if e != nil {
 		return "Could not read project id.", e
 	}
+	aid, e := webutil.Id(r, "assignment-id")
+	if e != nil {
+		return "Could not read assignment id.", e
+	}
 	u, e := webutil.String(r, "user-id")
 	if e != nil {
 		return "Could not read user.", e
@@ -171,7 +179,7 @@ func AddArchive(r *http.Request, c *context.C) (string, error) {
 	}
 	//We need to create a submission for this archive so that
 	//it can be added to the db and so that it can be processed
-	s := project.NewSubmission(pid, "", u, project.ARCHIVE_MODE, util.CurMilis())
+	s := project.NewSubmission(pid, aid, u, project.ARCHIVE_MODE, util.CurMilis())
 	if e = db.Add(db.SUBMISSIONS, s); e != nil {
 		return "Could not create submission.", e
 	}
@@ -285,6 +293,24 @@ func DeleteSkeletons(r *http.Request, c *context.C) (string, error) {
 	return "Successfully deleted skeletons.", nil
 }
 
+func DeleteTests(r *http.Request, c *context.C) (string, error) {
+	ts, e := webutil.Strings(r, "test-id")
+	if e != nil {
+		return "Could not read tests.", e
+	}
+	for _, t := range ts {
+		id, e := convert.Id(t)
+		if e != nil {
+			util.Log(e)
+			continue
+		}
+		if e = db.RemoveById(db.TESTS, id); e != nil {
+			util.Log(e)
+		}
+	}
+	return "Successfully deleted tests.", nil
+}
+
 //DeleteResults removes all results for a specic project.
 func DeleteResults(r *http.Request, c *context.C) (string, error) {
 	ss, e := webutil.Strings(r, "submission-id")
@@ -364,6 +390,9 @@ func EditAssignment(r *http.Request, c *context.C) (string, error) {
 	m := bson.M{}
 	if pid, e := webutil.Id(r, "assignment-project"); e == nil && a.ProjectId != pid && db.Contains(db.PROJECTS, bson.M{db.ID: pid}) {
 		m[db.PROJECTID] = pid
+	}
+	if sid, e := webutil.Id(r, "assignment-skeleton"); e == nil && a.SkeletonId != sid && db.Contains(db.SKELETONS, bson.M{db.ID: sid}) {
+		m[db.SKELETONID] = sid
 	}
 	if u, e := webutil.String(r, "assignment-user"); e == nil && a.User != u && db.Contains(db.USERS, bson.M{db.ID: u}) {
 		m[db.USER] = u
@@ -567,33 +596,35 @@ func RenameFiles(r *http.Request, c *context.C) (string, error) {
 	if e != nil {
 		return "Could not read project.", e
 	}
-	newName, e := webutil.String(r, "file-name-new")
+	nn, e := webutil.String(r, "file-name-new")
 	if e != nil {
 		return "Could not read new file name.", e
 	}
-	oldName, e := webutil.String(r, "file-name-old")
+	np, _ := webutil.String(r, "package-name-new")
+	on, e := webutil.String(r, "file-name-old")
 	if e != nil {
 		return "Could not read current file name.", e
 	}
+	op, _ := webutil.String(r, "package-name-old")
 	subs, e := db.Submissions(bson.M{db.PROJECTID: pid}, nil)
 	if e != nil {
 		return "Could not retrieve submissions.", e
 	}
 	for _, s := range subs {
-		fs, e := db.Files(bson.M{db.SUBID: s.Id, db.NAME: oldName}, bson.M{db.ID: 1}, 0)
+		fs, e := db.Files(bson.M{db.SUBID: s.Id, db.NAME: on, db.PKG: op}, bson.M{db.ID: 1}, 0)
 		if e != nil {
 			return "Could not retrieve files.", e
 		}
 		for _, fi := range fs {
 			f, e := db.File(bson.M{db.ID: fi.Id}, nil)
 			if e != nil {
-				return "Could not retrieve files.", e
+				return "Could not retrieve file.", e
 			}
-			f.Rename(newName)
-			if e := db.Update(db.FILES, bson.M{db.ID: f.Id}, bson.M{db.SET: bson.M{db.DATA: f.Data, db.NAME: f.Name}}); e != nil {
+			f.Rename(np, nn)
+			if e := db.Update(db.FILES, bson.M{db.ID: f.Id}, bson.M{db.SET: bson.M{db.DATA: f.Data, db.NAME: f.Name, db.PKG: f.Package}}); e != nil {
 				return "Could not update file name.", e
 			}
 		}
 	}
-	return fmt.Sprintf("Succesfully renamed files to %s.", newName), nil
+	return fmt.Sprintf("Succesfully renamed files to package: %s class: %s.", np, nn), nil
 }

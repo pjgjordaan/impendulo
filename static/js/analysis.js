@@ -1,5 +1,6 @@
 var AnalysisView = {
     init: function(fn, sid, aid, pid, uid, tipe) {
+        AnalysisView.loaded = 0;
         $(function() {
             $.getJSON('projects', function(data) {
                 if (not(data['projects'])) {
@@ -34,7 +35,6 @@ var AnalysisView = {
 
         });
     },
-
     buidFileDropdown: function(fn, vals) {
         for (var i = 0; i < vals.length; i++) {
             var link = 'resultsview?file=' + vals[i];

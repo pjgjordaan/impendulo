@@ -28,7 +28,6 @@ import (
 	"github.com/godfried/impendulo/util"
 
 	"path/filepath"
-	"strings"
 )
 
 type (
@@ -49,12 +48,7 @@ func (t *Target) FilePath() string {
 
 //PackagePath
 func (t *Target) PackagePath() string {
-	if t.Package != "" {
-		vals := strings.Split(t.Package, ".")
-		return filepath.Join(t.Dir, filepath.Join(vals...))
-	} else {
-		return t.Dir
-	}
+	return filepath.Join(t.Dir, util.PackagePath(t.Package))
 }
 
 //FullName

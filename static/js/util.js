@@ -96,22 +96,6 @@ $(function() {
 });
 
 
-function loadCollections(dbList, collectionList) {
-    var url = 'collections?db=' + $('#' + dbList).val();
-    $.getJSON(url, function(data) {
-        clearMulti('#' + collectionList);
-        var items = data['collections'];
-        for (var i = 0; i < items.length; i++) {
-            $('#' + collectionList).append('<option value="' + items[i] + '">' + items[i] + '</option>');
-        }
-        $('#' + collectionList).multiselect({
-            noneSelectedText: 'Choose collections to export',
-            selectedText: '# collections selected to export'
-        });
-        $('#' + collectionList).multiselected = true;
-    });
-}
-
 function loadSkeletonInfo(id, dest) {
     $.getJSON('skeletoninfo?id=' + id, function(data) {
         var items = data['info'];
@@ -160,32 +144,6 @@ function endsWith(str, suffix) {
     return str.indexOf(suffix, str.length - suffix.length) !== -1;
 };
 
-function addProjects(dest) {
-    $.getJSON('projects', function(data) {
-        if (not(data['projects'])) {
-            return;
-        }
-        var ps = data['projects'];
-        for (var i = 0; i < ps.length; i++) {
-            $('#' + dest).append('<option value="' + ps[i].Id + '">' + ps[i].Name + '</option>');
-        }
-        addFilenames('file-name-old', ps[0].Id);
-    });
-}
-
-function addFilenames(dest, pid) {
-    $('#' + dest).empty();
-    $.getJSON('filenames?project-id=' + pid, function(data) {
-        if (not(data['filenames'])) {
-            return;
-        }
-        var ns = data['filenames'];
-        for (var i = 0; i < ns.length; i++) {
-            $('#' + dest).append('<option value="' + ns[i] + '">' + ns[i] + '</option>');
-        }
-    });
-}
-
 if (typeof String.prototype.format != 'function') {
     String.prototype.format = function() {
         var args = arguments;
@@ -212,4 +170,9 @@ function round(n, p) {
         p = 2
     }
     return +Number(n).toFixed(2);
+}
+
+function osize(o) {
+    var ks = Object.keys(o);
+    return not(o) ? 0 : ks.length;
 }

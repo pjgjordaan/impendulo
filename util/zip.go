@@ -191,29 +191,36 @@ func AddToZip(zw *zip.Writer, n string, d []byte) error {
 }
 
 func ZipDir(dir string) ([]byte, error) {
-	buf := new(bytes.Buffer)
-	w := zip.NewWriter(buf)
+	b := new(bytes.Buffer)
+	if e := zipDir(dir, b); e != nil {
+		return nil, e
+	}
+	return b.Bytes(), nil
+}
+
+func zipDir(dir string, b *bytes.Buffer) error {
+	w := zip.NewWriter(b)
 	defer w.Close()
 	d, e := os.Open(dir)
 	if e != nil {
-		return nil, e
+		return e
 	}
 	fis, e := d.Readdir(-1)
 	if e != nil {
-		return nil, e
+		return e
 	}
 	for _, fi := range fis {
 		f, e := os.Open(filepath.Join(dir, fi.Name()))
 		if e != nil {
-			return nil, e
+			return e
 		}
 		zf, e := w.Create(fi.Name())
 		if e != nil {
-			return nil, e
+			return e
 		}
 		if _, e := io.Copy(zf, f); e != nil {
-			return nil, e
+			return e
 		}
 	}
-	return buf.Bytes(), nil
+	return nil
 }

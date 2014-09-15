@@ -89,16 +89,16 @@ func New() *S {
 
 func (s *S) Update(r *request.R) error {
 	switch r.Type {
-	case request.SRC_ADD:
+	case request.SRC_ADD, request.TEST_ADD, request.ARCHIVE_ADD:
 		return s.addFile(r)
-	case request.SRC_REMOVE:
+	case request.SRC_REMOVE, request.TEST_REMOVE, request.ARCHIVE_REMOVE:
 		return s.removeFile(r)
 	case request.SUBMISSION_START:
 		return s.addSubmission(r)
 	case request.SUBMISSION_STOP:
 		return s.removeSubmission(r)
 	default:
-		return fmt.Errorf("unknown request type %d", r.Type)
+		return fmt.Errorf("unknown request type %s", r.Type)
 	}
 }
 

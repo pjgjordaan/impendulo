@@ -121,6 +121,12 @@ func ReadBytes(r io.Reader) []byte {
 	return b.Bytes()
 }
 
+func GetPackageB(data []byte) string {
+	b := bytes.NewBuffer(data)
+	return GetPackage(b)
+
+}
+
 //GetPackage retrieves the package name from a Java source file.
 func GetPackage(r io.Reader) string {
 	s := bufio.NewScanner(r)
@@ -252,4 +258,11 @@ func LocateDirectory(src, name string) (string, error) {
 		return "", e
 	}
 	return f.l, nil
+}
+
+func PackagePath(pkg string) string {
+	if pkg == "" {
+		return ""
+	}
+	return filepath.Join(strings.Split(pkg, ".")...)
 }

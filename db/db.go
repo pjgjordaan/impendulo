@@ -218,3 +218,16 @@ func Databases() ([]string, error) {
 	defer s.Close()
 	return s.DatabaseNames()
 }
+
+func IDs(c string, m bson.M) ([]bson.ObjectId, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
+	}
+	defer s.Close()
+	var ids []bson.ObjectId
+	if e := s.DB("").C(c).Find(m).Distinct(ID, &ids); e != nil {
+		return nil, &GetError{"ids", e, m}
+	}
+	return ids, nil
+}

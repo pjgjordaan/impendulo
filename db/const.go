@@ -38,6 +38,8 @@ const (
 	PMD         = "pmd"
 	MAKE        = "make"
 	//Mongodb command
+	MATCH  = "$match"
+	GROUP  = "$group"
 	SET    = "$set"
 	OR     = "$or"
 	AND    = "$and"
@@ -66,6 +68,7 @@ const (
 	ID           = "_id"
 	PROJECTID    = "projectid"
 	ASSIGNMENTID = "assignmentid"
+	SKELETONID   = "skeletonid"
 	PROJECT      = "project"
 	USER         = "user"
 	TIME         = "time"

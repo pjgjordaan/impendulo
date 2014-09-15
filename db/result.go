@@ -410,15 +410,22 @@ func ResultNames(sid bson.ObjectId, fname string) (map[string]map[string][]strin
             var t = values[i].type;
             var n = values[i].name;
             var id = values[i].fileid;
+            if(t === undefined || t === ''){ 
+                continue;
+            }
             if(!(t in r)){
                 r[t] = {};
             }
-            if(n !== '' && !(n in r)){
+            if(n === undefined || n === ''){ 
+                continue;
+            }
+            if(!(n in r)){
                 r[t][n] = [];
             }
-            if(id !== ''){
-                r[t][n].push(id);
+            if(id === undefined || id === ''){ 
+                continue;
             }
+            r[t][n].push(id);
        }
        return r;
 };`,

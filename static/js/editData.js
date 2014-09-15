@@ -186,6 +186,23 @@ var EditView = {
         $('#file-panel').removeClass('in');
     },
 
+    assignmentSkeletons: function(pid, sid) {
+        $('#assignment-skeleton').empty();
+        $.getJSON('skeletons?project-id=' + pid, function(data) {
+            var sk = data['skeletons'];
+            if (not(sk)) {
+                return;
+            }
+            for (var i = 0; i < sk.length; i++) {
+                if (sk[i].Id === sid) {
+                    $('#assignment-skeleton').append('<option value="' + sk[i].Id + '" selected>' + sk[i].Name + '</option>');
+                } else {
+                    $('#assignment-skeleton').append('<option value="' + sk[i].Id + '">' + sk[i].Name + '</option>');
+                }
+            }
+        });
+    },
+
     loadassignment: function(id) {
         $('.assignment-input').empty();
         $('.assignment-input').val('');
@@ -208,6 +225,10 @@ var EditView = {
                         $('#assignment-project').append('<option value="' + projects[i].Id + '">' + projects[i].Name + '</option>');
                     }
                 }
+                $('#assignment-project').change(function() {
+                    EditView.assignmentSkeletons($(this).val(), a.SkeletonId);
+                });
+                EditView.assignmentSkeletons(a.ProjectId, a.SkeletonId);
             });
             $.getJSON('usernames', function(udata) {
                 var users = udata['usernames'];

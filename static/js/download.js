@@ -33,27 +33,34 @@ var SkeletonDownload = {
                 for (var i = 0; i < ps.length; i++) {
                     $('#project-id').append('<option value="' + ps[i].Id + '">' + ps[i].Name + '</option>');
                 }
-                SkeletonDownload.addSkeletons(ps[0].Id);
+                SkeletonDownload.addAssignments(ps[0].Id);
                 $('#project-id').change(function() {
-                    SkeletonDownload.addSkeletons($(this).val());
+                    SkeletonDownload.addAssignments($(this).val());
                 });
             });
         });
     },
-    addSkeletons: function() {
-        var id = $('#project-id').val();
-        $.getJSON('skeletons?project-id=' + id, function(data) {
-            $('#skeleton-id').empty();
-            $('#skeleton-id').hide();
-            if (not(data['skeletons'])) {
+    addAssignments: function(pid) {
+        $('#skeleton-id').empty();
+        $('#assignment-id').empty();
+        $('#assignment-id').hide();
+        $.getJSON('assignments?project-id=' + pid, function(data) {
+            if (not(data['assignments'])) {
                 return;
             }
-            $('#skeleton-id').show();
-            var sk = data['skeletons'];
-            for (var i = 0; i < sk.length; i++) {
-                $('#skeleton-id').append('<option value="' + sk[i].Id + '">' + sk[i].Name + '</option>');
+            var a = data['assignments'];
+            for (var i = 0; i < a.length; i++) {
+                $('#assignment-id').append('<option skeletonid="' + a[i].SkeletonId + '" value="' + a[i].Id + '">' + a[i].Name + '</option>');
             }
+            $('#assignment-id').show();
+            SkeletonDownload.addSkeleton(a[0].SkeletonId);
+            $('#project-id').change(function() {
+                SkeletonDownload.addSkeleton($(this).attr('skeletonid'));
+            });
         });
+    },
+    addSkeleton: function(id) {
+        $('#skeleton-id').val(id);
     }
 }
 

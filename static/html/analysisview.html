@@ -1,5 +1,5 @@
 {{define "view"}} {{$currentFile := .currentFile}} {{$nextFile := .nextFile}} {{$current := .ctx.Browse.Current}} {{$next := .ctx.Browse.Next}} {{$project := projectName .ctx.Browse.Pid}} {{$rd := .ctx.Browse.Result}} {{$fileName := .ctx.Browse.File}} {{template "breadcrumb" .}}
-<ul class="nav nav-tabs">
+<ul class="nav nav-tabs tabs-list">
     <li class="dropdown" id="project-dropdown">
         <a href="#" data-toggle="dropdown" role="button" id="project-dropdown-label" class="dropdown-toggle"></a>
         <ul class="dropdown-menu" role="menu" aria-labelledby="project-dropdown-label"></ul>

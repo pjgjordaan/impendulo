@@ -34,6 +34,10 @@ var CreateAssignment = {
                 for (var i = 0; i < ps.length; i++) {
                     $('#project-id').append('<option value="' + ps[i].Id + '">' + ps[i].Name + '</option>');
                 }
+                $('#project-id').change(function() {
+                    CreateAssignment.loadSkeletons($(this).val());
+                });
+                CreateAssignment.loadSkeletons(ps[0].Id);
             });
             $('#assignment-form').submit(function(e) {
                 var sval = $('#datetimepicker-start').val();
@@ -53,6 +57,18 @@ var CreateAssignment = {
                 $('[name="assignment-start"]').val(sdate);
                 $('[name="assignment-end"]').val(edate);
             });
+        });
+    },
+    loadSkeletons: function(pid) {
+        $('#skeleton-id').empty();
+        $.getJSON('skeletons?project-id=' + pid, function(data) {
+            var sk = data['skeletons'];
+            if (not(sk)) {
+                return;
+            }
+            for (var i = 0; i < sk.length; i++) {
+                $('#skeleton-id').append('<option value="' + sk[i].Id + '">' + sk[i].Name + '</option>');
+            }
         });
     },
     addPickers: function() {
@@ -98,7 +114,6 @@ var AssignmentsView = {
     init: function(tipe, id) {
         AssignmentsView.tipe = tipe;
         $(function() {
-            AssignmentsView.addPickers();
             $('#button-filter').on('click', AssignmentsView.load);
             $.getJSON(AssignmentsView.tipe + 's', function(data) {
                 if (not(data[AssignmentsView.tipe + 's'])) {
@@ -128,57 +143,11 @@ var AssignmentsView = {
         });
     },
 
-    addPickers: function() {
-        $('#datetimepicker-start').datetimepicker({
-            onShow: function(ct) {
-                this.setOptions({
-                    maxDate: $('#datetimepicker-end').val() ? $('#datetimepicker-end').val() : false
-                });
-            }
-        });
-        $('#datetimepicker-end').datetimepicker({
-            onShow: function(ct) {
-                this.setOptions({
-                    minDate: $('#datetimepicker-start').val() ? $('#datetimepicker-start').val() : false
-                });
-            }
-        });
-        AssignmentsView.pickerButton('start');
-        AssignmentsView.pickerButton('end');
-    },
-
-    pickerButton: function(n) {
-        $('#span-' + n).attr('showing', false);
-        $('#span-' + n).click(function() {
-            var s = $(this).attr('showing') === 'true';
-            if (!s) {
-                $('#datetimepicker-' + n).datetimepicker('show');
-            } else {
-                $('#datetimepicker-' + n).datetimepicker('hide');
-            }
-            $(this).attr('showing', !s);
-        });
-    },
-
-    time: function(s) {
-        var val = $(s).val();
-        if (!val) {
-            return -1;
-        }
-        var d = new Date(val);
-        if (d === null || d === undefined) {
-            return -1;
-        }
-        return d.getTime();
-    },
-
     load: function() {
         $('#table-assignments > tbody').empty();
         var tid = $('#type-dropdown-label').attr(AssignmentsView.tipe + 'id');
         var params = {
             'counts': true,
-            'min-start': AssignmentsView.time('#datetimepicker-start'),
-            'max-end': AssignmentsView.time('#datetimepicker-end')
         };
         params[AssignmentsView.tipe + '-id'] = tid;
         $.getJSON('assignments', params, function(data) {

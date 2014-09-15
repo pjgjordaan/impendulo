@@ -41,7 +41,7 @@ import (
 type (
 	Worker struct {
 		sub      *project.Submission
-		project  *project.Project
+		project  *project.P
 		id       bson.ObjectId
 		rootDir  string
 		srcDir   string
@@ -51,7 +51,7 @@ type (
 	}
 )
 
-func New(f *project.File, s *project.Submission, p *project.Project, rootDir string) (*Worker, error) {
+func New(f *project.File, s *project.Submission, p *project.P, rootDir string) (*Worker, error) {
 	d := filepath.Join(rootDir, f.Id.Hex())
 	td := filepath.Join(d, "tools")
 	c, e := javac.New("")

@@ -33,11 +33,11 @@ import (
 )
 
 type (
-	//FileInfo
 	FileInfo struct {
-		Name  string
-		Count int
-		Type  project.Type
+		Package string
+		Name    string
+		Count   int
+		Type    project.Type
 	}
 )
 
@@ -77,26 +77,20 @@ func Files(m, sl interface{}, limit int, sort ...string) ([]*project.File, error
 	return fs, nil
 }
 
-//FileInfos retrieves names of file information.
 func FileInfos(m bson.M) ([]*FileInfo, error) {
-	ns, e := FileNames(m)
+	fis, e := BasicFileInfos(m)
 	if e != nil {
 		return nil, e
 	}
-	fi := make([]*FileInfo, len(ns))
-	for i, n := range ns {
-		m[NAME] = n
+	for i, fi := range fis {
+		m[NAME] = fi.Name
 		c, e := Count(FILES, m)
 		if e != nil {
 			return nil, e
 		}
-		f, e := File(m, bson.M{TYPE: 1})
-		if e != nil {
-			return nil, e
-		}
-		fi[i] = &FileInfo{Name: n, Count: c, Type: f.Type}
+		fis[i].Count = c
 	}
-	return fi, nil
+	return fis, nil
 }
 
 //FileNames retrieves names of files
@@ -112,6 +106,38 @@ func FileNames(m interface{}) ([]string, error) {
 		return nil, &GetError{"filenames", e, m}
 	}
 	return ns, nil
+}
+
+func BasicFileInfos(m interface{}) ([]*FileInfo, error) {
+	s, e := Session()
+	if e != nil {
+		return nil, e
+	}
+	defer s.Close()
+	type st struct {
+		Id bson.M `bson:"_id"`
+	}
+	var vals []st
+	if e := s.DB("").C(FILES).Pipe([]bson.M{{MATCH: m}, {GROUP: bson.M{ID: bson.M{NAME: "$" + NAME, PKG: "$" + PKG, TYPE: "$" + TYPE}}}}).All(&vals); e != nil {
+		return nil, &GetError{"classnames", e, m}
+	}
+	fi := make([]*FileInfo, len(vals))
+	for i, v := range vals {
+		n, e := convert.String(v.Id[NAME])
+		if e != nil {
+			return nil, e
+		}
+		p, e := convert.String(v.Id[PKG])
+		if e != nil {
+			return nil, e
+		}
+		t, e := convert.String(v.Id[TYPE])
+		if e != nil {
+			return nil, e
+		}
+		fi[i] = &FileInfo{Name: n, Package: p, Type: project.Type(t)}
+	}
+	return fi, nil
 }
 
 func Assignment(m, sl interface{}) (*project.Assignment, error) {
@@ -177,13 +203,13 @@ func Submissions(m, sl interface{}, sort ...string) ([]*project.Submission, erro
 }
 
 //Project retrieves a project matching m from the active database.
-func Project(m, sl interface{}) (*project.Project, error) {
+func Project(m, sl interface{}) (*project.P, error) {
 	s, e := Session()
 	if e != nil {
 		return nil, e
 	}
 	defer s.Close()
-	var p *project.Project
+	var p *project.P
 	if e = s.DB("").C(PROJECTS).Find(m).Select(sl).One(&p); e != nil {
 		return nil, &GetError{"project", e, m}
 	}
@@ -191,7 +217,7 @@ func Project(m, sl interface{}) (*project.Project, error) {
 }
 
 //Projects retrieves projects matching m from the active database.
-func Projects(m, sl interface{}, sort ...string) ([]*project.Project, error) {
+func Projects(m, sl interface{}, sort ...string) ([]*project.P, error) {
 	s, e := Session()
 	if e != nil {
 		return nil, e
@@ -201,7 +227,7 @@ func Projects(m, sl interface{}, sort ...string) ([]*project.Project, error) {
 	if len(sort) > 0 {
 		q = q.Sort(sort...)
 	}
-	var p []*project.Project
+	var p []*project.P
 	if e = q.Select(sl).All(&p); e != nil {
 		return nil, &GetError{"projects", e, m}
 	}
@@ -281,7 +307,7 @@ func RemoveAssignmentById(id bson.ObjectId) error {
 	return RemoveById(ASSIGNMENTS, id)
 }
 
-//RemoveProjectById removes a project matching
+//RemovePById removes a project matching
 //the given id from the active database.
 func RemoveProjectById(id interface{}) error {
 	pm := bson.M{PROJECTID: id}
@@ -350,7 +376,7 @@ func UpdateTime(sub *project.Submission) error {
 	return Update(SUBMISSIONS, bson.M{ID: sub.Id}, bson.M{SET: bson.M{TIME: f.Time}})
 }
 
-func ProjectFileNames(id bson.ObjectId) ([]string, error) {
+func ProjectBasicFileInfos(id bson.ObjectId) ([]*FileInfo, error) {
 	s, e := Session()
 	if e != nil {
 		return nil, e
@@ -360,7 +386,7 @@ func ProjectFileNames(id bson.ObjectId) ([]string, error) {
 	if e := s.DB("").C(SUBMISSIONS).Find(bson.M{PROJECTID: id}).Distinct(ID, &ss); e != nil {
 		return nil, &GetError{"submissions", e, id}
 	}
-	return FileNames(bson.M{SUBID: bson.M{IN: ss}})
+	return BasicFileInfos(bson.M{SUBID: bson.M{IN: ss}})
 }
 
 //Snapshots retrieves snapshots of a given file in a submission.

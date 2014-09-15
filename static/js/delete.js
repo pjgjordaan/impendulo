@@ -35,6 +35,7 @@ var DeleteView = {
                     $('#ts-project-id').append('<option value="' + ps[i].Id + '">' + ps[i].Name + '</option>');
                     $('#tr-project-id').append('<option value="' + ps[i].Id + '">' + ps[i].Name + '</option>');
                     $('#tsk-project-id').append('<option value="' + ps[i].Id + '">' + ps[i].Name + '</option>');
+                    $('#tt-project-id').append('<option value="' + ps[i].Id + '">' + ps[i].Name + '</option>');
                 }
                 $('#tp-project-id').multiselect({
                     selectedText: '# of # projects selected',
@@ -52,6 +53,10 @@ var DeleteView = {
                 DeleteView.loadSkeletons(ps[0].Id);
                 $('#tsk-project-id').change(function() {
                     DeleteView.loadSkeletons($(this).val());
+                });
+                DeleteView.loadTests(ps[0].Id);
+                $('#tt-project-id').change(function() {
+                    DeleteView.loadTests($(this).val());
                 });
             });
             $.getJSON('usernames', function(data) {
@@ -87,6 +92,27 @@ var DeleteView = {
             $(id).multiselect({
                 selectedText: '# of # skeletons selected',
                 noneSelectedText: 'Delete skeletons'
+            });
+            $(id).multiselected = true;
+        });
+    },
+
+    loadTests: function(pid) {
+        var id = '#tt-test-id';
+        clearMulti(id);
+        $(id).hide();
+        $.getJSON('tests?project-id=' + pid, function(data) {
+            if (not(data['tests'])) {
+                return;
+            }
+            $(id).show();
+            var ts = data['tests'];
+            for (var i = 0; i < ts.length; i++) {
+                $(id).append('<option value="' + ts[i].Id + '">' + ts[i].Name + '</option>');
+            }
+            $(id).multiselect({
+                selectedText: '# of # tests selected',
+                noneSelectedText: 'Delete tests'
             });
             $(id).multiselected = true;
         });

@@ -25,15 +25,34 @@ func FileInfos(r *http.Request) ([]byte, error) {
 }
 
 func FileNames(r *http.Request) ([]byte, error) {
-	pid, e := webutil.Id(r, "project-id")
-	if e != nil {
-		return nil, e
+	m := bson.M{}
+	if pid, e := webutil.Id(r, "project-id"); e == nil {
+		ss, e := db.IDs(db.SUBMISSIONS, bson.M{db.PROJECTID: pid})
+		if e != nil {
+			return nil, e
+		}
+		m[db.SUBID] = bson.M{db.IN: ss}
 	}
-	ns, e := db.ProjectFileNames(pid)
+	if sid, e := webutil.Id(r, "submission-id"); e == nil {
+		m[db.SUBID] = sid
+	}
+	ns, e := db.FileNames(m)
 	if e != nil {
 		return nil, e
 	}
 	return util.JSON(map[string]interface{}{"filenames": ns})
+}
+
+func BasicFileInfos(r *http.Request) ([]byte, error) {
+	pid, e := webutil.Id(r, "project-id")
+	if e != nil {
+		return nil, e
+	}
+	fs, e := db.ProjectBasicFileInfos(pid)
+	if e != nil {
+		return nil, e
+	}
+	return util.JSON(map[string]interface{}{"fileinfos": fs})
 }
 
 func Assignments(r *http.Request) ([]byte, error) {
@@ -179,11 +198,14 @@ func Langs(r *http.Request) ([]byte, error) {
 }
 
 func Skeletons(r *http.Request) ([]byte, error) {
-	pid, e := webutil.Id(r, "project-id")
-	if e != nil {
-		return nil, e
+	m := bson.M{}
+	if id, e := webutil.Id(r, "id"); e == nil {
+		m[db.ID] = id
 	}
-	s, e := db.Skeletons(bson.M{db.PROJECTID: pid}, bson.M{db.DATA: 0}, db.NAME)
+	if pid, e := webutil.Id(r, "project-id"); e == nil {
+		m[db.PROJECTID] = pid
+	}
+	s, e := db.Skeletons(m, bson.M{db.DATA: 0}, db.NAME)
 	if e != nil {
 		return nil, e
 	}

@@ -321,8 +321,6 @@ var SubmissionsView = {
                 theme: 'bootstrap',
                 dateFormat: 'ddmmyyyy'
             });
-            SubmissionsView.addPickers();
-            $('#button-filter').on('click', SubmissionsView.load);
             $.getJSON('projects', function(data) {
                 if (not(data['projects'])) {
                     return;
@@ -374,50 +372,6 @@ var SubmissionsView = {
         });
     },
 
-    addPickers: function() {
-        $('#datetimepicker-start').datetimepicker({
-            onShow: function(ct) {
-                this.setOptions({
-                    maxDate: $('#datetimepicker-end').val() ? $('#datetimepicker-end').val() : false
-                });
-            }
-        });
-        $('#datetimepicker-end').datetimepicker({
-            onShow: function(ct) {
-                this.setOptions({
-                    minDate: $('#datetimepicker-start').val() ? $('#datetimepicker-start').val() : false
-                });
-            }
-        });
-        SubmissionsView.pickerButton('start');
-        SubmissionsView.pickerButton('end');
-    },
-
-    pickerButton: function(n) {
-        $('#span-' + n).attr('showing', false);
-        $('#span-' + n).click(function() {
-            var s = $(this).attr('showing') === 'true';
-            if (!s) {
-                $('#datetimepicker-' + n).datetimepicker('show');
-            } else {
-                $('#datetimepicker-' + n).datetimepicker('hide');
-            }
-            $(this).attr('showing', !s);
-        });
-    },
-
-    time: function(s) {
-        var val = $(s).val();
-        if (!val) {
-            return -1;
-        }
-        var d = new Date(val);
-        if (d === null || d === undefined) {
-            return -1;
-        }
-        return d.getTime();
-    },
-
     load: function() {
         $('#table-submissions > tbody').empty();
         var uid = $('#user-dropdown-label').attr('userid');
@@ -425,8 +379,6 @@ var SubmissionsView = {
         var aid = $('#assignment-dropdown-label').attr('assignmentid');
         var params = {
             'counts': true,
-            'min-time': SubmissionsView.time('#datetimepicker-start'),
-            'max-time': SubmissionsView.time('#datetimepicker-end'),
             'assignment-id': aid,
             'project-id': pid,
             'user-id': uid

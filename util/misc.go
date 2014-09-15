@@ -148,3 +148,13 @@ func SplitTitles(titles string) []string {
 	}
 	return a
 }
+
+func PackageClass(exec string) (string, string) {
+	s := strings.Split(exec, ".")
+	switch len(s) {
+	case 0, 1:
+		return "", exec
+	default:
+		return strings.Join(s[0:len(s)-1], "."), s[len(s)-1]
+	}
+}

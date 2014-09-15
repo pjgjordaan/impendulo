@@ -82,9 +82,8 @@ var (
 		"insert":     insert,
 		"isError":    isError,
 		"hasChart":   result.HasChart,
-		"fileinfos":  _fileinfos,
 		"projects":   projects,
-		"langProjects": func(l string) ([]*project.Project, error) {
+		"langProjects": func(l string) ([]*project.P, error) {
 			return db.Projects(bson.M{db.LANG: l}, nil, db.NAME)
 		},
 		"resultNames": db.ResultNames,
@@ -102,7 +101,7 @@ var (
 		},
 		"empty":       emptyString,
 		"sortFiles":   sortFiles,
-		"project":     func(id bson.ObjectId) (*project.Project, error) { return db.Project(bson.M{db.ID: id}, nil) },
+		"project":     func(id bson.ObjectId) (*project.P, error) { return db.Project(bson.M{db.ID: id}, nil) },
 		"configtools": configTools,
 	}
 	templateDir      string
@@ -112,10 +111,6 @@ var (
 
 func emptyString(s string) bool {
 	return strings.TrimSpace(s) == ""
-}
-
-func _fileinfos(sid bson.ObjectId) ([]*db.FileInfo, error) {
-	return db.FileInfos(bson.M{db.SUBID: sid, db.TYPE: bson.M{db.IN: []project.Type{project.SRC, project.TEST}}})
 }
 
 func pagerSize(high int) int {
@@ -177,7 +172,7 @@ func chartTime(f *project.File) (float64, error) {
 	return util.Round(float64(f.Time-s.Time)/1000.0, 2), nil
 }
 
-func projects() ([]*project.Project, error) {
+func projects() ([]*project.P, error) {
 	return db.Projects(nil, nil, db.NAME)
 }
 

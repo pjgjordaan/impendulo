@@ -140,13 +140,8 @@ func CreateJUnit(r *http.Request, c *context.C) (string, error) {
 		return "Could not read JUnit file.", e
 	}
 	//A test does not always need data files.
-	var d []byte
-	if r.FormValue("data-check") == "true" {
-		_, d, e = webutil.File(r, "data")
-		if e != nil {
-			return "Could not read data file.", e
-		}
-	} else {
+	_, d, e := webutil.File(r, "data")
+	if e != nil {
 		d = make([]byte, 0)
 	}
 	return "", db.AddJUnitTest(junit.NewTest(pid, n, tipe, t, b, d))

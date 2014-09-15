@@ -58,3 +58,11 @@ func Collections(r *http.Request) ([]byte, error) {
 	}
 	return util.JSON(map[string]interface{}{"collections": c})
 }
+
+func Databases(r *http.Request) ([]byte, error) {
+	d, e := db.Databases()
+	if e != nil {
+		return nil, e
+	}
+	return util.JSON(map[string]interface{}{"databases": d})
+}

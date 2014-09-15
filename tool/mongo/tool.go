@@ -52,7 +52,7 @@ func ExportData(db string, cols []string) (string, error) {
 	if e != nil {
 		return "", e
 	}
-	//defer os.RemoveAll(d)
+	defer os.RemoveAll(d)
 	for _, c := range cols {
 		if _, e := tool.RunCommand([]string{"mongoexport", "-d", db, "-c", c, "-o", filepath.Join(d, c+".json")}, nil, 10*time.Minute); e != nil {
 			return "", e

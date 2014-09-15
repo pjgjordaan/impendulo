@@ -64,7 +64,7 @@ var (
 	}
 	admin = []string{
 		"deleteprojects", "deleteusers", "deleteresults", "deleteview",
-		"deleteskeletons", "deletesubmissions", "importdataview", "exportdataview",
+		"deleteskeletons", "deletesubmissions", "deletetests", "importview", "exportview",
 		"importdata", "exportdb.zip", "statusview", "evaluatesubmissionsview",
 		"evaluatesubmissions", "logs", "editdbview", "loadproject", "editproject",
 		"loaduser", "edituser", "loadsubmission", "editsubmission", "loadfile",
@@ -85,7 +85,7 @@ var (
 	statusViews   = []string{"statusview"}
 	toolViews     = []string{"runtoolsview", "evaluatesubmissionsview"}
 	dataViews     = []string{
-		"importdataview", "exportdataview", "editdbview", "renameview",
+		"importview", "exportview", "editdbview", "renameview",
 		"loadproject", "loadsubmission", "loadfile", "loaduser", "deleteview",
 	}
 )

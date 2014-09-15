@@ -1,4 +1,5 @@
 {{define "view"}}
+<h3 class="heading">Edit Data</h3>
 <div class="btn-group">
     <div id="projects" class="btn-group">
         <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
@@ -49,7 +50,7 @@
             <h4 class="panel-title">
 	<a data-toggle="collapse" data-parent="#accordion"
 	   href="#project-panel">
-	  Edit Project
+	  Project
 	</a>
       </h4>
         </div>
@@ -100,7 +101,7 @@
             <h4 class="panel-title">
 	<a data-toggle="collapse" data-parent="#accordion"
 	   href="#user-panel">
-	  Edit User
+	  User
 	</a>
       </h4>
         </div>
@@ -139,7 +140,7 @@
             <h4 class="panel-title">
 	<a data-toggle="collapse" data-parent="#accordion"
 	   href="#assignment-panel">
-	  Edit Assignment
+	  Assignment
 	</a>
       </h4>
         </div>
@@ -150,6 +151,13 @@
                         <label class="col-lg-offset-3 col-lg-2 control-label" for="assignment-project">Project</label>
                         <div class="col-lg-3">
                             <select class="form-control assignment-input" name="assignment-project" id="assignment-project">
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-lg-offset-3 col-lg-2 control-label" for="assignment-skeleton">Skeleton</label>
+                        <div class="col-lg-3">
+                            <select class="form-control assignment-input" name="assignment-skeleton" id="assignment-skeleton">
                             </select>
                         </div>
                     </div>
@@ -184,7 +192,7 @@
             <h4 class="panel-title">
 	<a data-toggle="collapse" data-parent="#accordion"
 	   href="#submission-panel">
-	  Edit Submission
+	  Submission
 	</a>
       </h4>
         </div>
@@ -229,7 +237,7 @@
             <h4 class="panel-title">
 	<a data-toggle="collapse" data-parent="#accordion"
 	   href="#file-panel">
-	  Edit File
+	  File
 	</a>
       </h4>
         </div>
@@ -265,7 +273,7 @@
             <h4 class="panel-title">
 	<a data-toggle="collapse" data-parent="#accordion"
 	   href="#test-panel">
-	  Edit JUnit Test
+	  JUnit Test
 	</a>
       </h4>
         </div>

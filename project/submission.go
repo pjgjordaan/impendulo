@@ -66,7 +66,7 @@ func NewSubmission(pid, aid bson.ObjectId, u, m string, t int64) *Submission {
 	return &Submission{bson.NewObjectId(), pid, aid, u, m, t, []*Comment{}}
 }
 
-func (s *Submission) Format(p *Project) string {
+func (s *Submission) Format(p *P) string {
 	return fmt.Sprintf("%s \u2192 %s \u2192 %s", p.Name, s.User, util.Date(s.Time))
 }
 

@@ -52,7 +52,7 @@ type (
 	}
 
 	ProjectInfo struct {
-		Project     *project.Project
+		Project     *project.P
 		Assignments []*AssignmentInfo
 	}
 	AssignmentInfo struct {
@@ -74,7 +74,7 @@ const (
 	LOG_RECEIVER = "receiver/receiver.go"
 )
 
-func NewProjectInfo(p *project.Project) *ProjectInfo {
+func NewProjectInfo(p *project.P) *ProjectInfo {
 	return &ProjectInfo{Project: p, Assignments: make([]*AssignmentInfo, 0, 1)}
 }
 

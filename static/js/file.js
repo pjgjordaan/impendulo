@@ -74,18 +74,21 @@ var FilesView = {
             }
             var fs = data['fileinfos'];
             for (var i = 0; i < fs.length; i++) {
-                FilesView.addInfo(fs[i], sid);
+                FilesView.addInfo(fs[i], sid, i);
             }
         });
     },
-    addInfo: function(f, sid) {
+    addInfo: function(f, sid, fc) {
+        $('#files-list').append('<li id="file' + fc + '"><h4></h4></li>');
+        var desc = '<dt>{0}</dt><dd>{1}</dd>';
         $.getJSON('resultnames?submission-id=' + sid + '&filename=' + f.Name, function(data) {
-            var e = '<li><h3>' + f.Name + '</h3><h5>' + f.Count + ' Snapshots</h5>';
+            $('#file' + fc).append('<dl class="dl-horizontal">' + desc.format('Package', f.Package) + desc.format('Type', f.Type) + desc.format('Snapshots', f.Count) + '</dl>');
+            var e = '';
             var rs = data['resultnames'];
             if (not(rs)) {
                 e += '<div class="alert alert-danger alert-dynamic alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button><strong>No results available</strong></div>';
             } else {
-                e += '<ul class="list-inline"><li class="dropdown"><button class="btn btn-primary dropdown-toggle" data-toggle="dropdown" href="#">Analysis <span class="caret"></span></button><ul class="dropdown-menu" role="menu">';
+                e += '<ul class="nav nav-tabs"><li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">' + f.Name + ' <span class="caret"></span></a><ul class="dropdown-menu" role="menu">';
                 for (var o in rs) {
                     if (not(rs[o])) {
                         e += '<li><a href="resultsview?result=' + o + '&file=' + f.Name + '">' + o + '</a></li>';
@@ -107,8 +110,7 @@ var FilesView = {
                 }
                 e += '</ul></li></ul>';
             }
-            e += '</li>';
-            $('#files-list').append(e);
+            $('#file' + fc + ' h4').append(e);
             $('a[testid]').each(function() {
                 var id = $(this).attr('testid');
                 $.getJSON('files?id=' + id, function(data) {

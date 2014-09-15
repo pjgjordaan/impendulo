@@ -135,5 +135,11 @@ func removeFile(fid bson.ObjectId) error {
 	if e != nil {
 		return e
 	}
-	return mq.ChangeStatus(r)
+	if e = mq.ChangeStatus(r); e != nil {
+		return e
+	}
+	if r.Type != request.ARCHIVE_REMOVE {
+		return nil
+	}
+	return db.RemoveFileById(fid)
 }

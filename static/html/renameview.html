@@ -2,39 +2,43 @@
 <h3 class="heading">Rename Files</h3>
 <form class="form-horizontal" role="form" action="renamefiles" method="post">
     <div class="form-group">
-        <label class="col-lg-offset-3 col-lg-2 control-label" for="project-id">Project</label>
-        <div class="col-lg-3">
+        <label class="col-lg-offset-2 col-lg-2 control-label" for="project-id">Project</label>
+        <div class="col-lg-5">
             <select class="form-control" name="project-id" id="project-id">
             </select>
         </div>
     </div>
     <div class="form-group">
-        <label class="col-lg-offset-3 col-lg-2 control-label" for="file-name-old">File Name</label>
-        <div class="col-lg-3">
-            <select class="form-control" name="file-name-old" id="file-name-old">
+        <label class="col-lg-offset-2 col-lg-2 control-label" for="old">Current Values</label>
+        <div class="col-lg-5">
+            <select class="form-control" name="old" id="old">
             </select>
         </div>
     </div>
+    <input type="hidden" class="form-control" name="file-name-old" id="file-name-old">
+    <input type="hidden" class="form-control" name="package-name-old" id="package-name-old">
     <div class="form-group">
-        <label class="col-lg-offset-3 col-lg-2 control-label" for="file-name-new">New Name</label>
-        <div class="col-lg-3">
-            <input type="text" class="form-control" name="file-name-new" id="file-name-new">
+        <label class="col-lg-offset-2 col-lg-2 control-label" for="file-name-new">New Name</label>
+        <div class="col-lg-5">
+            <input type="text" class="form-control" name="file-name-new" id="file-name-new" required>
         </div>
     </div>
     <div class="form-group">
-        <div class="col-lg-offset-5 col-lg-3">
+        <label class="col-lg-offset-2 col-lg-2 control-label" for="package-name-new">New Package</label>
+        <div class="col-lg-5">
+            <input type="text" class="form-control" name="package-name-new" id="package-name-new">
+        </div>
+    </div>
+    <div class="form-group">
+        <div class="col-lg-offset-4 col-lg-3">
             <button type="submit" class="btn btn-default">
                 <span class="glyphicon glyphicon-play"></span> Rename
             </button>
         </div>
     </div>
 </form>
+<script type="text/javascript" language="javascript" src="/static/js/rename.js"></script>
 <script type="text/javascript" language="javascript">
-    window.onload = function() {
-        addProjects('project-id');
-        $('#project-id').change(function() {
-            addFilenames('file-name-old', $(this).val());
-        });
-    }
+    RenameView.init();
 </script>
 {{end}}

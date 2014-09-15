@@ -45,7 +45,7 @@ import (
 type (
 	Worker struct {
 		submission *project.Submission
-		project    *project.Project
+		project    *project.P
 		rootDir    string
 		srcDir     string
 		toolDir    string
@@ -189,8 +189,7 @@ func (w *Worker) Archive(a *project.File) error {
 			util.Log(e, LOG_F)
 		}
 	}
-	//We don't need the archive anymore
-	return db.RemoveFileById(a.Id)
+	return nil
 }
 
 func (w *Worker) archive(name string, data []byte) error {
@@ -218,7 +217,7 @@ func (w *Worker) archive(name string, data []byte) error {
 //StoreFile creates a new project.File given an encoded file name and file data.
 //The new project.File is then saved in the database.
 func (w *Worker) StoreFile(n string, d []byte) (*project.File, error) {
-	f, e := project.ParseName(n)
+	f, e := project.ParseFile(n, d)
 	if e != nil {
 		return nil, e
 	}
@@ -226,7 +225,6 @@ func (w *Worker) StoreFile(n string, d []byte) (*project.File, error) {
 		return nil, db.DuplicateFile
 	}
 	f.SubId = w.submission.Id
-	f.Data = d
 	if e := db.Add(db.FILES, f); e != nil {
 		return nil, e
 	}
