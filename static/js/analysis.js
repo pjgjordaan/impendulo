@@ -30,7 +30,7 @@ var AnalysisView = {
                 if (not(data['filenames'])) {
                     return;
                 }
-                AnalysisView.buidFileDropdown('file', fn, 'resultsview', data['filenames']);
+                AnalysisView.buidFileDropdown(fn, data['filenames']);
             });
 
         });
@@ -44,7 +44,7 @@ var AnalysisView = {
                 $('#file-dropdown-label').append('<h4><small>file</small> ' + fn + ' <span class="caret"></span></h4>');
             }
         }
-        if ($('#file-dropdown-label').attr(tipe + 'id') === undefined) {
+        if ($('#file-dropdown-label').attr('filename') === undefined) {
             $('#file-dropdown-label').append('<h4><small>file</small> None Selected <span class="caret"></span></h4>');
         }
     },
@@ -117,7 +117,9 @@ var AnalysisView = {
         $(s).modal('show');
         $(s).on('shown.bs.modal', function(e) {
             var p = $(s).find('.highlighted').position();
-            $(s).scrollTop(p.top);
+            if (p !== undefined) {
+                $(s).scrollTop(p.top);
+            }
         });
     }
 }

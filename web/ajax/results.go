@@ -30,7 +30,8 @@ func ResultNames(r *http.Request) ([]byte, error) {
 	}
 	rs, e := db.ResultNames(sid, f)
 	if e != nil {
-		return nil, e
+		util.Log(e)
+		rs = db.BasicResultNames()
 	}
 	return util.JSON(map[string]interface{}{"resultnames": rs})
 }

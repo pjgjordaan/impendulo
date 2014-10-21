@@ -74,19 +74,7 @@
     });
 </script>
 {{end}} {{if hasChart .currentResult .nextResult}}
-<script>
-    var chartParams = {
-        sid: '{{.ctx.Browse.Sid.Hex}}',
-        file: '{{$fileName}}',
-        result: '{{$rd.Raw}}',
-        uid: '{{.ctx.Browse.Uid}}',
-        rid: '{{validId .currentResult .nextResult}}',
-        pid: '{{.ctx.Browse.Pid.Hex}}',
-        currentTime: '{{chartTime (index .files .ctx.Browse.Current)}}',
-        nextTime: '{{chartTime (index .files .ctx.Browse.Next)}}'
-    }
-</script>
-<form class="form-inline centered" role="form" onsubmit="return ResultChart.load(chartParams)">
+<form class="form-inline centered" role="form" id="form-comparables">
     <div class="form-group">
         <label class="sr-only" for="comparables">Submissions</label>
         <select class="form-control select-inline" name="comparables" id="comparables" multiple>
@@ -98,7 +86,18 @@
 </form>
 <div id="chartHolder">
 </div>
+<script type="text/javascript" language="javascript" src="/static/js/resultschart.js"></script>
 <script>
+    var chartParams = {
+        sid: '{{.ctx.Browse.Sid.Hex}}',
+        file: '{{$fileName}}',
+        result: '{{$rd.Raw}}',
+        uid: '{{.ctx.Browse.Uid}}',
+        rid: '{{validId .currentResult .nextResult}}',
+        pid: '{{.ctx.Browse.Pid.Hex}}',
+        currentTime: '{{chartTime (index .files .ctx.Browse.Current)}}',
+        nextTime: '{{chartTime (index .files .ctx.Browse.Next)}}'
+    }
     ResultChart.init(chartParams);
 </script>
 {{end}}

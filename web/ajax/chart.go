@@ -11,7 +11,6 @@ import (
 	"github.com/godfried/impendulo/util/convert"
 	"github.com/godfried/impendulo/web/charts"
 	"github.com/godfried/impendulo/web/context"
-	"github.com/godfried/impendulo/web/stats"
 	"github.com/godfried/impendulo/web/webutil"
 
 	"net/http"
@@ -26,7 +25,7 @@ func ChartOptions(r *http.Request) ([]byte, error) {
 	} else if u, e := webutil.String(r, "user-id"); e == nil {
 		rs = db.UserResults(u)
 	} else {
-		return nil, ResultsError
+		rs = db.AllResults()
 	}
 	sort.Strings(rs)
 	other := []string{"Time", "Lines", util.Title(project.SRC.String()), util.Title(project.LAUNCH.String()), util.Title(project.TEST.String()), "Testcases", "Passed"}
@@ -63,24 +62,46 @@ func Chart(r *http.Request) ([]byte, error) {
 }
 
 func overviewChart(r *http.Request) ([]byte, error) {
+	x, e := webutil.String(r, "x")
+	if e != nil {
+		return nil, e
+	}
+	xd, e := context.NewResult(x)
+	if e != nil {
+		return nil, e
+	}
+	y, e := webutil.String(r, "y")
+	if e != nil {
+		return nil, e
+	}
+	yd, e := context.NewResult(y)
 	v, e := webutil.String(r, "view")
 	if e != nil {
 		return nil, e
 	}
-	var f func() (charts.D, error)
+	var d charts.D
+	var i charts.I
 	switch v {
 	case "user":
-		f = charts.User
+		u, e := db.Users(nil)
+		if e != nil {
+			return nil, e
+		}
+		if d, i, e = charts.User(u, xd, yd); e != nil {
+			return nil, e
+		}
 	case "project":
-		f = charts.Project
+		p, e := db.Projects(nil, nil)
+		if e != nil {
+			return nil, e
+		}
+		if d, i, e = charts.Project(p, xd, yd); e != nil {
+			return nil, e
+		}
 	default:
 		return nil, fmt.Errorf("unknown view %s", v)
 	}
-	c, e := f()
-	if e != nil {
-		return nil, e
-	}
-	return util.JSON(map[string]interface{}{"chart": c, "categories": stats.TypeNames()})
+	return util.JSON(map[string]interface{}{"chart-data": d, "chart-info": i})
 }
 
 func assignmentChart(r *http.Request) ([]byte, error) {
@@ -97,9 +118,6 @@ func assignmentChart(r *http.Request) ([]byte, error) {
 		return nil, e
 	}
 	yd, e := context.NewResult(y)
-	if e != nil {
-		return nil, e
-	}
 	t, e := webutil.String(r, "assignment-type")
 	if e != nil {
 		return nil, e

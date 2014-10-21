@@ -28,21 +28,26 @@ import (
 	"fmt"
 
 	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
 	"labix.org/v2/mgo/bson"
+
+	"strings"
 )
 
 type (
 	FileInfo struct {
-		Package string
-		Name    string
-		Count   int
-		Type    project.Type
+		Info, Results map[string]interface{}
 	}
 )
 
+func NewFileInfo() *FileInfo {
+	return &FileInfo{Info: make(map[string]interface{}), Results: make(map[string]interface{})}
+}
+
 func (f *FileInfo) HasCharts() bool {
-	return f.Type == project.SRC
+	t, ok := f.Info["Type"]
+	return ok && t.(project.Type) == project.SRC
 }
 
 //File retrieves a file matching m from the active database.
@@ -82,15 +87,48 @@ func FileInfos(m bson.M) ([]*FileInfo, error) {
 	if e != nil {
 		return nil, e
 	}
-	for i, fi := range fis {
-		m[NAME] = fi.Name
-		c, e := Count(FILES, m)
+	t := m[TYPE]
+	for _, fi := range fis {
+		m[NAME] = fi.Info["Name"]
+		m[TYPE] = project.LAUNCH
+		lc, e := Count(FILES, m)
 		if e != nil {
 			return nil, e
 		}
-		fis[i].Count = c
+		fi.Info["Launches"] = lc
+		m[TYPE] = t
+		sc, e := Count(FILES, m)
+		if e != nil {
+			return nil, e
+		}
+		fi.Info["Source Files"] = sc
+		f, e := LastFile(m, bson.M{DATA: 0})
+		if e != nil {
+			return nil, e
+		}
+		for n, v := range f.Results {
+			id, e := convert.Id(v)
+			if e != nil {
+				continue
+			}
+			r, e := Charter(bson.M{ID: id}, nil)
+			if e != nil {
+				continue
+			}
+			cv := r.ChartVals()[0]
+			fi.Results[FormatResultName(n, f.Time)+" "+cv.Name] = cv.Y
+		}
 	}
 	return fis, nil
+}
+
+func FormatResultName(n string, t int64) string {
+	sp := strings.Split(n, "-")
+	if len(sp) > 1 {
+		n = sp[0] + " \u2192 " + util.Date(t)
+	}
+	n = strings.Replace(n, ":", " \u2192 ", -1)
+	return n
 }
 
 //FileNames retrieves names of files
@@ -135,7 +173,10 @@ func BasicFileInfos(m interface{}) ([]*FileInfo, error) {
 		if e != nil {
 			return nil, e
 		}
-		fi[i] = &FileInfo{Name: n, Package: p, Type: project.Type(t)}
+		fi[i] = NewFileInfo()
+		fi[i].Info["Name"] = n
+		fi[i].Info["Package"] = p
+		fi[i].Info["Type"] = project.Type(t)
 	}
 	return fi, nil
 }

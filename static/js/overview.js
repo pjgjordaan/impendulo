@@ -26,192 +26,56 @@ var OverviewChart = {
     tipe: '',
     init: function(tipe) {
         $(function() {
+            ComparisonChart.init();
             OverviewChart.tipe = tipe;
-            var params = {
-                'type': 'overview',
-                'view': tipe,
-            };
-            $.getJSON('chart-data', params, function(data) {
-                OverviewChart.active = data['categories'][0];
-                OverviewChart.create(data['chart'], data['categories'], data['categories'][0]);
+            OverviewChart.addOptions();
+            $('.select-chart').change(function() {
+                $('#chart').empty();
+                OverviewChart.load($('#x').val(), $('#y').val());
             });
+            OverviewChart.addOptions();
         });
     },
 
-    create: function(chartData, categories, active) {
-        if (chartData === null) {
-            return;
-        }
-        d3.select('#overview-chart').html('');
-        var m = [10, 150, 50, 100];
-        var w = 1100 - m[1] - m[3];
-        var h = 500 - m[0] - m[2];
-        var size = w / chartData.length;
-        var yMax = h / 3;
-        var duration = 1500;
-        var ease = 'quad-in-out';
-        var currentY = function(d) {
-            return d[active];
-        };
-        var names = chartData.map(function(d) {
-            return d.key;
+    addOptions: function() {
+        var x = $('#x').val();
+        var y = $('#y').val();
+        $.getJSON('chart-options', function(data) {
+            var o = data['options'];
+            if (not(o)) {
+                return;
+            }
+            for (var i = 0; i < o.length; i++) {
+                $('.select-chart').append('<option value="' + o[i].Id + '">' + o[i].Name + '</option>');
+            }
+            if (x === undefined || x === null || !$('#x option[value="' + x + '"]').length) {
+                x = o[0].Id;
+            }
+            $('#x').val(x);
+            if (y === undefined || y === null || !$('#y option[value="' + y + '"]').length) {
+                y = o[o.length - 1].Id;
+            }
+            $('#y').val(y);
+            OverviewChart.load(x, y);
         });
-        var chartColour = function(t) {
-            return d3.scale.category10()
-                .domain(categories)(t);
-        };
-        var getAssignments = function(d) {
-            var url = '';
-            if (OverviewChart.tipe === 'project') {
-                for (var i = 0; i < chartData.length; i++) {
-                    if (chartData[i].key === d) {
-                        url = 'assignmentsview?project-id=' + chartData[i].id;
-                        break;
-                    }
-                }
-            } else if (OverviewChart.tipe === 'user') {
-                url = 'assignmentsview?user-id=' + d;
-            }
-            if (url !== '') {
-                window.location = url;
-            }
-        };
-        var xScale = d3.scale.ordinal()
-            .domain(names)
-            .rangeBands([0, w]);
-        var xPos = function(d) {
-            return xScale(d.key);
-        };
-        var domain = [0, d3.max(chartData, currentY)];
-        var yScale = d3.scale.linear()
-            .domain(d3.extent(chartData, currentY))
-            .range([h, 0]);
-        var yPos = function(d) {
-            return h - height(d);
-        };
-        var height = function(d) {
-            return d3.scale.linear()
-                .domain(domain)
-                .range([0, yMax])(d[active]);
-        };
-        var x = w / chartData.length - 10;
-        var xAxis = d3.svg.axis()
-            .scale(xScale)
-            .tickSize(-h)
-            .orient('bottom')
-            .tickSubdivide(true);
-        var yAxis = d3.svg.axis()
-            .scale(yScale)
-            .ticks(5)
-            .orient('left')
-            .tickSubdivide(true);
+    },
 
-        var chart = d3.select('#overview-chart')
-            .append('svg:svg')
-            .attr('width', w + m[1] + m[3])
-            .attr('height', h + m[0] + m[2])
-            .append('svg:g')
-            .attr('transform', 'translate(' + m[3] + ',' + m[0] + ')');
-        chart.append('svg:rect')
-            .attr('width', w)
-            .attr('height', h)
-            .attr('class', 'plot');
-        chart.append('svg:g')
-            .attr('class', 'y axis')
-            .attr('transform', 'translate(-25,0)')
-            .call(yAxis);
-        chart.append('svg:g')
-            .attr('font-size', '10px')
-            .attr('class', 'x axis')
-            .attr('transform', 'translate(0,' + h + ')')
-            .call(xAxis);
-        chart.select('.x.axis')
-            .selectAll('.tick.major')
-            .attr('class', 'tick major clickable')
-            .on('click', getAssignments)
-        chart.append('text')
-            .attr('x', w / 2)
-            .attr('y', h + 40)
-            .attr('font-size', '20px')
-            .style('text-anchor', 'middle')
-            .text(OverviewChart.tipe === 'project' ? 'Project' : 'User');
-        chart.append('text')
-            .attr('font-size', '20px')
-            .attr('transform', 'translate(' + (-70) + ',' + (h * 0.5) + ')rotate(-90)')
-            .style('text-anchor', 'middle')
-            .text(active.toTitleCase());
-
-        chart.append('svg:clipPath')
-            .attr('id', 'clip')
-            .append('svg:rect')
-            .attr('x', -10)
-            .attr('y', -10)
-            .attr('width', w + 20)
-            .attr('height', h + 20);
-        var chartBody = chart.append('g')
-            .attr('clip-path', 'url(#clip)');
-        var bars = chartBody.selectAll('.bar')
-            .data(chartData)
-            .enter()
-            .append('g')
-            .attr('class', 'bar');
-        bars.append('rect')
-            .attr("x", xPos)
-            .attr('fill', chartColour(active))
-            .attr("y", yPos)
-            .attr("width", x)
-            .attr("height", height)
-            .attr('status', 'stacked')
-            .append('title')
-            .attr('class', 'description')
-            .text(function(d) {
-                return d.key +
-                    '\n' + d[active] + ' ' + active.toTitleCase();
-            });
-        var legend = chart.append('g')
-            .attr('class', 'legend')
-            .attr('height', 100)
-            .attr('width', 100)
-            .attr('transform', 'translate(-100,0)');
-        var changeActive = function(d) {
-            OverviewChart.create(chartData, categories, d);
+    load: function(x, y) {
+        var params = {
+            'type': 'overview',
+            'view': OverviewChart.tipe,
+            'x': x,
+            'y': y
         };
-        var legendElements = legend.selectAll('g')
-            .data(categories)
-            .enter()
-            .append('g');
-        legendElements
-            .attr('class', 'clickable')
-            .style('opacity', function(d) {
-                return d === active ? 1.0 : 0.5;
-            })
-            .on('click', changeActive);
-        legendElements.append('text')
-            .attr('x', 120 + w)
-            .attr('y', function(d, i) {
-                return i * 20 + 60;
-            })
-            .attr('font-size', '12px')
-            .text(function(d) {
-                return d.toTitleCase();
-            });
-        legendElements.append('rect')
-            .attr('class', 'legendrect')
-            .attr('x', 100 + w)
-            .attr('y', function(d, i) {
-                return i * 20 + 50;
-            })
-            .attr('width', 15)
-            .attr('height', 15)
-            .style('fill', chartColour);
-    }
+        ComparisonChart.load(params);
+    },
+
 };
 
 var Overview = {
     setup: function(tipe, tipeNames) {
         $(function() {
             $.getJSON('typecounts?view=' + tipe, function(data) {
-                console.log(data);
                 if (not(data['typecounts'])) {
                     return;
                 }

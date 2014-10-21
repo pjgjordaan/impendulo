@@ -26,6 +26,9 @@ package stats
 import (
 	"errors"
 	"fmt"
+
+	"github.com/godfried/impendulo/user"
+
 	"strings"
 
 	"github.com/godfried/impendulo/config"
@@ -51,6 +54,7 @@ type (
 	}
 	C struct {
 		projects map[bson.ObjectId]int
+		XN, YN   string
 	}
 	Type string
 )
@@ -89,6 +93,77 @@ func (c *C) Calc(rd *context.Result, s *project.Submission) (float64, string, er
 	} else {
 		return Score(s, rd)
 	}
+}
+
+func (c *C) Submission(s *project.Submission, x, y *context.Result) (float64, float64, error) {
+	xVal, xN, e := c.Calc(x, s)
+	if e != nil {
+		return 0, 0, e
+	}
+	yVal, yN, e := c.Calc(y, s)
+	if e != nil {
+		return 0, 0, e
+	}
+	c.XN = xN
+	c.YN = yN
+	return xVal, yVal, nil
+}
+
+func (c *C) Assignment(a *project.Assignment, x, y *context.Result) (float64, float64, error) {
+	subs, e := db.Submissions(bson.M{db.ASSIGNMENTID: a.Id}, nil)
+	if e != nil {
+		return 0, 0, e
+	}
+	count, xTotal, yTotal := 0, 0.0, 0.0
+	for _, s := range subs {
+		if xVal, yVal, e := c.Submission(s, x, y); e == nil {
+			xTotal += xVal
+			yTotal += yVal
+			count++
+		}
+	}
+	if count == 0 {
+		return 0, 0, nil
+	}
+	return util.Round(xTotal/float64(count), 2), util.Round(yTotal/float64(count), 2), nil
+}
+
+func (c *C) Project(p *project.P, x, y *context.Result) (float64, float64, error) {
+	as, e := db.Assignments(bson.M{db.PROJECTID: p.Id}, nil)
+	if e != nil {
+		return 0, 0, e
+	}
+	count, xTotal, yTotal := 0, 0.0, 0.0
+	for _, a := range as {
+		if xVal, yVal, e := c.Assignment(a, x, y); e == nil {
+			xTotal += xVal
+			yTotal += yVal
+			count++
+		}
+	}
+	if count == 0 {
+		return 0, 0, nil
+	}
+	return util.Round(xTotal/float64(count), 2), util.Round(yTotal/float64(count), 2), nil
+}
+
+func (c *C) User(u *user.User, x, y *context.Result) (float64, float64, error) {
+	ss, e := db.Submissions(bson.M{db.USER: u.Name}, nil)
+	if e != nil {
+		return 0, 0, e
+	}
+	count, xTotal, yTotal := 0, 0.0, 0.0
+	for _, s := range ss {
+		if xVal, yVal, e := c.Submission(s, x, y); e == nil {
+			xTotal += xVal
+			yTotal += yVal
+			count++
+		}
+	}
+	if count == 0 {
+		return 0, 0, nil
+	}
+	return util.Round(xTotal/float64(count), 2), util.Round(yTotal/float64(count), 2), nil
 }
 
 func ParseType(n string) (Type, error) {
@@ -449,7 +524,7 @@ func TypeCounts(id interface{}) map[string]interface{} {
 	}
 	c["assignments"] = len(am)
 	if pc == 0 {
-		c[string(PASSED)] = "N/A"
+		c[string(PASSED)] = 0.0
 	} else {
 		c[string(PASSED)] = util.Round(ps/float64(pc), 2)
 	}

@@ -95,6 +95,14 @@ func GetInt64(m map[string]interface{}, k string) (int64, error) {
 	return Int64(i)
 }
 
+func GetFloat64(m map[string]interface{}, k string) (float64, error) {
+	i, ok := m[k]
+	if !ok {
+		return 0, errors.NewMissing(k)
+	}
+	return Float64(i)
+}
+
 func Int(i interface{}) (int, error) {
 	switch v := i.(type) {
 	case int:

@@ -5,7 +5,7 @@
     <li class="active"><a>Chart</a>
     </li>
 </ul>
-<div id="overview-chart" class="overview-chart" xmlns:xlink="http://www.w3.org/1999/xlink"></div>
+{{template "chart" .}}
 <script type="text/javascript" language="javascript" src="/static/js/overview.js"></script>
 <script>
     var isUser = '{{.ctx.Browse.IsUser}}' === 'true';

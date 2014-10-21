@@ -51,8 +51,8 @@ var FilesView = {
             $('#submission-dropdown-label h4').html('<small>submission</small> ' + currentName + ' <span class="caret"></span>');
             FilesView.load(currentId);
         });
-
     },
+
     buidDropdown: function(tipe, id, url, vals) {
         for (var i = 0; i < vals.length; i++) {
             var currentId = tipe === 'user' ? vals[i].Name : vals[i].Id;
@@ -67,6 +67,7 @@ var FilesView = {
             $('#' + tipe + '-dropdown-label').append('<h4><small>' + tipe + '</small> None Selected <span class="caret"></span></h4>');
         }
     },
+
     load: function(sid) {
         $.getJSON('fileinfos?submission-id=' + sid, function(data) {
             if (not(data['fileinfos'])) {
@@ -78,29 +79,35 @@ var FilesView = {
             }
         });
     },
+
     addInfo: function(f, sid, fc) {
         $('#files-list').append('<li id="file' + fc + '"><h4></h4></li>');
         var desc = '<dt>{0}</dt><dd>{1}</dd>';
-        $.getJSON('resultnames?submission-id=' + sid + '&filename=' + f.Name, function(data) {
-            $('#file' + fc).append('<dl class="dl-horizontal">' + desc.format('Package', f.Package) + desc.format('Type', f.Type) + desc.format('Snapshots', f.Count) + '</dl>');
+        $.getJSON('resultnames?submission-id=' + sid + '&filename=' + f.Info.Name, function(data) {
+            $('#file' + fc).append('<h5>Info</h5><dl class="dl-horizontal">' + desc.format("Package", f.Info.Package) + desc.format("Type", f.Info.Type) + desc.format("Source Files", f.Info['Source Files']) + desc.format("Launches", f.Info.Launches) + '</dl>');
+            var dl = '';
+            for (var n in f.Results) {
+                dl += desc.format(n, f.Results[n]);
+            }
+            $('#file' + fc).append('<h5>Final Results</h5><dl class="dl-horizontal">' + dl + '</dl>');
             var e = '';
             var rs = data['resultnames'];
             if (not(rs)) {
                 e += '<div class="alert alert-danger alert-dynamic alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button><strong>No results available</strong></div>';
             } else {
-                e += '<ul class="nav nav-tabs"><li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">' + f.Name + ' <span class="caret"></span></a><ul class="dropdown-menu" role="menu">';
+                e += '<ul class="nav nav-tabs"><li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">' + f.Info.Name + ' <span class="caret"></span></a><ul class="dropdown-menu" role="menu">';
                 for (var o in rs) {
                     if (not(rs[o])) {
-                        e += '<li><a href="resultsview?result=' + o + '&file=' + f.Name + '">' + o + '</a></li>';
+                        e += '<li><a href="resultsview?result=' + o + '&file=' + f.Info.Name + '">' + o + '</a></li>';
                     } else {
                         e += '<li class="dropdown-submenu"><a tabindex="-1" href="#">' + o + '</a><ul class="dropdown-menu" role="menu">';
                         for (var k in rs[o]) {
                             if (not(rs[o][k])) {
-                                e += '<li><a href="resultsview?result=' + o + ':' + k + '&file=' + f.Name + '">' + k + '</a></li>';
+                                e += '<li><a href="resultsview?result=' + o + ':' + k + '&file=' + f.Info.Name + '">' + k + '</a></li>';
                             } else {
                                 e += '<li class="dropdown-submenu"><a tabindex="-1" href="#">' + k + '</a><ul class="dropdown-menu" role="menu">';
                                 for (var j = 0; j < rs[o][k].length; j++) {
-                                    e += '<li><a testid=' + rs[o][k][j] + ' href="resultsview?result=' + o + ':' + k + '-' + rs[o][k][j] + '&file=' + f.Name + '"></a></li>';
+                                    e += '<li><a testid=' + rs[o][k][j] + ' href="resultsview?result=' + o + ':' + k + '-' + rs[o][k][j] + '&file=' + f.Info.Name + '"></a></li>';
                                 }
                                 e += '</ul></li>';
                             }

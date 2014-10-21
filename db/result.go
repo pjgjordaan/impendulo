@@ -450,6 +450,13 @@ func ResultNames(sid bson.ObjectId, fname string) (map[string]map[string][]strin
 	return m, nil
 }
 
+func BasicResultNames() map[string]map[string][]string {
+	return map[string]map[string][]string{
+		result.CODE: map[string][]string{},
+		diff.NAME:   map[string][]string{},
+	}
+}
+
 func ProjectResults(pid bson.ObjectId) []string {
 	rs := []string{javac.NAME, pmd.NAME, findbugs.NAME, checkstyle.NAME}
 	if Contains(JPF, bson.M{PROJECTID: pid}) {
@@ -462,6 +469,23 @@ func ProjectResults(pid bson.ObjectId) []string {
 	for _, t := range ts {
 		n, _ := util.Extension(t.Name)
 		rs = append(rs, junit.NAME+":"+n, jacoco.NAME+":"+n)
+	}
+	return rs
+}
+
+func AllResults() []string {
+	rs := []string{javac.NAME, pmd.NAME, findbugs.NAME, checkstyle.NAME, jpf.NAME}
+	s, e := Session()
+	if e != nil {
+		return rs
+	}
+	defer s.Close()
+	var ts []string
+	if e := s.DB("").C(TESTS).Find(nil).Distinct(NAME, &ts); e == nil {
+		for _, t := range ts {
+			n, _ := util.Extension(t)
+			rs = append(rs, junit.NAME+":"+n, jacoco.NAME+":"+n)
+		}
 	}
 	return rs
 }

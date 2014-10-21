@@ -157,6 +157,7 @@ path {
 dl dt {
     text-align: left;
     margin-left: 10px;
+    white-space: normal !important;
 }
 dl dd {
     text-align: left;

@@ -231,7 +231,7 @@ func (f *File) Rename(p, n string) {
 		on, _ := util.Extension(f.Name)
 		nn, _ := util.Extension(n)
 		f.Data = bytes.Replace(f.Data, []byte(on), []byte(nn), -1)
-		f.Name = nn
+		f.Name = n
 	}
 	if p != f.Package {
 		f.ChangePackage(f.Package, p)

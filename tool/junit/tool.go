@@ -127,6 +127,7 @@ func (t *Tool) Run(fileId bson.ObjectId, target *tool.Target) (result.Tooler, er
 		}
 		return nil, fmt.Errorf("could not run junit: %q.", string(r.StdErr))
 	}
+	defer rf.Close()
 	nr, e := NewResult(fileId, t.testId, t.test.Name, util.ReadBytes(rf))
 	if e != nil {
 		if re != nil {

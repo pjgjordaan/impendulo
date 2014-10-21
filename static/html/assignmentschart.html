@@ -8,30 +8,12 @@
     </li>
 </ul>
 <ul class="nav nav-pills">
-    <li><a href="getassignments">Table</a>
+    <li><a href="assignmentsview">Table</a>
     </li>
     <li class="active"><a>Chart</a>
     </li>
 </ul>
-<div class="row">
-    <div class="col-md-6">
-        <form class="form-inline centered" role="form" onsubmit="return false;">
-            <div class="form-group">
-                <label for="x">X</label>
-                <select style="width:200px;" id="x" name="x" class="form-control select-inline select-chart"></select>
-            </div>
-            <div class="form-group">
-                <label for="y">Y</label>
-                <select style="width:200px;" id="y" name="y" class="form-control select-inline select-chart"></select>
-            </div>
-            <div class="checkbox">
-                <label>
-                    <input type="checkbox" id="checkbox-outliers">Outliers
-                </label>
-            </div>
-        </form>
-    </div>
-</div>
+{{template "chart" .}}
 <script type="text/javascript" language="javascript" src="/static/js/assignment.js"></script>
 {{if .ctx.Browse.IsUser}}
 <script>
@@ -41,7 +23,4 @@
 <script>
     AssignmentsChart.init('project', "{{.ctx.Browse.Pid.Hex}}");
 </script>
-{{end}}
-<div id="assignments-chart" xmlns:xlink="http://www.w3.org/1999/xlink">
-</div>
-{{end}}
+{{end}} {{end}}

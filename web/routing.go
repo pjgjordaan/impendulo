@@ -88,6 +88,11 @@ var (
 		"importview", "exportview", "editdbview", "renameview",
 		"loadproject", "loadsubmission", "loadfile", "loaduser", "deleteview",
 	}
+
+	extraTemplates = map[string][]string{
+		"assignmentschart": {"comparisonchart"},
+		"submissionschart": {"comparisonchart"}, "overviewchart": {"comparisonchart"},
+	}
 )
 
 //Views loads all views.
@@ -149,7 +154,11 @@ func LoadView(n, v string) Handler {
 		if c.Browse.View == "home" {
 			c.Browse.SetLevel(n)
 		}
-		return T(getNav(c), n).Execute(w, map[string]interface{}{"ctx": c})
+		t := []string{getNav(c), n}
+		if et, ok := extraTemplates[n]; ok {
+			t = append(t, et...)
+		}
+		return T(t...).Execute(w, map[string]interface{}{"ctx": c})
 	}
 }
 

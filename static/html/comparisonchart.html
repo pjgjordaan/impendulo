@@ -1,0 +1,47 @@
+{{define "chart"}}
+<div class="row">
+    <div class="col-md-6">
+        <form class="form-inline" role="form" onsubmit="return false;">
+            <div class="form-group">
+                <label for="x">X</label>
+                <select style="width:200px;" id="x" name="x" class="form-control select-inline select-chart"></select>
+            </div>
+            <div class="form-group">
+                <label for="y">Y</label>
+                <select style="width:200px;" id="y" name="y" class="form-control select-inline select-chart"></select>
+            </div>
+        </form>
+    </div>
+    <div class="col-md-6">
+        <form class="form-inline centered" role="form" onsubmit="return false;">
+            <div class="checkbox">
+                <label>
+                    Adjust Outliers
+                    <input type="checkbox" id="checkbox-outliers">
+                </label>
+            </div>
+            <div class="checkbox">
+                <label>
+                    Labels
+                    <input type="checkbox" id="checkbox-labels">
+                </label>
+            </div>
+            <div class="checkbox">
+                <label>
+                    Mean
+                    <input type="checkbox" id="checkbox-mean">
+                </label>
+            </div>
+            <div class="checkbox">
+                <label>
+                    Standard Deviation
+                    <input type="checkbox" id="checkbox-stddev">
+                </label>
+            </div>
+        </form>
+    </div>
+</div>
+<script type="text/javascript" language="javascript" src="/static/js/comparisonchart.js"></script>
+<div id="chart" xmlns:xlink="http://www.w3.org/1999/xlink">
+</div>
+{{end}}

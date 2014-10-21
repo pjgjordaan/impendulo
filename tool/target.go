@@ -25,6 +25,8 @@
 package tool
 
 import (
+	"fmt"
+
 	"github.com/godfried/impendulo/util"
 
 	"path/filepath"
@@ -40,6 +42,10 @@ type (
 		Lang    Language
 	}
 )
+
+func (t *Target) String() string {
+	return fmt.Sprintf("Name: %s; Package: %s; Extension: %s; Directory: %s; Language: %s;", t.Name, t.Package, t.Ext, t.Dir, t.Lang)
+}
 
 //FilePath
 func (t *Target) FilePath() string {

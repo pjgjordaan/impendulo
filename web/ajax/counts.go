@@ -126,7 +126,7 @@ func assignmentCounts(aid bson.ObjectId, projectTests int) map[string]interface{
 	if pc > 0 {
 		counts[ps] = util.Round(counts[ps].(float64)/float64(pc), 2)
 	} else {
-		counts[ps] = "N/A"
+		counts[ps] = 0.0
 	}
 	return counts
 }

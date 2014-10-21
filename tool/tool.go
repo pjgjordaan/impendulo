@@ -28,6 +28,7 @@ package tool
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/godfried/impendulo/tool/result"
 
@@ -96,13 +97,17 @@ func Supported(l Language) bool {
 }
 
 //HasStdErr checks whether the ExecResult has standard error output.
-func (e *Result) HasStdErr() bool {
-	return e.StdErr != nil && len(e.StdErr) > 0
+func (r *Result) HasStdErr() bool {
+	return r.StdErr != nil && len(r.StdErr) > 0
 }
 
 //HasStdOut checks whether the ExecResult has standard output.
-func (e *Result) HasStdOut() bool {
-	return e.StdOut != nil && len(strings.TrimSpace(string(e.StdOut))) > 0
+func (r *Result) HasStdOut() bool {
+	return r.StdOut != nil && len(strings.TrimSpace(string(r.StdOut))) > 0
+}
+
+func (r *Result) String() string {
+	return fmt.Sprintf("StdOut: %s;\nStdErr: %s;\n", string(r.StdOut), string(r.StdErr))
 }
 
 //RunCommand executes a given command given by args and stdin. It terminates

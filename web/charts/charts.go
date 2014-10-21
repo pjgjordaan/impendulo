@@ -26,6 +26,9 @@ package charts
 
 import (
 	"errors"
+
+	"github.com/godfried/impendulo/user"
+
 	"math"
 
 	"github.com/godfried/impendulo/db"
@@ -49,17 +52,20 @@ type (
 	}
 
 	D      []map[string]interface{}
-	I      map[string]string
+	I      map[string]interface{}
 	avgVal struct {
 		count int
 		val   *result.ChartVal
 	}
+	O map[int]util.E
 )
 
 var (
 	NoFilesError       = errors.New("no files to load chart for")
 	NoSubmissionsError = errors.New("no submissions to create chart for")
 	NoAssignmentsError = errors.New("no assignments to create chart for")
+	NoProjectsError    = errors.New("no projects to create chart for")
+	NoUsersError       = errors.New("no users to create chart for")
 )
 
 func Tool(r *context.Result, files []*project.File) (D, error) {
@@ -194,33 +200,58 @@ func NewData() D {
 	return make(D, 0, 1000)
 }
 
-func User() (D, error) {
-	us, e := db.Users(nil)
-	if e != nil {
-		return nil, e
+func User(us []*user.User, x *context.Result, y *context.Result) (D, I, error) {
+	if len(us) == 0 {
+		return nil, nil, NoUsersError
 	}
 	d := NewData()
+	c := stats.NewCalc()
+	i := I{"x": x.Format(), "y": y.Format()}
+	sumX, sumY := 0.0, 0.0
 	for _, u := range us {
-		vals := stats.TypeCounts(u.Name)
-		vals["key"] = u.Name
-		d = append(d, vals)
+		if xTotal, yTotal, e := c.User(u, x, y); e == nil {
+			sumX += xTotal
+			sumY += yTotal
+			v := map[string]interface{}{
+				"key": "assignmentsview?user-id=" + u.Name, "x": xTotal, "y": yTotal,
+				"title": u.Name,
+			}
+			d = append(d, v)
+		}
 	}
-	return d, nil
+	i["x-unit"] = c.XN
+	i["y-unit"] = c.YN
+	d.AddOutliers("x")
+	d.AddOutliers("y")
+	i.AddStats(d, sumX, sumY)
+	return d, i, nil
 }
 
-func Project() (D, error) {
-	ps, e := db.Projects(bson.M{}, nil)
-	if e != nil {
-		return nil, e
+func Project(ps []*project.P, x *context.Result, y *context.Result) (D, I, error) {
+	if len(ps) == 0 {
+		return nil, nil, NoProjectsError
 	}
 	d := NewData()
+	c := stats.NewCalc()
+	i := I{"x": x.Format(), "y": y.Format()}
+	sumX, sumY := 0.0, 0.0
 	for _, p := range ps {
-		vals := stats.TypeCounts(p.Id)
-		vals["key"] = p.Name
-		vals["id"] = p.Id
-		d = append(d, vals)
+		if xTotal, yTotal, e := c.Project(p, x, y); e == nil {
+			sumX += xTotal
+			sumY += yTotal
+			v := map[string]interface{}{
+				"url": "assignmentschart?project-id=" + p.Id.Hex(), "x": xTotal, "y": yTotal,
+				"title": p.Name,
+			}
+			d = append(d, v)
+		}
 	}
-	return d, nil
+	i["x-unit"] = c.XN
+	i["y-unit"] = c.YN
+	d.AddOutliers("x")
+	d.AddOutliers("y")
+	i.AddStats(d, sumX, sumY)
+	return d, i, nil
 }
 
 func Assignment(as []*project.Assignment, x *context.Result, y *context.Result) (D, I, error) {
@@ -228,9 +259,10 @@ func Assignment(as []*project.Assignment, x *context.Result, y *context.Result) 
 		return nil, nil, NoAssignmentsError
 	}
 	d := NewData()
-	calc := stats.NewCalc()
+	c := stats.NewCalc()
 	names := make(map[bson.ObjectId]string)
-	info := I{"x": x.Format(), "y": y.Format()}
+	i := I{"x": x.Format(), "y": y.Format()}
+	sumX, sumY := 0.0, 0.0
 	for _, a := range as {
 		n, ok := names[a.ProjectId]
 		if !ok {
@@ -240,72 +272,22 @@ func Assignment(as []*project.Assignment, x *context.Result, y *context.Result) 
 			}
 			names[a.ProjectId] = n
 		}
-		subs, e := db.Submissions(bson.M{db.ASSIGNMENTID: a.Id}, nil)
-		if e != nil {
-			continue
-		}
-		count, xTotal, yTotal := 0, 0.0, 0.0
-		for _, s := range subs {
-			xVal, xN, e := calc.Calc(x, s)
-			if e != nil {
-				util.Log(e)
-				continue
+		if xTotal, yTotal, e := c.Assignment(a, x, y); e == nil {
+			sumX += xTotal
+			sumY += yTotal
+			p := map[string]interface{}{
+				"url": "submissionschart?assignment-id=" + a.Id.Hex(), "x": xTotal, "y": yTotal,
+				"title": n + " " + a.Name,
 			}
-			yVal, yN, e := calc.Calc(y, s)
-			if e != nil {
-				util.Log(e)
-				continue
-			}
-			count++
-			xTotal += xVal
-			yTotal += yVal
-			if _, ok := info["x-unit"]; !ok {
-				info["x-unit"] = xN
-			}
-			if _, ok := info["y-unit"]; !ok {
-				info["y-unit"] = yN
-			}
+			d = append(d, p)
 		}
-		if count == 0 {
-			continue
-		}
-		p := map[string]interface{}{
-			"key": a.Id.Hex(), "x": xTotal / float64(count), "y": yTotal / float64(count),
-			"project": n, "name": a.Name,
-		}
-		d = append(d, p)
 	}
-	AddOutliers(d)
-	return d, info, nil
-}
-
-func AddOutliers(d D) {
-	prev := -1
-	outliers := make(map[int]util.E, len(d))
-	for len(outliers)-prev > 0 {
-		mean := mean(d, outliers)
-		stdDev := stdDeviation(d, outliers, mean)
-		prev = len(outliers)
-		addOutliers(d, outliers, mean, stdDev)
-	}
-	if len(outliers) == 0 {
-		return
-	}
-	mean := mean(d, outliers)
-	stdDev := stdDeviation(d, outliers, mean)
-	n := float64(len(d))
-	inv := 0.5 * (2.82843 * stdDev * util.ErfInverse((n-0.5)/n, 100))
-	min := mean - inv
-	max := mean + inv
-	for i, _ := range outliers {
-		y := d[i]["y"].(float64)
-		if y < min {
-			d[i]["y"] = int(min)
-		} else if y > max {
-			d[i]["y"] = int(max)
-		}
-		d[i]["outlier"] = y
-	}
+	i["x-unit"] = c.XN
+	i["y-unit"] = c.YN
+	d.AddOutliers("x")
+	d.AddOutliers("y")
+	i.AddStats(d, sumX, sumY)
+	return d, i, nil
 }
 
 func Submission(subs []*project.Submission, x *context.Result, y *context.Result) (D, I, error) {
@@ -313,9 +295,10 @@ func Submission(subs []*project.Submission, x *context.Result, y *context.Result
 		return nil, nil, NoSubmissionsError
 	}
 	d := NewData()
-	calc := stats.NewCalc()
+	c := stats.NewCalc()
 	names := make(map[bson.ObjectId]string)
-	info := I{"x": x.Format(), "y": y.Format()}
+	i := I{"x": x.Format(), "y": y.Format()}
+	sumX, sumY := 0.0, 0.0
 	for _, s := range subs {
 		n, ok := names[s.ProjectId]
 		if !ok {
@@ -325,66 +308,148 @@ func Submission(subs []*project.Submission, x *context.Result, y *context.Result
 			}
 			names[s.ProjectId] = n
 		}
-		xVal, xN, e := calc.Calc(x, s)
-		if e != nil {
-			util.Log(e)
-			continue
+		if xVal, yVal, e := c.Submission(s, x, y); e == nil {
+			sumX += xVal
+			sumY += yVal
+			p := map[string]interface{}{
+				"url": "filesview?submission-id=" + s.Id.Hex(), "title": s.User + "'s " + n, "x": xVal, "y": yVal,
+			}
+			d = append(d, p)
 		}
-		yVal, yN, e := calc.Calc(y, s)
-		if e != nil {
-			util.Log(e)
-			continue
-		}
-		if _, ok := info["x-unit"]; !ok {
-			info["x-unit"] = xN
-		}
-		if _, ok := info["y-unit"]; !ok {
-			info["y-unit"] = yN
-		}
-		p := map[string]interface{}{
-			"key": s.Id.Hex(), "user": s.User, "x": xVal, "y": yVal,
-			"project": n,
-		}
-		d = append(d, p)
 	}
-	AddOutliers(d)
-	return d, info, nil
+	i["x-unit"] = c.XN
+	i["y-unit"] = c.YN
+	d.AddOutliers("x")
+	d.AddOutliers("y")
+	i.AddStats(d, sumX, sumY)
+	return d, i, nil
 }
 
-func mean(vals []map[string]interface{}, outliers map[int]util.E) float64 {
+func (i I) AddStats(d D, sumX, sumY float64) {
+	mx := util.Round(sumX/float64(len(d)), 2)
+	my := util.Round(sumY/float64(len(d)), 2)
+	sx, sy := d.StandardDeviations(mx, my)
+	mxo, myo := d.AdjustedMeans()
+	sxo, syo := d.AdjustedStandardDeviations(mxo, myo)
+	i["mean"] = bson.M{"x": mx, "y": my, "x_o": mxo, "y_o": myo, "title": "Mean"}
+	i["stddev"] = bson.M{"x": mx, "y": my, "x_o": mxo, "y_o": myo, "rx": sx, "ry": sy, "rx_o": sxo, "ry_o": syo}
+}
+
+func (d D) StandardDeviations(mx, my float64) (float64, float64) {
+	sx, sy := 0.0, 0.0
+	for _, v := range d {
+		if f, e := convert.GetFloat64(v, "x"); e == nil {
+			sx += math.Pow(f-mx, 2.0)
+		}
+		if f, e := convert.GetFloat64(v, "y"); e == nil {
+			sy += math.Pow(f-my, 2.0)
+		}
+	}
+	sx = util.Round(math.Sqrt(sx/float64(len(d))), 2.0)
+	sy = util.Round(math.Sqrt(sy/float64(len(d))), 2.0)
+	return sx, sy
+}
+
+func (d D) AdjustedMeans() (float64, float64) {
+	mx, my := 0.0, 0.0
+	for _, v := range d {
+		if f, e := convert.GetFloat64(v, "x_o"); e == nil {
+			mx += f
+		} else if f, e := convert.GetFloat64(v, "x"); e == nil {
+			mx += f
+		}
+		if f, e := convert.GetFloat64(v, "y_o"); e == nil {
+			my += f
+		} else if f, e := convert.GetFloat64(v, "y"); e == nil {
+			my += f
+		}
+	}
+	mx = util.Round(mx/float64(len(d)), 2.0)
+	my = util.Round(my/float64(len(d)), 2.0)
+	return mx, my
+}
+
+func (d D) AdjustedStandardDeviations(mx, my float64) (float64, float64) {
+	sx, sy := 0.0, 0.0
+	for _, v := range d {
+		if f, e := convert.GetFloat64(v, "x_o"); e == nil {
+			sx += math.Pow(f-mx, 2.0)
+		} else if f, e := convert.GetFloat64(v, "x"); e == nil {
+			sx += math.Pow(f-mx, 2.0)
+		}
+		if f, e := convert.GetFloat64(v, "y_o"); e == nil {
+			sy += math.Pow(f-my, 2.0)
+		} else if f, e := convert.GetFloat64(v, "y"); e == nil {
+			sy += math.Pow(f-my, 2.0)
+		}
+	}
+	sx = util.Round(math.Sqrt(sx/float64(len(d))), 2.0)
+	sy = util.Round(math.Sqrt(sy/float64(len(d))), 2.0)
+	return sx, sy
+}
+
+func (d D) AddOutliers(axis string) {
+	prev := -1
+	o := make(O, len(d))
+	for len(o)-prev > 0 {
+		mean := o.Mean(d, axis)
+		stdDev := o.StandardDeviation(d, mean, axis)
+		prev = len(o)
+		o.Add(d, mean, stdDev, axis)
+	}
+	if len(o) == 0 {
+		return
+	}
+	mean := o.Mean(d, axis)
+	stdDev := o.StandardDeviation(d, mean, axis)
+	n := float64(len(d))
+	inv := 0.5 * (2.82843 * stdDev * util.ErfInverse((n-0.5)/n, 100))
+	min := mean - inv
+	max := mean + inv
+	for i, _ := range o {
+		v := d[i][axis].(float64)
+		if v < min {
+			d[i][axis+"_o"] = int(min)
+		} else if v > max {
+			d[i][axis+"_o"] = int(max)
+		}
+	}
+}
+
+func (o O) Mean(d D, axis string) float64 {
 	mean := 0.0
-	for i, c := range vals {
-		if _, ok := outliers[i]; ok {
+	for i, c := range d {
+		if _, ok := o[i]; ok {
 			continue
 		}
-		mean += c["y"].(float64)
+		mean += c[axis].(float64)
 	}
-	mean /= float64(len(vals) - len(outliers))
+	mean /= float64(len(d) - len(o))
 	return mean
 }
 
-func stdDeviation(vals []map[string]interface{}, outliers map[int]util.E, mean float64) float64 {
+func (o O) StandardDeviation(d D, mean float64, axis string) float64 {
 	stdDev := 0.0
-	for i, c := range vals {
-		if _, ok := outliers[i]; ok {
+	for i, c := range d {
+		if _, ok := o[i]; ok {
 			continue
 		}
-		stdDev += math.Pow(c["y"].(float64)-mean, 2.0)
+		stdDev += math.Pow(c[axis].(float64)-mean, 2.0)
 	}
-	stdDev = math.Sqrt(stdDev / float64(len(vals)-len(outliers)))
+	stdDev = math.Sqrt(stdDev / float64(len(d)-len(o)))
 	return stdDev
 }
 
-func addOutliers(vals []map[string]interface{}, outliers map[int]util.E, mean, stdDev float64) {
-	for i, c := range vals {
-		if _, ok := outliers[i]; ok {
+func (o O) Add(d D, mean, stdDev float64, axis string) {
+	for i, c := range d {
+		if _, ok := o[i]; ok {
 			continue
 		}
-		y := c["y"].(float64)
-		z := math.Abs(mean-y) / stdDev
-		p := (1 - math.Erf(z/math.Sqrt(2))) * float64(len(vals))
+		v := c[axis].(float64)
+		z := math.Abs(mean-v) / stdDev
+		p := (1 - math.Erf(z/math.Sqrt(2))) * float64(len(d))
 		if p < 0.5 {
-			outliers[i] = util.E{}
+			o[i] = util.E{}
 		}
 	}
 }

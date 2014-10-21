@@ -18,7 +18,6 @@ var MongoView = {
 
     },
     loadCollections: function(db) {
-        console.log(db);
         clearMulti('#collections');
         $.getJSON('collections?db=' + db, function(data) {
             var c = data['collections'];
