@@ -23,74 +23,66 @@
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 var SubmissionsChart = {
-    tipe: '',
     init: function(aid, pid, uid, tipe) {
         ComparisonChart.init();
-        SubmissionsChart.tipe = tipe;
         $(function() {
             $('.select-chart').change(function() {
                 $('#chart').empty();
-                SubmissionsChart.load($('#' + SubmissionsChart.tipe + '-dropdown-label').attr(SubmissionsChart.tipe + 'id'), $('#x').val(), $('#y').val());
+                SubmissionsChart.load($('#x').val(), $('#y').val());
             });
             $.getJSON('projects', function(data) {
                 if (not(data['projects'])) {
                     return;
                 }
-                SubmissionsChart.buidDropdown('project', pid, data['projects']);
+                View.buidDropdown('project', pid, 'assignmentsview', data['projects']);
                 $.getJSON('users', function(data) {
                     if (not(data['users'])) {
                         return;
                     }
-                    SubmissionsChart.buidDropdown('user', uid, data['users']);
-                    var id = SubmissionsChart.tipe === 'user' ? uid : pid;
-                    $.getJSON('assignments?' + SubmissionsChart.tipe + '-id=' + id, function(data) {
+                    View.buidDropdown('user', uid, 'assignmentsview', data['users']);
+                    var id = tipe === 'user' ? uid : pid;
+                    $.getJSON('assignments?' + tipe + '-id=' + id, function(data) {
                         if (not(data['assignments'])) {
                             return;
                         }
-                        SubmissionsChart.buidDropdown('assignment', aid, data['assignments']);
+                        SubmissionsChart.assDropdown(aid, data['assignments']);
+                        SubmissionsChart.addOptions();
                     });
                 });
             });
         });
     },
 
-    buidDropdown: function(tipe, id, vals) {
+    assDropdown: function(id, vals) {
         for (var i = 0; i < vals.length; i++) {
-            var currentId = tipe === 'user' ? vals[i].Name : vals[i].Id;
-            $('#' + tipe + '-dropdown ul.dropdown-menu').append('<li role="presentation"><a tabindex="-1" role="menuitem" href="#" ' + tipe + 'id="' + currentId + '">' + vals[i].Name + '</a></li>');
+            var currentId = vals[i].Id;
+            $('#assignment-dropdown ul.dropdown-menu').append('<li role="presentation"><a tabindex="-1" role="menuitem" href="#" currentid="' + currentId + '">' + vals[i].Name + '</a></li>');
             if (id === currentId) {
-                $('#' + tipe + '-dropdown-label').attr(tipe + 'id', id);
-                $('#' + tipe + '-dropdown-label').append('<h4><small>' + tipe + '</small> ' + vals[i].Name + ' <span class="caret"></span></h4>');
-                if (tipe === SubmissionsChart.tipe) {
-                    SubmissionsChart.addOptions(id);
-                }
+                $('#assignment-dropdown-label').attr('currentid', id);
+                $('#assignment-dropdown-label').append('<h4><small>assignment</small> ' + vals[i].Name + ' <span class="caret"></span></h4>');
             }
         }
-        if ($('#' + tipe + '-dropdown-label').attr(tipe + 'id') === undefined) {
-            $('#' + tipe + '-dropdown-label').append('<h4><small>' + tipe + '</small> None Selected <span class="caret"></span></h4>');
-        }
-        $('#' + tipe + '-dropdown ul.dropdown-menu a').on('click', function() {
+        $('#assignment-dropdown ul.dropdown-menu a').on('click', function() {
             $('#table-submissions > tbody').empty();
-            var currentId = $(this).attr(tipe + 'id');
+            var currentId = $(this).attr('currentid');
             var currentName = $(this).html();
             var params = {};
-            params[tipe + '-id'] = currentId;
-            if (tipe !== 'assignment') {
-                SubmissionsChart.tipe = tipe;
-                params['assignment-id'] = 'all';
-            }
+            params['assignment-id'] = currentId;
             setContext(params);
-            $('#' + tipe + '-dropdown-label').attr(tipe + 'id', currentId);
-            $('#' + tipe + '-dropdown-label h4').html('<small>' + tipe + '</small> ' + currentName + ' <span class="caret"></span>');
-            SubmissionsChart.addOptions(currentId);
+            $('#assignment-dropdown-label').attr('currentid', currentId);
+            $('#assignment-dropdown-label h4').html('<small>assignment</small> ' + currentName + ' <span class="caret"></span>');
+            SubmissionsChart.addOptions();
         });
     },
 
-    addOptions: function(id) {
+    addOptions: function() {
         var x = $('#x').val();
         var y = $('#y').val();
         $('.select-chart').empty();
-        $.getJSON('chart-options?' + SubmissionsChart.tipe + '-id=' + id, function(data) {
+        var url = 'chart-options';
+        var count = 0;
+        var id = $('#assignment-dropdown-label').attr('currentid');
+        $.getJSON('chart-options?assignment-id=' + id, function(data) {
             var o = data['options'];
             if (not(o)) {
                 console.log(data);
@@ -107,17 +99,16 @@ var SubmissionsChart = {
                 y = o[o.length - 1].Id;
             }
             $('#y').val(y);
-            SubmissionsChart.load(id, x, y);
+            SubmissionsChart.load(x, y);
         });
     },
 
-    load: function(id, x, y) {
+    load: function(x, y) {
         var params = {
             'type': 'submission',
-            'id': id,
             'x': x,
             'y': y,
-            'submission-type': SubmissionsChart.tipe
+            'assignment-id': $('#assignment-dropdown-label').attr('currentid')
         };
         ComparisonChart.load(params);
     }
@@ -134,18 +125,18 @@ var SubmissionsView = {
                 if (not(data['projects'])) {
                     return;
                 }
-                SubmissionsView.buidDropdown('project', pid, data['projects']);
+                View.buidDropdown('project', pid, 'assignmentsview', data['projects']);
                 $.getJSON('users', function(data) {
                     if (not(data['users'])) {
                         return;
                     }
-                    SubmissionsView.buidDropdown('user', uid, data['users']);
+                    View.buidDropdown('user', uid, 'assignmentsview', data['users']);
                     var id = tipe === 'user' ? uid : pid;
                     $.getJSON('assignments?' + tipe + '-id=' + id, function(data) {
                         if (not(data['assignments'])) {
                             return;
                         }
-                        SubmissionsView.buidDropdown('assignment', aid, data['assignments']);
+                        SubmissionsView.assDropdown(aid, data['assignments']);
                         SubmissionsView.load();
                     });
                 });
@@ -153,44 +144,37 @@ var SubmissionsView = {
         });
     },
 
-    buidDropdown: function(tipe, id, vals) {
+    assDropdown: function(id, vals) {
         for (var i = 0; i < vals.length; i++) {
-            var currentId = tipe === 'user' ? vals[i].Name : vals[i].Id;
-            $('#' + tipe + '-dropdown ul.dropdown-menu').append('<li role="presentation"><a tabindex="-1" role="menuitem" href="#" ' + tipe + 'id="' + currentId + '">' + vals[i].Name + '</a></li>');
+            var currentId = vals[i].Id;
+            $('#assignment-dropdown ul.dropdown-menu').append('<li role="presentation"><a tabindex="-1" role="menuitem" href="#" assignmentid="' + currentId + '">' + vals[i].Name + '</a></li>');
             if (id === currentId) {
-                $('#' + tipe + '-dropdown-label').attr(tipe + 'id', id);
-                $('#' + tipe + '-dropdown-label').append('<h4><small>' + tipe + '</small> ' + vals[i].Name + ' <span class="caret"></span></h4>');
+                $('#assignment-dropdown-label').attr('assignmentid', id);
+                $('#assignment-dropdown-label').append('<h4><small>assignment</small> ' + vals[i].Name + ' <span class="caret"></span></h4>');
             }
         }
-        if ($('#' + tipe + '-dropdown-label').attr(tipe + 'id') === undefined) {
-            $('#' + tipe + '-dropdown-label').append('<h4><small>' + tipe + '</small> None Selected <span class="caret"></span></h4>');
+        if ($('#assignment-dropdown-label').attr('assignmentid') === undefined) {
+            $('#assignment-dropdown-label').append('<h4><small>assignment</small> None Selected <span class="caret"></span></h4>');
         }
-        $('#' + tipe + '-dropdown ul.dropdown-menu a').on('click', function() {
+        $('#assignment-dropdown ul.dropdown-menu a').on('click', function() {
             $('#table-submissions > tbody').empty();
-            var currentId = $(this).attr(tipe + 'id');
+            var currentId = $(this).attr('assignmentid');
             var currentName = $(this).html();
             var params = {};
-            params[tipe + '-id'] = currentId;
-            if (tipe !== 'assignment') {
-                params['assignment-id'] = 'all';
-            }
+            params['assignment-id'] = currentId;
             setContext(params);
-            $('#' + tipe + '-dropdown-label').attr(tipe + 'id', currentId);
-            $('#' + tipe + '-dropdown-label h4').html('<small>' + tipe + '</small> ' + currentName + ' <span class="caret"></span>');
+            $('#assignment-dropdown-label').attr('assignmentid', currentId);
+            $('#assignment-dropdown-label h4').html('<small>assignment</small> ' + currentName + ' <span class="caret"></span>');
             SubmissionsView.load();
         });
     },
 
     load: function() {
         $('#table-submissions > tbody').empty();
-        var uid = $('#user-dropdown-label').attr('userid');
-        var pid = $('#project-dropdown-label').attr('projectid');
         var aid = $('#assignment-dropdown-label').attr('assignmentid');
         var params = {
             'counts': true,
-            'assignment-id': aid,
-            'project-id': pid,
-            'user-id': uid
+            'assignment-id': aid
         }
         $.getJSON('submissions', params, function(data) {
             if (not(data['submissions']) || not(data['counts'])) {

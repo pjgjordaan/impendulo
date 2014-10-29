@@ -54,6 +54,7 @@ type (
 
 	finder struct {
 		l, n string
+		dir  bool
 	}
 )
 
@@ -245,7 +246,7 @@ func (f *finder) walk(p string, i os.FileInfo, e error) error {
 	if e != nil {
 		return e
 	}
-	if i.IsDir() && strings.HasSuffix(p, f.n) {
+	if ((f.dir && i.IsDir()) || (!f.dir && !i.IsDir())) && strings.HasSuffix(p, f.n) {
 		f.l = p
 		return errors.Found
 	}
@@ -253,7 +254,15 @@ func (f *finder) walk(p string, i os.FileInfo, e error) error {
 }
 
 func LocateDirectory(src, name string) (string, error) {
-	f := &finder{n: name}
+	f := &finder{n: name, dir: true}
+	if e := filepath.Walk(src, f.walk); e != nil && e != errors.Found {
+		return "", e
+	}
+	return f.l, nil
+}
+
+func LocateFile(src, name string) (string, error) {
+	f := &finder{n: name, dir: false}
 	if e := filepath.Walk(src, f.walk); e != nil && e != errors.Found {
 		return "", e
 	}

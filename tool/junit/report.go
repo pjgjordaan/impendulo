@@ -27,30 +27,35 @@ package junit
 import (
 	"encoding/gob"
 	"encoding/xml"
+	"errors"
 	"fmt"
-
-	"github.com/godfried/impendulo/tool"
-	"labix.org/v2/mgo/bson"
-
 	"sort"
 	"strings"
+
+	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/result"
+	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/util/convert"
+	"labix.org/v2/mgo/bson"
 )
 
 type (
-	//Report is created from XML output by a Ant JUnit task.
-	Report struct {
-		Id bson.ObjectId
-		//Errors is the number of runtime exceptions
-		//which occurred when running the test cases.
-		Errors int `xml:"errors,attr"`
-		//Failures is the number of test cases which produced
-		//an invalid result.
-		Failures int     `xml:"failures,attr"`
-		Name     string  `xml:"name,attr"`
-		Tests    int     `xml:"tests,attr"`
-		Time     float64 `xml:"time,attr"`
+	XML struct {
+		Name  string  `xml:"name,attr"`
+		Tests int     `xml:"tests,attr"`
+		Time  float64 `xml:"time,attr"`
 		//Results is all the failed testcases.
 		Results TestCases `xml:"testcase"`
+	}
+
+	//Report is created from XML output by a Ant JUnit task.
+	Report struct {
+		Id       bson.ObjectId
+		Errors   TestCases
+		Failures TestCases
+		Name     string
+		Tests    int
+		Time     float64
 	}
 
 	//TestCase represents a failed testcase
@@ -58,18 +63,23 @@ type (
 		ClassName string   `xml:"classname,attr"`
 		Name      string   `xml:"name,attr"`
 		Time      float64  `xml:"time,attr"`
-		Fail      *Failure `xml:"failure"`
+		Failure   *Details `xml:"failure"`
+		Error     *Details `xml:"error"`
+		location  *Location
 	}
 
 	//TestCases represents all the testcases which a class failed.
 	//It implements sort.Sort
 	TestCases []*TestCase
 
-	//Failure gives details as to why a test case failed.
-	Failure struct {
+	Details struct {
 		Message string `xml:"message,attr"`
 		Type    string `xml:"type,attr"`
 		Value   string `xml:",innerxml"`
+	}
+	Location struct {
+		Source string
+		Line   int
 	}
 )
 
@@ -78,76 +88,172 @@ func init() {
 }
 
 //NewReport
-func NewReport(id bson.ObjectId, data []byte) (res *Report, err error) {
-	if err = xml.Unmarshal(data, &res); err != nil {
-		if res == nil {
-			err = tool.NewXMLError(err, "junit/junitResult.go")
-			return
-		} else {
-			err = nil
+func NewReport(id bson.ObjectId, data []byte) (*Report, error) {
+	var x *XML
+	if e := xml.Unmarshal(data, &x); e != nil && x == nil {
+		return nil, tool.NewXMLError(e, "junit/junitResult.go")
+	}
+	return newReport(x, id), nil
+}
+
+func newReport(x *XML, id bson.ObjectId) *Report {
+	errors := make(TestCases, 0, len(x.Results))
+	failures := make(TestCases, 0, len(x.Results))
+	for _, tc := range x.Results {
+		if e := tc.SetLocation(); e != nil {
+			util.Log(e)
+		}
+		if tc.Error != nil {
+			errors = append(errors, tc)
+		}
+		if tc.Failure != nil {
+			failures = append(failures, tc)
 		}
 	}
-	sort.Sort(res.Results)
-	res.Id = id
-	return
+	sort.Sort(errors)
+	sort.Sort(failures)
+	return &Report{Name: x.Name, Time: x.Time, Tests: x.Tests, Id: id, Errors: errors, Failures: failures}
 }
 
 //Success
-func (this *Report) Success() bool {
-	return this.Errors == 0 && this.Failures == 0
+func (r *Report) Success() bool {
+	return len(r.Errors) == 0 && len(r.Failures) == 0
 }
 
 //String
-func (this *Report) String() string {
+func (r *Report) String() string {
 	return fmt.Sprintf("Id: %q; Success: %t; Tests: %d; Errors: %d; Failures: %d; Name: %s; \n Results: %s",
-		this.Id, this.Success(), this.Tests, this.Errors, this.Failures, this.Name, this.Results)
+		r.Id, r.Success(), r.Tests, r.Name, r.Errors, r.Failures)
 }
 
-//GetResults
-func (this *Report) GetResults(num int) TestCases {
-	if len(this.Results) < num {
-		return this.Results
+func (r *Report) GetErrors(num int) TestCases {
+	if len(r.Errors) < num {
+		return r.Errors
 	} else {
-		return this.Results[:num]
+		return r.Errors[:num]
 	}
 }
 
+func (r *Report) GetFailures(num int) TestCases {
+	if len(r.Failures) < num {
+		return r.Failures
+	} else {
+		return r.Failures[:num]
+	}
+}
+
+func (r *Report) Lines() []*result.Line {
+	lines := make([]*result.Line, 0, len(r.Errors))
+	for _, e := range r.Errors {
+		if l := e.Location(); l != nil {
+			sp := strings.Split(e.Error.Message, ":")
+			d := ""
+			if len(sp) > 1 {
+				d = sp[1]
+			}
+			lines = append(lines, &result.Line{Title: util.ClassName(sp[0]), Description: d, Start: l.Line, End: l.Line})
+		}
+
+	}
+	return lines
+}
+
+func (t *TestCase) HasData() bool {
+	return strings.HasSuffix(t.Name, "txt")
+
+}
+
 //String
-func (this *TestCase) String() string {
+func (t *TestCase) String() string {
 	return fmt.Sprintf("ClassName: %s; Name: %s; Time: %f; \n Failure: %s\n",
-		this.ClassName, this.Name, this.Time, this.Fail)
+		t.ClassName, t.Name, t.Time, t.Failure)
 }
 
 //IsFailure
-func (this *TestCase) IsFailure() bool {
-	return this.Fail != nil && len(strings.TrimSpace(this.Fail.Type)) > 0
+func (t *TestCase) IsFailure() bool {
+	return t.Failure != nil
 }
 
 //Len
-func (this TestCases) Len() int {
-	return len(this)
+func (t TestCases) Len() int {
+	return len(t)
 }
 
 //Swap
-func (this TestCases) Swap(i, j int) {
-	this[i], this[j] = this[j], this[i]
+func (t TestCases) Swap(i, j int) {
+	t[i], t[j] = t[j], t[i]
 }
 
 //Less
-func (this TestCases) Less(i, j int) bool {
-	return this[i].Name < this[j].Name
+func (t TestCases) Less(i, j int) bool {
+	return t[i].Name < t[j].Name
 }
 
 //String
-func (this TestCases) String() (ret string) {
-	for _, t := range this {
-		ret += t.String()
+func (t TestCases) String() string {
+	s := ""
+	for _, c := range t {
+		s += c.String()
 	}
-	return ret
+	return s
 }
 
 //String
-func (this *Failure) String() string {
+func (d *Details) String() string {
 	return fmt.Sprintf("Message: %s; Type: %s; Value: %s",
-		this.Message, this.Type, this.Value)
+		d.Message, d.Type, d.Value)
+}
+
+func (t *TestCase) Location() *Location {
+	if t.location == nil && t.Error != nil {
+		t.location, _ = t.Error.Location()
+	}
+	return t.location
+}
+
+func (t *TestCase) SetLocation() error {
+	if t.Error == nil {
+		return nil
+	}
+	l, e := t.Error.Location()
+	if e != nil {
+		return e
+	}
+	t.location = l
+	return nil
+}
+
+func (d *Details) Location() (*Location, error) {
+	i := strings.Index(d.Value, "Caused by:")
+	if i == -1 {
+		return nil, errors.New("\"Caused by:\" not found")
+	}
+	s := d.Value[i:]
+	i = strings.Index(s, "at ")
+	if i == -1 {
+		return nil, errors.New("\"at \" not found")
+	}
+	s = s[i:]
+	i = strings.Index(s, "(")
+	if i == -1 {
+		return nil, errors.New("\"(\" not found")
+	}
+	s = s[i+1:]
+	i = strings.Index(s, ":")
+	if i == -1 {
+		return nil, errors.New("\":\" not found")
+	}
+	src := s[:i]
+	end := strings.Index(s, ")")
+	if end == -1 {
+		return nil, errors.New("\")\" not found")
+	}
+	if end <= i+1 {
+		return nil, errors.New("line not found")
+	}
+	l, e := convert.Int(s[i+1 : end])
+	if e != nil {
+		return nil, e
+	}
+	return &Location{Source: src, Line: l}, nil
 }

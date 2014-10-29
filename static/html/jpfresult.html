@@ -13,7 +13,7 @@
     {{if not $report.Success}} {{$rid := $report.Id.Hex}}
     <div class="panel panel-default">
         <div class="panel-heading">
-            <a class="accordion-toggle" data-toggle="collapse" data-parent="#jpfaccordion{{$addr}}" href="#errors{{$addr}}">
+            <a class="accordion-toggle" data-toggle="collapse" href="#errors{{$addr}}">
                 <h4>Errors</h4>
             </a>
         </div>
@@ -31,7 +31,7 @@
                 <div class="panel-group" id="threadaccordion{{$errAddr}}">
                     <div class="panel panel-default">
                         <div class="panel-heading">
-                            <a class="accordion-toggle" data-toggle="collapse" data-parent="#threadaccordion{{$addr}}" href="#threads{{$errAddr}}">
+                            <a class="accordion-toggle" data-toggle="collapse" href="#threads{{$errAddr}}">
                                 <h5 class="text-center">Threads</h5>
                             </a>
                         </div>
@@ -66,7 +66,7 @@
     {{end}}
     <div class="panel panel-default">
         <div class="panel-heading">
-            <a class="accordion-toggle" data-toggle="collapse" data-parent="#jpfaccordion{{$addr}}" href="#statistics{{$addr}}">
+            <a class="accordion-toggle" data-toggle="collapse" href="#statistics{{$addr}}">
                 <h4>Statistics</h4>
             </a>
         </div>

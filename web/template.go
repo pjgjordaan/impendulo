@@ -92,7 +92,7 @@ var (
 		"toTitle":     util.Title,
 		"addSpaces":   func(s string) string { return strings.Join(util.SplitTitles(s), " ") },
 		"chartTime":   chartTime,
-		"validId":     validId,
+		"toolerId":    toolerId,
 		"emptyM": func(m map[string][]string) bool {
 			return len(m) == 0
 		},

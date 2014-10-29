@@ -3,15 +3,15 @@
 {{template "breadcrumb" .}}
 <ul class="nav nav-tabs">
     <li class="dropdown" id="project-dropdown">
-        <a href="#" data-toggle="dropdown" role="button" id="project-dropdown-label" class="dropdown-toggle"></a>
+        <a href="#" data-toggle="dropdown" role="button" id="project-dropdown-label" class="dropdown-toggle" tipe="project"></a>
         <ul class="dropdown-menu" role="menu" aria-labelledby="project-dropdown-label"></ul>
     </li>
     <li class="dropdown" id="user-dropdown">
-        <a href="#" data-toggle="dropdown" role="button" id="user-dropdown-label" class="dropdown-toggle"></a>
+        <a href="#" data-toggle="dropdown" role="button" id="user-dropdown-label" class="dropdown-toggle" tipe="user"></a>
         <ul class="dropdown-menu" role="menu" aria-labelledby="user-dropdown-label"></ul>
     </li>
     <li class="dropdown" id="assignment-dropdown">
-        <a href="#" data-toggle="dropdown" role="button" id="assignment-dropdown-label" class="dropdown-toggle"></a>
+        <a href="#" data-toggle="dropdown" role="button" id="assignment-dropdown-label" class="dropdown-toggle" tipe="assignment"></a>
         <ul class="dropdown-menu" role="menu" aria-labelledby="assignment-dropdown-label"></ul>
     </li>
 </ul>
@@ -22,6 +22,7 @@
     </li>
 </ul>
 {{template "chart" .}}
+<script type="text/javascript" language="javascript" src="/static/js/view.js"></script>
 <script type="text/javascript" language="javascript" src="/static/js/submission.js"></script>
 <script>
     var isUser = '{{.ctx.Browse.IsUser}}' === 'true';

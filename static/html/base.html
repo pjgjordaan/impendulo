@@ -50,7 +50,6 @@
 
 <body>
     <section id="content">
-        {{template "content" .}}
         <div id="loading-image" style="display: none;">
             <img src="/static/images/ajax-loader.gif"></img>
         </div>
@@ -64,6 +63,7 @@
                 });
             });
         </script>
+        {{template "content" .}}
     </section>
 </body>
 <script>

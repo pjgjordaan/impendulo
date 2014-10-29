@@ -34,9 +34,9 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool/result"
+	"github.com/godfried/impendulo/tool/result/description"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
-	"github.com/godfried/impendulo/web/context"
 	"github.com/godfried/impendulo/web/stats"
 	"labix.org/v2/mgo/bson"
 )
@@ -45,7 +45,7 @@ type (
 	//Chart represents the x and y values used to draw the charts.
 	C struct {
 		sid, user, id string
-		result        *context.Result
+		result        *description.D
 		start         int64
 		keys          map[string]string
 		Data          D
@@ -68,7 +68,7 @@ var (
 	NoUsersError       = errors.New("no users to create chart for")
 )
 
-func Tool(r *context.Result, files []*project.File) (D, error) {
+func Tool(r *description.D, files []*project.File) (D, error) {
 	if len(files) == 0 {
 		return nil, NoFilesError
 	}
@@ -116,10 +116,7 @@ func addAll(c *C, f *project.File) {
 }
 
 func addSingle(c *C, f *project.File) {
-	if _, e := convert.Id(f.Results[c.result.Raw()]); e != nil {
-		return
-	}
-	r, e := db.Charter(bson.M{db.ID: f.Results[c.result.Raw()]}, nil)
+	r, e := c.result.Charter(f)
 	if e != nil {
 		return
 	}
@@ -134,7 +131,7 @@ func (c *C) Add(t int64, vs []*result.ChartVal) {
 	}
 	x := util.Round(float64(t-c.start)/1000.0, 2)
 	title := c.user + " \u2192 " + c.result.Format()
-	r := c.result.Raw()
+	r := c.result.Key()
 	for i, v := range vs {
 		p := map[string]interface{}{
 			"x": x, "y": v.Y, "key": c.Key(v.Name), "name": v.Name,
@@ -184,7 +181,7 @@ func (c *C) Less(i, j int) bool {
 }
 
 //New initialises new chart data.
-func New(s *project.Submission, result *context.Result) *C {
+func New(s *project.Submission, result *description.D) *C {
 	return &C{
 		keys:   make(map[string]string),
 		user:   s.User,
@@ -200,7 +197,7 @@ func NewData() D {
 	return make(D, 0, 1000)
 }
 
-func User(us []*user.User, x *context.Result, y *context.Result) (D, I, error) {
+func User(us []*user.User, x *description.D, y *description.D) (D, I, error) {
 	if len(us) == 0 {
 		return nil, nil, NoUsersError
 	}
@@ -227,7 +224,7 @@ func User(us []*user.User, x *context.Result, y *context.Result) (D, I, error) {
 	return d, i, nil
 }
 
-func Project(ps []*project.P, x *context.Result, y *context.Result) (D, I, error) {
+func Project(ps []*project.P, x *description.D, y *description.D) (D, I, error) {
 	if len(ps) == 0 {
 		return nil, nil, NoProjectsError
 	}
@@ -254,7 +251,7 @@ func Project(ps []*project.P, x *context.Result, y *context.Result) (D, I, error
 	return d, i, nil
 }
 
-func Assignment(as []*project.Assignment, x *context.Result, y *context.Result) (D, I, error) {
+func Assignment(as []*project.Assignment, x *description.D, y *description.D) (D, I, error) {
 	if len(as) == 0 {
 		return nil, nil, NoAssignmentsError
 	}
@@ -290,7 +287,7 @@ func Assignment(as []*project.Assignment, x *context.Result, y *context.Result) 
 	return d, i, nil
 }
 
-func Submission(subs []*project.Submission, x *context.Result, y *context.Result) (D, I, error) {
+func Submission(subs []*project.Submission, x *description.D, y *description.D) (D, I, error) {
 	if len(subs) == 0 {
 		return nil, nil, NoSubmissionsError
 	}

@@ -33,7 +33,9 @@ import (
 )
 
 const (
-	NAME = "JPF"
+	NAME   = "JPF"
+	TOTAL  = "Total Errors"
+	UNIQUE = "Unique Errors"
 )
 
 type (
@@ -105,9 +107,24 @@ func (r *Result) Reporter() result.Reporter {
 //ChartVals
 func (r *Result) ChartVals() []*result.ChartVal {
 	return []*result.ChartVal{
-		&result.ChartVal{Name: "Total Errors", Y: float64(r.Report.Total), FileId: r.FileId},
-		&result.ChartVal{Name: "Unique Errors", Y: float64(r.Report.ErrorCount()), FileId: r.FileId},
+		&result.ChartVal{Name: TOTAL, Y: float64(r.Report.Total), FileId: r.FileId},
+		&result.ChartVal{Name: UNIQUE, Y: float64(r.Report.ErrorCount()), FileId: r.FileId},
 	}
+}
+
+func (r *Result) ChartVal(n string) (*result.ChartVal, error) {
+	switch n {
+	case TOTAL:
+		return &result.ChartVal{Name: TOTAL, Y: float64(r.Report.Total), FileId: r.FileId}, nil
+	case UNIQUE:
+		return &result.ChartVal{Name: UNIQUE, Y: float64(r.Report.ErrorCount()), FileId: r.FileId}, nil
+	default:
+		return nil, fmt.Errorf("unknown ChartVal %s", n)
+	}
+}
+
+func Types() []string {
+	return []string{TOTAL, UNIQUE}
 }
 
 func (r *Result) Template() string {

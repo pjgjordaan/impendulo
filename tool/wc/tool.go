@@ -14,8 +14,8 @@ import (
 
 var NoCountsError = errors.New("no counts for wc")
 
-func Lines(data []byte) (int64, error) {
-	r, e := tool.RunCommand([]string{"wc", "-l"}, strings.NewReader(string(data)), 10*time.Minute)
+func Lines(data string) (int64, error) {
+	r, e := tool.RunCommand([]string{"wc", "-l"}, strings.NewReader(data), 10*time.Minute)
 	if e != nil {
 		return -1, e
 	}
@@ -27,4 +27,8 @@ func Lines(data []byte) (int64, error) {
 		return -1, NoCountsError
 	}
 	return convert.Int64(strings.TrimSpace(sp[0]))
+}
+
+func LinesB(data []byte) (int64, error) {
+	return Lines(string(data))
 }

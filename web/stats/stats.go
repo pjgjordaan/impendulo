@@ -35,11 +35,12 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
+	"github.com/godfried/impendulo/tool/code"
 	"github.com/godfried/impendulo/tool/junit"
+	"github.com/godfried/impendulo/tool/result/description"
 	"github.com/godfried/impendulo/tool/wc"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
-	"github.com/godfried/impendulo/web/context"
 
 	"io/ioutil"
 
@@ -61,7 +62,6 @@ type (
 
 const (
 	TIME      Type = "time"
-	LINES     Type = "lines"
 	PASSED    Type = "passed"
 	TESTCASES Type = "testcases"
 )
@@ -75,7 +75,7 @@ func NewCalc() *C {
 	return &C{projects: make(map[bson.ObjectId]int)}
 }
 
-func (c *C) Calc(rd *context.Result, s *project.Submission) (float64, string, error) {
+func (c *C) Calc(rd *description.D, s *project.Submission) (float64, string, error) {
 	n := rd.Raw()
 	if t, e := project.ParseType(n); e == nil {
 		fc, e := db.FileCount(s.Id, t)
@@ -95,7 +95,7 @@ func (c *C) Calc(rd *context.Result, s *project.Submission) (float64, string, er
 	}
 }
 
-func (c *C) Submission(s *project.Submission, x, y *context.Result) (float64, float64, error) {
+func (c *C) Submission(s *project.Submission, x, y *description.D) (float64, float64, error) {
 	xVal, xN, e := c.Calc(x, s)
 	if e != nil {
 		return 0, 0, e
@@ -106,10 +106,10 @@ func (c *C) Submission(s *project.Submission, x, y *context.Result) (float64, fl
 	}
 	c.XN = xN
 	c.YN = yN
-	return xVal, yVal, nil
+	return util.Round(xVal, 2), util.Round(yVal, 2), nil
 }
 
-func (c *C) Assignment(a *project.Assignment, x, y *context.Result) (float64, float64, error) {
+func (c *C) Assignment(a *project.Assignment, x, y *description.D) (float64, float64, error) {
 	subs, e := db.Submissions(bson.M{db.ASSIGNMENTID: a.Id}, nil)
 	if e != nil {
 		return 0, 0, e
@@ -128,7 +128,7 @@ func (c *C) Assignment(a *project.Assignment, x, y *context.Result) (float64, fl
 	return util.Round(xTotal/float64(count), 2), util.Round(yTotal/float64(count), 2), nil
 }
 
-func (c *C) Project(p *project.P, x, y *context.Result) (float64, float64, error) {
+func (c *C) Project(p *project.P, x, y *description.D) (float64, float64, error) {
 	as, e := db.Assignments(bson.M{db.PROJECTID: p.Id}, nil)
 	if e != nil {
 		return 0, 0, e
@@ -147,7 +147,7 @@ func (c *C) Project(p *project.P, x, y *context.Result) (float64, float64, error
 	return util.Round(xTotal/float64(count), 2), util.Round(yTotal/float64(count), 2), nil
 }
 
-func (c *C) User(u *user.User, x, y *context.Result) (float64, float64, error) {
+func (c *C) User(u *user.User, x, y *description.D) (float64, float64, error) {
 	ss, e := db.Submissions(bson.M{db.USER: u.Name}, nil)
 	if e != nil {
 		return 0, 0, e
@@ -196,12 +196,6 @@ func calc(t Type, s *project.Submission, projectTests int) (float64, string, err
 			return -1, "", e
 		}
 		return float64(d), "seconds", nil
-	case LINES:
-		l, e := Lines(s.Id)
-		if e != nil {
-			return -1, "", e
-		}
-		return float64(l), "lines", nil
 	default:
 		return -1, "", fmt.Errorf("unknown calc type %s", t)
 	}
@@ -213,8 +207,8 @@ func NewTest(total int) *Test {
 
 func (t *Test) Add(r *junit.Report) {
 	t.tests += r.Tests
-	t.errors += r.Errors
-	t.failures += r.Failures
+	t.errors += len(r.Errors)
+	t.failures += len(r.Failures)
 }
 
 func (t *Test) Passed() float64 {
@@ -422,27 +416,34 @@ func Time(s *project.Submission) (int64, error) {
 	return (f.Time - s.Time) / 1000.0, nil
 }
 
-func Score(s *project.Submission, r *context.Result) (float64, string, error) {
+func Score(s *project.Submission, r *description.D) (float64, string, error) {
+	if r.Type == code.NAME {
+		l, e := Lines(s.Id)
+		if e != nil {
+			return -1, "", e
+		}
+		return float64(l), "", nil
+	}
 	rid, e := lastResultId(s.Id, r)
 	if e != nil {
 		return -1, "", e
 	}
-	return score(rid)
+	return score(rid, r)
 }
 
-func score(rid bson.ObjectId) (float64, string, error) {
-	r, e := db.Charter(bson.M{db.ID: rid}, nil)
+func score(rid bson.ObjectId, r *description.D) (float64, string, error) {
+	c, e := db.Charter(bson.M{db.ID: rid}, nil)
 	if e != nil {
 		return -1, "", e
 	}
-	vs := r.ChartVals()
-	if len(vs) == 0 || vs[0] == nil {
-		return -1, "", NoValuesError
+	v, e := c.ChartVal(r.Metric)
+	if e != nil {
+		return -1, "", e
 	}
-	return vs[0].Y, strings.ToLower(vs[0].Name), nil
+	return v.Y, "", nil
 }
 
-func lastResultId(sid bson.ObjectId, r *context.Result) (bson.ObjectId, error) {
+func lastResultId(sid bson.ObjectId, r *description.D) (bson.ObjectId, error) {
 	fs, e := db.Files(bson.M{db.SUBID: sid, db.TYPE: project.SRC}, bson.M{db.DATA: 0}, 0, "-"+db.TIME)
 	if e != nil {
 		return "", e
@@ -458,11 +459,11 @@ func lastResultId(sid bson.ObjectId, r *context.Result) (bson.ObjectId, error) {
 		}
 	}
 	for i, f := range fs {
-		if id, e := convert.GetId(fs[i].Results, r.Raw()); e == nil {
+		if id, e := convert.GetId(fs[i].Results, r.Key()); e == nil {
 			return id, nil
 		}
 		for _, t := range ts {
-			if id, e := convert.GetId(f.Results, r.Raw()+"-"+t.Id.Hex()); e == nil {
+			if id, e := convert.GetId(f.Results, r.Key()+"-"+t.Id.Hex()); e == nil {
 				return id, nil
 			}
 		}
@@ -475,7 +476,7 @@ func Lines(sid bson.ObjectId) (int64, error) {
 	if e != nil {
 		return -1, nil
 	}
-	return wc.Lines(f.Data)
+	return wc.LinesB(f.Data)
 }
 
 func TypeNames() []string {

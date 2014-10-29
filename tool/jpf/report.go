@@ -137,10 +137,10 @@ func NewReport(id bson.ObjectId, data []byte) (r *Report, e error) {
 
 func (r *Report) Lines() []*result.Line {
 	lines := make([]*result.Line, 0, len(r.Errors)*10)
-	for _, e := range r.Errors {
+	for i, e := range r.Errors {
 		for _, t := range e.Threads {
 			for _, f := range t.Frames {
-				d := "Thread " + t.Name + ": " + t.Status + " at " + f.Details
+				d := "Error #" + strconv.Itoa(i+1) + ": " + t.Name + ": " + t.Status + " at " + f.Details
 				lines = append(lines, &result.Line{Title: util.ShortName(e.Property), Description: d, Start: f.Line, End: f.Line})
 			}
 		}

@@ -59,6 +59,7 @@ var CreateAssignment = {
             });
         });
     },
+
     loadSkeletons: function(pid) {
         $('#skeleton-id').empty();
         $.getJSON('skeletons?project-id=' + pid, function(data) {
@@ -71,6 +72,7 @@ var CreateAssignment = {
             }
         });
     },
+
     addPickers: function() {
         $('#datetimepicker-start').datetimepicker({
             onShow: function(ct) {

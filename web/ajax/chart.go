@@ -7,15 +7,15 @@ import (
 
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/tool/result/all"
+	"github.com/godfried/impendulo/tool/result/description"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
 	"github.com/godfried/impendulo/web/charts"
-	"github.com/godfried/impendulo/web/context"
 	"github.com/godfried/impendulo/web/webutil"
 
 	"net/http"
 	"sort"
-	"strings"
 )
 
 func ChartOptions(r *http.Request) ([]byte, error) {
@@ -27,15 +27,26 @@ func ChartOptions(r *http.Request) ([]byte, error) {
 	} else {
 		rs = db.AllResults()
 	}
-	sort.Strings(rs)
-	other := []string{"Time", "Lines", util.Title(project.SRC.String()), util.Title(project.LAUNCH.String()), util.Title(project.TEST.String()), "Testcases", "Passed"}
-	ops := make(Selects, len(rs)+len(other))
-	for i, o := range other {
-		ops[i] = &Select{Id: o, Name: o}
+	other := []string{"Time", util.Title(project.SRC.String()), util.Title(project.LAUNCH.String()), util.Title(project.TEST.String()), "Testcases", "Passed"}
+	ops := make(Selects, 0, len(rs)+len(other))
+	for _, o := range other {
+		ops = append(ops, &Select{Id: o, Name: o})
 	}
-	for i, r := range rs {
-		ops[i+len(other)] = &Select{Id: r, Name: strings.Replace(r, ":", " \u2192 ", -1)}
+	for _, r := range rs {
+		tipes, e := all.Types(r)
+		if e != nil {
+			return nil, e
+		}
+		for _, t := range tipes {
+			id := r + "~" + t
+			rd, e := description.New(id)
+			if e != nil {
+				return nil, e
+			}
+			ops = append(ops, &Select{Id: rd.Raw(), Name: rd.Format()})
+		}
 	}
+	sort.Sort(ops)
 	return util.JSON(map[string]interface{}{"options": ops})
 }
 
@@ -62,19 +73,14 @@ func Chart(r *http.Request) ([]byte, error) {
 }
 
 func overviewChart(r *http.Request) ([]byte, error) {
-	x, e := webutil.String(r, "x")
+	xd, e := webutil.Description(r, "x")
 	if e != nil {
 		return nil, e
 	}
-	xd, e := context.NewResult(x)
+	yd, e := webutil.Description(r, "y")
 	if e != nil {
 		return nil, e
 	}
-	y, e := webutil.String(r, "y")
-	if e != nil {
-		return nil, e
-	}
-	yd, e := context.NewResult(y)
 	v, e := webutil.String(r, "view")
 	if e != nil {
 		return nil, e
@@ -105,19 +111,14 @@ func overviewChart(r *http.Request) ([]byte, error) {
 }
 
 func assignmentChart(r *http.Request) ([]byte, error) {
-	x, e := webutil.String(r, "x")
+	xd, e := webutil.Description(r, "x")
 	if e != nil {
 		return nil, e
 	}
-	xd, e := context.NewResult(x)
+	yd, e := webutil.Description(r, "y")
 	if e != nil {
 		return nil, e
 	}
-	y, e := webutil.String(r, "y")
-	if e != nil {
-		return nil, e
-	}
-	yd, e := context.NewResult(y)
 	t, e := webutil.String(r, "assignment-type")
 	if e != nil {
 		return nil, e
@@ -155,42 +156,23 @@ func assignmentChart(r *http.Request) ([]byte, error) {
 }
 
 func submissionChart(r *http.Request) ([]byte, error) {
-	x, e := webutil.String(r, "x")
+	xd, e := webutil.Description(r, "x")
 	if e != nil {
 		return nil, e
 	}
-	xd, e := context.NewResult(x)
-	if e != nil {
-		return nil, e
-	}
-	y, e := webutil.String(r, "y")
-	if e != nil {
-		return nil, e
-	}
-	yd, e := context.NewResult(y)
-	if e != nil {
-		return nil, e
-	}
-	t, e := webutil.String(r, "submission-type")
-	if e != nil {
-		return nil, e
-	}
-	id, e := webutil.String(r, "id")
+	yd, e := webutil.Description(r, "y")
 	if e != nil {
 		return nil, e
 	}
 	m := bson.M{}
-	switch t {
-	case "project":
-		pid, e := convert.Id(id)
-		if e != nil {
-			return nil, e
-		}
+	if pid, e := webutil.Id(r, "project-id"); e == nil {
 		m[db.PROJECTID] = pid
-	case "user":
-		m[db.USER] = id
-	default:
-		return nil, fmt.Errorf("invalid submission chart type %s", t)
+	}
+	if uid, e := webutil.String(r, "user-id"); e == nil {
+		m[db.USER] = uid
+	}
+	if aid, e := webutil.Id(r, "assignment-id"); e == nil {
+		m[db.ASSIGNMENTID] = aid
 	}
 	s, e := db.Submissions(m, nil)
 	if e != nil {
@@ -212,11 +194,7 @@ func fileChart(r *http.Request) ([]byte, error) {
 	if e != nil {
 		return nil, e
 	}
-	rn, e := webutil.String(r, "result")
-	if e != nil {
-		return nil, e
-	}
-	rd, e := context.NewResult(rn)
+	rd, e := webutil.Description(r, "result")
 	if e != nil {
 		return nil, e
 	}
@@ -246,7 +224,7 @@ func fileChart(r *http.Request) ([]byte, error) {
 	return util.JSON(map[string]interface{}{"chart": d})
 }
 
-func _fileChart(s, fn string, r *context.Result) (charts.D, error) {
+func _fileChart(s, fn string, r *description.D) (charts.D, error) {
 	id, e := convert.Id(s)
 	if e != nil {
 		return nil, e
@@ -261,7 +239,7 @@ func _fileChart(s, fn string, r *context.Result) (charts.D, error) {
 }
 
 func _cmpChart(sid bson.ObjectId, cmp, fn string) (charts.D, error) {
-	r, e := context.NewResult(cmp)
+	r, e := description.New(cmp)
 	if e != nil {
 		return nil, e
 	}

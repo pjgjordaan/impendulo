@@ -93,7 +93,7 @@
         file: '{{$fileName}}',
         result: '{{$rd.Raw}}',
         uid: '{{.ctx.Browse.Uid}}',
-        rid: '{{validId .currentResult .nextResult}}',
+        fid: '{{toolerId .currentResult .nextResult}}',
         pid: '{{.ctx.Browse.Pid.Hex}}',
         currentTime: '{{chartTime (index .files .ctx.Browse.Current)}}',
         nextTime: '{{chartTime (index .files .ctx.Browse.Next)}}'

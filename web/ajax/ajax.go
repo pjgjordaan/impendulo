@@ -70,7 +70,7 @@ func Generate(r *pat.Router) {
 		"code": Code, "users": Users, "permissions": Perms, "comparables": Comparables,
 		"tests": Tests, "test-types": TestTypes, "filenames": FileNames, "basicfileinfos": BasicFileInfos, "status": Status, "counts": Counts,
 		"comments": Comments, "fileresults": FileResults, "chart-options": ChartOptions, "assignments": Assignments,
-		"typecounts": TypeCounts, "fileinfos": FileInfos, "resultnames": ResultNames, "databases": Databases,
+		"typecounts": TypeCounts, "fileinfos": FileInfos, "resultnames": ResultNames, "databases": Databases, "testdata": TestData,
 	}
 	for n, f := range gets {
 		r.Add("GET", "/"+n, f)

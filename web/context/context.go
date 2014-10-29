@@ -32,7 +32,8 @@ import (
 
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool/result"
+	"github.com/godfried/impendulo/tool/code"
+	"github.com/godfried/impendulo/tool/result/description"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/web/webutil"
 	"labix.org/v2/mgo/bson"
@@ -55,7 +56,7 @@ type (
 		Current, Next   int
 		DisplayCount    int
 		Level           Level
-		Result          *Result
+		Result          *description.D
 	}
 	Level  int
 	Setter func(*http.Request) error
@@ -188,7 +189,7 @@ func load(s *sessions.Session) *C {
 		c.Browse.DisplayCount = 10
 		c.Browse.Current = 0
 		c.Browse.Next = 0
-		c.Browse.Result = &Result{Type: result.CODE}
+		c.Browse.Result = &description.D{Type: code.NAME}
 	}
 	u, e := c.Username()
 	if e != nil {
@@ -206,7 +207,7 @@ func (b *Browse) ClearSubmission() {
 	b.Next = 0
 	b.DisplayCount = 10
 	if b.Result == nil {
-		b.Result = &Result{Type: result.CODE}
+		b.Result = &description.D{Type: code.NAME}
 	}
 }
 

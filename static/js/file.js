@@ -84,12 +84,11 @@ var FilesView = {
         $('#files-list').append('<li id="file' + fc + '"><h4></h4></li>');
         var desc = '<dt>{0}</dt><dd>{1}</dd>';
         $.getJSON('resultnames?submission-id=' + sid + '&filename=' + f.Info.Name, function(data) {
-            $('#file' + fc).append('<h5>Info</h5><dl class="dl-horizontal">' + desc.format("Package", f.Info.Package) + desc.format("Type", f.Info.Type) + desc.format("Source Files", f.Info['Source Files']) + desc.format("Launches", f.Info.Launches) + '</dl>');
             var dl = '';
             for (var n in f.Results) {
                 dl += desc.format(n, f.Results[n]);
             }
-            $('#file' + fc).append('<h5>Final Results</h5><dl class="dl-horizontal">' + dl + '</dl>');
+            $('#file' + fc).append('<div class="row"><div class="col-md-6"><h5>Info</h5><dl class="dl-horizontal">' + desc.format("Package", f.Info.Package) + desc.format("Type", f.Info.Type) + desc.format("Source Files", f.Info['Source Files']) + desc.format("Launches", f.Info.Launches) + '</dl></div><div class="col-md-6"><h5>Final Results</h5><dl class="dl-horizontal">' + dl + '</dl></div></div>');
             var e = '';
             var rs = data['resultnames'];
             if (not(rs)) {

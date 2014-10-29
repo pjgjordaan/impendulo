@@ -79,7 +79,7 @@ var AnalysisView = {
             return;
         }
         $.getJSON('code?tool-name=' + name + '&project-id=' + pid, function(data) {
-            jQuery('<div id="' + id + '" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="' + id + 'label" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="' + id + 'label">' + title + '</h4></div><div class="modal-body"><script class="brush: java;" type="syntaxhighlighter"><![CDATA[' + data.code + ']]></script></div></div></div></div>').appendTo('body');
+            jQuery('<div id="' + id + '" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="' + id + 'label" aria-hidden="true"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="' + id + 'label">' + title + '</h4></div><div class="modal-body"><script class="brush: java;" type="syntaxhighlighter"><![CDATA[' + data.code + ']]></script></div></div></div></div>').appendTo('body');
             SyntaxHighlighter.defaults['toolbar'] = false;
             SyntaxHighlighter.defaults['class-name'] = 'error';
             SyntaxHighlighter.highlight();
@@ -92,7 +92,7 @@ var AnalysisView = {
         var id = 'bug-modal';
         var s = '#' + id;
         if ($(s).length === 0) {
-            $('<div id="' + id + '" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="' + id + 'label" aria-hidden="true"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="' + id + 'label"><br><small></small></h4></div><div class="modal-body"></div></div></div></div>').appendTo('body');
+            $('<div id="' + id + '" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="' + id + 'label" aria-hidden="true"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h4 class="modal-title" id="' + id + 'label"><br><small></small></h4></div><div class="modal-body"></div></div></div></div>').appendTo('body');
         }
         $('#' + dest).click(function() {
             $.getJSON('code?result-id=' + resultId, function(data) {

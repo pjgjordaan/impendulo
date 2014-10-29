@@ -5,6 +5,9 @@ import (
 
 	"labix.org/v2/mgo/bson"
 
+	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/tool/result/description"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
 
@@ -16,8 +19,8 @@ import (
 	"strings"
 )
 
-//File reads a file's name and data from a request form.
-func File(r *http.Request, n string) (string, []byte, error) {
+//FileData reads a file's name and data from a request form.
+func FileData(r *http.Request, n string) (string, []byte, error) {
 	f, h, e := r.FormFile(n)
 	if e != nil {
 		return "", nil, e
@@ -87,6 +90,22 @@ func Id(r *http.Request, n string) (bson.ObjectId, error) {
 		return "", e
 	}
 	return convert.Id(v)
+}
+
+func File(r *http.Request, n string, sl bson.M) (*project.File, error) {
+	id, e := Id(r, n)
+	if e != nil {
+		return nil, e
+	}
+	return db.File(bson.M{db.ID: id}, sl)
+}
+
+func Description(r *http.Request, n string) (*description.D, error) {
+	v, e := String(r, n)
+	if e != nil {
+		return nil, e
+	}
+	return description.New(v)
 }
 
 func Index(r *http.Request, n string, maxSize int) (int, error) {

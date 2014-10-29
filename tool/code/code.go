@@ -22,75 +22,82 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//Package diff is used to run diffs on source files and provide the result in HTML.
-package diff
+package code
 
 import (
-	"github.com/godfried/impendulo/project"
+	"fmt"
+
 	"github.com/godfried/impendulo/tool/result"
-	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/tool/wc"
+
 	"labix.org/v2/mgo/bson"
 
 	"strings"
 )
 
-const (
-	NAME = "Diff"
-)
-
 type (
-	Result struct {
-		header, data, diff string
-		first              bson.ObjectId
+	//C is a Displayer used to display a source file's code.
+	C struct {
+		FileId bson.ObjectId
+		Lang   string
+		Data   string
 	}
 )
 
-//NewResult creates a new Result with a single file.
-//A Result is actually only made up of a single file's source code
-//and never contains a diff. This is calculated seperately.
-func NewResult(f *project.File) *Result {
-	return &Result{
-		header: f.Name + " " + util.Date(f.Time),
-		data:   strings.TrimSpace(string(f.Data)),
-		first:  f.Id,
-		diff:   "",
+const (
+	NAME  = "Code"
+	LINES = "Lines"
+)
+
+//New
+func New(fid bson.ObjectId, lang string, data []byte) *C {
+	return &C{
+		FileId: fid,
+		Lang:   strings.ToLower(lang),
+		Data:   strings.TrimSpace(string(data)),
 	}
 }
 
-//Create calculates the diff of two Results' code, converts it to HTML
-//and returns this.
-func (r *Result) Create(next *Result) (string, error) {
-	r.diff = ""
-	d, e := Diff(r.data, next.data)
-	if e != nil {
-		return "", e
-	}
-	r.diff = SetHeader(d, r.header, next.header)
-	return r.diff, nil
-}
-
-func (r *Result) Diff() string {
-	return r.diff
-}
-
-func (r *Result) GetType() string {
+func (c *C) GetType() string {
 	return NAME
 }
 
 //GetName
-func (r *Result) GetName() string {
-	return NAME
+func (c *C) GetName() string {
+	return c.GetType()
 }
 
-//GetReport
-func (r *Result) Reporter() result.Reporter {
-	return r
+//Reporter
+func (c *C) Reporter() result.Reporter {
+	return c
 }
 
-func (r *Result) Template() string {
-	return "diffresult"
+func (c *C) Template() string {
+	return "coderesult"
 }
 
-func (r *Result) GetFileId() bson.ObjectId {
-	return r.first
+func (c *C) ChartVals() []*result.ChartVal {
+	return []*result.ChartVal{{Name: "Lines", Y: float64(c.Lines()), FileId: c.FileId}}
+}
+
+func (c *C) Lines() int64 {
+	lc, _ := wc.Lines(c.Data)
+	return lc
+}
+
+func (c *C) ChartVal(n string) (*result.ChartVal, error) {
+	switch n {
+	case LINES:
+		return &result.ChartVal{Name: LINES, Y: float64(c.Lines()), FileId: c.FileId}, nil
+	default:
+		return nil, fmt.Errorf("unknown ChartVal %s", n)
+	}
+}
+
+func Types() []string {
+	return []string{LINES}
+}
+
+func (c *C) GetFileId() bson.ObjectId {
+	return c.FileId
 }

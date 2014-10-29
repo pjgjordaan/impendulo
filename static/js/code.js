@@ -142,10 +142,10 @@ var CodeView = {
     createPopover: function(fileID, num) {
         if (!$('.popover-content[fileid="' + fileID + '"][linenum="' + num + '"]').length) {
             $('.fileid' + fileID + ' .code .number' + num).attr('data-toggle', 'popover');
+            $('.fileid' + fileID + ' .code .number' + num).attr('tabindex', '0');
             $('.fileid' + fileID + ' .code .number' + num).popover({
                 html: true,
-                trigger: 'hover',
-                placement: 'top',
+                placement: 'auto bottom',
                 content: function() {
                     return CodeView.lineContent(fileID, num);
                 },
@@ -174,6 +174,7 @@ var CodeView = {
         $.getJSON('comments?file-id=' + fileID, function(data) {
             var cs = data['comments'];
             if (not(cs)) {
+                console.log('could not load comments for ' + fileID, data);
                 return;
             }
             for (var i = 0; i < cs.length; i++) {
@@ -187,6 +188,7 @@ var CodeView = {
         $.getJSON('fileresults?id=' + fileID, function(data) {
             var rs = data['fileresults'];
             if (not(rs)) {
+                console.log('could not load results for ' + fileID, data);
                 return;
             }
             var added = Array.apply(null, Array(Number($('.fileid' + fileID + ' .gutter .line').last().html()))).map(function() {
@@ -253,10 +255,12 @@ var CodeView = {
                         var fileID = c.attr('fileid');
                         var line = c.attr('linenum');
                         $('.fileid' + fileID + ' .code .number' + line + ' .underlineable-' + type).addClass('underline-' + type);
+                        $('.fileid' + fileID + ' .code .number' + line + ' .underlineable-' + type).css('cursor', 'pointer');
                     }
                 });
             } else {
                 $('.underlineable-' + type).removeClass('underline-' + type);
+                $('.underlineable-' + type).css('cursor', 'default');
             }
         });
         $('#picker-' + type).on('change', function() {

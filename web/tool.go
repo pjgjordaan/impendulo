@@ -33,6 +33,7 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/checkstyle"
+	"github.com/godfried/impendulo/tool/code"
 	"github.com/godfried/impendulo/tool/diff"
 	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/tool/jpf"
@@ -40,6 +41,7 @@ import (
 	mk "github.com/godfried/impendulo/tool/make"
 	"github.com/godfried/impendulo/tool/pmd"
 	"github.com/godfried/impendulo/tool/result"
+	"github.com/godfried/impendulo/tool/result/description"
 	"github.com/godfried/impendulo/user"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
@@ -110,7 +112,7 @@ func CreateMake(r *http.Request, c *context.C) (string, error) {
 	if e != nil {
 		return "Could not read project id.", e
 	}
-	_, d, e := webutil.File(r, "makefile")
+	_, d, e := webutil.FileData(r, "makefile")
 	if e != nil {
 		return "Could not read Makefile.", e
 	}
@@ -135,12 +137,12 @@ func CreateJUnit(r *http.Request, c *context.C) (string, error) {
 	if e != nil {
 		return e.Error(), e
 	}
-	n, b, e := webutil.File(r, "test")
+	n, b, e := webutil.FileData(r, "test")
 	if e != nil {
 		return "Could not read JUnit file.", e
 	}
 	//A test does not always need data files.
-	_, d, e := webutil.File(r, "data")
+	_, d, e := webutil.FileData(r, "data")
 	if e != nil {
 		d = make([]byte, 0)
 	}
@@ -391,7 +393,7 @@ func runTools(f *project.File, ts []string, allFiles bool) {
 }
 
 //GetResult retrieves a DisplayResult for a given file and result name.
-func GetResult(r *context.Result, fileId bson.ObjectId) (result.Displayer, error) {
+func GetResult(d *description.D, fileId bson.ObjectId) (result.Displayer, error) {
 	m := bson.M{db.ID: fileId}
 	f, err := db.File(m, nil)
 	if err != nil {
@@ -401,19 +403,19 @@ func GetResult(r *context.Result, fileId bson.ObjectId) (result.Displayer, error
 	if err != nil {
 		return nil, err
 	}
-	switch r.Type {
-	case result.CODE:
+	switch d.Type {
+	case code.NAME:
 		p, err := db.Project(bson.M{db.ID: s.ProjectId}, nil)
 		if err != nil {
 			return nil, err
 		}
-		return result.NewCode(fileId, p.Lang, f.Data), nil
+		return code.New(fileId, p.Lang, f.Data), nil
 	case diff.NAME:
 		return diff.NewResult(f), nil
 	default:
-		ival, ok := f.Results[r.Raw()]
+		ival, ok := f.Results[d.Key()]
 		if !ok {
-			return result.NewError(result.NORESULT, r.Format()), nil
+			return result.NewError(f.Id, result.NORESULT, d.Format()), nil
 		}
 		switch v := ival.(type) {
 		case bson.ObjectId:
@@ -421,20 +423,19 @@ func GetResult(r *context.Result, fileId bson.ObjectId) (result.Displayer, error
 			return db.Displayer(bson.M{db.ID: v}, nil)
 		case string:
 			//Error, so create new error result.
-			return result.NewError(v, r.Format()), nil
+			return result.NewError(f.Id, v, d.Format()), nil
 		}
 	}
-	return result.NewError(result.NORESULT, r.Format()), nil
+	return result.NewError(f.Id, result.NORESULT, d.Format()), nil
 }
 
-//validId
-func validId(rs ...interface{}) (string, error) {
+func toolerId(rs ...interface{}) string {
 	for _, i := range rs {
 		if r, ok := i.(result.Tooler); ok {
-			return r.GetId().Hex(), nil
+			return r.GetFileId().Hex()
 		}
 	}
-	return "", fmt.Errorf("no valid result found")
+	return ""
 }
 
 func getTestType(r *http.Request) (junit.Type, error) {

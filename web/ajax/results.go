@@ -2,12 +2,15 @@ package ajax
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool/jacoco"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/tool/result"
+	"github.com/godfried/impendulo/tool/result/description"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
 	"github.com/godfried/impendulo/web/context"
@@ -16,7 +19,6 @@ import (
 
 	"net/http"
 	"sort"
-	"strings"
 )
 
 func ResultNames(r *http.Request) ([]byte, error) {
@@ -49,7 +51,11 @@ func Results(r *http.Request) ([]byte, error) {
 	}
 	s := make(Selects, len(rs))
 	for i, r := range rs {
-		s[i] = &Select{Id: r, Name: strings.Replace(r, ":", " \u2192 ", -1)}
+		rd, e := description.New(r)
+		if e != nil {
+			return nil, e
+		}
+		s[i] = &Select{Id: rd.Raw(), Name: rd.Format()}
 	}
 	sort.Sort(s)
 	return util.JSON(map[string]interface{}{"results": s})
@@ -58,18 +64,22 @@ func Results(r *http.Request) ([]byte, error) {
 //Comparables retrieves other results which a given result
 //can be compared to, i.e. different unit tests.
 func Comparables(r *http.Request) ([]byte, error) {
-	id, e := webutil.Id(r, "id")
+	d, e := webutil.Description(r, "result")
 	if e != nil {
 		return nil, e
 	}
-	tr, e := db.Tooler(bson.M{db.ID: id}, nil)
-	if e != nil {
-		return nil, e
-	}
-	if tr.GetType() != jacoco.NAME && tr.GetType() != junit.NAME {
+	if d.Type != jacoco.NAME && d.Type != junit.NAME {
 		return util.JSON(map[string]interface{}{"comparables": []*Select{}})
 	}
-	f, e := db.File(bson.M{db.ID: tr.GetFileId()}, bson.M{db.SUBID: 1})
+	f, e := webutil.File(r, "file-id", bson.M{db.DATA: 0})
+	if e != nil {
+		return nil, e
+	}
+	rid, e := convert.GetId(f.Results, d.Raw())
+	if e != nil {
+		return nil, e
+	}
+	tr, e := db.Tooler(bson.M{db.ID: rid}, nil)
 	if e != nil {
 		return nil, e
 	}
@@ -94,14 +104,12 @@ func Comparables(r *http.Request) ([]byte, error) {
 	cmp := make([]*Select, len(ts)+len(uts))
 	for i, t := range ts {
 		n, _ := util.Extension(t.Name)
-		cmp[i] = &Select{tr.GetType() + ":" + n, tr.GetType() + " \u2192 " + n, false}
+		rd := &description.D{Type: tr.GetType(), Name: n}
+		cmp[i] = &Select{rd.Raw(), rd.Format(), false}
 	}
 	for i, ut := range uts {
 		n, _ := util.Extension(ut.Name)
-		rd, e := context.NewResult(tr.GetType() + ":" + n + "-" + ut.Id.Hex())
-		if e != nil {
-			return nil, e
-		}
+		rd := &description.D{Type: tr.GetType(), Name: n, FileID: ut.Id}
 		cmp[i+len(ts)] = &Select{rd.Raw(), rd.Format(), true}
 	}
 	return util.JSON(map[string]interface{}{"comparables": cmp})
@@ -116,7 +124,7 @@ func Comment(w http.ResponseWriter, r *http.Request) error {
 	if e != nil {
 		return e
 	}
-	fid, e := webutil.Id(r, "file-id")
+	f, e := webutil.File(r, "file-id", bson.M{db.COMMENTS: 1})
 	if e != nil {
 		return e
 	}
@@ -132,12 +140,8 @@ func Comment(w http.ResponseWriter, r *http.Request) error {
 	if e != nil {
 		return e
 	}
-	f, e := db.File(bson.M{db.ID: fid}, bson.M{db.COMMENTS: 1})
-	if e != nil {
-		return e
-	}
 	f.Comments = append(f.Comments, &project.Comment{Data: d, User: u, Start: start, End: end})
-	return db.Update(db.FILES, bson.M{db.ID: fid}, bson.M{db.SET: bson.M{db.COMMENTS: f.Comments}})
+	return db.Update(db.FILES, bson.M{db.ID: f.Id}, bson.M{db.SET: bson.M{db.COMMENTS: f.Comments}})
 }
 
 func Comments(r *http.Request) ([]byte, error) {
@@ -158,11 +162,7 @@ func commentor(r *http.Request) (project.Commentor, error) {
 }
 
 func FileResults(r *http.Request) ([]byte, error) {
-	id, e := webutil.Id(r, "id")
-	if e != nil {
-		return nil, e
-	}
-	f, e := db.File(bson.M{db.ID: id}, bson.M{db.RESULTS: 1})
+	f, e := webutil.File(r, "id", bson.M{db.RESULTS: 1})
 	if e != nil {
 		return nil, e
 	}
@@ -202,7 +202,7 @@ func Code(r *http.Request) ([]byte, error) {
 		m[db.ID] = id
 	}
 	if n, e := webutil.String(r, "tool-name"); e == nil {
-		d, e := context.NewResult(n)
+		d, e := description.New(n)
 		if e != nil {
 			return nil, e
 		}
@@ -247,4 +247,40 @@ func Tests(r *http.Request) ([]byte, error) {
 
 func TestTypes(r *http.Request) ([]byte, error) {
 	return util.JSON(map[string]interface{}{"types": junit.TestTypes()})
+}
+
+func TestData(r *http.Request) ([]byte, error) {
+	c, e := context.Load(r)
+	if e != nil {
+		return nil, e
+	}
+	test, e := webutil.Description(r, "test")
+	if e != nil {
+		return nil, e
+	}
+	name, e := webutil.String(r, "data-name")
+	if e != nil {
+		return nil, e
+	}
+	tf, e := db.JUnitTest(bson.M{db.NAME: test.Name + ".java", db.PROJECTID: c.Browse.Pid}, bson.M{db.DATA: 1})
+	if e != nil {
+		return nil, e
+	}
+	d, e := ioutil.TempDir("", "")
+	if e != nil {
+		return nil, e
+	}
+	if e := util.Unzip(d, tf.Data); e != nil {
+		return nil, e
+	}
+	defer os.RemoveAll(d)
+	p, e := util.LocateFile(d, name)
+	if e != nil {
+		return nil, e
+	}
+	data, e := ioutil.ReadFile(p)
+	if e != nil {
+		return nil, e
+	}
+	return util.JSON(map[string]interface{}{"data": string(data)})
 }

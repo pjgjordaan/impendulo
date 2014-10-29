@@ -25,13 +25,16 @@
 package pmd
 
 import (
+	"fmt"
+
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/result"
 	"labix.org/v2/mgo/bson"
 )
 
 const (
-	NAME = "PMD"
+	NAME   = "PMD"
+	ERRORS = "Errors"
 )
 
 type (
@@ -95,8 +98,21 @@ func (r *Result) Success() bool {
 //ChartVals gets the number of errors found by PMD.
 func (r *Result) ChartVals() []*result.ChartVal {
 	return []*result.ChartVal{
-		&result.ChartVal{Name: "Errors", Y: float64(r.Report.Errors), FileId: r.FileId},
+		&result.ChartVal{Name: ERRORS, Y: float64(r.Report.Errors), FileId: r.FileId},
 	}
+}
+
+func (r *Result) ChartVal(n string) (*result.ChartVal, error) {
+	switch n {
+	case ERRORS:
+		return &result.ChartVal{Name: ERRORS, Y: float64(r.Report.Errors), FileId: r.FileId}, nil
+	default:
+		return nil, fmt.Errorf("unknown ChartVal %s", n)
+	}
+}
+
+func Types() []string {
+	return []string{ERRORS}
 }
 
 func (r *Result) Template() string {

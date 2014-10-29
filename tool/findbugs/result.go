@@ -34,6 +34,10 @@ import (
 
 const (
 	NAME = "Findbugs"
+	ALL  = "All"
+	P1   = "Priority 1"
+	P2   = "Priority 2"
+	P3   = "Priority 3"
 )
 
 type (
@@ -102,6 +106,25 @@ func (r *Result) ChartVals() []*result.ChartVal {
 		&result.ChartVal{Name: "Priority 2", Y: float64(r.Report.Summary.Priority2), FileId: r.FileId},
 		&result.ChartVal{Name: "Priority 3", Y: float64(r.Report.Summary.Priority3), FileId: r.FileId},
 	}
+}
+
+func (r *Result) ChartVal(n string) (*result.ChartVal, error) {
+	switch n {
+	case ALL:
+		return &result.ChartVal{Name: ALL, Y: float64(r.Report.Summary.BugCount), FileId: r.FileId}, nil
+	case P1:
+		return &result.ChartVal{Name: P1, Y: float64(r.Report.Summary.Priority1), FileId: r.FileId}, nil
+	case P2:
+		return &result.ChartVal{Name: P2, Y: float64(r.Report.Summary.Priority2), FileId: r.FileId}, nil
+	case P3:
+		return &result.ChartVal{Name: P3, Y: float64(r.Report.Summary.Priority3), FileId: r.FileId}, nil
+	default:
+		return nil, fmt.Errorf("unknown ChartVal %s", n)
+	}
+}
+
+func Types() []string {
+	return []string{ALL, P1, P2, P3}
 }
 
 func (r *Result) Template() string {

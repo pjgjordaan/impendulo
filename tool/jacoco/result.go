@@ -25,6 +25,8 @@
 package jacoco
 
 import (
+	"fmt"
+
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/util"
@@ -41,6 +43,15 @@ type (
 		GridFS   bool          `bson:"gridfs"`
 		Type     string        `bson:"type"`
 	}
+)
+
+const (
+	INSTRUCTION = "Instruction"
+	LINE        = "Line"
+	COMPLEXITY  = "Complexity"
+	METHOD      = "Method"
+	CLASS       = "Class"
+	BRANCH      = "Branch"
 )
 
 //SetReport
@@ -97,9 +108,23 @@ func (r *Result) ChartVals() []*result.ChartVal {
 	v := make([]*result.ChartVal, len(r.Report.Counters))
 	for i, c := range r.Report.MainCounters {
 		p := util.Round(float64(c.Covered)/float64(c.Covered+c.Missed)*100.0, 2)
-		v[i] = &result.ChartVal{Name: util.Title(c.Type) + " Coverage", Y: p, FileId: r.FileId}
+		v[i] = &result.ChartVal{Name: util.Title(c.Type), Y: p, FileId: r.FileId}
 	}
 	return v
+}
+
+func (r *Result) ChartVal(n string) (*result.ChartVal, error) {
+	for _, c := range r.Report.MainCounters {
+		if t := util.Title(c.Type); t == n {
+			p := util.Round(float64(c.Covered)/float64(c.Covered+c.Missed)*100.0, 2)
+			return &result.ChartVal{Name: util.Title(c.Type), Y: p, FileId: r.FileId}, nil
+		}
+	}
+	return nil, fmt.Errorf("unknown ChartVal %s", n)
+}
+
+func Types() []string {
+	return []string{INSTRUCTION, LINE, COMPLEXITY, METHOD, CLASS, BRANCH}
 }
 
 func NewResult(fileId, testId bson.ObjectId, name string, xml, html []byte, target *tool.Target) (*Result, error) {

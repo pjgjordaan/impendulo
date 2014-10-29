@@ -150,7 +150,7 @@ func AddSkeleton(r *http.Request, c *context.C) (string, error) {
 	if e != nil {
 		return "Could not read skeleton name.", e
 	}
-	_, s, e := webutil.File(r, "skeleton")
+	_, s, e := webutil.FileData(r, "skeleton")
 	if e != nil {
 		return "Could not read skeleton file.", e
 	}
@@ -173,7 +173,7 @@ func AddArchive(r *http.Request, c *context.C) (string, error) {
 	if e != nil {
 		return "Could not read user.", e
 	}
-	_, a, e := webutil.File(r, "archive")
+	_, a, e := webutil.FileData(r, "archive")
 	if e != nil {
 		return "Could not read archive.", e
 	}
@@ -581,7 +581,7 @@ func ImportData(r *http.Request, c *context.C) (string, error) {
 	if e != nil {
 		return "Could not read db to import to.", e
 	}
-	_, d, e := webutil.File(r, "data")
+	_, d, e := webutil.FileData(r, "data")
 	if e != nil {
 		return "Unable to read data file.", e
 	}

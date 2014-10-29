@@ -44,8 +44,12 @@ var (
 	baseDir, installPath string
 )
 
-func NewSet() Set {
-	return make(map[string]E)
+func NewSet(vals ...string) Set {
+	s := make(map[string]E)
+	for _, v := range vals {
+		s[v] = E{}
+	}
+	return s
 }
 
 func (s Set) Contains(k string) bool {
@@ -121,12 +125,20 @@ func EqualsOne(i interface{}, as ...interface{}) bool {
 
 //ShortName gets the shortened class name of a Java class.
 func ShortName(n string) string {
-	e := strings.Split(n, ".")
+	return Shorten(n, ".", 2)
+}
+
+func ClassName(n string) string {
+	return Shorten(n, ".", 1)
+}
+
+func Shorten(n, sep string, p int) string {
+	e := strings.Split(n, sep)
 	c := len(e)
 	if c < 2 {
 		return n
 	}
-	return strings.Join(e[c-2:], ".")
+	return strings.Join(e[c-p:], sep)
 }
 
 func Title(s string) string {

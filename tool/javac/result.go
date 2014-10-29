@@ -25,13 +25,17 @@
 package javac
 
 import (
+	"fmt"
+
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/result"
 	"labix.org/v2/mgo/bson"
 )
 
 const (
-	NAME = "Javac"
+	NAME     = "Javac"
+	ERRORS   = "Errors"
+	WARNINGS = "Warnings"
 )
 
 type (
@@ -83,19 +87,41 @@ func (r *Result) Reporter() result.Reporter {
 	return r.Report
 }
 
+func (r *Result) Warnings() int {
+	if r.Report.Warnings() {
+		return r.Report.Count
+	}
+	return 0
+}
+
+func (r *Result) Errors() int {
+	if r.Report.Errors() {
+		return r.Report.Count
+	}
+	return 0
+}
+
 //ChartVals
 func (r *Result) ChartVals() []*result.ChartVal {
-	var yE, yW float64
-	if r.Report.Errors() {
-		yE = float64(r.Report.Count)
-	}
-	if r.Report.Warnings() {
-		yW = float64(r.Report.Count)
-	}
 	return []*result.ChartVal{
-		&result.ChartVal{Name: "Errors", Y: yE, FileId: r.FileId},
-		&result.ChartVal{Name: "Warnings", Y: yW, FileId: r.FileId},
+		&result.ChartVal{Name: ERRORS, Y: float64(r.Errors()), FileId: r.FileId},
+		&result.ChartVal{Name: WARNINGS, Y: float64(r.Warnings()), FileId: r.FileId},
 	}
+}
+
+func (r *Result) ChartVal(n string) (*result.ChartVal, error) {
+	switch n {
+	case ERRORS:
+		return &result.ChartVal{Name: ERRORS, Y: float64(r.Errors()), FileId: r.FileId}, nil
+	case WARNINGS:
+		return &result.ChartVal{Name: WARNINGS, Y: float64(r.Warnings()), FileId: r.FileId}, nil
+	default:
+		return nil, fmt.Errorf("unknown ChartVal %s", n)
+	}
+}
+
+func Types() []string {
+	return []string{ERRORS, WARNINGS}
 }
 
 func (r *Result) Template() string {

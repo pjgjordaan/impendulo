@@ -33,7 +33,9 @@ import (
 )
 
 const (
-	NAME = "JUnit"
+	NAME     = "JUnit"
+	FAILURES = "Failures"
+	ERRORS   = "Errors"
 )
 
 type (
@@ -94,9 +96,24 @@ func (r *Result) Reporter() result.Reporter {
 //ChartVals
 func (r *Result) ChartVals() []*result.ChartVal {
 	return []*result.ChartVal{
-		&result.ChartVal{Name: "Failures", Y: float64(r.Report.Failures), FileId: r.FileId},
-		&result.ChartVal{Name: "Errors", Y: float64(r.Report.Errors), FileId: r.FileId},
+		&result.ChartVal{Name: "Failures", Y: float64(len(r.Report.Failures)), FileId: r.FileId},
+		&result.ChartVal{Name: "Errors", Y: float64(len(r.Report.Errors)), FileId: r.FileId},
 	}
+}
+
+func (r *Result) ChartVal(n string) (*result.ChartVal, error) {
+	switch n {
+	case FAILURES:
+		return &result.ChartVal{Name: FAILURES, Y: float64(len(r.Report.Failures)), FileId: r.FileId}, nil
+	case ERRORS:
+		return &result.ChartVal{Name: ERRORS, Y: float64(len(r.Report.Errors)), FileId: r.FileId}, nil
+	default:
+		return nil, fmt.Errorf("unknown ChartVal %s", n)
+	}
+}
+
+func Types() []string {
+	return []string{FAILURES, ERRORS}
 }
 
 func (r *Result) Template() string {
@@ -105,6 +122,10 @@ func (r *Result) Template() string {
 
 func (r *Result) GetType() string {
 	return r.Type
+}
+
+func (r *Result) Lines() []*result.Line {
+	return r.Report.Lines()
 }
 
 //NewResult creates a new junit.Result from provided XML data.

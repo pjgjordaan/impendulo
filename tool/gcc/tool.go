@@ -16,10 +16,6 @@ type (
 	}
 )
 
-const (
-	NAME = "GCC"
-)
-
 func New() (*Tool, error) {
 	p, e := config.GCC.Path()
 	if e != nil {

@@ -86,9 +86,9 @@ var ComparisonChart = {
         var tooltip = function() {
             $('ui.tooltip').siblings('.tooltip').remove();
             var d = this.__data__;
-            var yVal = info['y-unit'] === '' ? '' : info['y-unit'];
-            var xVal = info['x-unit'] === '' ? '' : info['x-unit'];
-            return '<ul class="list-unstyled list-left"><li><strong>' + d.title + '</strong></li><li>' + ComparisonChart.getActualY(d) + ' ' + yVal + '</li><li>' + ComparisonChart.getActualX(d) + ' ' + xVal + '</li></ul><div style="clear: both;"></div>';
+            var yVal = info['y'] + ': ' + ComparisonChart.getActualY(d) + ' ' + (info['y-unit'] === '' ? '' : info['y-unit']);
+            var xVal = info['x'] + ': ' + ComparisonChart.getActualX(d) + ' ' + (info['x-unit'] === '' ? '' : info['x-unit']);
+            return '<ul class="list-unstyled list-left"><li><strong>' + d.title + '</strong></li><li>' + yVal + '</li><li>' + xVal + '</li></ul><div style="clear: both;"></div>';
         };
         var cvals = intervals(extent(data, actualCombined), ComparisonChart.colours.length);
         var getColour = d3.scale.ordinal()

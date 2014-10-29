@@ -33,7 +33,8 @@ import (
 )
 
 const (
-	NAME = "Checkstyle"
+	NAME   = "Checkstyle"
+	ERRORS = "Errors"
 )
 
 type (
@@ -98,8 +99,21 @@ func (r *Result) Reporter() result.Reporter {
 //ChartVals
 func (r *Result) ChartVals() []*result.ChartVal {
 	return []*result.ChartVal{
-		&result.ChartVal{Name: "Errors", Y: float64(r.Report.Errors), FileId: r.FileId},
+		&result.ChartVal{Name: ERRORS, Y: float64(r.Report.Errors), FileId: r.FileId},
 	}
+}
+
+func (r *Result) ChartVal(n string) (*result.ChartVal, error) {
+	switch n {
+	case ERRORS:
+		return &result.ChartVal{Name: ERRORS, Y: float64(r.Report.Errors), FileId: r.FileId}, nil
+	default:
+		return nil, fmt.Errorf("unknown ChartVal %s", n)
+	}
+}
+
+func Types() []string {
+	return []string{ERRORS}
 }
 
 func (r *Result) Template() string {

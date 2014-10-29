@@ -127,7 +127,7 @@ func FormatResultName(n string, t int64) string {
 	if len(sp) > 1 {
 		n = sp[0] + " \u2192 " + util.Date(t)
 	}
-	n = strings.Replace(n, ":", " \u2192 ", -1)
+	n = strings.Replace(n, ":", " \u2192 ", 1)
 	return n
 }
 
@@ -404,6 +404,10 @@ func firstFile(m, sl interface{}, sort string) (*project.File, error) {
 		return nil, fmt.Errorf("no files for matcher %q", m)
 	}
 	return fs[0], nil
+}
+
+func NextFile(f *project.File) (*project.File, error) {
+	return FirstFile(bson.M{TIME: bson.M{GT: f.Time}}, nil)
 }
 
 func UpdateTime(sub *project.Submission) error {

@@ -38,22 +38,24 @@ var ResultChart = {
                 e.preventDefault();
                 ResultChart.load(vals);
             });
-            ResultChart.addComparables(vals.rid, vals.pid, vals.uid);
+            ResultChart.addComparables(vals.fid, vals.pid, vals.uid, vals.result);
             ResultChart.load(vals);
         });
     },
 
-    addComparables: function(rid, pid, user) {
+    addComparables: function(fid, pid, user, result) {
         var d = '#comparables';
         clearMulti(d);
         $(d).append('<optgroup id="optgroup-tests" label="Tests"></optgroup>"');
         $(d).append('<optgroup id="optgroup-users" label="User Submissions"></optgroup>"');
         $(d).append('<optgroup id="optgroup-usertests" label="User Tests"></optgroup>"');
-        $.getJSON('comparables?id=' + rid, function(cdata) {
+        $.getJSON('comparables?file-id=' + fid + '&result=' + result, function(cdata) {
             var comp = cdata['comparables'];
-            for (var i = 0; i < comp.length; i++) {
-                var s = comp[i].User ? '#optgroup-usertests' : '#optgroup-tests';
-                $(s).append('<option value="' + comp[i].Id + '">' + comp[i].Name + '</option>');
+            if (!not(comp)) {
+                for (var i = 0; i < comp.length; i++) {
+                    var s = comp[i].User ? '#optgroup-usertests' : '#optgroup-tests';
+                    $(s).append('<option value="' + comp[i].Id + '">' + comp[i].Name + '</option>');
+                }
             }
             $.getJSON('submissions?project-id=' + pid, function(data) {
                 var items = data['submissions'];
@@ -168,7 +170,7 @@ var ResultChart = {
             .range([0, w]);
 
         var loadLink = function(d) {
-            return 'resultsview?time=' + d.time + '&result=' + d.rid + '&submission-id=' + d.sid;
+            return 'resultsview?time=' + d.time + '&submission-id=' + d.sid;
         };
         var loadX = function(d, i) {
             return x(getX(d));

@@ -1,73 +1,116 @@
 {{define "result"}} {{$report := .Report}} {{if $report.Success}}
 <h4 class="text-success">Passed all {{$report.Tests}} tests.</h4>
-{{else}} {{$displayCount := .ctx.Browse.DisplayCount}}
+{{else}} {{$displayCount := .ctx.Browse.DisplayCount}} {{$rid := $report.Id.Hex}}
 <dl class="dl-horizontal">
     <dt>Tests</dt>
     <dd>{{$report.Tests}}</dd>
     <dt>Errors</dt>
-    <dd>{{$report.Errors}}</dd>
+    <dd>{{len $report.Errors}}</dd>
     <dt>Failures</dt>
-    <dd>{{$report.Failures}}</dd>
+    <dd>{{len $report.Failures}}</dd>
     <dt>Time</dt>
     <dd>{{$report.Time}}</dd>
 </dl>
 {{$addr := address $report}}
 <div class="panel-group" id="junitaccordion{{$addr}}">
+    {{if gt (len $report.Failures) 0}}
     <div class="panel panel-default">
         <div class="panel-heading">
             <a class="accordion-toggle" data-toggle="collapse" data-parent="#junitaccordion{{$addr}}" href="#failures{{$addr}}">
                 <h4>Failures<h4>
-      </a>
-    </div>
-    <div id="failures{{$addr}}" class="panel-collapse collapse in">
-      <div class="accordion-inner">
-	<div class="panel-group" id="results{{$addr}}">
-	  {{$results := $report.GetResults $displayCount}}
-	  {{range $results}}
-	  {{$resultAddress := address .}}
-	  {{if .IsFailure}}
-	  <div class="panel panel-default">
-	    <div class="panel-heading">
-	      <a class="accordion-toggle" data-toggle="collapse"
-	  data-parent="#results{{$addr}}" href="#result{{$resultAddress}}">
-		<h5 class="text-center">{{base .Name}}</h5>
-	      </a>
-	    </div>
-	    <div id="result{{$resultAddress}}" class="panel-collapse collapse">
-	      <div class="accordion-inner">
-		<dl class="dl-horizontal">
-		  <dt>Time</dt><dd>{{.Time}}</dd>
-		  <dt>Message</dt><dd>{{.Fail.Message}}</dd>
-		  <dt>Type</dt><dd>{{.Fail.Type}}</dd>
-	  	</dl>
-		<div class="panel-group" id="traceaccordion{{$resultAddress}}">
-		  <div class="panel panel-default">
-		    <div class="panel-heading">
-		      <a class="accordion-toggle"
-			 data-toggle="collapse"
-			 data-parent="#traceaccordion{{$resultAddress}}"
-			 href="#trace{{$resultAddress}}">
-			<h6>Trace</h6>
-		      </a>
-		    </div>
-		    <div id="trace{{$resultAddress}}" class="panel-collapse collapse">
-		      <div class="accordion-inner">
-			<p class="text-error">
-			  {{setBreaks .Fail.Value}}
-			</p>
-		      </div>
-		    </div>
-		  </div>
+	</a>
+      </div>
+      <div id="failures{{$addr}}" class="panel-collapse collapse in">
+	<div class="accordion-inner">
+	  <div class="panel-group" id="fresults{{$addr}}">
+	    {{$results := $report.GetFailures $displayCount}}
+	    {{range $results}}
+	    {{$resultAddress := address .}}
+	    <div class="panel panel-default">
+	      <div class="panel-heading">
+		<a class="accordion-toggle" data-toggle="collapse"
+		   href="#fresult{{$resultAddress}}">
+		  {{$bn := base .Name}}
+		  <h5 class="text-center">{{$bn}}</h5>
+		</a>
+	      </div>
+	      <div id="fresult{{$resultAddress}}" class="panel-collapse collapse">
+		<div class="accordion-inner">
+		  <dl class="dl-horizontal">
+		    <dt>Time</dt><dd>{{.Time}}</dd>
+		    {{if .HasData}}
+		    <dt>Message</dt><dd><a href="#" class="testcase" dataname="{{$bn}}">{{.Failure.Message}}</a></dd>
+		    {{else}}
+		    <dt>Message</dt><dd>{{.Failure.Message}}</dd>
+		    {{end}}
+		    <dt>Type</dt><dd>{{.Failure.Type}}</dd>
+	  	  </dl>
 		</div>
 	      </div>
 	    </div>
+	    {{end}}
 	  </div>
-	  {{end}}
+	</div>
+      </div>
+    </div>
+    {{end}}
+    {{if gt (len $report.Errors) 0}}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <a class="accordion-toggle" data-toggle="collapse" data-parent="#junitaccordion{{$addr}}" href="#errors{{$addr}}">
+                <h4>Errors<h4>
+      </a>
+    </div>
+    <div id="errors{{$addr}}" class="panel-collapse collapse in">
+      <div class="accordion-inner">
+	<div class="panel-group" id="eresults{{$addr}}">
+	  {{$results := $report.GetErrors $displayCount}}
+	  {{range $results}}
+	  {{$resultAddress := address .}}
+	  {{$trace := setBreaks .Error.Value}}
+	  <div class="panel panel-default">
+	    <div class="panel-heading">
+	      <a class="accordion-toggle" data-toggle="collapse"
+	  href="#eresult{{$resultAddress}}">
+		<h5 class="text-center">{{base .Name}}</h5>
+	      </a>
+	    </div>
+	    <div id="eresult{{$resultAddress}}" class="panel-collapse collapse">
+	      <div class="accordion-inner">
+		<dl class="dl-horizontal">
+		  <dt>Time</dt><dd>{{.Time}}</dd>
+		  <dt>Message</dt><dd>{{.Error.Message}}</dd>
+		  <dt>Type</dt><dd>{{.Error.Type}}</dd>
+		  {{$l := .Location}}
+		  {{if $l}}
+		  <dt>Location</dt>
+		  <dd>
+		    <a href="#" id="line{{$resultAddress}}">
+			{{$l.Source}} at line {{$l.Line}}
+		    </a>
+		  </dd>
+		  <script>
+                    var id = 'line{{$resultAddress}}';
+                    var info = {};
+                    info.title = '{{.Error.Message}}';
+                    info.content = '{{$trace}}';
+                    AnalysisView.addCodeModal(id, '{{$rid}}', info, '{{$l.Line}}', '{{$l.Line}}');
+                  </script>
+                  {{end}}
+		</dl>
+	      </div>
+	    </div>
+	  </div>
 	  {{end}}
 	</div>
       </div>
     </div>
   </div>
+{{end}}
 </div>
 {{end}}
+<script type="text/javascript" language="javascript" src="/static/js/junit.js"></script>
+<script>
+  JUnitResult.init("{{.ctx.Browse.Result.Raw}}");
+</script>
 {{end}}

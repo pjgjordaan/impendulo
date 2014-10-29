@@ -29,6 +29,7 @@ import (
 
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool/checkstyle"
+	"github.com/godfried/impendulo/tool/code"
 	"github.com/godfried/impendulo/tool/diff"
 	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/tool/gcc"
@@ -210,6 +211,20 @@ func GCCResult(m, sl bson.M) (*gcc.Result, error) {
 	return r, nil
 }
 
+func Diff(fid bson.ObjectId) (*diff.Result, error) {
+	f, e := File(bson.M{ID: fid}, nil)
+	if e != nil {
+		return nil, e
+	}
+	nf, e := NextFile(f)
+	if e != nil {
+		nf = f
+	}
+	r := diff.NewResult(f)
+	r.Create(diff.NewResult(nf))
+	return r, nil
+}
+
 func resultType(m bson.M) (string, error) {
 	s, e := Session()
 	if e != nil {
@@ -322,6 +337,8 @@ func Coder(m, sl bson.M) (result.Coder, error) {
 		return PMDResult(m, sl)
 	case checkstyle.NAME:
 		return CheckstyleResult(m, sl)
+	case junit.NAME:
+		return JUnitResult(m, sl)
 	default:
 		return nil, fmt.Errorf("Unsupported result type %s.", t)
 	}
@@ -445,20 +462,20 @@ func ResultNames(sid bson.ObjectId, fname string) (map[string]map[string][]strin
 		return nil, NoResultsError
 	}
 	m := ns[0].Value
-	m[result.CODE] = map[string][]string{}
+	m[code.NAME] = map[string][]string{}
 	m[diff.NAME] = map[string][]string{}
 	return m, nil
 }
 
 func BasicResultNames() map[string]map[string][]string {
 	return map[string]map[string][]string{
-		result.CODE: map[string][]string{},
-		diff.NAME:   map[string][]string{},
+		code.NAME: map[string][]string{},
+		diff.NAME: map[string][]string{},
 	}
 }
 
 func ProjectResults(pid bson.ObjectId) []string {
-	rs := []string{javac.NAME, pmd.NAME, findbugs.NAME, checkstyle.NAME}
+	rs := []string{code.NAME, javac.NAME, pmd.NAME, findbugs.NAME, checkstyle.NAME}
 	if Contains(JPF, bson.M{PROJECTID: pid}) {
 		rs = append(rs, jpf.NAME)
 	}
@@ -474,24 +491,25 @@ func ProjectResults(pid bson.ObjectId) []string {
 }
 
 func AllResults() []string {
-	rs := []string{javac.NAME, pmd.NAME, findbugs.NAME, checkstyle.NAME, jpf.NAME}
+	rs := []string{code.NAME, javac.NAME, pmd.NAME, findbugs.NAME, checkstyle.NAME, jpf.NAME}
 	s, e := Session()
 	if e != nil {
 		return rs
 	}
 	defer s.Close()
 	var ts []string
-	if e := s.DB("").C(TESTS).Find(nil).Distinct(NAME, &ts); e == nil {
-		for _, t := range ts {
-			n, _ := util.Extension(t)
-			rs = append(rs, junit.NAME+":"+n, jacoco.NAME+":"+n)
-		}
+	if e := s.DB("").C(TESTS).Find(nil).Distinct(NAME, &ts); e != nil {
+		return rs
+	}
+	for _, t := range ts {
+		n, _ := util.Extension(t)
+		rs = append(rs, junit.NAME+":"+n, jacoco.NAME+":"+n)
 	}
 	return rs
 }
 
 func UserResults(u string) []string {
-	rs := []string{javac.NAME, pmd.NAME, findbugs.NAME, checkstyle.NAME}
+	rs := []string{code.NAME, javac.NAME, pmd.NAME, findbugs.NAME, checkstyle.NAME}
 	s, e := Session()
 	if e != nil {
 		return rs
@@ -501,13 +519,12 @@ func UserResults(u string) []string {
 	if e := s.DB("").C(SUBMISSIONS).Find(bson.M{USER: u}).Distinct(PROJECTID, &ids); e != nil || len(ids) == 0 {
 		return rs
 	}
-	type q struct{}
-	a := map[string]q{javac.NAME: q{}, pmd.NAME: q{}, findbugs.NAME: q{}, checkstyle.NAME: q{}}
+	a := util.NewSet(javac.NAME, pmd.NAME, findbugs.NAME, checkstyle.NAME)
 	for _, id := range ids {
 		prs := ProjectResults(id)
 		for _, r := range prs {
-			if _, ok := a[r]; !ok {
-				a[r] = q{}
+			if !a.Contains(r) {
+				a.Add(r)
 				rs = append(rs, r)
 			}
 		}

@@ -1,9 +1,17 @@
 package gcc
 
 import (
+	"fmt"
+
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/result"
 	"labix.org/v2/mgo/bson"
+)
+
+const (
+	NAME     = "GCC"
+	ERRORS   = "Errors"
+	WARNINGS = "Warnings"
 )
 
 type (
@@ -48,9 +56,24 @@ func (r *Result) SetReport(report result.Reporter) {
 //ChartVals
 func (r *Result) ChartVals() []*result.ChartVal {
 	return []*result.ChartVal{
-		&result.ChartVal{Name: "Errors", Y: float64(r.Report.Errors), FileId: r.FileId},
-		&result.ChartVal{Name: "Warnings", Y: float64(r.Report.Warnings), FileId: r.FileId},
+		&result.ChartVal{Name: ERRORS, Y: float64(r.Report.Errors), FileId: r.FileId},
+		&result.ChartVal{Name: WARNINGS, Y: float64(r.Report.Warnings), FileId: r.FileId},
 	}
+}
+
+func (r *Result) ChartVal(n string) (*result.ChartVal, error) {
+	switch n {
+	case ERRORS:
+		return &result.ChartVal{Name: ERRORS, Y: float64(r.Report.Errors), FileId: r.FileId}, nil
+	case WARNINGS:
+		return &result.ChartVal{Name: WARNINGS, Y: float64(r.Report.Warnings), FileId: r.FileId}, nil
+	default:
+		return nil, fmt.Errorf("unknown ChartVal %s", n)
+	}
+}
+
+func Types() []string {
+	return []string{ERRORS, WARNINGS}
 }
 
 func (r *Result) Template() string {
