@@ -36,6 +36,7 @@ const (
 	NAME     = "JUnit"
 	FAILURES = "Failures"
 	ERRORS   = "Errors"
+	PASSED   = "Passed"
 )
 
 type (
@@ -96,8 +97,9 @@ func (r *Result) Reporter() result.Reporter {
 //ChartVals
 func (r *Result) ChartVals() []*result.ChartVal {
 	return []*result.ChartVal{
-		&result.ChartVal{Name: "Failures", Y: float64(len(r.Report.Failures)), FileId: r.FileId},
-		&result.ChartVal{Name: "Errors", Y: float64(len(r.Report.Errors)), FileId: r.FileId},
+		&result.ChartVal{Name: FAILURES, Y: float64(len(r.Report.Failures)), FileId: r.FileId},
+		&result.ChartVal{Name: ERRORS, Y: float64(len(r.Report.Errors)), FileId: r.FileId},
+		&result.ChartVal{Name: PASSED, Y: float64(r.Report.Passed()), FileId: r.FileId},
 	}
 }
 
@@ -107,13 +109,15 @@ func (r *Result) ChartVal(n string) (*result.ChartVal, error) {
 		return &result.ChartVal{Name: FAILURES, Y: float64(len(r.Report.Failures)), FileId: r.FileId}, nil
 	case ERRORS:
 		return &result.ChartVal{Name: ERRORS, Y: float64(len(r.Report.Errors)), FileId: r.FileId}, nil
+	case PASSED:
+		return &result.ChartVal{Name: PASSED, Y: float64(r.Report.Passed()), FileId: r.FileId}, nil
 	default:
 		return nil, fmt.Errorf("unknown ChartVal %s", n)
 	}
 }
 
 func Types() []string {
-	return []string{FAILURES, ERRORS}
+	return []string{FAILURES, ERRORS, PASSED}
 }
 
 func (r *Result) Template() string {

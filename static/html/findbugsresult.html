@@ -2,10 +2,10 @@
 <h4 class="text-success">No bugs found</h4>
 {{else}} {{$rid := $report.Id.Hex}} {{$addr := address $report}}
 <h4 class="text-danger">{{$report.Summary.BugCount}} bugs found</h4>
-<div class="panel-group" id="fbaccordion{{$addr}}">
+<div class="panel-group">
     <div class="panel panel-default">
         <div class="panel-heading">
-            <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbaccordion{{$addr}}" href="#summary{{$addr}}">
+            <a class="accordion-toggle" data-toggle="collapse" href="#summary{{$addr}}">
                 <h4>Summary</h4>
             </a>
         </div>
@@ -32,18 +32,18 @@
     </div>
     <div class="panel panel-default">
         <div class="panel-heading">
-            <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbaccordion{{$addr}}" href="#bugs{{$addr}}">
+            <a class="accordion-toggle" data-toggle="collapse" href="#bugs{{$addr}}">
                 <h4>Bugs</h4>
             </a>
         </div>
         <div id="bugs{{$addr}}" class="panel-collapse collapse">
             <div class="accordion-inner">
-                <div class="panel-group" id="fbbugsaccordion{{$addr}}">
+                <div class="panel-group">
                     {{$patterns := $report.PatternMap}} {{$categories := $report.CategoryMap}} {{range $i, $bug := $report.Instances}} {{$pattern := index $patterns $bug.Type}} {{$category := index $categories $bug.Category}}
                     <div class="panel panel-default">
                         {{$bugAddress := address $bug}}
                         <div class="panel-heading">
-                            <a class="accordion-toggle" data-toggle="collapse" data-parent="#fbbugsaccordion{{$addr}}" href="#bug{{$bugAddress}}">
+                            <a class="accordion-toggle" data-toggle="collapse" href="#bug{{$bugAddress}}">
                                 <h5 class="text-center">{{$pattern.Description}}</h5>
                             </a>
                         </div>

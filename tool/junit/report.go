@@ -142,6 +142,10 @@ func (r *Report) GetFailures(num int) TestCases {
 	}
 }
 
+func (r *Report) Passed() int {
+	return r.Tests - len(r.Errors) - len(r.Failures)
+}
+
 func (r *Report) Lines() []*result.Line {
 	lines := make([]*result.Line, 0, len(r.Errors))
 	for _, e := range r.Errors {
