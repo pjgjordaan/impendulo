@@ -44,7 +44,7 @@ var AnalysisView = {
                 $('#file-dropdown-label').append('<h4><small>file</small> ' + fn + ' <span class="caret"></span></h4>');
             }
         }
-        if ($('#file-dropdown-label').attr('filename') === undefined) {
+        if (not($('#file-dropdown-label').attr('filename'))) {
             $('#file-dropdown-label').append('<h4><small>file</small> None Selected <span class="caret"></span></h4>');
         }
     },
@@ -117,7 +117,7 @@ var AnalysisView = {
         $(s).modal('show');
         $(s).on('shown.bs.modal', function(e) {
             var p = $(s).find('.highlighted').position();
-            if (p !== undefined) {
+            if (!not(p)) {
                 $(s).scrollTop(p.top);
             }
         });

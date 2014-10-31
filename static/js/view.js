@@ -9,7 +9,7 @@ var View = {
                 $('#' + tipe + '-dropdown-label').append('<h4><small>' + tipe + '</small> ' + vals[i].Name + ' <span class="caret"></span></h4>');
             }
         }
-        if ($('#' + tipe + '-dropdown-label').attr(tipe + 'id') === undefined) {
+        if (not($('#' + tipe + '-dropdown-label').attr(tipe + 'id'))) {
             $('#' + tipe + '-dropdown-label').append('<h4><small>' + tipe + '</small> None Selected <span class="caret"></span></h4>');
         }
     }

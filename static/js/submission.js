@@ -23,7 +23,9 @@
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 var SubmissionsChart = {
+    tipe: '',
     init: function(aid, pid, uid, tipe) {
+        SubmissionsChart.tipe = tipe;
         ComparisonChart.init();
         $(function() {
             $('.select-chart').change(function() {
@@ -91,11 +93,11 @@ var SubmissionsChart = {
             for (var i = 0; i < o.length; i++) {
                 $('.select-chart').append('<option value="' + o[i].Id + '">' + o[i].Name + '</option>');
             }
-            if (x === undefined || x === null || $('#x option[value="' + x + '"]').length) {
+            if (not(x) || $('#x option[value="' + x + '"]').length) {
                 x = o[0].Id;
             }
             $('#x').val(x);
-            if (y === undefined || y === null || $('#y option[value="' + y + '"]').length) {
+            if (not(y) || $('#y option[value="' + y + '"]').length) {
                 y = o[o.length - 1].Id;
             }
             $('#y').val(y);
@@ -110,12 +112,15 @@ var SubmissionsChart = {
             'y': y,
             'assignment-id': $('#assignment-dropdown-label').attr('currentid')
         };
+        params[SubmissionsChart.tipe + '-id'] = $('#' + SubmissionsChart.tipe + '-dropdown-label').attr(SubmissionsChart.tipe + 'id');
         ComparisonChart.load(params);
     }
 };
 
 var SubmissionsView = {
+    tipe: '',
     init: function(aid, pid, uid, tipe) {
+        SubmissionsView.tipe = tipe;
         $(function() {
             $("#table-submissions").tablesorter({
                 theme: 'bootstrap',
@@ -134,6 +139,7 @@ var SubmissionsView = {
                     var id = tipe === 'user' ? uid : pid;
                     $.getJSON('assignments?' + tipe + '-id=' + id, function(data) {
                         if (not(data['assignments'])) {
+                            console.log('could not load assignments', data);
                             return;
                         }
                         SubmissionsView.assDropdown(aid, data['assignments']);
@@ -153,7 +159,7 @@ var SubmissionsView = {
                 $('#assignment-dropdown-label').append('<h4><small>assignment</small> ' + vals[i].Name + ' <span class="caret"></span></h4>');
             }
         }
-        if ($('#assignment-dropdown-label').attr('assignmentid') === undefined) {
+        if (not($('#assignment-dropdown-label').attr('assignmentid'))) {
             $('#assignment-dropdown-label').append('<h4><small>assignment</small> None Selected <span class="caret"></span></h4>');
         }
         $('#assignment-dropdown ul.dropdown-menu a').on('click', function() {
@@ -176,6 +182,7 @@ var SubmissionsView = {
             'counts': true,
             'assignment-id': aid
         }
+        params[SubmissionsView.tipe + '-id'] = $('#' + SubmissionsView.tipe + '-dropdown-label').attr(SubmissionsView.tipe + 'id');
         $.getJSON('submissions', params, function(data) {
             if (not(data['submissions']) || not(data['counts'])) {
                 return;

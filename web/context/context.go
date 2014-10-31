@@ -201,6 +201,21 @@ func load(s *sessions.Session) *C {
 	return c
 }
 
+func (b *Browse) ClearProject() {
+	b.Pid = ""
+	b.ClearAssignment()
+}
+
+func (b *Browse) ClearUser() {
+	b.Uid = ""
+	b.ClearAssignment()
+}
+
+func (b *Browse) ClearAssignment() {
+	b.Aid = ""
+	b.ClearSubmission()
+}
+
 func (b *Browse) ClearSubmission() {
 	b.File = ""
 	b.Current = 0
@@ -209,6 +224,7 @@ func (b *Browse) ClearSubmission() {
 	if b.Result == nil {
 		b.Result = &description.D{Type: code.NAME}
 	}
+	b.Sid = ""
 }
 
 func (b *Browse) SetDisplayCount(r *http.Request) error {
@@ -226,7 +242,7 @@ func (b *Browse) SetUid(r *http.Request) error {
 	if e != nil {
 		return nil
 	}
-	b.ClearSubmission()
+	b.ClearUser()
 	b.IsUser = true
 	b.Uid = id
 	return nil
@@ -237,7 +253,7 @@ func (b *Browse) SetPid(r *http.Request) error {
 	if e != nil {
 		return nil
 	}
-	b.ClearSubmission()
+	b.ClearProject()
 	b.IsUser = false
 	b.Pid = pid
 	return nil
@@ -248,7 +264,7 @@ func (b *Browse) SetAid(r *http.Request) error {
 	if e != nil {
 		return nil
 	}
-	b.ClearSubmission()
+	b.ClearAssignment()
 	a, e := db.Assignment(bson.M{db.ID: id}, nil)
 	if e != nil {
 		return e

@@ -116,6 +116,7 @@ var AssignmentsView = {
     init: function(tipe, id) {
         AssignmentsView.tipe = tipe;
         $(function() {
+            $('#btn-all-submissions').attr('href', 'submissionsview?' + tipe + '-id=' + id);
             $('#button-filter').on('click', AssignmentsView.load);
             $.getJSON(AssignmentsView.tipe + 's', function(data) {
                 if (not(data[AssignmentsView.tipe + 's'])) {
@@ -218,11 +219,11 @@ var AssignmentsChart = {
             for (var i = 0; i < o.length; i++) {
                 $('.select-chart').append('<option value="' + o[i].Id + '">' + o[i].Name + '</option>');
             }
-            if (x === undefined || x === null || !$('#x option[value="' + x + '"]').length) {
+            if (not(x) || !$('#x option[value="' + x + '"]').length) {
                 x = o[0].Id;
             }
             $('#x').val(x);
-            if (y === undefined || y === null || !$('#y option[value="' + y + '"]').length) {
+            if (not(y) || !$('#y option[value="' + y + '"]').length) {
                 y = o[o.length - 1].Id;
             }
             $('#y').val(y);
