@@ -94,7 +94,6 @@ func (h *Handler) Handle(onDone chan util.E) {
 				busy = true
 			} else if h.done {
 				sc <- util.E{}
-				<-sc
 				return
 			}
 		}

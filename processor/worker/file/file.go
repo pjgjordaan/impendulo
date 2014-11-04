@@ -113,7 +113,6 @@ processing:
 	}
 	os.RemoveAll(w.rootDir)
 	util.Log("Processed submission", w.submission, LOG_F)
-	dc <- util.E{}
 }
 
 func (w *Worker) Process(fid bson.ObjectId) error {
