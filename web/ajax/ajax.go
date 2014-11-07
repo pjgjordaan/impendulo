@@ -4,7 +4,6 @@ import (
 	"code.google.com/p/gorilla/pat"
 
 	"errors"
-	"strings"
 
 	"fmt"
 
@@ -14,13 +13,8 @@ import (
 )
 
 type (
-	Get    func(*http.Request) ([]byte, error)
-	Post   func(http.ResponseWriter, *http.Request) error
-	Select struct {
-		Id, Name string
-		User     bool
-	}
-	Selects []*Select
+	Get  func(*http.Request) ([]byte, error)
+	Post func(http.ResponseWriter, *http.Request) error
 )
 
 const (
@@ -32,18 +26,6 @@ var (
 	CommentsError = errors.New("unsupported comments request")
 	ResultsError  = errors.New("cannot retrieve results")
 )
-
-func (s Selects) Len() int {
-	return len(s)
-}
-
-func (s Selects) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
-func (s Selects) Less(i, j int) bool {
-	return strings.ToLower(s[i].Name) <= strings.ToLower(s[j].Name)
-}
 
 func (a Get) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	b, e := a(r)
@@ -69,8 +51,8 @@ func Generate(r *pat.Router) {
 		"langs": Langs, "projects": Projects, "files": Files, "tools": Tools, "jpfsearches": JPFSearches,
 		"code": Code, "users": Users, "permissions": Perms, "comparables": Comparables,
 		"tests": Tests, "test-types": TestTypes, "filenames": FileNames, "basicfileinfos": BasicFileInfos, "status": Status, "counts": Counts,
-		"comments": Comments, "fileresults": FileResults, "chart-options": ChartOptions, "assignments": Assignments,
-		"typecounts": TypeCounts, "fileinfos": FileInfos, "resultnames": ResultNames, "databases": Databases, "testdata": TestData,
+		"comments": Comments, "fileresults": FileResults, "chart-options": chartOptions, "assignments": Assignments,
+		"typecounts": TypeCounts, "fileinfos": FileInfos, "resultnames": ResultNames, "databases": Databases, "testdata": TestData, "table-info": TableInfo,
 	}
 	for n, f := range gets {
 		r.Add("GET", "/"+n, f)

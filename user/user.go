@@ -43,8 +43,8 @@ type (
 		Name   string
 	}
 
-	//User represents a user within the Impendulo system.
-	User struct {
+	//U represents a user within the Impendulo system.
+	U struct {
 		Name     string     `bson:"_id"`
 		Password string     `bson:"password"`
 		Salt     string     `bson:"salt"`
@@ -70,25 +70,25 @@ var (
 )
 
 //String
-func (u *User) String() string {
-	return "Type: user.User; Name: " + u.Name + "; Permission: " + u.Access.Name()
+func (u *U) String() string {
+	return "Type: user.U; Name: " + u.Name + "; Permission: " + u.Access.Name()
 }
 
 //New creates a new user with file submission permissions.
-func New(u, p string) *User {
+func New(u, p string) *U {
 	h, s := util.Hash(p)
-	return &User{u, h, s, STUDENT}
+	return &U{u, h, s, STUDENT}
 }
 
 //Read reads user configurations from a file.
 //It also sets up their passwords.
-func Read(n string) ([]*User, error) {
+func Read(n string) ([]*U, error) {
 	f, e := os.Open(n)
 	if e != nil {
 		return nil, e
 	}
 	s := bufio.NewScanner(f)
-	us := make([]*User, 0, 1000)
+	us := make([]*U, 0, 1000)
 	i := 0
 	for s.Scan() {
 		vs := strings.Split(s.Text(), ":")

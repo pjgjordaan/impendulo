@@ -32,13 +32,13 @@ import (
 )
 
 //User retrieves a user matching the given id from the active database.
-func User(id string) (*user.User, error) {
+func User(id string) (*user.U, error) {
 	s, e := Session()
 	if e != nil {
 		return nil, e
 	}
 	defer s.Close()
-	var u *user.User
+	var u *user.U
 	if e = s.DB("").C(USERS).FindId(id).One(&u); e != nil {
 		return nil, &GetError{"user", e, id}
 	}
@@ -46,7 +46,7 @@ func User(id string) (*user.User, error) {
 }
 
 //Users retrieves users matching the given interface from the active database.
-func Users(m interface{}, sort ...string) ([]*user.User, error) {
+func Users(m interface{}, sort ...string) ([]*user.U, error) {
 	s, e := Session()
 	if e != nil {
 		return nil, e
@@ -56,7 +56,7 @@ func Users(m interface{}, sort ...string) ([]*user.User, error) {
 	if len(sort) > 0 {
 		q = q.Sort(sort...)
 	}
-	var u []*user.User
+	var u []*user.U
 	if e = q.All(&u); e != nil {
 		return nil, &GetError{"users", e, m}
 	}
@@ -77,7 +77,7 @@ func Usernames(m interface{}) ([]string, error) {
 }
 
 //AddUsers adds new users to the active database.
-func AddUsers(users ...*user.User) error {
+func AddUsers(users ...*user.U) error {
 	s, e := Session()
 	if e != nil {
 		return e

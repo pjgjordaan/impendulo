@@ -197,7 +197,7 @@ func NewData() D {
 	return make(D, 0, 1000)
 }
 
-func User(us []*user.User, x *description.D, y *description.D) (D, I, error) {
+func User(us []*user.U, x *description.D, y *description.D) (D, I, error) {
 	if len(us) == 0 {
 		return nil, nil, NoUsersError
 	}
@@ -205,19 +205,22 @@ func User(us []*user.User, x *description.D, y *description.D) (D, I, error) {
 	c := stats.NewCalc()
 	i := I{"x": x.Format(), "y": y.Format()}
 	sumX, sumY := 0.0, 0.0
+
 	for _, u := range us {
-		if xTotal, yTotal, e := c.User(u, x, y); e == nil {
-			sumX += xTotal
-			sumY += yTotal
+		if vs, ns, e := c.User(u, []*description.D{x, y}); e == nil {
+			sumX += vs[0]
+			sumY += vs[1]
 			v := map[string]interface{}{
-				"key": "assignmentsview?user-id=" + u.Name, "x": xTotal, "y": yTotal,
+				"key": "assignmentsview?user-id=" + u.Name, "x": vs[0], "y": vs[1],
 				"title": u.Name,
 			}
 			d = append(d, v)
+			if _, ok := i["x-unit"]; !ok {
+				i["x-unit"] = ns[0]
+				i["y-unit"] = ns[1]
+			}
 		}
 	}
-	i["x-unit"] = c.XN
-	i["y-unit"] = c.YN
 	d.AddOutliers("x")
 	d.AddOutliers("y")
 	i.AddStats(d, sumX, sumY)
@@ -233,18 +236,20 @@ func Project(ps []*project.P, x *description.D, y *description.D) (D, I, error) 
 	i := I{"x": x.Format(), "y": y.Format()}
 	sumX, sumY := 0.0, 0.0
 	for _, p := range ps {
-		if xTotal, yTotal, e := c.Project(p, x, y); e == nil {
-			sumX += xTotal
-			sumY += yTotal
+		if vs, ns, e := c.Project(p, []*description.D{x, y}); e == nil {
+			sumX += vs[0]
+			sumY += vs[1]
 			v := map[string]interface{}{
-				"url": "assignmentschart?project-id=" + p.Id.Hex(), "x": xTotal, "y": yTotal,
+				"url": "assignmentschart?project-id=" + p.Id.Hex(), "x": vs[0], "y": vs[1],
 				"title": p.Name,
 			}
 			d = append(d, v)
+			if _, ok := i["x-unit"]; !ok {
+				i["x-unit"] = ns[0]
+				i["y-unit"] = ns[1]
+			}
 		}
 	}
-	i["x-unit"] = c.XN
-	i["y-unit"] = c.YN
 	d.AddOutliers("x")
 	d.AddOutliers("y")
 	i.AddStats(d, sumX, sumY)
@@ -269,18 +274,20 @@ func Assignment(as []*project.Assignment, x *description.D, y *description.D) (D
 			}
 			names[a.ProjectId] = n
 		}
-		if xTotal, yTotal, e := c.Assignment(a, x, y); e == nil {
-			sumX += xTotal
-			sumY += yTotal
+		if vs, ns, e := c.Assignment(a, []*description.D{x, y}); e == nil {
+			sumX += vs[0]
+			sumY += vs[1]
 			p := map[string]interface{}{
-				"url": "submissionschart?assignment-id=" + a.Id.Hex(), "x": xTotal, "y": yTotal,
+				"url": "submissionschart?assignment-id=" + a.Id.Hex(), "x": vs[0], "y": vs[1],
 				"title": n + " " + a.Name,
 			}
 			d = append(d, p)
+			if _, ok := i["x-unit"]; !ok {
+				i["x-unit"] = ns[0]
+				i["y-unit"] = ns[1]
+			}
 		}
 	}
-	i["x-unit"] = c.XN
-	i["y-unit"] = c.YN
 	d.AddOutliers("x")
 	d.AddOutliers("y")
 	i.AddStats(d, sumX, sumY)
@@ -305,17 +312,19 @@ func Submission(subs []*project.Submission, x *description.D, y *description.D) 
 			}
 			names[s.ProjectId] = n
 		}
-		if xVal, yVal, e := c.Submission(s, x, y); e == nil {
-			sumX += xVal
-			sumY += yVal
+		if vs, ns, e := c.Submission(s, []*description.D{x, y}); e == nil {
+			sumX += vs[0]
+			sumY += vs[1]
 			p := map[string]interface{}{
-				"url": "filesview?submission-id=" + s.Id.Hex(), "title": s.User + "'s " + n, "x": xVal, "y": yVal,
+				"url": "filesview?submission-id=" + s.Id.Hex(), "title": s.User + "'s " + n, "x": vs[0], "y": vs[1],
 			}
 			d = append(d, p)
+			if _, ok := i["x-unit"]; !ok {
+				i["x-unit"] = ns[0]
+				i["y-unit"] = ns[1]
+			}
 		}
 	}
-	i["x-unit"] = c.XN
-	i["y-unit"] = c.YN
 	d.AddOutliers("x")
 	d.AddOutliers("y")
 	i.AddStats(d, sumX, sumY)

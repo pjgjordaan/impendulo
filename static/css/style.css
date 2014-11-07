@@ -354,3 +354,15 @@ p.annotation-content {
     float: none;
     margin: 0 auto;
 }
+.table-responsive {
+    overflow-x: scroll;
+}
+.table-responsive th {
+    overflow-x: visible;
+    white-space: nowrap;
+}
+.table-responsive td {
+    overflow-x: visible;
+    white-space: nowrap;
+    text-align: left;
+}

@@ -10,6 +10,7 @@ import (
 	"github.com/godfried/impendulo/tool/jacoco"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/tool/result"
+	"github.com/godfried/impendulo/tool/result/all"
 	"github.com/godfried/impendulo/tool/result/description"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
@@ -49,13 +50,12 @@ func Results(r *http.Request) ([]byte, error) {
 	} else {
 		return nil, ResultsError
 	}
-	s := make(Selects, len(rs))
+	s := make(description.Ds, len(rs))
 	for i, r := range rs {
-		rd, e := description.New(r)
-		if e != nil {
+		var e error
+		if s[i], e = description.New(r); e != nil {
 			return nil, e
 		}
-		s[i] = &Select{Id: rd.Raw(), Name: rd.Format()}
 	}
 	sort.Sort(s)
 	return util.JSON(map[string]interface{}{"results": s})
@@ -69,7 +69,7 @@ func Comparables(r *http.Request) ([]byte, error) {
 		return nil, e
 	}
 	if d.Type != jacoco.NAME && d.Type != junit.NAME {
-		return util.JSON(map[string]interface{}{"comparables": []*Select{}})
+		return util.JSON(map[string]interface{}{"comparables": description.Ds{}})
 	}
 	f, e := webutil.File(r, "file-id", bson.M{db.DATA: 0})
 	if e != nil {
@@ -101,16 +101,14 @@ func Comparables(r *http.Request) ([]byte, error) {
 	if e != nil {
 		return nil, e
 	}
-	cmp := make([]*Select, len(ts)+len(uts))
+	cmp := make(description.Ds, len(ts)+len(uts))
 	for i, t := range ts {
 		n, _ := util.Extension(t.Name)
-		rd := &description.D{Type: tr.GetType(), Name: n}
-		cmp[i] = &Select{rd.Raw(), rd.Format(), false}
+		cmp[i] = &description.D{Type: tr.GetType(), Name: n}
 	}
 	for i, ut := range uts {
 		n, _ := util.Extension(ut.Name)
-		rd := &description.D{Type: tr.GetType(), Name: n, FileID: ut.Id}
-		cmp[i+len(ts)] = &Select{rd.Raw(), rd.Format(), true}
+		cmp[i+len(ts)] = &description.D{Type: tr.GetType(), Name: n, FileID: ut.Id}
 	}
 	return util.JSON(map[string]interface{}{"comparables": cmp})
 }
@@ -283,4 +281,32 @@ func TestData(r *http.Request) ([]byte, error) {
 		return nil, e
 	}
 	return util.JSON(map[string]interface{}{"data": string(data)})
+}
+
+func Metrics(r *http.Request) (description.Ds, error) {
+	var rs []string
+	if pid, e := webutil.Id(r, "project-id"); e == nil {
+		rs = db.ProjectResults(pid)
+	} else if u, e := webutil.String(r, "user-id"); e == nil {
+		rs = db.UserResults(u)
+	} else {
+		rs = db.AllResults()
+	}
+	ops := description.Ds{{Type: "Time"}, {Type: util.Title(project.SRC.String())}, {Type: util.Title(project.LAUNCH.String())}, {Type: util.Title(project.TEST.String())}, {Type: "Testcases"}, {Type: "Passed"}}
+	for _, r := range rs {
+		tipes, e := all.Types(r)
+		if e != nil {
+			return nil, e
+		}
+		for _, t := range tipes {
+			id := r + "~" + t
+			d, e := description.New(id)
+			if e != nil {
+				return nil, e
+			}
+			ops = append(ops, d)
+		}
+	}
+	sort.Sort(ops)
+	return ops, nil
 }

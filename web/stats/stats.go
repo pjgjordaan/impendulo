@@ -55,7 +55,6 @@ type (
 	}
 	C struct {
 		projects map[bson.ObjectId]int
-		XN, YN   string
 	}
 	Type string
 )
@@ -75,8 +74,8 @@ func NewCalc() *C {
 	return &C{projects: make(map[bson.ObjectId]int)}
 }
 
-func (c *C) Calc(rd *description.D, s *project.Submission) (float64, string, error) {
-	n := rd.Raw()
+func (c *C) Calc(d *description.D, s *project.Submission) (float64, string, error) {
+	n := d.Raw()
 	if t, e := project.ParseType(n); e == nil {
 		fc, e := db.FileCount(s.Id, t)
 		if e != nil {
@@ -91,79 +90,104 @@ func (c *C) Calc(rd *description.D, s *project.Submission) (float64, string, err
 		}
 		return calc(t, s, pt)
 	} else {
-		return Score(s, rd)
+		return Score(s, d)
 	}
 }
 
-func (c *C) Submission(s *project.Submission, x, y *description.D) (float64, float64, error) {
-	xVal, xN, e := c.Calc(x, s)
-	if e != nil {
-		return 0, 0, e
+func (c *C) Submission(s *project.Submission, ds []*description.D) ([]float64, []string, error) {
+	vals := make([]float64, len(ds))
+	ns := make([]string, len(ds))
+	for i, d := range ds {
+		var e error
+		if vals[i], ns[i], e = c.Calc(d, s); e == nil {
+			vals[i] = util.Round(vals[i], 2)
+		}
 	}
-	yVal, yN, e := c.Calc(y, s)
-	if e != nil {
-		return 0, 0, e
-	}
-	c.XN = xN
-	c.YN = yN
-	return util.Round(xVal, 2), util.Round(yVal, 2), nil
+	return vals, ns, nil
 }
 
-func (c *C) Assignment(a *project.Assignment, x, y *description.D) (float64, float64, error) {
+func (c *C) Assignment(a *project.Assignment, ds []*description.D) ([]float64, []string, error) {
 	subs, e := db.Submissions(bson.M{db.ASSIGNMENTID: a.Id}, nil)
 	if e != nil {
-		return 0, 0, e
+		return nil, nil, e
 	}
-	count, xTotal, yTotal := 0, 0.0, 0.0
+	count := 0
+	vals := make([]float64, len(ds))
+	var ns []string
 	for _, s := range subs {
-		if xVal, yVal, e := c.Submission(s, x, y); e == nil {
-			xTotal += xVal
-			yTotal += yVal
+		if svals, sn, e := c.Submission(s, ds); e == nil {
+			for i, v := range svals {
+				vals[i] += v
+			}
+			if ns == nil {
+				ns = sn
+			}
 			count++
 		}
 	}
 	if count == 0 {
-		return 0, 0, nil
+		return nil, nil, nil
 	}
-	return util.Round(xTotal/float64(count), 2), util.Round(yTotal/float64(count), 2), nil
+	for i, _ := range vals {
+		vals[i] = util.Round(vals[i]/float64(count), 2)
+	}
+	return vals, ns, nil
 }
 
-func (c *C) Project(p *project.P, x, y *description.D) (float64, float64, error) {
+func (c *C) Project(p *project.P, ds []*description.D) ([]float64, []string, error) {
 	as, e := db.Assignments(bson.M{db.PROJECTID: p.Id}, nil)
 	if e != nil {
-		return 0, 0, e
+		return nil, nil, e
 	}
-	count, xTotal, yTotal := 0, 0.0, 0.0
+	count := 0
+	vals := make([]float64, len(ds))
+	var ns []string
 	for _, a := range as {
-		if xVal, yVal, e := c.Assignment(a, x, y); e == nil {
-			xTotal += xVal
-			yTotal += yVal
+		if avals, an, e := c.Assignment(a, ds); e == nil {
+			for i, v := range avals {
+				vals[i] += v
+			}
+			if ns == nil {
+				ns = an
+			}
 			count++
 		}
 	}
 	if count == 0 {
-		return 0, 0, nil
+		return nil, nil, nil
 	}
-	return util.Round(xTotal/float64(count), 2), util.Round(yTotal/float64(count), 2), nil
+	for i, _ := range vals {
+		vals[i] = util.Round(vals[i]/float64(count), 2)
+	}
+	return vals, ns, nil
 }
 
-func (c *C) User(u *user.User, x, y *description.D) (float64, float64, error) {
+func (c *C) User(u *user.U, ds []*description.D) ([]float64, []string, error) {
 	ss, e := db.Submissions(bson.M{db.USER: u.Name}, nil)
 	if e != nil {
-		return 0, 0, e
+		return nil, nil, e
 	}
-	count, xTotal, yTotal := 0, 0.0, 0.0
+	count := 0
+	vals := make([]float64, len(ds))
+	var ns []string
 	for _, s := range ss {
-		if xVal, yVal, e := c.Submission(s, x, y); e == nil {
-			xTotal += xVal
-			yTotal += yVal
+		if svals, sn, e := c.Submission(s, ds); e == nil {
+			for i, v := range svals {
+				vals[i] += v
+			}
+			if ns == nil {
+				ns = sn
+			}
 			count++
 		}
 	}
 	if count == 0 {
-		return 0, 0, nil
+		return nil, nil, nil
 	}
-	return util.Round(xTotal/float64(count), 2), util.Round(yTotal/float64(count), 2), nil
+	for i, _ := range vals {
+		vals[i] = util.Round(vals[i]/float64(count), 2)
+	}
+	return vals, ns, nil
 }
 
 func ParseType(n string) (Type, error) {
@@ -416,19 +440,19 @@ func Time(s *project.Submission) (int64, error) {
 	return (f.Time - s.Time) / 1000.0, nil
 }
 
-func Score(s *project.Submission, r *description.D) (float64, string, error) {
-	if r.Type == code.NAME {
+func Score(s *project.Submission, d *description.D) (float64, string, error) {
+	if d.Type == code.NAME {
 		l, e := Lines(s.Id)
 		if e != nil {
 			return -1, "", e
 		}
 		return float64(l), "", nil
 	}
-	rid, e := lastResultId(s.Id, r)
+	rid, e := lastResultId(s.Id, d)
 	if e != nil {
 		return -1, "", e
 	}
-	return score(rid, r)
+	return score(rid, d)
 }
 
 func score(rid bson.ObjectId, r *description.D) (float64, string, error) {

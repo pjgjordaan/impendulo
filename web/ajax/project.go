@@ -1,11 +1,15 @@
 package ajax
 
 import (
+	"fmt"
+
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/util/convert"
 	"github.com/godfried/impendulo/web/stats"
+	"github.com/godfried/impendulo/web/tables"
 	"github.com/godfried/impendulo/web/webutil"
 	"labix.org/v2/mgo/bson"
 
@@ -210,4 +214,124 @@ func Skeletons(r *http.Request) ([]byte, error) {
 		return nil, e
 	}
 	return util.JSON(map[string]interface{}{"skeletons": s})
+}
+
+func TableInfo(r *http.Request) ([]byte, error) {
+	if e := r.ParseForm(); e != nil {
+		return nil, e
+	}
+	t, e := webutil.String(r, "type")
+	if e != nil {
+		return nil, e
+	}
+	switch t {
+	case "assignment":
+		return assignmentInfo(r)
+	case "submission":
+		return submissionInfo(r)
+	case "overview":
+		return overviewInfo(r)
+	default:
+		return nil, fmt.Errorf("unsupported type %s", t)
+	}
+}
+
+func assignmentInfo(r *http.Request) ([]byte, error) {
+	t, e := webutil.String(r, "assignment-type")
+	if e != nil {
+		return nil, e
+	}
+	id, e := webutil.String(r, "id")
+	if e != nil {
+		return nil, e
+	}
+	m := bson.M{}
+	switch t {
+	case "project":
+		pid, e := convert.Id(id)
+		if e != nil {
+			return nil, e
+		}
+		m[db.PROJECTID] = pid
+	case "user":
+		aids, e := db.UserAssignmentIds(id)
+		if e != nil {
+			return nil, e
+		}
+		m[db.ID] = bson.M{db.IN: aids}
+	default:
+		return nil, fmt.Errorf("invalid assignment type %s", t)
+	}
+	a, e := db.Assignments(m, nil)
+	if e != nil {
+		return nil, e
+	}
+	ds, e := Metrics(r)
+	if e != nil {
+		return nil, e
+	}
+	ti, ds, e := tables.Assignment(a, ds)
+	if e != nil {
+		return nil, e
+	}
+	return util.JSON(map[string]interface{}{"table-info": ti, "table-fields": ds})
+}
+
+func submissionInfo(r *http.Request) ([]byte, error) {
+	m := bson.M{}
+	if pid, e := webutil.Id(r, "project-id"); e == nil {
+		m[db.PROJECTID] = pid
+	}
+	if uid, e := webutil.String(r, "user-id"); e == nil {
+		m[db.USER] = uid
+	}
+	if aid, e := webutil.Id(r, "assignment-id"); e == nil {
+		m[db.ASSIGNMENTID] = aid
+	}
+	s, e := db.Submissions(m, nil)
+	if e != nil {
+		return nil, e
+	}
+	ds, e := Metrics(r)
+	if e != nil {
+		return nil, e
+	}
+	ti, ds, e := tables.Submission(s, ds)
+	if e != nil {
+		return nil, e
+	}
+	return util.JSON(map[string]interface{}{"table-info": ti, "table-fields": ds})
+}
+
+func overviewInfo(r *http.Request) ([]byte, error) {
+	v, e := webutil.String(r, "view")
+	if e != nil {
+		return nil, e
+	}
+	ds, e := Metrics(r)
+	if e != nil {
+		return nil, e
+	}
+	var t tables.T
+	switch v {
+	case "user":
+		u, e := db.Users(nil)
+		if e != nil {
+			return nil, e
+		}
+		if t, ds, e = tables.User(u, ds); e != nil {
+			return nil, e
+		}
+	case "project":
+		p, e := db.Projects(nil, nil)
+		if e != nil {
+			return nil, e
+		}
+		if t, ds, e = tables.Project(p, ds); e != nil {
+			return nil, e
+		}
+	default:
+		return nil, fmt.Errorf("unknown view %s", v)
+	}
+	return util.JSON(map[string]interface{}{"table-info": t, "table-fields": ds})
 }

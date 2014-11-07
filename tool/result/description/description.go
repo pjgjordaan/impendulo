@@ -1,6 +1,7 @@
 package description
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/godfried/impendulo/db"
@@ -22,6 +23,7 @@ type (
 		FileID bson.ObjectId
 		Metric string
 	}
+	Ds []*D
 )
 
 const (
@@ -153,4 +155,37 @@ func (d *D) charter(f *project.File) (result.Charter, error) {
 	default:
 		return nil, fmt.Errorf("not a charter %s", d.Type)
 	}
+}
+
+/*
+func (d *D) ToBasic() *Basic {
+	return *Basic{Id: d.Raw(), Name: d.Format()}
+}
+*/
+
+func (ds Ds) Len() int {
+	return len(ds)
+}
+
+func (ds Ds) Swap(i, j int) {
+	ds[i], ds[j] = ds[j], ds[i]
+}
+
+func (ds Ds) Less(i, j int) bool {
+	return strings.ToLower(ds[i].Raw()) <= strings.ToLower(ds[j].Raw())
+}
+
+func (d *D) MarshalJSON() ([]byte, error) {
+	return []byte(`{"id":"` + d.Raw() + `", "name":"` + d.Format() + `"}`), nil
+}
+
+func (d *D) UnmarshalJSON(b []byte) error {
+	type j struct {
+		Id string `json:"id"`
+	}
+	var id *j
+	if e := json.Unmarshal(b, &id); e != nil {
+		return e
+	}
+	return d.Set(id.Id)
 }

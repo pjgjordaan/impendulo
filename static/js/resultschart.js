@@ -53,8 +53,8 @@ var ResultChart = {
             var comp = cdata['comparables'];
             if (!not(comp)) {
                 for (var i = 0; i < comp.length; i++) {
-                    var s = comp[i].User ? '#optgroup-usertests' : '#optgroup-tests';
-                    $(s).append('<option value="' + comp[i].Id + '">' + comp[i].Name + '</option>');
+                    var s = comp[i].id.indexOf("-") > -1 ? '#optgroup-usertests' : '#optgroup-tests';
+                    $(s).append('<option value="' + comp[i].id + '">' + comp[i].name + '</option>');
                 }
             }
             $.getJSON('submissions?project-id=' + pid, function(data) {

@@ -37,6 +37,7 @@ const (
 	JPF         = "jpf"
 	PMD         = "pmd"
 	MAKE        = "make"
+	CALC        = "calc"
 	//Mongodb command
 	MATCH  = "$match"
 	GROUP  = "$group"

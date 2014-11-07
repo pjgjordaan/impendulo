@@ -6,8 +6,6 @@ import (
 	"labix.org/v2/mgo/bson"
 
 	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool/result/all"
 	"github.com/godfried/impendulo/tool/result/description"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
@@ -15,38 +13,13 @@ import (
 	"github.com/godfried/impendulo/web/webutil"
 
 	"net/http"
-	"sort"
 )
 
-func ChartOptions(r *http.Request) ([]byte, error) {
-	var rs []string
-	if pid, e := webutil.Id(r, "project-id"); e == nil {
-		rs = db.ProjectResults(pid)
-	} else if u, e := webutil.String(r, "user-id"); e == nil {
-		rs = db.UserResults(u)
-	} else {
-		rs = db.AllResults()
+func chartOptions(r *http.Request) ([]byte, error) {
+	ops, e := Metrics(r)
+	if e != nil {
+		return nil, e
 	}
-	other := []string{"Time", util.Title(project.SRC.String()), util.Title(project.LAUNCH.String()), util.Title(project.TEST.String()), "Testcases", "Passed"}
-	ops := make(Selects, 0, len(rs)+len(other))
-	for _, o := range other {
-		ops = append(ops, &Select{Id: o, Name: o})
-	}
-	for _, r := range rs {
-		tipes, e := all.Types(r)
-		if e != nil {
-			return nil, e
-		}
-		for _, t := range tipes {
-			id := r + "~" + t
-			rd, e := description.New(id)
-			if e != nil {
-				return nil, e
-			}
-			ops = append(ops, &Select{Id: rd.Raw(), Name: rd.Format()})
-		}
-	}
-	sort.Sort(ops)
 	return util.JSON(map[string]interface{}{"options": ops})
 }
 

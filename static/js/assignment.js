@@ -116,6 +116,7 @@ var AssignmentsView = {
     init: function(tipe, id) {
         AssignmentsView.tipe = tipe;
         $(function() {
+
             $('#btn-all-submissions').attr('href', 'submissionsview?' + tipe + '-id=' + id);
             $('#button-filter').on('click', AssignmentsView.load);
             $.getJSON(AssignmentsView.tipe + 's', function(data) {
@@ -150,25 +151,64 @@ var AssignmentsView = {
         $('#table-assignments > tbody').empty();
         var tid = $('#type-dropdown-label').attr(AssignmentsView.tipe + 'id');
         var params = {
-            'counts': true,
+            'type': 'assignment',
+            'assignment-type': AssignmentsView.tipe,
+            'id': tid
         };
-        params[AssignmentsView.tipe + '-id'] = tid;
-        $.getJSON('assignments', params, function(data) {
-            if (not(data['assignments']) || not(data['counts'])) {
+        $.getJSON('table-info', params, function(data) {
+            if (not(data['table-info']) || not(data['table-fields'])) {
                 return;
             }
-            var a = data['assignments'];
-            var c = data['counts'];
+            var a = data['table-info'];
+            var fs = data['table-fields'];
+            for (var j = 0; j < fs.length; j++) {
+                if (fs[j].id === 'id') {
+                    continue;
+                }
+                var n = toTitleCase(fs[j].name);
+                $('#table-assignments > thead > tr').append('<th key="' + fs[j].id + '">' + n + '</th>');
+                $('#fields').append('<option value="' + fs[j].id + '">' + n + '</option>');
+                if (AssignmentsView.isMetric(fs[j].id, a[0])) {
+                    $('#table-assignments > thead > tr > th').last().hide();
+                } else {
+                    $('#fields > option').last().prop('selected', true);
+                }
+            }
+            $('#fields').show();
+            $('#fields').multiselect({
+                noneSelectedText: 'Add table fields',
+                selectedText: '# table fields selected',
+                click: function(event, ui) {
+                    $('[key="' + ui.value + '"]').toggle();
+                },
+                checkAll: function(event, ui) {
+                    $('[key]').show();
+                },
+                uncheckAll: function(event, ui) {
+                    $('[key]').hide();
+                }
+            });
             for (var i = 0; i < a.length; i++) {
-                var s = new Date(a[i].Start);
-                var e = new Date(a[i].End);
-                $('#table-assignments > tbody').append('<tr assignmentid="' + a[i].Id + '"><td><a href="submissionsview?assignment-id=' + a[i].Id + '">' + a[i].Name + '</a></td><td>' + s.toLocaleDateString() + '</td><td>' + s.toLocaleTimeString() + '</td><td>' + e.toLocaleDateString() + '</td><td>' + e.toLocaleTimeString() + '</td><td>' + c[a[i].Id]['submissions'] + '</td><td>' + c[a[i].Id]['source'] + '</td><td>' + c[a[i].Id]['launch'] + '</td><td>' + c[a[i].Id]['test'] + '</td><td>' + c[a[i].Id]['testcases'] + '</td><td>' + c[a[i].Id]['passed'] + ' %</td></tr>');
+                var s = new Date(a[i].start);
+                var e = new Date(a[i].end);
+                $('#table-assignments > tbody').append('<tr assignmentid="' + a[i].id + '"><td key="name"><a href="submissionsview?assignment-id=' + a[i].id + '">' + a[i].name + '</a></td><td key="start date">' + s.toLocaleDateString() + '</td><td key="start time">' + s.toLocaleTimeString() + '</td><td key="end date">' + e.toLocaleDateString() + '</td><td key="end time">' + e.toLocaleTimeString() + '</td></tr>');
+                var s = '#table-assignments > tbody > tr[assignmentid="' + a[i].id + '"]';
+                for (var j = 0; j < fs.length; j++) {
+                    if (!AssignmentsView.isMetric(fs[j].id, a[i])) {
+                        continue;
+                    }
+                    $(s).append('<td key="' + fs[j].id + '">' + a[i][fs[j].id].value + ' ' + a[i][fs[j].id].unit + '</td>');
+                    $(s + ' td').last().hide();
+                }
             }
             $("#table-submissions").tablesorter({
                 theme: 'bootstrap',
                 dateFormat: 'ddmmyyyy'
             });
         });
+    },
+    isMetric: function(k, m) {
+        return k !== 'id' && k !== 'name' && !not(m[k])
     }
 };
 

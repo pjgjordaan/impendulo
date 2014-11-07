@@ -73,34 +73,62 @@ var OverviewChart = {
 };
 
 var Overview = {
-    setup: function(tipe, tipeNames) {
+    setup: function(tipe) {
         $(function() {
-            $.getJSON('typecounts?view=' + tipe, function(data) {
-                if (not(data['typecounts'])) {
+            var params = {
+                'type': 'overview',
+                'view': tipe
+            };
+            $.getJSON('table-info', params, function(data) {
+                if (not(data['table-info']) || not(data['table-fields'])) {
                     return;
                 }
-                var tcs = data['typecounts'];
-                var cs = data['categories'];
-                for (var i = 0; i < tipeNames.length; i++) {
-                    $('tr.info').append('<th>' + tipeNames[i] + '</th>');
-                }
-                for (var i = 0; i < cs.length; i++) {
-                    $('tr.info').append('<th>' + cs[i].toTitleCase() + '</th>');
-                }
-                for (var i = 0; i < tcs.length; i++) {
-                    var tr = '<tr>';
-                    if (tipe === 'project') {
-                        tr += '<td><a href="assignmentsview?project-id=' + tcs[i].id + '">' + tcs[i].name + '</a></td><td class="rowlink-skip"><a href="#" class="a-info"><span class="glyphicon glyphicon-info-sign"></span><p hidden>' + tcs[i].description + '</p></a></td><td>' + new Date(tcs[i].time).toLocaleString() + '</td><td>' + tcs[i].lang + '</td>';
+                var info = data['table-info'];
+                var fs = data['table-fields'];
+                for (var j = 0; j < fs.length; j++) {
+                    if (fs[j].id === 'id') {
+                        continue;
+                    }
+                    var n = toTitleCase(fs[j].name);
+                    $('#table-overview > thead > tr').append('<th key="' + fs[j].id + '">' + n + '</th>');
+                    $('#fields').append('<option value="' + fs[j].id + '">' + n + '</option>');
+                    if (Overview.isMetric(fs[j].id, info[0])) {
+                        $('#table-overview > thead > tr > th').last().hide();
                     } else {
-                        tr += '<td><a href="assignmentsview?user-id=' + tcs[i].name + '">' + tcs[i].name + '</a></td>';
+                        $('#fields > option').last().prop('selected', true);
                     }
-                    for (var j = 0; j < cs.length; j++) {
-                        tr += '<td>' + tcs[i][cs[j]] + '</td>';
+                }
+                $('#fields').show();
+                $('#fields').multiselect({
+                    noneSelectedText: 'Add table fields',
+                    selectedText: '# table fields selected',
+                    click: function(event, ui) {
+                        $('[key="' + ui.value + '"]').toggle();
+                    },
+                    checkAll: function(event, ui) {
+                        $('[key]').show();
+                    },
+                    uncheckAll: function(event, ui) {
+                        $('[key]').hide();
                     }
-                    $('tbody').append(tr);
+                });
+                for (var i = 0; i < info.length; i++) {
+                    $('#table-overview > tbody').append('<tr ' + tipe + 'id="' + info[i].id + '"><td key="name"><a href="assignmentsview?' + tipe + '-id=' + info[i].id + '">' + info[i].name + '</a></td></tr>');
+                    var s = '#table-overview > tbody > tr[' + tipe + 'id="' + info[i].id + '"]';
+                    if (tipe === 'project') {
+                        $(s).append('<td class="rowlink-skip" key="description"><a href="#" class="a-info"><span class="glyphicon glyphicon-info-sign"></span><p hidden>' + info[i].description + '</p></a></td>');
+                    }
+                    for (var j = 0; j < fs.length; j++) {
+                        if (!Overview.isMetric(fs[j].id, info[i])) {
+                            continue;
+                        }
+                        $(s).append('<td key="' + fs[j].id + '">' + info[i][fs[j].id].value + ' ' + info[i][fs[j].id].unit + '</td>');
+                        $(s + ' td').last().hide();
+                    }
                 }
                 $('#table-overview').tablesorter({
-                    theme: 'bootstrap'
+                    theme: 'bootstrap',
+                    dateFormat: 'ddmmyyyy'
                 });
                 if (tipe === 'project') {
                     $('.a-info').popover({
@@ -108,10 +136,12 @@ var Overview = {
                             var d = $(this).find('p').html();
                             return d === '' ? 'No description' : d;
                         }
-                    })
+                    });
                 }
             });
-
         });
+    },
+    isMetric: function(k, m) {
+        return k !== 'id' && k !== 'name' && k !== 'description' && !not(m[k])
     }
 };
