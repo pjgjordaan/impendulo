@@ -67,6 +67,7 @@ const (
 	//Field names
 	TARGET       = "target"
 	ID           = "_id"
+	DATAID       = "dataid"
 	PROJECTID    = "projectid"
 	ASSIGNMENTID = "assignmentid"
 	SKELETONID   = "skeletonid"
@@ -94,4 +95,7 @@ const (
 	TESTCASES    = "testcases"
 	START        = "start"
 	END          = "end"
+	LEVEL        = "level"
+	X            = "x"
+	Y            = "y"
 )

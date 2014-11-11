@@ -75,6 +75,7 @@ func defaultPosters() map[string]Poster {
 		"deletetests": DeleteTests, "importdata": ImportData, "renamefiles": RenameFiles, "login": Login, "register": Register,
 		"logout": Logout, "editproject": EditProject, "edituser": EditUser, "editsubmission": EditSubmission,
 		"editfile": EditFile, "edittest": EditTest, "addassignment": AddAssignment, "editassignment": EditAssignment,
+		"deletecache": ClearCache,
 	}
 }
 
@@ -627,4 +628,11 @@ func RenameFiles(r *http.Request, c *context.C) (string, error) {
 		}
 	}
 	return fmt.Sprintf("Succesfully renamed files to package: %s class: %s.", np, nn), nil
+}
+
+func ClearCache(r *http.Request, c *context.C) (string, error) {
+	if e := db.RemoveCollection(db.CALC); e != nil {
+		return "Could not clear cache.", e
+	}
+	return "Cache cleared.", nil
 }

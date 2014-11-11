@@ -28,6 +28,7 @@ var CreateAssignment = {
             CreateAssignment.addPickers();
             $.getJSON('projects', function(data) {
                 if (not(data['projects'])) {
+                    console.log(data);
                     return;
                 }
                 var ps = data['projects'];
@@ -65,6 +66,7 @@ var CreateAssignment = {
         $.getJSON('skeletons?project-id=' + pid, function(data) {
             var sk = data['skeletons'];
             if (not(sk)) {
+                console.log(data);
                 return;
             }
             for (var i = 0; i < sk.length; i++) {
@@ -116,11 +118,11 @@ var AssignmentsView = {
     init: function(tipe, id) {
         AssignmentsView.tipe = tipe;
         $(function() {
-
             $('#btn-all-submissions').attr('href', 'submissionsview?' + tipe + '-id=' + id);
             $('#button-filter').on('click', AssignmentsView.load);
             $.getJSON(AssignmentsView.tipe + 's', function(data) {
                 if (not(data[AssignmentsView.tipe + 's'])) {
+                    console.log(data);
                     return;
                 }
                 var ts = data[AssignmentsView.tipe + 's'];
@@ -148,7 +150,9 @@ var AssignmentsView = {
     },
 
     load: function() {
+        $('#fields').empty();
         $('#table-assignments > tbody').empty();
+        $('#table-assignments > thead > tr').empty();
         var tid = $('#type-dropdown-label').attr(AssignmentsView.tipe + 'id');
         var params = {
             'type': 'assignment',
@@ -157,6 +161,7 @@ var AssignmentsView = {
         };
         $.getJSON('table-info', params, function(data) {
             if (not(data['table-info']) || not(data['table-fields'])) {
+                console.log(data);
                 return;
             }
             var a = data['table-info'];
@@ -168,47 +173,60 @@ var AssignmentsView = {
                 var n = toTitleCase(fs[j].name);
                 $('#table-assignments > thead > tr').append('<th key="' + fs[j].id + '">' + n + '</th>');
                 $('#fields').append('<option value="' + fs[j].id + '">' + n + '</option>');
-                if (AssignmentsView.isMetric(fs[j].id, a[0])) {
+                if (AssignmentsView.isMetric(fs[j].id)) {
                     $('#table-assignments > thead > tr > th').last().hide();
                 } else {
                     $('#fields > option').last().prop('selected', true);
                 }
             }
-            $('#fields').show();
+            if ($('#fields').multiselected) {
+                $('#fields').multiselect('destroy');
+            }
             $('#fields').multiselect({
                 noneSelectedText: 'Add table fields',
                 selectedText: '# table fields selected',
                 click: function(event, ui) {
                     $('[key="' + ui.value + '"]').toggle();
+                    if ($('[key="' + ui.value + '"]').is(":visible")) {
+                        $('[key="' + ui.value + '"]').each(function() {
+                            $(this).appendTo($(this).parent());
+                        });
+                    }
                 },
                 checkAll: function(event, ui) {
+                    $('[key]').each(function() {
+                        if (!$(this).is(":visible")) {
+                            $(this).appendTo($(this).parent());
+                        }
+                    });
                     $('[key]').show();
                 },
                 uncheckAll: function(event, ui) {
                     $('[key]').hide();
                 }
             });
+            $('#fields').multiselected = true;
             for (var i = 0; i < a.length; i++) {
                 var s = new Date(a[i].start);
                 var e = new Date(a[i].end);
                 $('#table-assignments > tbody').append('<tr assignmentid="' + a[i].id + '"><td key="name"><a href="submissionsview?assignment-id=' + a[i].id + '">' + a[i].name + '</a></td><td key="start date">' + s.toLocaleDateString() + '</td><td key="start time">' + s.toLocaleTimeString() + '</td><td key="end date">' + e.toLocaleDateString() + '</td><td key="end time">' + e.toLocaleTimeString() + '</td></tr>');
                 var s = '#table-assignments > tbody > tr[assignmentid="' + a[i].id + '"]';
                 for (var j = 0; j < fs.length; j++) {
-                    if (!AssignmentsView.isMetric(fs[j].id, a[i])) {
+                    if (!AssignmentsView.isMetric(fs[j].id)) {
                         continue;
                     }
                     $(s).append('<td key="' + fs[j].id + '">' + a[i][fs[j].id].value + ' ' + a[i][fs[j].id].unit + '</td>');
                     $(s + ' td').last().hide();
                 }
             }
-            $("#table-submissions").tablesorter({
+            $("#table-assignments").tablesorter({
                 theme: 'bootstrap',
                 dateFormat: 'ddmmyyyy'
             });
         });
     },
-    isMetric: function(k, m) {
-        return k !== 'id' && k !== 'name' && !not(m[k])
+    isMetric: function(k) {
+        return notEqual(k, ['id', 'name', 'start date', 'end date', 'start time', 'end time']);
     }
 };
 
@@ -223,6 +241,7 @@ var AssignmentsChart = {
             });
             $.getJSON(tipe + 's', function(data) {
                 if (not(data[tipe + 's'])) {
+                    console.log(data);
                     return;
                 }
                 var ts = data[tipe + 's'];
@@ -251,20 +270,21 @@ var AssignmentsChart = {
     addOptions: function(tipe, id) {
         var x = $('#x').val();
         var y = $('#y').val();
-        $.getJSON('chart-options?' + tipe + '-id=' + id, function(data) {
+        $.getJSON('chart-options?type=assignment&' + tipe + '-id=' + id, function(data) {
             var o = data['options'];
             if (not(o)) {
+                console.log(data);
                 return;
             }
             for (var i = 0; i < o.length; i++) {
-                $('.select-chart').append('<option value="' + o[i].Id + '">' + o[i].Name + '</option>');
+                $('.select-chart').append('<option value="' + o[i].id + '">' + o[i].name + '</option>');
             }
             if (not(x) || !$('#x option[value="' + x + '"]').length) {
-                x = o[0].Id;
+                x = o[0].id;
             }
             $('#x').val(x);
             if (not(y) || !$('#y option[value="' + y + '"]').length) {
-                y = o[o.length - 1].Id;
+                y = o[o.length - 1].id;
             }
             $('#y').val(y);
             AssignmentsChart.load(tipe, id, x, y);

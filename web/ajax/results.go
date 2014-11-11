@@ -14,6 +14,7 @@ import (
 	"github.com/godfried/impendulo/tool/result/description"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
+	"github.com/godfried/impendulo/web/calc"
 	"github.com/godfried/impendulo/web/context"
 	"github.com/godfried/impendulo/web/webutil"
 	"labix.org/v2/mgo/bson"
@@ -283,7 +284,7 @@ func TestData(r *http.Request) ([]byte, error) {
 	return util.JSON(map[string]interface{}{"data": string(data)})
 }
 
-func Metrics(r *http.Request) (description.Ds, error) {
+func Metrics(r *http.Request, l calc.Level) (description.Ds, error) {
 	var rs []string
 	if pid, e := webutil.Id(r, "project-id"); e == nil {
 		rs = db.ProjectResults(pid)
@@ -292,7 +293,17 @@ func Metrics(r *http.Request) (description.Ds, error) {
 	} else {
 		rs = db.AllResults()
 	}
-	ops := description.Ds{{Type: "Time"}, {Type: util.Title(project.SRC.String())}, {Type: util.Title(project.LAUNCH.String())}, {Type: util.Title(project.TEST.String())}, {Type: "Testcases"}, {Type: "Passed"}}
+	var ops description.Ds
+	switch l {
+	case calc.OVERVIEW:
+		ops = overviewMetrics()
+	case calc.ASSIGNMENT:
+		ops = assignmentMetrics()
+	case calc.SUBMISSION:
+		ops = submissionMetrics()
+	default:
+		return nil, fmt.Errorf("unsupported level %s", l)
+	}
 	for _, r := range rs {
 		tipes, e := all.Types(r)
 		if e != nil {
@@ -309,4 +320,16 @@ func Metrics(r *http.Request) (description.Ds, error) {
 	}
 	sort.Sort(ops)
 	return ops, nil
+}
+
+func overviewMetrics() description.Ds {
+	return append(assignmentMetrics(), description.Ds{{Type: "Submissions", Metric: "Average"}, {Type: "Assignments", Metric: "Total"}}...)
+}
+
+func assignmentMetrics() description.Ds {
+	return append(submissionMetrics(), description.Ds{{Type: "Time", Metric: "Average"}, {Type: util.Title(project.SRC.String()), Metric: "Average"}, {Type: util.Title(project.LAUNCH.String()), Metric: "Average"}, {Type: util.Title(project.TEST.String()), Metric: "Average"}, {Type: "Testcases", Metric: "Average"}, {Type: "Submissions", Metric: "Total"}}...)
+}
+
+func submissionMetrics() description.Ds {
+	return description.Ds{{Type: "Time", Metric: "Total"}, {Type: util.Title(project.SRC.String()), Metric: "Total"}, {Type: util.Title(project.LAUNCH.String()), Metric: "Total"}, {Type: util.Title(project.TEST.String()), Metric: "Total"}, {Type: "Testcases", Metric: "Total"}, {Type: "Passed", Metric: "Average"}}
 }

@@ -9,14 +9,23 @@ import (
 	"github.com/godfried/impendulo/tool/result/description"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
-	"github.com/godfried/impendulo/web/charts"
+	"github.com/godfried/impendulo/web/calc"
+	"github.com/godfried/impendulo/web/calc/charts"
 	"github.com/godfried/impendulo/web/webutil"
 
 	"net/http"
 )
 
 func chartOptions(r *http.Request) ([]byte, error) {
-	ops, e := Metrics(r)
+	t, e := webutil.String(r, "type")
+	if e != nil {
+		return nil, e
+	}
+	l, e := calc.ParseLevel(t)
+	if e != nil {
+		return nil, e
+	}
+	ops, e := Metrics(r, l)
 	if e != nil {
 		return nil, e
 	}
@@ -58,6 +67,10 @@ func overviewChart(r *http.Request) ([]byte, error) {
 	if e != nil {
 		return nil, e
 	}
+	c, e := db.Chart(v, calc.OVERVIEW, xd.Raw(), yd.Raw())
+	if e == nil {
+		return util.JSON(map[string]interface{}{"chart-data": c.Data, "chart-info": c.Info})
+	}
 	var d charts.D
 	var i charts.I
 	switch v {
@@ -80,6 +93,9 @@ func overviewChart(r *http.Request) ([]byte, error) {
 	default:
 		return nil, fmt.Errorf("unknown view %s", v)
 	}
+	if e := db.AddChart(d, i, calc.OVERVIEW, v, xd.Raw(), yd.Raw()); e != nil {
+		return nil, e
+	}
 	return util.JSON(map[string]interface{}{"chart-data": d, "chart-info": i})
 }
 
@@ -99,6 +115,10 @@ func assignmentChart(r *http.Request) ([]byte, error) {
 	id, e := webutil.String(r, "id")
 	if e != nil {
 		return nil, e
+	}
+	c, e := db.Chart(id, calc.ASSIGNMENT, xd.Raw(), yd.Raw())
+	if e == nil {
+		return util.JSON(map[string]interface{}{"chart-data": c.Data, "chart-info": c.Info})
 	}
 	m := bson.M{}
 	switch t {
@@ -125,6 +145,9 @@ func assignmentChart(r *http.Request) ([]byte, error) {
 	if e != nil {
 		return nil, e
 	}
+	if e := db.AddChart(d, i, calc.ASSIGNMENT, id, xd.Raw(), yd.Raw()); e != nil {
+		return nil, e
+	}
 	return util.JSON(map[string]interface{}{"chart-data": d, "chart-info": i})
 }
 
@@ -138,14 +161,22 @@ func submissionChart(r *http.Request) ([]byte, error) {
 		return nil, e
 	}
 	m := bson.M{}
+	var id string
 	if pid, e := webutil.Id(r, "project-id"); e == nil {
 		m[db.PROJECTID] = pid
+		id = pid.Hex()
 	}
 	if uid, e := webutil.String(r, "user-id"); e == nil {
 		m[db.USER] = uid
+		id = uid
 	}
 	if aid, e := webutil.Id(r, "assignment-id"); e == nil {
 		m[db.ASSIGNMENTID] = aid
+		id = aid.Hex()
+	}
+	c, e := db.Chart(id, calc.SUBMISSION, xd.Raw(), yd.Raw())
+	if e == nil {
+		return util.JSON(map[string]interface{}{"chart-data": c.Data, "chart-info": c.Info})
 	}
 	s, e := db.Submissions(m, nil)
 	if e != nil {
@@ -153,6 +184,9 @@ func submissionChart(r *http.Request) ([]byte, error) {
 	}
 	d, i, e := charts.Submission(s, xd, yd)
 	if e != nil {
+		return nil, e
+	}
+	if e := db.AddChart(d, i, calc.SUBMISSION, id, xd.Raw(), yd.Raw()); e != nil {
 		return nil, e
 	}
 	return util.JSON(map[string]interface{}{"chart-data": d, "chart-info": i})

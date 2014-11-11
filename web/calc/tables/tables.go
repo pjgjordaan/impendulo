@@ -33,7 +33,7 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool/result/description"
 	"github.com/godfried/impendulo/user"
-	"github.com/godfried/impendulo/web/stats"
+	"github.com/godfried/impendulo/web/calc/stats"
 )
 
 type (
@@ -69,7 +69,7 @@ func User(us []*user.U, ds []*description.D) (T, []*description.D, error) {
 			t = append(t, m)
 		}
 	}
-	return t, append(description.Ds{{Type: "id"}, {Type: "name"}}, ds...), nil
+	return t, UserFields(ds), nil
 }
 
 func Project(ps []*project.P, ds []*description.D) (T, []*description.D, error) {
@@ -89,7 +89,7 @@ func Project(ps []*project.P, ds []*description.D) (T, []*description.D, error) 
 			t = append(t, m)
 		}
 	}
-	return t, append(description.Ds{{Type: "id"}, {Type: "name"}, {Type: "description"}}, ds...), nil
+	return t, ProjectFields(ds), nil
 }
 
 func Assignment(as []*project.Assignment, ds []*description.D) (T, []*description.D, error) {
@@ -109,7 +109,7 @@ func Assignment(as []*project.Assignment, ds []*description.D) (T, []*descriptio
 			t = append(t, p)
 		}
 	}
-	return t, append(description.Ds{{Type: "id"}, {Type: "name"}, {Type: "start date"}, {Type: "start time"}, {Type: "end date"}, {Type: "end time"}}, ds...), nil
+	return t, AssignmentFields(ds), nil
 }
 
 func Submission(ss []*project.Submission, ds []*description.D) (T, []*description.D, error) {
@@ -137,5 +137,32 @@ func Submission(ss []*project.Submission, ds []*description.D) (T, []*descriptio
 			t = append(t, p)
 		}
 	}
-	return t, append(description.Ds{{Type: "id"}, {Type: "name"}, {Type: "start date"}, {Type: "start time"}}, ds...), nil
+	return t, SubmissionFields(ds), nil
+}
+
+func SubmissionFields(ds []*description.D) []*description.D {
+	return append(description.Ds{{Type: "id"}, {Type: "name"}, {Type: "start date"}, {Type: "start time"}}, ds...)
+}
+
+func AssignmentFields(ds []*description.D) []*description.D {
+	return append(description.Ds{{Type: "id"}, {Type: "name"}, {Type: "start date"}, {Type: "start time"}, {Type: "end date"}, {Type: "end time"}}, ds...)
+}
+
+func ProjectFields(ds []*description.D) []*description.D {
+	return append(description.Ds{{Type: "id"}, {Type: "name"}, {Type: "description"}}, ds...)
+}
+
+func UserFields(ds []*description.D) []*description.D {
+	return append(description.Ds{{Type: "id"}, {Type: "name"}}, ds...)
+}
+
+func OverviewFields(ds []*description.D, t string) []*description.D {
+	switch t {
+	case "user":
+		return UserFields(ds)
+	case "project":
+		return ProjectFields(ds)
+	default:
+		return ds
+	}
 }

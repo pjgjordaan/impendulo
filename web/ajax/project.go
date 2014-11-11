@@ -8,8 +8,9 @@ import (
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
-	"github.com/godfried/impendulo/web/stats"
-	"github.com/godfried/impendulo/web/tables"
+	"github.com/godfried/impendulo/web/calc"
+	"github.com/godfried/impendulo/web/calc/stats"
+	"github.com/godfried/impendulo/web/calc/tables"
 	"github.com/godfried/impendulo/web/webutil"
 	"labix.org/v2/mgo/bson"
 
@@ -245,6 +246,14 @@ func assignmentInfo(r *http.Request) ([]byte, error) {
 	if e != nil {
 		return nil, e
 	}
+	ds, e := Metrics(r, calc.ASSIGNMENT)
+	if e != nil {
+		return nil, e
+	}
+	c, e := db.Table(id, calc.ASSIGNMENT)
+	if e == nil {
+		return util.JSON(map[string]interface{}{"table-info": c.Data, "table-fields": tables.AssignmentFields(ds)})
+	}
 	m := bson.M{}
 	switch t {
 	case "project":
@@ -266,38 +275,48 @@ func assignmentInfo(r *http.Request) ([]byte, error) {
 	if e != nil {
 		return nil, e
 	}
-	ds, e := Metrics(r)
+	ti, ds, e := tables.Assignment(a, ds)
 	if e != nil {
 		return nil, e
 	}
-	ti, ds, e := tables.Assignment(a, ds)
-	if e != nil {
+	if e := db.AddTable(ti, calc.ASSIGNMENT, id); e != nil {
 		return nil, e
 	}
 	return util.JSON(map[string]interface{}{"table-info": ti, "table-fields": ds})
 }
 
 func submissionInfo(r *http.Request) ([]byte, error) {
+	var id string
 	m := bson.M{}
 	if pid, e := webutil.Id(r, "project-id"); e == nil {
 		m[db.PROJECTID] = pid
+		id = pid.Hex()
 	}
 	if uid, e := webutil.String(r, "user-id"); e == nil {
 		m[db.USER] = uid
+		id = uid
 	}
 	if aid, e := webutil.Id(r, "assignment-id"); e == nil {
 		m[db.ASSIGNMENTID] = aid
+		id = aid.Hex()
+	}
+	ds, e := Metrics(r, calc.SUBMISSION)
+	if e != nil {
+		return nil, e
+	}
+	c, e := db.Table(id, calc.SUBMISSION)
+	if e == nil {
+		return util.JSON(map[string]interface{}{"table-info": c.Data, "table-fields": tables.SubmissionFields(ds)})
 	}
 	s, e := db.Submissions(m, nil)
 	if e != nil {
 		return nil, e
 	}
-	ds, e := Metrics(r)
+	ti, ds, e := tables.Submission(s, ds)
 	if e != nil {
 		return nil, e
 	}
-	ti, ds, e := tables.Submission(s, ds)
-	if e != nil {
+	if e := db.AddTable(ti, calc.SUBMISSION, id); e != nil {
 		return nil, e
 	}
 	return util.JSON(map[string]interface{}{"table-info": ti, "table-fields": ds})
@@ -308,9 +327,13 @@ func overviewInfo(r *http.Request) ([]byte, error) {
 	if e != nil {
 		return nil, e
 	}
-	ds, e := Metrics(r)
+	ds, e := Metrics(r, calc.OVERVIEW)
 	if e != nil {
 		return nil, e
+	}
+	c, e := db.Table(v, calc.OVERVIEW)
+	if e == nil {
+		return util.JSON(map[string]interface{}{"table-info": c.Data, "table-fields": tables.OverviewFields(ds, v)})
 	}
 	var t tables.T
 	switch v {
@@ -332,6 +355,9 @@ func overviewInfo(r *http.Request) ([]byte, error) {
 		}
 	default:
 		return nil, fmt.Errorf("unknown view %s", v)
+	}
+	if e := db.AddTable(t, calc.OVERVIEW, v); e != nil {
+		return nil, e
 	}
 	return util.JSON(map[string]interface{}{"table-info": t, "table-fields": ds})
 }

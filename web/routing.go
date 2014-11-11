@@ -63,7 +63,7 @@ var (
 		"newproject", "addproject", "runtoolsview", "runtools", "newconfig",
 	}
 	admin = []string{
-		"deleteprojects", "deleteusers", "deleteresults", "deleteview",
+		"deleteprojects", "deleteusers", "deleteresults", "deleteview", "deletecache",
 		"deleteskeletons", "deletesubmissions", "deletetests", "importview", "exportview",
 		"importdata", "exportdb.zip", "statusview", "evaluatesubmissionsview",
 		"evaluatesubmissions", "logs", "editdbview", "loadproject", "editproject",

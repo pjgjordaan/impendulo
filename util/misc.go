@@ -58,7 +58,9 @@ func (s Set) Contains(k string) bool {
 }
 
 func (s Set) Add(k string) {
-	s[k] = E{}
+	if !s.Contains(k) {
+		s[k] = E{}
+	}
 }
 
 //InstallPath retrieves the location where Impendulo is currently installed.

@@ -8,7 +8,7 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/util"
-	"github.com/godfried/impendulo/web/stats"
+	"github.com/godfried/impendulo/web/calc/stats"
 	"github.com/godfried/impendulo/web/webutil"
 
 	"net/http"

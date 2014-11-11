@@ -130,6 +130,15 @@ func CloneData(o string) error {
 	return nil
 }
 
+func RemoveCollection(n string) error {
+	s, e := Session()
+	if e != nil {
+		return e
+	}
+	defer s.Close()
+	return s.DB("").C(n).DropCollection()
+}
+
 //Add adds a document to the specified collection.
 func Add(n string, i interface{}) error {
 	s, e := Session()
@@ -140,7 +149,19 @@ func Add(n string, i interface{}) error {
 	if e = s.DB("").C(n).Insert(i); e != nil {
 		return &AddError{n, e}
 	}
-	return nil
+	return RemoveCalcs(n, i)
+}
+
+func Remove(n string, m bson.M) error {
+	s, e := Session()
+	if e != nil {
+		return e
+	}
+	defer s.Close()
+	if e = s.DB("").C(n).Remove(m); e != nil {
+		return &RemoveError{n, e, m}
+	}
+	return RemoveCalcsU(n, m)
 }
 
 //RemoveById removes a document matching the given id in collection n from the active database.
@@ -153,11 +174,11 @@ func RemoveById(n string, id interface{}) error {
 	if e = s.DB("").C(n).RemoveId(id); e != nil {
 		return &RemoveError{n, e, id}
 	}
-	return nil
+	return RemoveCalcsU(n, bson.M{ID: id})
 }
 
 //Update updates documents from the collection n matching m with the changes specified by c.
-func Update(n string, m, c interface{}) error {
+func Update(n string, m, c bson.M) error {
 	s, e := Session()
 	if e != nil {
 		return e
@@ -166,10 +187,10 @@ func Update(n string, m, c interface{}) error {
 	if e = s.DB("").C(n).Update(m, c); e != nil {
 		return fmt.Errorf("error %q: updating %q matching %q to %q", e, n, m, c)
 	}
-	return nil
+	return RemoveCalcsU(n, m)
 }
 
-func UpdateAll(n string, m, c interface{}) error {
+func UpdateAll(n string, m, c bson.M) error {
 	s, e := Session()
 	if e != nil {
 		return e
@@ -178,17 +199,17 @@ func UpdateAll(n string, m, c interface{}) error {
 	if _, e = s.DB("").C(n).UpdateAll(m, c); e != nil {
 		return fmt.Errorf("error %q: updating %q matching %q to %q", e, n, m, c)
 	}
-	return nil
+	return RemoveCalcsU(n, m)
 }
 
 //Contains checks whether the collection n contains any items matching m.
-func Contains(n string, m interface{}) bool {
+func Contains(n string, m bson.M) bool {
 	c, e := Count(n, m)
 	return e == nil && c > 0
 }
 
 //Count calculates the amount of items in the collection col which match matcher.
-func Count(n string, m interface{}) (int, error) {
+func Count(n string, m bson.M) (int, error) {
 	s, e := Session()
 	if e != nil {
 		return -1, e

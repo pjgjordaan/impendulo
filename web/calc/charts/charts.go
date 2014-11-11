@@ -37,7 +37,7 @@ import (
 	"github.com/godfried/impendulo/tool/result/description"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
-	"github.com/godfried/impendulo/web/stats"
+	"github.com/godfried/impendulo/web/calc/stats"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -211,11 +211,11 @@ func User(us []*user.U, x *description.D, y *description.D) (D, I, error) {
 			sumX += vs[0]
 			sumY += vs[1]
 			v := map[string]interface{}{
-				"key": "assignmentsview?user-id=" + u.Name, "x": vs[0], "y": vs[1],
+				"url": "assignmentschart?user-id=" + u.Name, "x": vs[0], "y": vs[1],
 				"title": u.Name,
 			}
 			d = append(d, v)
-			if _, ok := i["x-unit"]; !ok {
+			if _, ok := i["x-unit"]; !ok && ns != nil {
 				i["x-unit"] = ns[0]
 				i["y-unit"] = ns[1]
 			}

@@ -182,3 +182,20 @@ function toTitleCase(str) {
         return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
     });
 }
+
+function notEqual(v, tests) {
+    for (var i = 0; i < tests.length; i++) {
+        if (v === tests[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function tableSortExtraction(node) {
+    var data = node.innerHTML.split(' ')[0];
+    if (data === 'N/A') {
+        return 0;
+    }
+    return data;
+}

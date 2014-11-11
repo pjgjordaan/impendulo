@@ -34,17 +34,20 @@ var SubmissionsChart = {
             });
             $.getJSON('projects', function(data) {
                 if (not(data['projects'])) {
+                    console.log(data);
                     return;
                 }
                 View.buidDropdown('project', pid, 'assignmentsview', data['projects']);
                 $.getJSON('users', function(data) {
                     if (not(data['users'])) {
+                        console.log(data);
                         return;
                     }
                     View.buidDropdown('user', uid, 'assignmentsview', data['users']);
                     var id = tipe === 'user' ? uid : pid;
                     $.getJSON('assignments?' + tipe + '-id=' + id, function(data) {
                         if (not(data['assignments'])) {
+                            console.log(data);
                             return;
                         }
                         SubmissionsChart.assDropdown(aid, data['assignments']);
@@ -84,21 +87,21 @@ var SubmissionsChart = {
         var url = 'chart-options';
         var count = 0;
         var id = $('#assignment-dropdown-label').attr('currentid');
-        $.getJSON('chart-options?assignment-id=' + id, function(data) {
+        $.getJSON('chart-options?type=submission&assignment-id=' + id, function(data) {
             var o = data['options'];
             if (not(o)) {
                 console.log(data);
                 return;
             }
             for (var i = 0; i < o.length; i++) {
-                $('.select-chart').append('<option value="' + o[i].Id + '">' + o[i].Name + '</option>');
+                $('.select-chart').append('<option value="' + o[i].id + '">' + o[i].name + '</option>');
             }
             if (not(x) || $('#x option[value="' + x + '"]').length) {
-                x = o[0].Id;
+                x = o[0].id;
             }
             $('#x').val(x);
             if (not(y) || $('#y option[value="' + y + '"]').length) {
-                y = o[o.length - 1].Id;
+                y = o[o.length - 1].id;
             }
             $('#y').val(y);
             SubmissionsChart.load(x, y);
@@ -122,17 +125,16 @@ var SubmissionsView = {
     init: function(aid, pid, uid, tipe) {
         SubmissionsView.tipe = tipe;
         $(function() {
-            $("#table-submissions").tablesorter({
-                theme: 'bootstrap',
-                dateFormat: 'ddmmyyyy'
-            });
+            $('#button-filter').on('click', SubmissionsView.load);
             $.getJSON('projects', function(data) {
                 if (not(data['projects'])) {
+                    console.log(data);
                     return;
                 }
                 View.buidDropdown('project', pid, 'assignmentsview', data['projects']);
                 $.getJSON('users', function(data) {
                     if (not(data['users'])) {
+                        console.log(data);
                         return;
                     }
                     View.buidDropdown('user', uid, 'assignmentsview', data['users']);
@@ -179,38 +181,73 @@ var SubmissionsView = {
         $('#table-submissions > tbody').empty();
         var aid = $('#assignment-dropdown-label').attr('assignmentid');
         var params = {
-            'counts': true,
+            'type': 'submission',
             'assignment-id': aid
         }
         params[SubmissionsView.tipe + '-id'] = $('#' + SubmissionsView.tipe + '-dropdown-label').attr(SubmissionsView.tipe + 'id');
-        $.getJSON('submissions', params, function(data) {
-            if (not(data['submissions']) || not(data['counts'])) {
+        $.getJSON('table-info', params, function(data) {
+            if (not(data['table-info']) || not(data['table-fields'])) {
+                console.log(data);
                 return;
             }
-            var s = data['submissions'];
-            var c = data['counts'];
-            for (var i = 0; i < s.length; i++) {
-                var d = new Date(s[i].Time);
-                var uname = s[i].User;
-                var aname = '';
-                var pname = '';
-                $('#assignment-dropdown > ul > li > a[assignmentid]').each(function() {
-                    var a = $(this).attr('assignmentid');
-                    if (a === s[i].AssignmentId) {
-                        aname = $(this).html();
-                        return false;
-                    }
-                });
-                $('#project-dropdown > ul > li > a[projectid]').each(function() {
-                    var p = $(this).attr('projectid');
-                    if (p === s[i].ProjectId) {
-                        pname = $(this).html();
-                        return false;
-                    }
-                });
-                $('#table-submissions > tbody').append('<tr submissionid="' + s[i].Id + '"><td><a href="filesview?submission-id=' + s[i].Id + '">' + pname + '</a></td><td>' + uname + '</td><td>' + aname + '</td><td>' + d.toLocaleDateString() + '</td><td>' + d.toLocaleTimeString() + '</td><td>' + c[s[i].Id]['source'] + '</td><td>' + c[s[i].Id]['launch'] + '</td><td>' + c[s[i].Id]['test'] + '</td><td>' + c[s[i].Id]['testcases'] + '</td><td>' + c[s[i].Id]['passed'] + ' %</td></tr>');
+            var info = data['table-info'];
+            var fs = data['table-fields'];
+            for (var j = 0; j < fs.length; j++) {
+                if (fs[j].id === 'id') {
+                    continue;
+                }
+                var n = toTitleCase(fs[j].name);
+                $('#table-submissions > thead > tr').append('<th key="' + fs[j].id + '">' + n + '</th>');
+                $('#fields').append('<option value="' + fs[j].id + '">' + n + '</option>');
+                if (SubmissionsView.isMetric(fs[j].id)) {
+                    $('#table-submissions > thead > tr > th').last().hide();
+                } else {
+                    $('#fields > option').last().prop('selected', true);
+                }
             }
-            $('#table-submissions').trigger('update');
+            $('#fields').show();
+            $('#fields').multiselect({
+                noneSelectedText: 'Add table fields',
+                selectedText: '# table fields selected',
+                click: function(event, ui) {
+                    $('[key="' + ui.value + '"]').toggle();
+                    if ($('[key="' + ui.value + '"]').is(":visible")) {
+                        $('[key="' + ui.value + '"]').each(function() {
+                            $(this).appendTo($(this).parent());
+                        });
+                    }
+                },
+                checkAll: function(event, ui) {
+                    $('[key]').each(function() {
+                        if (!$(this).is(":visible")) {
+                            $(this).appendTo($(this).parent());
+                        }
+                    });
+                    $('[key]').show();
+                },
+                uncheckAll: function(event, ui) {
+                    $('[key]').hide();
+                }
+            });
+            for (var i = 0; i < info.length; i++) {
+                var s = new Date(info[i].time);
+                $('#table-submissions > tbody').append('<tr submissionid="' + info[i].id + '"><td key="name"><a href="filesview?submission-id=' + info[i].id + '">' + info[i].name + '</a></td><td key="start date">' + s.toLocaleDateString() + '</td><td key="start time">' + s.toLocaleTimeString() + '</td></tr>');
+                var s = '#table-submissions > tbody > tr[submissionid="' + info[i].id + '"]';
+                for (var j = 0; j < fs.length; j++) {
+                    if (!SubmissionsView.isMetric(fs[j].id)) {
+                        continue;
+                    }
+                    $(s).append('<td key="' + fs[j].id + '">' + info[i][fs[j].id].value + ' ' + info[i][fs[j].id].unit + '</td>');
+                    $(s + ' td').last().hide();
+                }
+            }
+            $("#table-submissions").tablesorter({
+                theme: 'bootstrap',
+                dateFormat: 'ddmmyyyy'
+            });
         });
+    },
+    isMetric: function(k) {
+        return notEqual(k, ['id', 'name', 'start date', 'start time']);
     }
 }

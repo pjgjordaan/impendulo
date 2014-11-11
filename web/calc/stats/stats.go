@@ -75,14 +75,13 @@ func NewCalc() *C {
 }
 
 func (c *C) Calc(d *description.D, s *project.Submission) (float64, string, error) {
-	n := d.Raw()
-	if t, e := project.ParseType(n); e == nil {
+	if t, e := project.ParseType(d.Type); e == nil {
 		fc, e := db.FileCount(s.Id, t)
 		if e != nil {
 			return -1, "", e
 		}
 		return float64(fc), "files", nil
-	} else if t, e := ParseType(n); e == nil {
+	} else if t, e := ParseType(d.Type); e == nil {
 		pt, ok := c.projects[s.ProjectId]
 		if t == PASSED && !ok {
 			pt = ProjectTestCases(s.ProjectId)
@@ -129,7 +128,11 @@ func (c *C) Assignment(a *project.Assignment, ds []*description.D) ([]float64, [
 		return nil, nil, nil
 	}
 	for i, _ := range vals {
-		vals[i] = util.Round(vals[i]/float64(count), 2)
+		if ds[i].Type == "Submissions" {
+			vals[i] = float64(len(subs))
+		} else if ds[i].Metric != "Total" {
+			vals[i] = util.Round(vals[i]/float64(count), 2)
+		}
 	}
 	return vals, ns, nil
 }
@@ -157,7 +160,11 @@ func (c *C) Project(p *project.P, ds []*description.D) ([]float64, []string, err
 		return nil, nil, nil
 	}
 	for i, _ := range vals {
-		vals[i] = util.Round(vals[i]/float64(count), 2)
+		if ds[i].Type == "Assignments" {
+			vals[i] = float64(len(as))
+		} else if ds[i].Metric != "Total" {
+			vals[i] = util.Round(vals[i]/float64(count), 2)
+		}
 	}
 	return vals, ns, nil
 }
@@ -170,7 +177,9 @@ func (c *C) User(u *user.U, ds []*description.D) ([]float64, []string, error) {
 	count := 0
 	vals := make([]float64, len(ds))
 	var ns []string
+	am := util.NewSet()
 	for _, s := range ss {
+		am.Add(s.AssignmentId.Hex())
 		if svals, sn, e := c.Submission(s, ds); e == nil {
 			for i, v := range svals {
 				vals[i] += v
@@ -182,10 +191,14 @@ func (c *C) User(u *user.U, ds []*description.D) ([]float64, []string, error) {
 		}
 	}
 	if count == 0 {
-		return nil, nil, nil
+		return nil, nil, errors.New("no user submissions")
 	}
 	for i, _ := range vals {
-		vals[i] = util.Round(vals[i]/float64(count), 2)
+		if ds[i].Type == "Assignments" {
+			vals[i] = float64(len(am))
+		} else if ds[i].Metric != "Total" {
+			vals[i] = util.Round(vals[i]/float64(count), 2)
+		}
 	}
 	return vals, ns, nil
 }

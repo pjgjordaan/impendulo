@@ -33,27 +33,26 @@ var OverviewChart = {
                 $('#chart').empty();
                 OverviewChart.load($('#x').val(), $('#y').val());
             });
-            OverviewChart.addOptions();
         });
     },
 
     addOptions: function() {
         var x = $('#x').val();
         var y = $('#y').val();
-        $.getJSON('chart-options', function(data) {
+        $.getJSON('chart-options?type=overview', function(data) {
             var o = data['options'];
             if (not(o)) {
                 return;
             }
             for (var i = 0; i < o.length; i++) {
-                $('.select-chart').append('<option value="' + o[i].Id + '">' + o[i].Name + '</option>');
+                $('.select-chart').append('<option value="' + o[i].id + '">' + o[i].name + '</option>');
             }
             if (x === undefined || x === null || !$('#x option[value="' + x + '"]').length) {
-                x = o[0].Id;
+                x = o[0].id;
             }
             $('#x').val(x);
             if (y === undefined || y === null || !$('#y option[value="' + y + '"]').length) {
-                y = o[o.length - 1].Id;
+                y = o[o.length - 1].id;
             }
             $('#y').val(y);
             OverviewChart.load(x, y);
@@ -81,6 +80,7 @@ var Overview = {
             };
             $.getJSON('table-info', params, function(data) {
                 if (not(data['table-info']) || not(data['table-fields'])) {
+                    console.log('could not load table data', data);
                     return;
                 }
                 var info = data['table-info'];
@@ -92,7 +92,7 @@ var Overview = {
                     var n = toTitleCase(fs[j].name);
                     $('#table-overview > thead > tr').append('<th key="' + fs[j].id + '">' + n + '</th>');
                     $('#fields').append('<option value="' + fs[j].id + '">' + n + '</option>');
-                    if (Overview.isMetric(fs[j].id, info[0])) {
+                    if (Overview.isMetric(fs[j].id)) {
                         $('#table-overview > thead > tr > th').last().hide();
                     } else {
                         $('#fields > option').last().prop('selected', true);
@@ -104,8 +104,18 @@ var Overview = {
                     selectedText: '# table fields selected',
                     click: function(event, ui) {
                         $('[key="' + ui.value + '"]').toggle();
+                        if ($('[key="' + ui.value + '"]').is(":visible")) {
+                            $('[key="' + ui.value + '"]').each(function() {
+                                $(this).appendTo($(this).parent());
+                            });
+                        }
                     },
                     checkAll: function(event, ui) {
+                        $('[key]').each(function() {
+                            if (!$(this).is(":visible")) {
+                                $(this).appendTo($(this).parent());
+                            }
+                        });
                         $('[key]').show();
                     },
                     uncheckAll: function(event, ui) {
@@ -119,16 +129,26 @@ var Overview = {
                         $(s).append('<td class="rowlink-skip" key="description"><a href="#" class="a-info"><span class="glyphicon glyphicon-info-sign"></span><p hidden>' + info[i].description + '</p></a></td>');
                     }
                     for (var j = 0; j < fs.length; j++) {
-                        if (!Overview.isMetric(fs[j].id, info[i])) {
+                        if (!Overview.isMetric(fs[j].id)) {
                             continue;
                         }
-                        $(s).append('<td key="' + fs[j].id + '">' + info[i][fs[j].id].value + ' ' + info[i][fs[j].id].unit + '</td>');
+                        var o = info[i][fs[j].id];
+                        var unit = '';
+                        var value = '';
+                        if (not(o) || o.value === -1) {
+                            value = 'N/A';
+                        } else {
+                            value = o.value;
+                            unit = o.unit;
+                        }
+                        $(s).append('<td key="' + fs[j].id + '">' + value + ' ' + unit + '</td>');
                         $(s + ' td').last().hide();
                     }
                 }
                 $('#table-overview').tablesorter({
                     theme: 'bootstrap',
-                    dateFormat: 'ddmmyyyy'
+                    dateFormat: 'ddmmyyyy',
+                    textExtraction: tableSortExtraction
                 });
                 if (tipe === 'project') {
                     $('.a-info').popover({
@@ -141,7 +161,7 @@ var Overview = {
             });
         });
     },
-    isMetric: function(k, m) {
-        return k !== 'id' && k !== 'name' && k !== 'description' && !not(m[k])
+    isMetric: function(k) {
+        return notEqual(k, ['id', 'name', 'description'])
     }
 };
