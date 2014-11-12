@@ -9,6 +9,7 @@ import (
 	"encoding/xml"
 	"errors"
 
+	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/util"
@@ -123,6 +124,6 @@ func (t *Tool) Name() string {
 	return NAME + ":" + t.test.Name
 }
 
-func (t *Tool) Lang() tool.Language {
-	return tool.JAVA
+func (t *Tool) Lang() project.Language {
+	return project.JAVA
 }

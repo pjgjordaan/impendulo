@@ -28,6 +28,7 @@ package javac
 
 import (
 	"github.com/godfried/impendulo/config"
+	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/result"
 	"labix.org/v2/mgo/bson"
@@ -52,8 +53,8 @@ func New(cp string) (*Tool, error) {
 }
 
 //Lang is Java.
-func (t *Tool) Lang() tool.Language {
-	return tool.JAVA
+func (t *Tool) Lang() project.Language {
+	return project.JAVA
 }
 
 //Name is Javac

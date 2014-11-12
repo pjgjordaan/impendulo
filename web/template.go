@@ -32,10 +32,10 @@ import (
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processor/mq"
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
+	"github.com/godfried/impendulo/util/milliseconds"
 
 	"html/template"
 
@@ -50,7 +50,7 @@ var (
 	funcs = template.FuncMap{
 		"databases":   db.Databases,
 		"projectName": db.ProjectName,
-		"date":        util.Date,
+		"date":        milliseconds.DateTimeString,
 		"setBreaks":   func(s string) template.HTML { return template.HTML(setBreaks(s)) },
 		"address":     func(i interface{}) string { return fmt.Sprint(&i) },
 		"base":        filepath.Base,
@@ -67,15 +67,15 @@ var (
 		"sum":        sum,
 		"percent":    percent,
 		"round":      round,
-		"langs":      tool.Langs,
+		"langs":      project.Langs,
 		"sub":        func(id bson.ObjectId) (*project.Submission, error) { return db.Submission(bson.M{db.ID: id}, nil) },
 		"getBusy":    mq.GetStatus,
 		"slice":      slice,
 		"adjustment": adjustment,
 		"tools":      db.ProjectTools,
-		"snapshots":  func(id bson.ObjectId) (int, error) { return db.FileCount(id, project.SRC) },
-		"launches":   func(id bson.ObjectId) (int, error) { return db.FileCount(id, project.LAUNCH) },
-		"usertests":  func(id bson.ObjectId) (int, error) { return db.FileCount(id, project.TEST) },
+		"snapshots":  func(id bson.ObjectId) (int, error) { return db.SubmissionFileCount(id, project.SRC) },
+		"launches":   func(id bson.ObjectId) (int, error) { return db.SubmissionFileCount(id, project.LAUNCH) },
+		"usertests":  func(id bson.ObjectId) (int, error) { return db.SubmissionFileCount(id, project.TEST) },
 		"html":       func(s string) template.HTML { return template.HTML(s) },
 		"string":     func(b []byte) string { return string(bytes.TrimSpace(b)) },
 		"args":       args,
@@ -154,7 +154,7 @@ func sortFiles(ids []string) []*project.File {
 		if e != nil {
 			continue
 		}
-		f, e := db.File(bson.M{db.ID: id}, bson.M{db.TIME: 1})
+		f, e := db.File(bson.M{db.ID: id}, db.FILE_SELECTOR)
 		if e != nil {
 			continue
 		}

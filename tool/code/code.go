@@ -27,6 +27,7 @@ package code
 import (
 	"fmt"
 
+	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/tool/wc"
 
@@ -39,7 +40,7 @@ type (
 	//C is a Displayer used to display a source file's code.
 	C struct {
 		FileId bson.ObjectId
-		Lang   string
+		Lang   project.Language
 		Data   string
 	}
 )
@@ -50,10 +51,10 @@ const (
 )
 
 //New
-func New(fid bson.ObjectId, lang string, data []byte) *C {
+func New(fid bson.ObjectId, lang project.Language, data []byte) *C {
 	return &C{
 		FileId: fid,
-		Lang:   strings.ToLower(lang),
+		Lang:   lang,
 		Data:   strings.TrimSpace(string(data)),
 	}
 }

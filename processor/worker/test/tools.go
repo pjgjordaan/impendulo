@@ -39,10 +39,10 @@ import (
 )
 
 func TestTools(w *Worker, f *project.File) ([]tool.T, error) {
-	switch tool.Language(w.project.Lang) {
-	case tool.JAVA:
+	switch project.Language(w.project.Lang) {
+	case project.JAVA:
 		return javaTestTools(w, f)
-	case tool.C:
+	case project.C:
 		return cTestTools(w, f), nil
 	}
 	//Only Java is supported so far...
@@ -55,7 +55,7 @@ func cTestTools(w *Worker, f *project.File) []tool.T {
 
 func javaTestTools(w *Worker, f *project.File) ([]tool.T, error) {
 	a := make([]tool.T, 0, 2)
-	target := tool.NewTarget(f.Name, f.Package, filepath.Join(w.toolDir, f.Id.Hex()), tool.JAVA)
+	target := tool.NewTarget(f.Name, f.Package, filepath.Join(w.toolDir, f.Id.Hex()), project.JAVA)
 	if e := util.SaveFile(target.FilePath(), f.Data); e != nil {
 		return nil, e
 	}

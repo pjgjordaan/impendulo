@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/godfried/impendulo/config"
+	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/util"
@@ -103,7 +104,7 @@ func findClasses(tipe, fname string) ([]byte, error) {
 		return nil, e
 	}
 	//Setup and compile JPFFinder
-	t := tool.NewTarget("JPFFinder.java", "finder", fd, tool.JAVA)
+	t := tool.NewTarget("JPFFinder.java", "finder", fd, project.JAVA)
 	cp := filepath.Join(hd, "build", "main") + ":" + t.Dir + ":" + gp
 	c, e := javac.New(cp)
 	if e != nil {

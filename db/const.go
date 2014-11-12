@@ -24,6 +24,8 @@
 
 package db
 
+import "labix.org/v2/mgo/bson"
+
 const (
 	//Mongodb collection name.
 	USERS       = "users"
@@ -98,4 +100,8 @@ const (
 	LEVEL        = "level"
 	X            = "x"
 	Y            = "y"
+)
+
+var (
+	FILE_SELECTOR = bson.M{DATA: 0, RESULTS: 0, COMMENTS: 0}
 )

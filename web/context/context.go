@@ -351,7 +351,11 @@ func (b *Browse) SetFileIndices(r *http.Request) error {
 func (b *Browse) setIndices(r *http.Request, fs []*project.File) error {
 	defer func() {
 		if b.Current == b.Next {
-			b.Next = (b.Current + 1) % len(fs)
+			if b.Current == 0 {
+				b.Next = len(fs) - 1
+			} else {
+				b.Next = (b.Current + 1) % len(fs)
+			}
 		}
 	}()
 	c, e := webutil.Index(r, "current", len(fs)-1)
@@ -443,7 +447,6 @@ func (l Level) String() string {
 	default:
 		return "unknown"
 	}
-
 }
 
 func (l Level) Is(level string) bool {

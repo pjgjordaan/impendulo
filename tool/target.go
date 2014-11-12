@@ -27,6 +27,7 @@ package tool
 import (
 	"fmt"
 
+	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/util"
 
 	"path/filepath"
@@ -39,7 +40,7 @@ type (
 		Package string
 		Ext     string
 		Dir     string
-		Lang    Language
+		Lang    project.Language
 	}
 )
 
@@ -72,13 +73,13 @@ func (t *Target) Executable() string {
 }
 
 //NewTarget
-func NewTarget(name, pkg, dir string, lang Language) *Target {
-	name, ext := util.Extension(name)
+func NewTarget(n, p, d string, l project.Language) *Target {
+	n, e := util.Extension(n)
 	return &Target{
-		Name:    name,
-		Package: pkg,
-		Ext:     ext,
-		Dir:     dir,
-		Lang:    lang,
+		Name:    n,
+		Package: p,
+		Ext:     e,
+		Dir:     d,
+		Lang:    l,
 	}
 }

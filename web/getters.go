@@ -124,7 +124,7 @@ func _resultsView(r *http.Request, c *context.C) (Args, error) {
 	if e != nil {
 		return nil, e
 	}
-	cf, e := db.File(bson.M{db.ID: fs[c.Browse.Current].Id}, bson.M{db.NAME: 1, db.TIME: 1})
+	cf, e := db.File(bson.M{db.ID: fs[c.Browse.Current].Id}, db.FILE_SELECTOR)
 	if e != nil {
 		return nil, e
 	}
@@ -136,7 +136,7 @@ func _resultsView(r *http.Request, c *context.C) (Args, error) {
 	if e != nil {
 		return nil, e
 	}
-	nf, e := db.File(bson.M{db.ID: fs[c.Browse.Next].Id}, bson.M{db.NAME: 1, db.TIME: 1})
+	nf, e := db.File(bson.M{db.ID: fs[c.Browse.Next].Id}, db.FILE_SELECTOR)
 	if e != nil {
 		return nil, e
 	}

@@ -364,7 +364,7 @@ func EditProject(r *http.Request, c *context.C) (string, error) {
 	if u, e := webutil.String(r, "project-user"); e == nil && p.User != u && db.Contains(db.USERS, bson.M{db.ID: u}) {
 		sm[db.USER] = u
 	}
-	if l, e := webutil.String(r, "project-lang"); e == nil && tool.Supported(tool.Language(l)) && p.Lang != l {
+	if l, e := webutil.Language(r, "project-lang"); e == nil && project.Supported(l) && p.Lang != l {
 		sm[db.LANG] = l
 	}
 	if d, e := webutil.String(r, "project-description"); e == nil && p.Description != d {
@@ -487,7 +487,7 @@ func EditTest(r *http.Request, c *context.C) (string, error) {
 	if tn, e := webutil.String(r, "test-target-name"); e == nil {
 		tp, _ := webutil.String(r, "test-target-package")
 		if t.Target == nil || (tp != t.Target.Package || tn != t.Target.FullName()) {
-			sm[db.TARGET] = tool.NewTarget(tn, tp, "", tool.JAVA)
+			sm[db.TARGET] = tool.NewTarget(tn, tp, "", project.JAVA)
 		}
 	}
 	if len(sm) == 0 {

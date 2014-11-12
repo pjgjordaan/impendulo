@@ -25,30 +25,17 @@
 package db
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/util/convert"
+	"github.com/godfried/impendulo/util/milliseconds"
 	"labix.org/v2/mgo/bson"
 
 	"strings"
 )
-
-type (
-	FileInfo struct {
-		Info, Results map[string]interface{}
-	}
-)
-
-func NewFileInfo() *FileInfo {
-	return &FileInfo{Info: make(map[string]interface{}), Results: make(map[string]interface{})}
-}
-
-func (f *FileInfo) HasCharts() bool {
-	t, ok := f.Info["Type"]
-	return ok && t.(project.Type) == project.SRC
-}
 
 //File retrieves a file matching m from the active database.
 func File(m, sl interface{}) (*project.File, error) {
@@ -82,26 +69,27 @@ func Files(m, sl interface{}, limit int, sort ...string) ([]*project.File, error
 	return fs, nil
 }
 
-func FileInfos(m bson.M) ([]*FileInfo, error) {
+/*
+func FileInfos(m bson.M) ([]FileInfo, error) {
 	fis, e := BasicFileInfos(m)
 	if e != nil {
 		return nil, e
 	}
 	t := m[TYPE]
 	for _, fi := range fis {
-		m[NAME] = fi.Info["Name"]
+		m[NAME] = fi["Name"]
 		m[TYPE] = project.LAUNCH
 		lc, e := Count(FILES, m)
 		if e != nil {
 			return nil, e
 		}
-		fi.Info["Launches"] = lc
+		fi["Launches"] = lc
 		m[TYPE] = t
 		sc, e := Count(FILES, m)
 		if e != nil {
 			return nil, e
 		}
-		fi.Info["Source Files"] = sc
+		fi["Source Files"] = sc
 		f, e := LastFile(m, bson.M{DATA: 0})
 		if e != nil {
 			return nil, e
@@ -116,16 +104,21 @@ func FileInfos(m bson.M) ([]*FileInfo, error) {
 				continue
 			}
 			cv := r.ChartVals()[0]
-			fi.Results[FormatResultName(n, f.Time)+" "+cv.Name] = cv.Y
+			fi[FormatResultName(n, f.Time)+" "+cv.Name] = cv.Y
 		}
 	}
 	return fis, nil
+}
+*/
+
+func FileCount(sid bson.ObjectId, n string, t project.Type) (int, error) {
+	return Count(FILES, bson.M{SUBID: sid, TYPE: t, NAME: n})
 }
 
 func FormatResultName(n string, t int64) string {
 	sp := strings.Split(n, "-")
 	if len(sp) > 1 {
-		n = sp[0] + " \u2192 " + util.Date(t)
+		n = sp[0] + " \u2192 " + milliseconds.DateTimeString(t)
 	}
 	n = strings.Replace(n, ":", " \u2192 ", 1)
 	return n
@@ -146,7 +139,7 @@ func FileNames(m interface{}) ([]string, error) {
 	return ns, nil
 }
 
-func BasicFileInfos(m interface{}) ([]*FileInfo, error) {
+func FileInfos(m bson.M) ([]*project.File, error) {
 	s, e := Session()
 	if e != nil {
 		return nil, e
@@ -159,24 +152,21 @@ func BasicFileInfos(m interface{}) ([]*FileInfo, error) {
 	if e := s.DB("").C(FILES).Pipe([]bson.M{{MATCH: m}, {GROUP: bson.M{ID: bson.M{NAME: "$" + NAME, PKG: "$" + PKG, TYPE: "$" + TYPE}}}}).All(&vals); e != nil {
 		return nil, &GetError{"classnames", e, m}
 	}
-	fi := make([]*FileInfo, len(vals))
+	fi := make([]*project.File, len(vals))
 	for i, v := range vals {
-		n, e := convert.String(v.Id[NAME])
-		if e != nil {
+		var e error
+		if m[NAME], e = convert.String(v.Id[NAME]); e != nil {
 			return nil, e
 		}
-		p, e := convert.String(v.Id[PKG])
-		if e != nil {
+		if m[PKG], e = convert.String(v.Id[PKG]); e != nil {
 			return nil, e
 		}
-		t, e := convert.String(v.Id[TYPE])
-		if e != nil {
+		if m[TYPE], e = convert.String(v.Id[TYPE]); e != nil {
 			return nil, e
 		}
-		fi[i] = NewFileInfo()
-		fi[i].Info["Name"] = n
-		fi[i].Info["Package"] = p
-		fi[i].Info["Type"] = project.Type(t)
+		if fi[i], e = LastFile(m, FILE_SELECTOR); e != nil {
+			return nil, e
+		}
 	}
 	return fi, nil
 }
@@ -411,7 +401,7 @@ func NextFile(f *project.File) (*project.File, error) {
 }
 
 func UpdateTime(sub *project.Submission) error {
-	f, e := FirstFile(bson.M{SUBID: sub.Id}, bson.M{TIME: 1})
+	f, e := FirstFile(bson.M{SUBID: sub.Id}, FILE_SELECTOR)
 	if e != nil {
 		return e
 	}
@@ -421,7 +411,7 @@ func UpdateTime(sub *project.Submission) error {
 	return Update(SUBMISSIONS, bson.M{ID: sub.Id}, bson.M{SET: bson.M{TIME: f.Time}})
 }
 
-func ProjectBasicFileInfos(id bson.ObjectId) ([]*FileInfo, error) {
+func ProjectFileInfos(id bson.ObjectId) ([]*project.File, error) {
 	s, e := Session()
 	if e != nil {
 		return nil, e
@@ -431,7 +421,7 @@ func ProjectBasicFileInfos(id bson.ObjectId) ([]*FileInfo, error) {
 	if e := s.DB("").C(SUBMISSIONS).Find(bson.M{PROJECTID: id}).Distinct(ID, &ss); e != nil {
 		return nil, &GetError{"submissions", e, id}
 	}
-	return BasicFileInfos(bson.M{SUBID: bson.M{IN: ss}})
+	return FileInfos(bson.M{SUBID: bson.M{IN: ss}})
 }
 
 //Snapshots retrieves snapshots of a given file in a submission.
@@ -446,7 +436,7 @@ func Snapshots(sid bson.ObjectId, n string) ([]*project.File, error) {
 	return fs, nil
 }
 
-func FileCount(sid bson.ObjectId, t project.Type) (int, error) {
+func SubmissionFileCount(sid bson.ObjectId, t project.Type) (int, error) {
 	return Count(FILES, bson.M{SUBID: sid, TYPE: t})
 }
 
@@ -490,4 +480,20 @@ func UserAssignmentIds(u string) ([]bson.ObjectId, error) {
 		return nil, &GetError{"assignment ids", e, u}
 	}
 	return ids, nil
+}
+
+func ProjectTarget(id bson.ObjectId) (*tool.Target, error) {
+	t, e := JUnitTest(bson.M{PROJECTID: id}, bson.M{TARGET: 1})
+	if e == nil {
+		return t.Target, nil
+	}
+	j, e := JPFConfig(bson.M{PROJECTID: id}, bson.M{TARGET: 1})
+	if e == nil {
+		return j.Target, nil
+	}
+	p, e := Project(bson.M{ID: id}, nil)
+	if e != nil {
+		return nil, errors.New("could not load project target")
+	}
+	return &tool.Target{Name: p.Name, Package: strings.ToLower(p.Name), Ext: p.Lang.Extension()}, nil
 }

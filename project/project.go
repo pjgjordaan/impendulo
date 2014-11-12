@@ -27,7 +27,9 @@
 package project
 
 import (
-	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/util/milliseconds"
+
+	"strings"
 
 	"labix.org/v2/mgo/bson"
 )
@@ -38,7 +40,7 @@ type (
 		Id          bson.ObjectId `bson:"_id"`
 		Name        string        `bson:"name"`
 		User        string        `bson:"user"`
-		Lang        string        `bson:"lang"`
+		Lang        Language      `bson:"lang"`
 		Time        int64         `bson:"time"`
 		Description string        `bson:"description"`
 	}
@@ -53,7 +55,43 @@ type (
 	Commentor interface {
 		LoadComments() []*Comment
 	}
+	Language string
 )
+
+const (
+	JAVA   Language = "Java"
+	C      Language = "C"
+	PYTHON Language = "Python"
+)
+
+var (
+	langs []Language
+)
+
+func Langs() []Language {
+	if langs == nil {
+		langs = []Language{JAVA, C}
+	}
+	return langs
+}
+
+func Supported(l Language) bool {
+	for _, c := range Langs() {
+		if l == c {
+			return true
+		}
+	}
+	return false
+}
+
+func (l Language) Extension() string {
+	switch l {
+	case PYTHON:
+		return "py"
+	default:
+		return strings.ToLower(string(l))
+	}
+}
 
 //TypeName
 func (p *P) TypeName() string {
@@ -64,10 +102,10 @@ func (p *P) TypeName() string {
 func (p *P) String() string {
 	return "Type: project.P; Id: " + p.Id.Hex() +
 		"; Name: " + p.Name + "; User: " + p.User +
-		"; Lang: " + p.Lang + "; Time: " + util.Date(p.Time)
+		"; Lang: " + string(p.Lang) + "; Time: " + milliseconds.DateTimeString(p.Time)
 }
 
 //New
 func New(n, u, l, d string) *P {
-	return &P{Id: bson.NewObjectId(), Name: n, User: u, Lang: l, Time: util.CurMilis(), Description: d}
+	return &P{Id: bson.NewObjectId(), Name: n, User: u, Lang: Language(l), Time: milliseconds.Current(), Description: d}
 }

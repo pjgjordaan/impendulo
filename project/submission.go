@@ -26,8 +26,7 @@ package project
 
 import (
 	"fmt"
-
-	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/util/milliseconds"
 	"labix.org/v2/mgo/bson"
 )
 
@@ -58,7 +57,7 @@ func (s *Submission) String() string {
 	return "Type: project.Submission; Id: " + s.Id.Hex() +
 		"; ProjectId: " + s.ProjectId.Hex() +
 		"; User: " + s.User + "; Mode: " + s.Mode +
-		"; Time: " + util.Date(s.Time)
+		"; Time: " + milliseconds.DateTimeString(s.Time)
 }
 
 //NewSubmission
@@ -67,7 +66,7 @@ func NewSubmission(pid, aid bson.ObjectId, u, m string, t int64) *Submission {
 }
 
 func (s *Submission) Format(p *P) string {
-	return fmt.Sprintf("%s \u2192 %s \u2192 %s", p.Name, s.User, util.Date(s.Time))
+	return fmt.Sprintf("%s \u2192 %s \u2192 %s", p.Name, s.User, milliseconds.DateTimeString(s.Time))
 }
 
 func (s *Submission) LoadComments() []*Comment {

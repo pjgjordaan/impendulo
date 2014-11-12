@@ -93,7 +93,7 @@ func Comparables(r *http.Request) ([]byte, error) {
 		return nil, e
 	}
 	m := bson.M{db.SUBID: f.SubId, db.TYPE: project.TEST}
-	if ut, e := db.File(bson.M{db.ID: tr.GetTestId()}, bson.M{db.NAME: 1}); e == nil {
+	if ut, e := db.File(bson.M{db.ID: tr.GetTestId()}, db.FILE_SELECTOR); e == nil {
 		m[db.ID] = bson.M{db.NE: ut.Id}
 	} else if !db.Contains(db.TESTS, bson.M{db.ID: tr.GetTestId()}) {
 		return nil, e
@@ -301,6 +301,8 @@ func Metrics(r *http.Request, l calc.Level) (description.Ds, error) {
 		ops = assignmentMetrics()
 	case calc.SUBMISSION:
 		ops = submissionMetrics()
+	case calc.FILE:
+		ops = fileMetrics()
 	default:
 		return nil, fmt.Errorf("unsupported level %s", l)
 	}
@@ -331,5 +333,9 @@ func assignmentMetrics() description.Ds {
 }
 
 func submissionMetrics() description.Ds {
-	return description.Ds{{Type: "Time", Metric: "Total"}, {Type: util.Title(project.SRC.String()), Metric: "Total"}, {Type: util.Title(project.LAUNCH.String()), Metric: "Total"}, {Type: util.Title(project.TEST.String()), Metric: "Total"}, {Type: "Testcases", Metric: "Total"}, {Type: "Passed", Metric: "Average"}}
+	return append(fileMetrics(), description.Ds{{Type: "Time", Metric: "Total"}}...)
+}
+
+func fileMetrics() description.Ds {
+	return description.Ds{{Type: project.SRC.Title(), Metric: "Total"}, {Type: project.LAUNCH.Title(), Metric: "Total"}, {Type: project.TEST.Title(), Metric: "Total"}, {Type: "Testcases", Metric: "Total"}, {Type: "Passed", Metric: "Average"}}
 }

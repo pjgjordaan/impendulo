@@ -3,22 +3,26 @@ var FilesView = {
         $(function() {
             $.getJSON('projects', function(data) {
                 if (not(data['projects'])) {
+                    console.log(data);
                     return;
                 }
                 FilesView.buidDropdown('project', pid, 'assignmentsview', data['projects']);
                 $.getJSON('users', function(data) {
                     if (not(data['users'])) {
+                        console.log(data);
                         return;
                     }
                     FilesView.buidDropdown('user', uid, 'assignmentsview', data['users']);
                     var id = tipe === 'user' ? uid : pid;
                     $.getJSON('assignments?' + tipe + '-id=' + id, function(data) {
                         if (not(data['assignments'])) {
+                            console.log(data);
                             return;
                         }
                         FilesView.buidDropdown('assignment', aid, 'submissionsview', data['assignments']);
                         $.getJSON('submissions?assignment-id=' + aid, function(data) {
                             if (not(data['submissions'])) {
+                                console.log(data);
                                 return;
                             }
                             FilesView.subDropdown(sid, data['submissions']);
@@ -27,7 +31,6 @@ var FilesView = {
                     });
                 });
             });
-
         });
     },
 
@@ -69,64 +72,81 @@ var FilesView = {
     },
 
     load: function(sid) {
-        $.getJSON('fileinfos?submission-id=' + sid, function(data) {
-            if (not(data['fileinfos'])) {
+        $('#table-files > tbody').empty();
+        var params = {
+            'type': 'file',
+            'submission-id': sid
+        }
+        $.getJSON('table', params, function(data) {
+            if (not(data['table-data']) || not(data['table-fields']) || not(data['table-metrics'])) {
+                console.log(data);
                 return;
             }
-            var fs = data['fileinfos'];
-            for (var i = 0; i < fs.length; i++) {
-                FilesView.addInfo(fs[i], sid, i);
+            var td = data['table-data'];
+            var tf = data['table-fields'];
+            var tm = data['table-metrics'];
+            for (var j = 1; j < tf.length; j++) {
+                var n = toTitleCase(tf[j].name);
+                $('#table-files > thead > tr').append('<th key="' + tf[j].id + '">' + n + '</th>');
+                $('#fields').append('<option value="' + tf[j].id + '">' + n + '</option>');
+                $('#fields > option').last().prop('selected', true);
             }
-        });
-    },
-
-    addInfo: function(f, sid, fc) {
-        $('#files-list').append('<li id="file' + fc + '"><h4></h4></li>');
-        var desc = '<dt>{0}</dt><dd>{1}</dd>';
-        $.getJSON('resultnames?submission-id=' + sid + '&filename=' + f.Info.Name, function(data) {
-            var dl = '';
-            for (var n in f.Results) {
-                dl += desc.format(n, f.Results[n]);
+            for (var j = 0; j < tm.length; j++) {
+                var n = toTitleCase(tm[j].name);
+                $('#table-files > thead > tr').append('<th key="' + tm[j].id + '">' + n + '</th>');
+                $('#fields').append('<option value="' + tm[j].id + '">' + n + '</option>');
+                $('#table-files > thead > tr > th').last().hide();
             }
-            $('#file' + fc).append('<div class="row"><div class="col-md-6"><h5>Info</h5><dl class="dl-horizontal">' + desc.format("Package", f.Info.Package) + desc.format("Type", f.Info.Type) + desc.format("Source Files", f.Info['Source Files']) + desc.format("Launches", f.Info.Launches) + '</dl></div><div class="col-md-6"><h5>Final Results</h5><dl class="dl-horizontal">' + dl + '</dl></div></div>');
-            var e = '';
-            var rs = data['resultnames'];
-            if (not(rs)) {
-                e += '<div class="alert alert-danger alert-dynamic alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button><strong>No results available</strong></div>';
-            } else {
-                e += '<ul class="nav nav-tabs"><li class="dropdown"><a class="dropdown-toggle" data-toggle="dropdown" href="#">' + f.Info.Name + ' <span class="caret"></span></a><ul class="dropdown-menu" role="menu">';
-                for (var o in rs) {
-                    if (not(rs[o])) {
-                        e += '<li><a href="resultsview?result=' + o + '&file=' + f.Info.Name + '">' + o + '</a></li>';
-                    } else {
-                        e += '<li class="dropdown-submenu"><a tabindex="-1" href="#">' + o + '</a><ul class="dropdown-menu" role="menu">';
-                        for (var k in rs[o]) {
-                            if (not(rs[o][k])) {
-                                e += '<li><a href="resultsview?result=' + o + ':' + k + '&file=' + f.Info.Name + '">' + k + '</a></li>';
-                            } else {
-                                e += '<li class="dropdown-submenu"><a tabindex="-1" href="#">' + k + '</a><ul class="dropdown-menu" role="menu">';
-                                for (var j = 0; j < rs[o][k].length; j++) {
-                                    e += '<li><a testid=' + rs[o][k][j] + ' href="resultsview?result=' + o + ':' + k + '-' + rs[o][k][j] + '&file=' + f.Info.Name + '"></a></li>';
-                                }
-                                e += '</ul></li>';
-                            }
+            $('#fields').show();
+            $('#fields').multiselect({
+                noneSelectedText: 'Add table fields',
+                selectedText: '# table fields selected',
+                click: function(event, ui) {
+                    $('[key="' + ui.value + '"]').toggle();
+                    if ($('[key="' + ui.value + '"]').is(":visible")) {
+                        $('[key="' + ui.value + '"]').each(function() {
+                            $(this).appendTo($(this).parent());
+                        });
+                    }
+                },
+                checkAll: function(event, ui) {
+                    $('[key]').each(function() {
+                        if (!$(this).is(":visible")) {
+                            $(this).appendTo($(this).parent());
                         }
-                        e += '</ul></li>';
+                    });
+                    $('[key]').show();
+                },
+                uncheckAll: function(event, ui) {
+                    $('[key]').hide();
+                }
+            });
+            for (var i = 0; i < td.length; i++) {
+                $('#table-files > tbody').append('<tr file="' + td[i].id + '"></tr>')
+                var s = '#table-files > tbody > tr[file="' + td[i].id + '"]';
+                for (var j = 1; j < tf.length; j++) {
+                    if (j === 1) {
+                        $(s).append('<td key="' + tf[j].id + '"><a href="resultsview?file=' + td[i].id + '">' + td[i][tf[j].id] + '</a></td>');
+                    } else {
+                        $(s).append('<td key="' + tf[j].id + '">' + td[i][tf[j].id] + '</td>');
                     }
                 }
-                e += '</ul></li></ul>';
-            }
-            $('#file' + fc + ' h4').append(e);
-            $('a[testid]').each(function() {
-                var id = $(this).attr('testid');
-                $.getJSON('files?id=' + id, function(data) {
-                    if (not(data)) {
-                        return;
+                for (var j = 0; j < tm.length; j++) {
+                    var o = td[i][tm[j].id];
+                    var unit = '';
+                    var value = 'N/A';
+                    if (!not(o) && o.value !== -1) {
+                        value = o.value;
+                        unit = o.unit;
                     }
-                    $('a[testid="' + id + '"]').html(new Date(data['files'][0].Time).toLocaleString());
-                });
+                    $(s).append('<td key="' + tm[j].id + '">' + value + ' ' + unit + '</td>');
+                    $(s + ' td').last().hide();
+                }
+            }
+            $('#table-files').tablesorter({
+                theme: 'bootstrap',
+                dateFormat: 'ddmmyyyy'
             });
         });
-
     }
 }

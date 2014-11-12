@@ -78,25 +78,25 @@ var Overview = {
                 'type': 'overview',
                 'view': tipe
             };
-            $.getJSON('table-info', params, function(data) {
-                if (not(data['table-info']) || not(data['table-fields'])) {
+            $.getJSON('table', params, function(data) {
+                if (not(data['table-data']) || not(data['table-fields']) || not(data['table-metrics'])) {
                     console.log('could not load table data', data);
                     return;
                 }
-                var info = data['table-info'];
-                var fs = data['table-fields'];
-                for (var j = 0; j < fs.length; j++) {
-                    if (fs[j].id === 'id') {
-                        continue;
-                    }
-                    var n = toTitleCase(fs[j].name);
-                    $('#table-overview > thead > tr').append('<th key="' + fs[j].id + '">' + n + '</th>');
-                    $('#fields').append('<option value="' + fs[j].id + '">' + n + '</option>');
-                    if (Overview.isMetric(fs[j].id)) {
-                        $('#table-overview > thead > tr > th').last().hide();
-                    } else {
-                        $('#fields > option').last().prop('selected', true);
-                    }
+                var td = data['table-data'];
+                var tf = data['table-fields'];
+                var tm = data['table-metrics'];
+                for (var j = 1; j < tf.length; j++) {
+                    var n = toTitleCase(tf[j].name);
+                    $('#table-overview > thead > tr').append('<th key="' + tf[j].id + '">' + n + '</th>');
+                    $('#fields').append('<option value="' + tf[j].id + '">' + n + '</option>');
+                    $('#fields > option').last().prop('selected', true);
+                }
+                for (var j = 0; j < tm.length; j++) {
+                    var n = toTitleCase(tm[j].name);
+                    $('#table-overview > thead > tr').append('<th key="' + tm[j].id + '">' + n + '</th>');
+                    $('#fields').append('<option value="' + tm[j].id + '">' + n + '</option>');
+                    $('#table-overview > thead > tr > th').last().hide();
                 }
                 $('#fields').show();
                 $('#fields').multiselect({
@@ -122,26 +122,27 @@ var Overview = {
                         $('[key]').hide();
                     }
                 });
-                for (var i = 0; i < info.length; i++) {
-                    $('#table-overview > tbody').append('<tr ' + tipe + 'id="' + info[i].id + '"><td key="name"><a href="assignmentsview?' + tipe + '-id=' + info[i].id + '">' + info[i].name + '</a></td></tr>');
-                    var s = '#table-overview > tbody > tr[' + tipe + 'id="' + info[i].id + '"]';
-                    if (tipe === 'project') {
-                        $(s).append('<td class="rowlink-skip" key="description"><a href="#" class="a-info"><span class="glyphicon glyphicon-info-sign"></span><p hidden>' + info[i].description + '</p></a></td>');
-                    }
-                    for (var j = 0; j < fs.length; j++) {
-                        if (!Overview.isMetric(fs[j].id)) {
-                            continue;
-                        }
-                        var o = info[i][fs[j].id];
-                        var unit = '';
-                        var value = '';
-                        if (not(o) || o.value === -1) {
-                            value = 'N/A';
+                for (var i = 0; i < td.length; i++) {
+                    $('#table-overview > tbody').append('<tr ' + tipe + 'id="' + td[i].id + '"></tr>')
+                    var s = '#table-overview > tbody > tr[' + tipe + 'id="' + td[i].id + '"]';
+                    for (var j = 1; j < tf.length; j++) {
+                        if (j === 1) {
+                            $(s).append('<td key="' + tf[j].id + '"><a href="assignmentsview?' + tipe + '-id=' + td[i].id + '">' + td[i][tf[j].id] + '</a></td></tr>');
+                        } else if (tf[j].id === 'description') {
+                            $(s).append('<td class="rowlink-skip" key="description"><a href="#" class="a-info"><span class="glyphicon glyphicon-info-sign"></span><p hidden>' + td[i][tf[j].id] + '</p></a></td>');
                         } else {
+                            $(s).append('<td key="' + tf[j].id + '">' + td[i][tf[j].id] + '</td>');
+                        }
+                    }
+                    for (var j = 0; j < tm.length; j++) {
+                        var o = td[i][tm[j].id];
+                        var unit = '';
+                        var value = 'N/A';
+                        if (!not(o) && o.value !== -1) {
                             value = o.value;
                             unit = o.unit;
                         }
-                        $(s).append('<td key="' + fs[j].id + '">' + value + ' ' + unit + '</td>');
+                        $(s).append('<td key="' + tm[j].id + '">' + value + ' ' + unit + '</td>');
                         $(s + ' td').last().hide();
                     }
                 }
@@ -160,8 +161,5 @@ var Overview = {
                 }
             });
         });
-    },
-    isMetric: function(k) {
-        return notEqual(k, ['id', 'name', 'description'])
     }
 };

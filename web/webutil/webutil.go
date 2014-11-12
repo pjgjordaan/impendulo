@@ -68,6 +68,14 @@ func String(r *http.Request, n string) (string, error) {
 	return vs[0], nil
 }
 
+func Language(r *http.Request, n string) (project.Language, error) {
+	v, e := String(r, n)
+	if e != nil {
+		return "", e
+	}
+	return project.Language(v), nil
+}
+
 func Int(r *http.Request, n string) (int, error) {
 	v, e := String(r, n)
 	if e != nil {

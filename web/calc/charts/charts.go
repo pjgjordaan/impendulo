@@ -84,7 +84,7 @@ func Tool(r *description.D, files []*project.File) (D, error) {
 		}
 		addSingle(c, f)
 	}
-	f, e := db.File(bson.M{db.ID: files[0].Id}, bson.M{db.SUBID: 1})
+	f, e := db.File(bson.M{db.ID: files[0].Id}, db.FILE_SELECTOR)
 	if e != nil {
 		util.Log(e)
 		return c.Data, nil

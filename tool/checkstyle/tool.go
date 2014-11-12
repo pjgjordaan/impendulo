@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/godfried/impendulo/config"
+	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/util"
@@ -67,8 +68,8 @@ func New() (tool *Tool, err error) {
 }
 
 //Lang is Java
-func (this *Tool) Lang() tool.Language {
-	return tool.JAVA
+func (this *Tool) Lang() project.Language {
+	return project.JAVA
 }
 
 //Name is Checkstyle

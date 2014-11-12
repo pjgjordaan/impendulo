@@ -185,25 +185,25 @@ var SubmissionsView = {
             'assignment-id': aid
         }
         params[SubmissionsView.tipe + '-id'] = $('#' + SubmissionsView.tipe + '-dropdown-label').attr(SubmissionsView.tipe + 'id');
-        $.getJSON('table-info', params, function(data) {
-            if (not(data['table-info']) || not(data['table-fields'])) {
+        $.getJSON('table', params, function(data) {
+            if (not(data['table-data']) || not(data['table-fields']) || not(data['table-metrics'])) {
                 console.log(data);
                 return;
             }
-            var info = data['table-info'];
-            var fs = data['table-fields'];
-            for (var j = 0; j < fs.length; j++) {
-                if (fs[j].id === 'id') {
-                    continue;
-                }
-                var n = toTitleCase(fs[j].name);
-                $('#table-submissions > thead > tr').append('<th key="' + fs[j].id + '">' + n + '</th>');
-                $('#fields').append('<option value="' + fs[j].id + '">' + n + '</option>');
-                if (SubmissionsView.isMetric(fs[j].id)) {
-                    $('#table-submissions > thead > tr > th').last().hide();
-                } else {
-                    $('#fields > option').last().prop('selected', true);
-                }
+            var td = data['table-data'];
+            var tf = data['table-fields'];
+            var tm = data['table-metrics'];
+            for (var j = 1; j < tf.length; j++) {
+                var n = toTitleCase(tf[j].name);
+                $('#table-submissions > thead > tr').append('<th key="' + tf[j].id + '">' + n + '</th>');
+                $('#fields').append('<option value="' + tf[j].id + '">' + n + '</option>');
+                $('#fields > option').last().prop('selected', true);
+            }
+            for (var j = 0; j < tm.length; j++) {
+                var n = toTitleCase(tm[j].name);
+                $('#table-submissions > thead > tr').append('<th key="' + tm[j].id + '">' + n + '</th>');
+                $('#fields').append('<option value="' + tm[j].id + '">' + n + '</option>');
+                $('#table-submissions > thead > tr > th').last().hide();
             }
             $('#fields').show();
             $('#fields').multiselect({
@@ -229,15 +229,26 @@ var SubmissionsView = {
                     $('[key]').hide();
                 }
             });
-            for (var i = 0; i < info.length; i++) {
-                var s = new Date(info[i].time);
-                $('#table-submissions > tbody').append('<tr submissionid="' + info[i].id + '"><td key="name"><a href="filesview?submission-id=' + info[i].id + '">' + info[i].name + '</a></td><td key="start date">' + s.toLocaleDateString() + '</td><td key="start time">' + s.toLocaleTimeString() + '</td></tr>');
-                var s = '#table-submissions > tbody > tr[submissionid="' + info[i].id + '"]';
-                for (var j = 0; j < fs.length; j++) {
-                    if (!SubmissionsView.isMetric(fs[j].id)) {
-                        continue;
+            for (var i = 0; i < td.length; i++) {
+                $('#table-submissions > tbody').append('<tr submissionid="' + td[i].id + '"></tr>')
+                var s = '#table-submissions > tbody > tr[submissionid="' + td[i].id + '"]';
+                for (var j = 1; j < tf.length; j++) {
+                    if (j === 1) {
+                        $(s).append('<td key="' + tf[j].id + '"><a href="filesview?submission-id=' + td[i].id + '">' + td[i][tf[j].id] + '</a></td>');
+                    } else {
+                        $(s).append('<td key="' + tf[j].id + '">' + td[i][tf[j].id] + '</td>');
                     }
-                    $(s).append('<td key="' + fs[j].id + '">' + info[i][fs[j].id].value + ' ' + info[i][fs[j].id].unit + '</td>');
+                }
+                for (var j = 0; j < tm.length; j++) {
+                    var o = td[i][tm[j].id];
+                    var unit = '';
+                    var value = 'N/A';
+                    if (!not(o) && o.value !== -1) {
+                        value = o.value;
+                        unit = o.unit;
+                    }
+
+                    $(s).append('<td key="' + tm[j].id + '">' + value + ' ' + unit + '</td>');
                     $(s + ' td').last().hide();
                 }
             }
@@ -246,8 +257,5 @@ var SubmissionsView = {
                 dateFormat: 'ddmmyyyy'
             });
         });
-    },
-    isMetric: function(k) {
-        return notEqual(k, ['id', 'name', 'start date', 'start time']);
     }
 }

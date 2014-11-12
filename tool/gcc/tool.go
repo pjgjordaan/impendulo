@@ -2,6 +2,7 @@ package gcc
 
 import (
 	"github.com/godfried/impendulo/config"
+	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/result"
 	"labix.org/v2/mgo/bson"
@@ -25,8 +26,8 @@ func New() (*Tool, error) {
 }
 
 //Lang
-func (t *Tool) Lang() tool.Language {
-	return tool.C
+func (t *Tool) Lang() project.Language {
+	return project.C
 }
 
 //Name

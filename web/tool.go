@@ -187,7 +187,7 @@ func readTarget(r *http.Request) (*tool.Target, error) {
 		}
 		pkg, f = f, pkg
 	}
-	return tool.NewTarget(f+".java", pkg, "", tool.JAVA), nil
+	return tool.NewTarget(f+".java", pkg, "", project.JAVA), nil
 }
 
 //readProperties reads JPF properties from a raw string and stores them in a map.

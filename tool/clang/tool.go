@@ -2,6 +2,7 @@ package gcc
 
 import (
 	"github.com/godfried/impendulo/config"
+	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"labix.org/v2/mgo/bson"
 )
@@ -17,28 +18,25 @@ const (
 	NAME = "Clang"
 )
 
-func New() (ret *Tool, err error) {
-	cmd, err := config.CLANG.Path()
-	if err != nil {
-		return
+func New() (*Tool, error) {
+	c, e := config.CLANG.Path()
+	if e != nil {
+		return nil, e
 	}
-	ret = &Tool{
-		cmd: cmd,
-	}
-	return
+	return &Tool{cmd: cmd}, nil
 }
 
 //Lang
-func (this *Tool) Lang() tool.Language {
-	return tool.C
+func (t *Tool) Lang() project.Language {
+	return project.C
 }
 
 //Name
-func (this *Tool) Name() string {
+func (t *Tool) Name() string {
 	return NAME
 }
 
-func (t *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (tool.ToolResult, error) {
+func (t *Tool) Run(fileId bson.ObjectId, ti *tool.TargetInfo) (tool.Tooler, error) {
 	a := []string{t.cmd, "-Wall", "-Wextra", "-Wno-variadic-macros", "-pedantic", "-O0", "-o", ti.Name, ti.FilePath()}
 	r, e := tool.RunCommand(a, nil)
 	if e != nil {

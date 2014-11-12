@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/godfried/impendulo/config"
+	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/result"
@@ -71,15 +72,15 @@ func New(test, target *tool.Target, toolDir string, testId bson.ObjectId) (*Tool
 		cp:           toolDir + ":" + test.Dir + ":" + j + ":" + aj + ":" + a,
 		dataLocation: filepath.Join(test.PackagePath(), "data"),
 		test:         test,
-		runner:       tool.NewTarget("TestRunner.java", "testing", toolDir, tool.JAVA),
+		runner:       tool.NewTarget("TestRunner.java", "testing", toolDir, project.JAVA),
 		target:       target,
 		testId:       testId,
 	}, nil
 }
 
 //Lang is Java
-func (t *Tool) Lang() tool.Language {
-	return tool.JAVA
+func (t *Tool) Lang() project.Language {
+	return project.JAVA
 }
 
 func (t *Tool) Name() string {

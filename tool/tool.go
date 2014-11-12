@@ -30,6 +30,7 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool/result"
 
 	"io"
@@ -47,7 +48,7 @@ type (
 		//Name retrieves the Tool's name.
 		Name() string
 		//Lang retrieves the language which the Tool is used for.
-		Lang() Language
+		Lang() project.Language
 		//Run runs the tool on a given file.
 		Run(fileId bson.ObjectId, target *Target) (result.Tooler, error)
 	}
@@ -55,7 +56,7 @@ type (
 		//Name retrieves the Tool's name.
 		Name() string
 		//Lang retrieves the language which the Tool is used for.
-		Lang() Language
+		Lang() project.Language
 		//Run runs the tool on a given file.
 		Run(fileId bson.ObjectId, target *Target) (result.Tooler, error)
 		AddCP(string)
@@ -65,36 +66,12 @@ type (
 	Result struct {
 		StdOut, StdErr []byte
 	}
-	Language string
 )
 
 const (
-	JAVA Language = "Java"
-	C    Language = "C"
 	//The maximum size in bytes that a ToolResult is allowed to have.
 	MAX_SIZE = 16000000
 )
-
-var (
-	langs []Language
-)
-
-//Langs returns the languages supported by Impendulo
-func Langs() []Language {
-	if langs == nil {
-		langs = []Language{JAVA, C}
-	}
-	return langs
-}
-
-func Supported(l Language) bool {
-	for _, c := range Langs() {
-		if l == c {
-			return true
-		}
-	}
-	return false
-}
 
 //HasStdErr checks whether the ExecResult has standard error output.
 func (r *Result) HasStdErr() bool {

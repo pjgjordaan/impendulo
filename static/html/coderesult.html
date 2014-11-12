@@ -1,5 +1,5 @@
 {{define "result"}} {{$r := .Report}}
-<pre class="brush: {{$r.Lang}}; class-name: 'fileid{{$r.FileId.Hex}} code'">
+<pre class="brush: {{$r.Lang.Extension}}; class-name: 'fileid{{$r.FileId.Hex}} code'">
 {{$r.Data}}
 </pre>
 {{end}}

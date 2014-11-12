@@ -29,6 +29,7 @@ import (
 
 	"github.com/godfried/impendulo/config"
 	"github.com/godfried/impendulo/db"
+	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/findbugs"
@@ -52,10 +53,10 @@ const (
 //Tools retrieves the Impendulo tool suite for a Worker's language.
 //Each tool is already constructed.
 func Tools(w *Worker) ([]tool.T, error) {
-	switch tool.Language(w.project.Lang) {
-	case tool.JAVA:
+	switch project.Language(w.project.Lang) {
+	case project.JAVA:
 		return javaTools(w)
-	case tool.C:
+	case project.C:
 		return cTools(w), nil
 	}
 	//Only Java is supported so far...
@@ -102,11 +103,11 @@ func javaTools(w *Worker) ([]tool.T, error) {
 
 //Compiler retrieves a compiler for a Processor's language.
 func Compiler(w *Worker) (tool.Compiler, error) {
-	l := tool.Language(w.project.Lang)
+	l := project.Language(w.project.Lang)
 	switch l {
-	case tool.JAVA:
+	case project.JAVA:
 		return javac.New("")
-	case tool.C:
+	case project.C:
 		m, e := db.Makefile(bson.M{db.PROJECTID: w.project.Id}, nil)
 		if e != nil {
 			return gcc.New()
@@ -162,7 +163,7 @@ func junitTools(w *Worker) ([]tool.T, error) {
 			continue
 		}
 		//Save the test files to the submission's tool directory.
-		target := tool.NewTarget(t.Name, t.Package, filepath.Join(w.toolDir, t.Id.Hex()), tool.JAVA)
+		target := tool.NewTarget(t.Name, t.Package, filepath.Join(w.toolDir, t.Id.Hex()), project.JAVA)
 		if e = util.SaveFile(target.FilePath(), t.Test); e != nil {
 			return nil, e
 		}

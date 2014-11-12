@@ -90,7 +90,7 @@ func (w *Worker) Process(fid bson.ObjectId) error {
 	if e != nil {
 		return e
 	}
-	t := tool.NewTarget(f.Name, f.Package, w.srcDir, tool.JAVA)
+	t := tool.NewTarget(f.Name, f.Package, w.srcDir, project.JAVA)
 	if e = util.SaveFile(t.FilePath(), f.Data); e != nil {
 		return e
 	}

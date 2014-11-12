@@ -138,7 +138,7 @@ func (w *Worker) Source(f *project.File) error {
 	util.Log("Processing file:", f.Id, LOG_F)
 	defer util.Log("Processed file:", f.Id, LOG_F)
 	//Create a target for the tools to run on and save the file.
-	t := tool.NewTarget(f.Name, f.Package, w.srcDir, tool.Language(w.project.Lang))
+	t := tool.NewTarget(f.Name, f.Package, w.srcDir, project.Language(w.project.Lang))
 	if e := util.SaveFile(t.FilePath(), f.Data); e != nil {
 		return e
 	}
@@ -147,7 +147,7 @@ func (w *Worker) Source(f *project.File) error {
 }
 
 func (w *Worker) Test(tf *project.File) error {
-	t := tool.NewTarget(tf.Name, tf.Package, w.srcDir, tool.Language(w.project.Lang))
+	t := tool.NewTarget(tf.Name, tf.Package, w.srcDir, project.Language(w.project.Lang))
 	if e := util.SaveFile(t.FilePath(), tf.Data); e != nil {
 		return e
 	}

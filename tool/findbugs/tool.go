@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/godfried/impendulo/config"
+	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/result"
 	"github.com/godfried/impendulo/util"
@@ -58,8 +59,8 @@ func New() (*Tool, error) {
 }
 
 //Lang is Java.
-func (t *Tool) Lang() tool.Language {
-	return tool.JAVA
+func (t *Tool) Lang() project.Language {
+	return project.JAVA
 }
 
 //Name is Findbugs.

@@ -26,8 +26,8 @@ package db
 
 import (
 	"fmt"
+
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/checkstyle"
 	"github.com/godfried/impendulo/tool/findbugs"
 	"github.com/godfried/impendulo/tool/gcc"
@@ -191,8 +191,8 @@ func ProjectTools(pid bson.ObjectId) ([]string, error) {
 	if e != nil {
 		return nil, e
 	}
-	switch tool.Language(p.Lang) {
-	case tool.JAVA:
+	switch project.Language(p.Lang) {
+	case project.JAVA:
 		ts := []string{pmd.NAME, findbugs.NAME, checkstyle.NAME, javac.NAME}
 		if _, e := JPFConfig(bson.M{PROJECTID: pid}, bson.M{ID: 1}); e == nil {
 			ts = append(ts, jpf.NAME)
@@ -205,7 +205,7 @@ func ProjectTools(pid bson.ObjectId) ([]string, error) {
 		}
 		sort.Strings(ts)
 		return ts, nil
-	case tool.C:
+	case project.C:
 		return []string{mk.NAME, gcc.NAME}, nil
 	default:
 		return nil, fmt.Errorf("unknown language %s", p.Lang)

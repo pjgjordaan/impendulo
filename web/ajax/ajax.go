@@ -50,9 +50,9 @@ func Generate(r *pat.Router) {
 		"skeletons": Skeletons, "submissions": Submissions, "results": Results, "jpflisteners": JPFListeners,
 		"langs": Langs, "projects": Projects, "files": Files, "tools": Tools, "jpfsearches": JPFSearches,
 		"code": Code, "users": Users, "permissions": Perms, "comparables": Comparables,
-		"tests": Tests, "test-types": TestTypes, "filenames": FileNames, "basicfileinfos": BasicFileInfos, "status": Status, "counts": Counts,
+		"tests": Tests, "test-types": TestTypes, "filenames": FileNames, "fileinfos": FileInfos, "status": Status, "counts": Counts,
 		"comments": Comments, "fileresults": FileResults, "chart-options": chartOptions, "assignments": Assignments,
-		"typecounts": TypeCounts, "fileinfos": FileInfos, "resultnames": ResultNames, "databases": Databases, "testdata": TestData, "table-info": TableInfo,
+		"typecounts": TypeCounts, "resultnames": ResultNames, "databases": Databases, "testdata": TestData, "table": Table,
 	}
 	for n, f := range gets {
 		r.Add("GET", "/"+n, f)

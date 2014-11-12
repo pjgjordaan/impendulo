@@ -22,7 +22,7 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package util
+package milliseconds
 
 import (
 	"fmt"
@@ -34,87 +34,96 @@ import (
 )
 
 const (
-	layout = "2006-01-02 15:04:05"
+	DATE_TIME = "2006-01-02 15:04:05"
+	TIME      = "15:04:05"
+	DATE      = "2006-01-02"
 )
 
-//CurMilis returns the time in miliseconds.
-func GetMilis(t time.Time) int64 {
+//Get returns the time in milliseconds.
+func Get(t time.Time) int64 {
 	return t.UnixNano() / 1000000
 }
 
-//CurMilis returns the current time in miliseconds.
-func CurMilis() int64 {
-	return GetMilis(time.Now())
+//Current returns the current time in milliseconds.
+func Current() int64 {
+	return Get(time.Now())
 }
 
-//GetTime returns an instance of time.Time for the miliseconds provided.
-func GetTime(m int64) time.Time {
+//Time returns an instance of time.Time for the milliseconds provided.
+func Time(m int64) time.Time {
 	return time.Unix(0, m*1000000)
 }
 
-//DateTime returns a string representation of the date represented by the miliseconds provided.
-func DateTime(m int64) string {
-	return GetTime(m).Format(layout)
+//DateTimeString returns a string representation of the date represented by the milliseconds provided.
+func DateTimeString(m int64) string {
+	return Time(m).Format(DATE_TIME)
 }
 
-//CalcTime converts a time string formatted as yyyymmddhhmmssmmm to a time.Time.
-func CalcTime(s string) (time.Time, error) {
-	t := time.Time{}
+func TimeString(m int64) string {
+	return Time(m).Format(TIME)
+}
+
+func DateString(m int64) string {
+	return Time(m).Format(DATE)
+}
+
+//Parse converts a time string formatted as yyyymmddhhmmssmmm to a date represented as milliseconds.
+func Parse(s string) (int64, error) {
 	if len(s) != 17 {
-		return t, fmt.Errorf("invalid time string length %d for %s", len(s), s)
+		return 0, fmt.Errorf("invalid time string length %d for %s", len(s), s)
 	}
 	y, e := strconv.Atoi(s[:4])
 	if e != nil {
-		return t, errors.NewUtil(s, "reading year", e)
+		return 0, errors.NewUtil(s, "reading year", e)
 	}
 	if y < 1900 || y > 3000 {
-		return t, fmt.Errorf("invalid year %d", y)
+		return 0, fmt.Errorf("invalid year %d", y)
 	}
 	m, e := strconv.Atoi(s[4:6])
 	if e != nil {
-		return t, errors.NewUtil(s, "reading month", e)
+		return 0, errors.NewUtil(s, "reading month", e)
 	}
 	if m < 1 || m > 12 {
-		return t, fmt.Errorf("invalid month %d", m)
+		return 0, fmt.Errorf("invalid month %d", m)
 	}
 	d, e := strconv.Atoi(s[6:8])
 	if e != nil {
-		return t, errors.NewUtil(s, "reading day", e)
+		return 0, errors.NewUtil(s, "reading day", e)
 	}
 	if d < 1 || d > 31 {
-		return t, fmt.Errorf("invalid day %d", d)
+		return 0, fmt.Errorf("invalid day %d", d)
 	}
 	h, e := strconv.Atoi(s[8:10])
 	if e != nil {
-		return t, errors.NewUtil(s, "reading hour", e)
+		return 0, errors.NewUtil(s, "reading hour", e)
 	}
 	if h < 0 || h > 24 {
-		return t, fmt.Errorf("invalid hour %d", h)
+		return 0, fmt.Errorf("invalid hour %d", h)
 	}
 	mi, e := strconv.Atoi(s[10:12])
 	if e != nil {
-		return t, errors.NewUtil(s, "reading minutes", e)
+		return 0, errors.NewUtil(s, "reading minutes", e)
 	}
 	if mi < 0 || mi > 60 {
-		return t, fmt.Errorf("invalid minutes %d", mi)
+		return 0, fmt.Errorf("invalid minutes %d", mi)
 	}
 	sc, e := strconv.Atoi(s[12:14])
 	if e != nil {
-		return t, errors.NewUtil(s, "reading seconds", e)
+		return 0, errors.NewUtil(s, "reading seconds", e)
 	}
 	if sc < 0 || sc > 60 {
-		return t, fmt.Errorf("invalid seconds %d", sc)
+		return 0, fmt.Errorf("invalid seconds %d", sc)
 	}
 	ms, e := strconv.Atoi(s[14:17])
 	if e != nil {
-		return t, errors.NewUtil(s, "reading miliseconds", e)
+		return 0, errors.NewUtil(s, "reading milliseconds", e)
 	}
 	if ms < 0 || ms > 1000 {
-		return t, fmt.Errorf("invalid miliseconds %d", ms)
+		return 0, fmt.Errorf("invalid milliseconds %d", ms)
 	}
 	l, e := time.LoadLocation("Local")
 	if e != nil {
-		return t, errors.NewUtil("", "loading location", e)
+		return 0, errors.NewUtil("", "loading location", e)
 	}
-	return time.Date(y, time.Month(m), d, h, mi, sc, ms*1000000, l), nil
+	return Get(time.Date(y, time.Month(m), d, h, mi, sc, ms*1000000, l)), nil
 }

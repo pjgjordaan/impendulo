@@ -31,6 +31,7 @@ import (
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
 	"github.com/godfried/impendulo/util/errors"
+	"github.com/godfried/impendulo/util/milliseconds"
 	"labix.org/v2/mgo/bson"
 
 	"reflect"
@@ -88,6 +89,13 @@ func ParseType(n string) (Type, error) {
 	}
 }
 
+func (t Type) Title() string {
+	if t == SRC {
+		return "Source"
+	}
+	return util.Title(string(t))
+}
+
 func (t Type) String() string {
 	if t == SRC {
 		return "source"
@@ -100,7 +108,7 @@ func (f *File) String() string {
 	return "Type: project.File; Id: " + f.Id.Hex() +
 		"; SubId: " + f.SubId.Hex() + "; Name: " + f.Name +
 		"; Package: " + f.Package + "; Type: " + string(f.Type) +
-		"; Time: " + util.Date(f.Time)
+		"; Time: " + milliseconds.DateTimeString(f.Time)
 }
 
 //Equals
@@ -165,20 +173,9 @@ func ParseName(n string) (*File, error) {
 		ni = 2
 	}
 	ts := es[len(es)-ni]
-	var t int64
-	var e error
-	if len(ts) == 13 {
-		if t, e = strconv.ParseInt(ts, 10, 64); e != nil {
-			return nil, fmt.Errorf("%s in %s could not be parsed as an int", ts, n)
-		}
-	} else if ts[0] == '2' && len(ts) == 17 {
-		ct, e := util.CalcTime(ts)
-		if e != nil {
-			return nil, e
-		}
-		t = util.GetMilis(ct)
-	} else {
-		return nil, fmt.Errorf("unknown time format %s in %s.", ts, n)
+	t, e := parseTime(ts)
+	if e != nil {
+		return nil, e
 	}
 	var fn, pkg string
 	if len(es) > ni {
@@ -204,6 +201,15 @@ func ParseName(n string) (*File, error) {
 		return nil, fmt.Errorf("unsupported file type in name %s", n)
 	}
 	return &File{Id: bson.NewObjectId(), Type: tp, Name: fn, Package: pkg, Time: t, Comments: []*Comment{}}, nil
+}
+
+func parseTime(ts string) (int64, error) {
+	if len(ts) == 13 {
+		return strconv.ParseInt(ts, 10, 64)
+	} else if ts[0] == '2' && len(ts) == 17 {
+		return milliseconds.Parse(ts)
+	}
+	return 0, fmt.Errorf("unknown time format %s.", ts)
 }
 
 func ParseFile(n string, d []byte) (*File, error) {
@@ -245,4 +251,8 @@ func (f *File) ChangePackage(o, n string) {
 
 func (f *File) LoadComments() []*Comment {
 	return f.Comments
+}
+
+func (f *File) HasCharts() bool {
+	return f.Type == SRC
 }

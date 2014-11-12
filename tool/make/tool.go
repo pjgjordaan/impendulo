@@ -2,6 +2,7 @@ package make
 
 import (
 	"github.com/godfried/impendulo/config"
+	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/gcc"
 	"github.com/godfried/impendulo/tool/result"
@@ -27,7 +28,7 @@ func New(mf *Makefile, dir string) (*Tool, error) {
 	if e != nil {
 		return nil, e
 	}
-	t := tool.NewTarget("Makefile", "", dir, tool.C)
+	t := tool.NewTarget("Makefile", "", dir, project.C)
 	if e = util.SaveFile(t.FilePath(), mf.Data); e != nil {
 		return nil, e
 	}
@@ -41,8 +42,8 @@ func (t *Tool) AddCP(p string) {
 }
 
 //Lang
-func (t *Tool) Lang() tool.Language {
-	return tool.C
+func (t *Tool) Lang() project.Language {
+	return project.C
 }
 
 //Name

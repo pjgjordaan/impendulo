@@ -126,7 +126,7 @@ func (h *Handler) nextFile() bson.ObjectId {
 }
 
 func removeFile(fid bson.ObjectId) error {
-	f, e := db.File(bson.M{db.ID: fid}, bson.M{db.DATA: 0, db.RESULTS: 0})
+	f, e := db.File(bson.M{db.ID: fid}, db.FILE_SELECTOR)
 	if e != nil {
 		return e
 	}

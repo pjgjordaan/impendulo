@@ -33,11 +33,13 @@ import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool/result/description"
 	"github.com/godfried/impendulo/user"
+	"github.com/godfried/impendulo/util/milliseconds"
 	"github.com/godfried/impendulo/web/calc/stats"
 )
 
 type (
-	T []map[string]interface{}
+	T     []map[string]interface{}
+	pname map[bson.ObjectId]string
 )
 
 var (
@@ -52,9 +54,9 @@ func New() T {
 	return make(T, 0, 1000)
 }
 
-func User(us []*user.U, ds []*description.D) (T, []*description.D, error) {
+func User(us []*user.U, ds description.Ds) (T, error) {
 	if len(us) == 0 {
-		return nil, nil, NoUsersError
+		return nil, NoUsersError
 	}
 	t := New()
 	c := stats.NewCalc()
@@ -69,19 +71,19 @@ func User(us []*user.U, ds []*description.D) (T, []*description.D, error) {
 			t = append(t, m)
 		}
 	}
-	return t, UserFields(ds), nil
+	return t, nil
 }
 
-func Project(ps []*project.P, ds []*description.D) (T, []*description.D, error) {
+func Project(ps []*project.P, ds description.Ds) (T, error) {
 	if len(ps) == 0 {
-		return nil, nil, NoProjectsError
+		return nil, NoProjectsError
 	}
 	t := New()
 	c := stats.NewCalc()
 	for _, p := range ps {
 		if vs, ns, e := c.Project(p, ds); e == nil {
 			m := map[string]interface{}{
-				"id": p.Id.Hex(), "name": p.Name, "description": p.Description,
+				"id": p.Id.Hex(), "name": p.Name, "description": p.Description, "author": p.User, "language": p.Lang,
 			}
 			for i, v := range vs {
 				m[ds[i].Raw()] = map[string]interface{}{"value": v, "unit": ns[i]}
@@ -89,19 +91,25 @@ func Project(ps []*project.P, ds []*description.D) (T, []*description.D, error) 
 			t = append(t, m)
 		}
 	}
-	return t, ProjectFields(ds), nil
+	return t, nil
 }
 
-func Assignment(as []*project.Assignment, ds []*description.D) (T, []*description.D, error) {
+func Assignment(as []*project.Assignment, ds description.Ds) (T, error) {
 	if len(as) == 0 {
-		return nil, nil, NoAssignmentsError
+		return nil, NoAssignmentsError
 	}
 	t := New()
 	c := stats.NewCalc()
+	pns := make(pname)
 	for _, a := range as {
+		pn := pns.get(a.ProjectId)
+		if pn == "" {
+			continue
+		}
 		if vs, ns, e := c.Assignment(a, ds); e == nil {
 			p := map[string]interface{}{
-				"id": a.Id.Hex(), "name": a.Name, "start": a.Start, "end": a.End,
+				"id": a.Id.Hex(), "name": a.Name, "project": pn, "author": a.User, "start date": milliseconds.DateString(a.Start),
+				"start time": milliseconds.TimeString(a.Start), "end date": milliseconds.DateString(a.End), "end time": milliseconds.TimeString(a.End),
 			}
 			for i, v := range vs {
 				p[ds[i].Raw()] = map[string]interface{}{"value": v, "unit": ns[i]}
@@ -109,27 +117,24 @@ func Assignment(as []*project.Assignment, ds []*description.D) (T, []*descriptio
 			t = append(t, p)
 		}
 	}
-	return t, AssignmentFields(ds), nil
+	return t, nil
 }
 
-func Submission(ss []*project.Submission, ds []*description.D) (T, []*description.D, error) {
+func Submission(ss []*project.Submission, ds description.Ds) (T, error) {
 	if len(ss) == 0 {
-		return nil, nil, NoSubmissionsError
+		return nil, NoSubmissionsError
 	}
 	t := New()
 	c := stats.NewCalc()
-	names := make(map[bson.ObjectId]string)
+	pns := make(pname)
 	for _, s := range ss {
-		n, ok := names[s.ProjectId]
-		if !ok {
-			var e error
-			if n, e = db.ProjectName(s.ProjectId); e != nil {
-				continue
-			}
+		pn := pns.get(s.ProjectId)
+		if pn == "" {
+			continue
 		}
 		if vs, ns, e := c.Submission(s, ds); e == nil {
 			p := map[string]interface{}{
-				"id": s.Id.Hex(), "name": s.User + "'s " + n, "time": s.Time,
+				"id": s.Id.Hex(), "user": s.User, "project": pn, "start date": milliseconds.DateString(s.Time), "start time": milliseconds.TimeString(s.Time),
 			}
 			for i, v := range vs {
 				p[ds[i].Raw()] = map[string]interface{}{"value": v, "unit": ns[i]}
@@ -137,32 +142,73 @@ func Submission(ss []*project.Submission, ds []*description.D) (T, []*descriptio
 			t = append(t, p)
 		}
 	}
-	return t, SubmissionFields(ds), nil
+	return t, nil
 }
 
-func SubmissionFields(ds []*description.D) []*description.D {
-	return append(description.Ds{{Type: "id"}, {Type: "name"}, {Type: "start date"}, {Type: "start time"}}, ds...)
+func File(fs []*project.File, ds description.Ds) (T, error) {
+	if len(fs) == 0 {
+		return nil, NoFilesError
+	}
+	t := New()
+	c := stats.NewCalc()
+	s, e := db.Submission(bson.M{db.ID: fs[0].SubId}, nil)
+	if e != nil {
+		return nil, e
+	}
+	pn, e := db.ProjectName(s.ProjectId)
+	if e != nil {
+		return nil, e
+	}
+	for _, f := range fs {
+		if vs, ns, e := c.File(f, ds); e == nil {
+			p := map[string]interface{}{
+				"id": f.Name, "name": f.Name, "package": f.Package, "type": f.Type.Title(), "user": s.User, "project": pn, "date": milliseconds.DateString(f.Time), "time": milliseconds.TimeString(f.Time),
+			}
+			for i, v := range vs {
+				p[ds[i].Raw()] = map[string]interface{}{"value": v, "unit": ns[i]}
+			}
+			t = append(t, p)
+		}
+	}
+	return t, nil
 }
 
-func AssignmentFields(ds []*description.D) []*description.D {
-	return append(description.Ds{{Type: "id"}, {Type: "name"}, {Type: "start date"}, {Type: "start time"}, {Type: "end date"}, {Type: "end time"}}, ds...)
+func FileFields() description.Ds {
+	return description.Ds{{Type: "id"}, {Type: "name"}, {Type: "package"}, {Type: "type"}, {Type: "user"}, {Type: "project"}, {Type: "date"}, {Type: "time"}}
 }
 
-func ProjectFields(ds []*description.D) []*description.D {
-	return append(description.Ds{{Type: "id"}, {Type: "name"}, {Type: "description"}}, ds...)
+func SubmissionFields() description.Ds {
+	return description.Ds{{Type: "id"}, {Type: "user"}, {Type: "project"}, {Type: "start date"}, {Type: "start time"}}
 }
 
-func UserFields(ds []*description.D) []*description.D {
-	return append(description.Ds{{Type: "id"}, {Type: "name"}}, ds...)
+func AssignmentFields() description.Ds {
+	return description.Ds{{Type: "id"}, {Type: "name"}, {Type: "project"}, {Type: "author"}, {Type: "start date"}, {Type: "start time"}, {Type: "end date"}, {Type: "end time"}}
 }
 
-func OverviewFields(ds []*description.D, t string) []*description.D {
+func ProjectFields() description.Ds {
+	return description.Ds{{Type: "id"}, {Type: "name"}, {Type: "description"}, {Type: "author"}, {Type: "language"}}
+}
+
+func UserFields() description.Ds {
+	return description.Ds{{Type: "id"}, {Type: "name"}}
+}
+
+func OverviewFields(t string) []*description.D {
 	switch t {
 	case "user":
-		return UserFields(ds)
+		return UserFields()
 	case "project":
-		return ProjectFields(ds)
+		return ProjectFields()
 	default:
-		return ds
+		return description.Ds{}
 	}
+}
+
+func (p pname) get(id bson.ObjectId) string {
+	n, ok := p[id]
+	if ok {
+		return n
+	}
+	p[id], _ = db.ProjectName(id)
+	return p[id]
 }

@@ -74,9 +74,25 @@ func NewCalc() *C {
 	return &C{projects: make(map[bson.ObjectId]int)}
 }
 
+func (c *C) CalcFile(d *description.D, f *project.File) (float64, string, error) {
+	if t, e := project.ParseType(d.Type); e == nil {
+		n := f.Name
+		if t == project.LAUNCH {
+			n, _ = util.Extension(n)
+		}
+		fc, e := db.FileCount(f.SubId, n, t)
+		if e != nil {
+			return -1, "", e
+		}
+		return float64(fc), "files", nil
+	} else {
+		return Score(f.SubId, f.Name, d)
+	}
+}
+
 func (c *C) Calc(d *description.D, s *project.Submission) (float64, string, error) {
 	if t, e := project.ParseType(d.Type); e == nil {
-		fc, e := db.FileCount(s.Id, t)
+		fc, e := db.SubmissionFileCount(s.Id, t)
 		if e != nil {
 			return -1, "", e
 		}
@@ -89,8 +105,24 @@ func (c *C) Calc(d *description.D, s *project.Submission) (float64, string, erro
 		}
 		return calc(t, s, pt)
 	} else {
-		return Score(s, d)
+		t, e := db.ProjectTarget(s.ProjectId)
+		if e != nil {
+			return -1, "", e
+		}
+		return Score(s.Id, t.FullName(), d)
 	}
+}
+
+func (c *C) File(f *project.File, ds []*description.D) ([]float64, []string, error) {
+	vals := make([]float64, len(ds))
+	ns := make([]string, len(ds))
+	for i, d := range ds {
+		var e error
+		if vals[i], ns[i], e = c.CalcFile(d, f); e == nil {
+			vals[i] = util.Round(vals[i], 2)
+		}
+	}
+	return vals, ns, nil
 }
 
 func (c *C) Submission(s *project.Submission, ds []*description.D) ([]float64, []string, error) {
@@ -193,9 +225,16 @@ func (c *C) User(u *user.U, ds []*description.D) ([]float64, []string, error) {
 	if count == 0 {
 		return nil, nil, errors.New("no user submissions")
 	}
+	ac, sc := float64(len(am)), float64(len(ss))
 	for i, _ := range vals {
-		if ds[i].Type == "Assignments" {
-			vals[i] = float64(len(am))
+		if ds[i].Type == "Submissions" {
+			if ds[i].Metric == "Total" {
+				vals[i] = sc
+			} else if ac > 0 {
+				vals[i] = sc / ac
+			}
+		} else if ds[i].Type == "Assignments" {
+			vals[i] = ac
 		} else if ds[i].Metric != "Total" {
 			vals[i] = util.Round(vals[i]/float64(count), 2)
 		}
@@ -206,7 +245,7 @@ func (c *C) User(u *user.U, ds []*description.D) ([]float64, []string, error) {
 func ParseType(n string) (Type, error) {
 	n = strings.ToLower(n)
 	switch n {
-	case "time", "passed", "testcases", "lines":
+	case "time", "passed", "testcases":
 		return Type(n), nil
 	default:
 		return Type(""), fmt.Errorf("unknown stats type %s", n)
@@ -342,7 +381,7 @@ func TestCases(t *junit.Test) (int, error) {
 	if e = util.Copy(td, p); e != nil {
 		return 0, e
 	}
-	testTarget := tool.NewTarget(t.Name, t.Package, filepath.Join(td, t.Id.Hex()), tool.JAVA)
+	testTarget := tool.NewTarget(t.Name, t.Package, filepath.Join(td, t.Id.Hex()), project.JAVA)
 	if e = util.SaveFile(testTarget.FilePath(), t.Test); e != nil {
 		return 0, e
 	}
@@ -408,7 +447,7 @@ func FileTestCases(id bson.ObjectId) (int, error) {
 	if e = util.Copy(td, p); e != nil {
 		return -1, e
 	}
-	testTarget := tool.NewTarget(f.Name, f.Package, filepath.Join(td, f.Id.Hex()), tool.JAVA)
+	testTarget := tool.NewTarget(f.Name, f.Package, filepath.Join(td, f.Id.Hex()), project.JAVA)
 	if e = util.SaveFile(testTarget.FilePath(), f.Data); e != nil {
 		return -1, e
 	}
@@ -453,15 +492,15 @@ func Time(s *project.Submission) (int64, error) {
 	return (f.Time - s.Time) / 1000.0, nil
 }
 
-func Score(s *project.Submission, d *description.D) (float64, string, error) {
+func Score(sid bson.ObjectId, n string, d *description.D) (float64, string, error) {
 	if d.Type == code.NAME {
-		l, e := Lines(s.Id)
+		l, e := Lines(sid, n)
 		if e != nil {
 			return -1, "", e
 		}
 		return float64(l), "", nil
 	}
-	rid, e := lastResultId(s.Id, d)
+	rid, e := lastResultId(sid, n, d)
 	if e != nil {
 		return -1, "", e
 	}
@@ -480,8 +519,8 @@ func score(rid bson.ObjectId, r *description.D) (float64, string, error) {
 	return v.Y, "", nil
 }
 
-func lastResultId(sid bson.ObjectId, r *description.D) (bson.ObjectId, error) {
-	fs, e := db.Files(bson.M{db.SUBID: sid, db.TYPE: project.SRC}, bson.M{db.DATA: 0}, 0, "-"+db.TIME)
+func lastResultId(sid bson.ObjectId, n string, r *description.D) (bson.ObjectId, error) {
+	fs, e := db.Files(bson.M{db.SUBID: sid, db.TYPE: bson.M{db.NE: project.LAUNCH}, db.NAME: n}, bson.M{db.DATA: 0}, 0, "-"+db.TIME)
 	if e != nil {
 		return "", e
 	}
@@ -508,8 +547,8 @@ func lastResultId(sid bson.ObjectId, r *description.D) (bson.ObjectId, error) {
 	return "", fmt.Errorf("no results found for %s", r.Format())
 }
 
-func Lines(sid bson.ObjectId) (int64, error) {
-	f, e := db.LastFile(bson.M{db.SUBID: sid, db.TYPE: project.SRC}, bson.M{db.DATA: 1})
+func Lines(sid bson.ObjectId, n string) (int64, error) {
+	f, e := db.LastFile(bson.M{db.SUBID: sid, db.NAME: n, db.TYPE: bson.M{db.NE: project.LAUNCH}}, bson.M{db.DATA: 1})
 	if e != nil {
 		return -1, nil
 	}
@@ -543,13 +582,13 @@ func TypeCounts(id interface{}) map[string]interface{} {
 	am := util.NewSet()
 	for _, s := range ss {
 		am.Add(s.AssignmentId.Hex())
-		if c, e := db.FileCount(s.Id, project.SRC); e == nil {
+		if c, e := db.SubmissionFileCount(s.Id, project.SRC); e == nil {
 			sc += c
 		}
-		if c, e := db.FileCount(s.Id, project.LAUNCH); e == nil {
+		if c, e := db.SubmissionFileCount(s.Id, project.LAUNCH); e == nil {
 			lc += c
 		}
-		if c, e := db.FileCount(s.Id, project.TEST); e == nil {
+		if c, e := db.SubmissionFileCount(s.Id, project.TEST); e == nil {
 			tc += c
 		}
 		if m == db.USER {

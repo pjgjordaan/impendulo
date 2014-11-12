@@ -28,7 +28,7 @@ package diff
 import (
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool/result"
-	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/util/milliseconds"
 	"labix.org/v2/mgo/bson"
 
 	"strings"
@@ -50,7 +50,7 @@ type (
 //and never contains a diff. This is calculated seperately.
 func NewResult(f *project.File) *Result {
 	return &Result{
-		header: f.Name + " " + util.Date(f.Time),
+		header: f.Name + " " + milliseconds.DateTimeString(f.Time),
 		data:   strings.TrimSpace(string(f.Data)),
 		first:  f.Id,
 		diff:   "",

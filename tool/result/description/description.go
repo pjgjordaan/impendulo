@@ -6,11 +6,10 @@ import (
 
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
-	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/code"
 	"github.com/godfried/impendulo/tool/result"
-	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
+	"github.com/godfried/impendulo/util/milliseconds"
 	"labix.org/v2/mgo/bson"
 
 	"strings"
@@ -84,11 +83,11 @@ func (d *D) Format() string {
 }
 
 func (d *D) Date() string {
-	f, e := db.File(bson.M{db.ID: d.FileID}, bson.M{db.TIME: 1})
+	f, e := db.File(bson.M{db.ID: d.FileID}, db.FILE_SELECTOR)
 	if e != nil {
 		return "No File Found"
 	}
-	return util.Date(f.Time)
+	return milliseconds.DateTimeString(f.Time)
 }
 
 func (d *D) Key() string {
@@ -151,17 +150,11 @@ func (d *D) charter(f *project.File) (result.Charter, error) {
 		if e != nil {
 			return nil, e
 		}
-		return code.New(fd.Id, string(tool.JAVA), fd.Data), nil
+		return code.New(fd.Id, project.JAVA, fd.Data), nil
 	default:
 		return nil, fmt.Errorf("not a charter %s", d.Type)
 	}
 }
-
-/*
-func (d *D) ToBasic() *Basic {
-	return *Basic{Id: d.Raw(), Name: d.Format()}
-}
-*/
 
 func (ds Ds) Len() int {
 	return len(ds)

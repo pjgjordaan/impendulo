@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/godfried/impendulo/config"
+	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/javac"
 	"github.com/godfried/impendulo/tool/result"
@@ -84,8 +85,8 @@ func New(cfg *Config, jpfDir string) (*Tool, error) {
 	//Setup classpath with the required JPF and Json jars.
 	cp := jpfDir + ":" + jar + ":" + rjar + ":" + g
 	//Compile JPF runner files
-	jt := tool.NewTarget("JPFRunner.java", "runner", jpfDir, tool.JAVA)
-	pt := tool.NewTarget("ImpenduloPublisher.java", "runner", jpfDir, tool.JAVA)
+	jt := tool.NewTarget("JPFRunner.java", "runner", jpfDir, project.JAVA)
+	pt := tool.NewTarget("ImpenduloPublisher.java", "runner", jpfDir, project.JAVA)
 	c, e := javac.New(cp)
 	if e != nil {
 		return nil, e
@@ -101,8 +102,8 @@ func New(cfg *Config, jpfDir string) (*Tool, error) {
 }
 
 //Lang is Java
-func (t *Tool) Lang() tool.Language {
-	return tool.JAVA
+func (t *Tool) Lang() project.Language {
+	return project.JAVA
 }
 
 //Name is JPF
