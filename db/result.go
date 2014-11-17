@@ -294,7 +294,7 @@ func Displayer(m, sl bson.M) (result.Displayer, error) {
 	}
 }
 
-func Charter(m, sl bson.M) (result.Charter, error) {
+func Valuer(m, sl bson.M) (result.Valuer, error) {
 	t, e := resultType(m)
 	if e != nil {
 		return nil, e
@@ -374,17 +374,17 @@ func AddFileResult(fid bson.ObjectId, n string, v interface{}) error {
 	return Update(FILES, bson.M{ID: fid}, bson.M{SET: bson.M{RESULTS + "." + n: v}})
 }
 
-func Charters(fid bson.ObjectId) ([]result.Charter, error) {
+func Valuers(fid bson.ObjectId) ([]result.Valuer, error) {
 	f, e := File(bson.M{ID: fid}, bson.M{DATA: 0})
 	if e != nil {
 		return nil, e
 	}
-	rs := make([]result.Charter, 0, len(f.Results))
+	rs := make([]result.Valuer, 0, len(f.Results))
 	for _, id := range f.Results {
 		if _, ok := id.(bson.ObjectId); !ok {
 			continue
 		}
-		r, e := Charter(bson.M{ID: id}, nil)
+		r, e := Valuer(bson.M{ID: id}, nil)
 		if e != nil {
 			continue
 		}

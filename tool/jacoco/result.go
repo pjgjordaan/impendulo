@@ -103,27 +103,27 @@ func (r *Result) GetType() string {
 	return r.Type
 }
 
-//ChartVals
-func (r *Result) ChartVals() []*result.ChartVal {
-	v := make([]*result.ChartVal, len(r.Report.Counters))
+//Values
+func (r *Result) Values() []*result.Value {
+	v := make([]*result.Value, len(r.Report.Counters))
 	for i, c := range r.Report.MainCounters {
 		p := util.Round(float64(c.Covered)/float64(c.Covered+c.Missed)*100.0, 2)
-		v[i] = &result.ChartVal{Name: util.Title(c.Type), Y: p, FileId: r.FileId}
+		v[i] = &result.Value{Name: util.Title(c.Type), V: p, FileId: r.FileId}
 	}
 	return v
 }
 
-func (r *Result) ChartVal(n string) (*result.ChartVal, error) {
+func (r *Result) Value(n string) (*result.Value, error) {
 	for _, c := range r.Report.MainCounters {
 		if t := util.Title(c.Type); t == n {
 			p := util.Round(float64(c.Covered)/float64(c.Covered+c.Missed)*100.0, 2)
-			return &result.ChartVal{Name: util.Title(c.Type), Y: p, FileId: r.FileId}, nil
+			return &result.Value{Name: util.Title(c.Type), V: p, FileId: r.FileId}, nil
 		}
 	}
-	return nil, fmt.Errorf("unknown ChartVal %s", n)
+	return nil, fmt.Errorf("unknown Value %s", n)
 }
 
-func Types() []string {
+func (r *Result) Types() []string {
 	return []string{INSTRUCTION, LINE, COMPLEXITY, METHOD, CLASS, BRANCH}
 }
 

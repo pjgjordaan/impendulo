@@ -37,8 +37,8 @@ import (
 )
 
 type (
-	//C is a Displayer used to display a source file's code.
-	C struct {
+	//Result is a Displayer used to display a source file's code.
+	Result struct {
 		FileId bson.ObjectId
 		Lang   project.Language
 		Data   string
@@ -51,54 +51,54 @@ const (
 )
 
 //New
-func New(fid bson.ObjectId, lang project.Language, data []byte) *C {
-	return &C{
+func New(fid bson.ObjectId, lang project.Language, data []byte) *Result {
+	return &Result{
 		FileId: fid,
 		Lang:   lang,
 		Data:   strings.TrimSpace(string(data)),
 	}
 }
 
-func (c *C) GetType() string {
+func (r *Result) GetType() string {
 	return NAME
 }
 
 //GetName
-func (c *C) GetName() string {
-	return c.GetType()
+func (r *Result) GetName() string {
+	return r.GetType()
 }
 
 //Reporter
-func (c *C) Reporter() result.Reporter {
-	return c
+func (r *Result) Reporter() result.Reporter {
+	return r
 }
 
-func (c *C) Template() string {
+func (r *Result) Template() string {
 	return "coderesult"
 }
 
-func (c *C) ChartVals() []*result.ChartVal {
-	return []*result.ChartVal{{Name: "Lines", Y: float64(c.Lines()), FileId: c.FileId}}
+func (r *Result) Values() []*result.Value {
+	return []*result.Value{{Name: "Lines", V: float64(r.Lines()), FileId: r.FileId}}
 }
 
-func (c *C) Lines() int64 {
-	lc, _ := wc.Lines(c.Data)
+func (r *Result) Lines() int64 {
+	lc, _ := wc.Lines(r.Data)
 	return lc
 }
 
-func (c *C) ChartVal(n string) (*result.ChartVal, error) {
+func (r *Result) Value(n string) (*result.Value, error) {
 	switch n {
 	case LINES:
-		return &result.ChartVal{Name: LINES, Y: float64(c.Lines()), FileId: c.FileId}, nil
+		return &result.Value{Name: LINES, V: float64(r.Lines()), FileId: r.FileId}, nil
 	default:
-		return nil, fmt.Errorf("unknown ChartVal %s", n)
+		return nil, fmt.Errorf("unknown Value %s", n)
 	}
 }
 
-func Types() []string {
+func (r *Result) Types() []string {
 	return []string{LINES}
 }
 
-func (c *C) GetFileId() bson.ObjectId {
-	return c.FileId
+func (r *Result) GetFileId() bson.ObjectId {
+	return r.FileId
 }

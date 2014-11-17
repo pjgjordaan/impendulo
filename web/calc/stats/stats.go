@@ -508,15 +508,15 @@ func Score(sid bson.ObjectId, n string, d *description.D) (float64, string, erro
 }
 
 func score(rid bson.ObjectId, r *description.D) (float64, string, error) {
-	c, e := db.Charter(bson.M{db.ID: rid}, nil)
+	vr, e := db.Valuer(bson.M{db.ID: rid}, nil)
 	if e != nil {
 		return -1, "", e
 	}
-	v, e := c.ChartVal(r.Metric)
+	v, e := vr.Value(r.Metric)
 	if e != nil {
 		return -1, "", e
 	}
-	return v.Y, "", nil
+	return v.V, "", nil
 }
 
 func lastResultId(sid bson.ObjectId, n string, r *description.D) (bson.ObjectId, error) {

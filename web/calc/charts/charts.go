@@ -55,7 +55,7 @@ type (
 	I      map[string]interface{}
 	avgVal struct {
 		count int
-		val   *result.ChartVal
+		val   *result.Value
 	}
 	O map[int]util.E
 )
@@ -95,7 +95,7 @@ func Tool(r *description.D, files []*project.File) (D, error) {
 		return c.Data, nil
 	}
 	for _, l := range ls {
-		v := []*result.ChartVal{&result.ChartVal{Name: "Launches", Y: 0.0, FileId: l.Id}}
+		v := []*result.Value{{Name: "Launches", V: 0.0, FileId: l.Id}}
 		c.Add(l.Time, v)
 	}
 	return c.Data, nil
@@ -106,26 +106,26 @@ func addAll(c *C, f *project.File) {
 		if _, e := convert.Id(id); e != nil {
 			continue
 		}
-		r, e := db.Charter(bson.M{db.ID: id}, nil)
+		v, e := db.Valuer(bson.M{db.ID: id}, nil)
 		if e != nil {
 			continue
 		}
-		c.Add(f.Time, r.ChartVals()[:1])
+		c.Add(f.Time, v.Values()[:1])
 	}
 	return
 }
 
 func addSingle(c *C, f *project.File) {
-	r, e := c.result.Charter(f)
+	v, e := c.result.Valuer(f)
 	if e != nil {
 		return
 	}
-	c.Add(f.Time, r.ChartVals())
+	c.Add(f.Time, v.Values())
 	return
 }
 
 //Add inserts new coordinates into data used to display a chart.
-func (c *C) Add(t int64, vs []*result.ChartVal) {
+func (c *C) Add(t int64, vs []*result.Value) {
 	if len(vs) == 0 {
 		return
 	}
@@ -134,7 +134,7 @@ func (c *C) Add(t int64, vs []*result.ChartVal) {
 	r := c.result.Key()
 	for i, v := range vs {
 		p := map[string]interface{}{
-			"x": x, "y": v.Y, "key": c.Key(v.Name), "name": v.Name,
+			"x": x, "y": v.V, "key": c.Key(v.Name), "name": v.Name,
 			"groupid": c.id, "user": c.user, "title": title,
 			"created": c.start, "time": t, "pos": i, "sid": c.sid, "rid": r,
 		}

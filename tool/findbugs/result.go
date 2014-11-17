@@ -98,32 +98,32 @@ func (r *Result) Lines() []*result.Line {
 	return r.Report.Lines()
 }
 
-//ChartVals
-func (r *Result) ChartVals() []*result.ChartVal {
-	return []*result.ChartVal{
-		&result.ChartVal{Name: "All", Y: float64(r.Report.Summary.BugCount), FileId: r.FileId},
-		&result.ChartVal{Name: "Priority 1", Y: float64(r.Report.Summary.Priority1), FileId: r.FileId},
-		&result.ChartVal{Name: "Priority 2", Y: float64(r.Report.Summary.Priority2), FileId: r.FileId},
-		&result.ChartVal{Name: "Priority 3", Y: float64(r.Report.Summary.Priority3), FileId: r.FileId},
+//Values
+func (r *Result) Values() []*result.Value {
+	return []*result.Value{
+		&result.Value{Name: "All", V: float64(r.Report.Summary.BugCount), FileId: r.FileId},
+		&result.Value{Name: "Priority 1", V: float64(r.Report.Summary.Priority1), FileId: r.FileId},
+		&result.Value{Name: "Priority 2", V: float64(r.Report.Summary.Priority2), FileId: r.FileId},
+		&result.Value{Name: "Priority 3", V: float64(r.Report.Summary.Priority3), FileId: r.FileId},
 	}
 }
 
-func (r *Result) ChartVal(n string) (*result.ChartVal, error) {
+func (r *Result) Value(n string) (*result.Value, error) {
 	switch n {
 	case ALL:
-		return &result.ChartVal{Name: ALL, Y: float64(r.Report.Summary.BugCount), FileId: r.FileId}, nil
+		return &result.Value{Name: ALL, V: float64(r.Report.Summary.BugCount), FileId: r.FileId}, nil
 	case P1:
-		return &result.ChartVal{Name: P1, Y: float64(r.Report.Summary.Priority1), FileId: r.FileId}, nil
+		return &result.Value{Name: P1, V: float64(r.Report.Summary.Priority1), FileId: r.FileId}, nil
 	case P2:
-		return &result.ChartVal{Name: P2, Y: float64(r.Report.Summary.Priority2), FileId: r.FileId}, nil
+		return &result.Value{Name: P2, V: float64(r.Report.Summary.Priority2), FileId: r.FileId}, nil
 	case P3:
-		return &result.ChartVal{Name: P3, Y: float64(r.Report.Summary.Priority3), FileId: r.FileId}, nil
+		return &result.Value{Name: P3, V: float64(r.Report.Summary.Priority3), FileId: r.FileId}, nil
 	default:
-		return nil, fmt.Errorf("unknown ChartVal %s", n)
+		return nil, fmt.Errorf("unknown Value %s", n)
 	}
 }
 
-func Types() []string {
+func (r *Result) Types() []string {
 	return []string{ALL, P1, P2, P3}
 }
 

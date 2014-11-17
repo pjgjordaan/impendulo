@@ -104,26 +104,26 @@ func (r *Result) Reporter() result.Reporter {
 	return r.Report
 }
 
-//ChartVals
-func (r *Result) ChartVals() []*result.ChartVal {
-	return []*result.ChartVal{
-		&result.ChartVal{Name: TOTAL, Y: float64(r.Report.Total), FileId: r.FileId},
-		&result.ChartVal{Name: UNIQUE, Y: float64(r.Report.ErrorCount()), FileId: r.FileId},
+//Values
+func (r *Result) Values() []*result.Value {
+	return []*result.Value{
+		&result.Value{Name: TOTAL, V: float64(r.Report.Total), FileId: r.FileId},
+		&result.Value{Name: UNIQUE, V: float64(r.Report.ErrorCount()), FileId: r.FileId},
 	}
 }
 
-func (r *Result) ChartVal(n string) (*result.ChartVal, error) {
+func (r *Result) Value(n string) (*result.Value, error) {
 	switch n {
 	case TOTAL:
-		return &result.ChartVal{Name: TOTAL, Y: float64(r.Report.Total), FileId: r.FileId}, nil
+		return &result.Value{Name: TOTAL, V: float64(r.Report.Total), FileId: r.FileId}, nil
 	case UNIQUE:
-		return &result.ChartVal{Name: UNIQUE, Y: float64(r.Report.ErrorCount()), FileId: r.FileId}, nil
+		return &result.Value{Name: UNIQUE, V: float64(r.Report.ErrorCount()), FileId: r.FileId}, nil
 	default:
-		return nil, fmt.Errorf("unknown ChartVal %s", n)
+		return nil, fmt.Errorf("unknown Value %s", n)
 	}
 }
 
-func Types() []string {
+func (r *Result) Types() []string {
 	return []string{TOTAL, UNIQUE}
 }
 

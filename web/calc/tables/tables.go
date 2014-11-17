@@ -38,8 +38,11 @@ import (
 )
 
 type (
-	T     []map[string]interface{}
-	pname map[bson.ObjectId]string
+	T      []map[string]interface{}
+	idname struct {
+		m map[bson.ObjectId]string
+		t string
+	}
 )
 
 var (
@@ -100,7 +103,7 @@ func Assignment(as []*project.Assignment, ds description.Ds) (T, error) {
 	}
 	t := New()
 	c := stats.NewCalc()
-	pns := make(pname)
+	pns := _idname("project")
 	for _, a := range as {
 		pn := pns.get(a.ProjectId)
 		if pn == "" {
@@ -126,15 +129,20 @@ func Submission(ss []*project.Submission, ds description.Ds) (T, error) {
 	}
 	t := New()
 	c := stats.NewCalc()
-	pns := make(pname)
+	pns := _idname("project")
+	ans := _idname("assignment")
 	for _, s := range ss {
 		pn := pns.get(s.ProjectId)
 		if pn == "" {
 			continue
 		}
+		an := ans.get(s.AssignmentId)
+		if pn == "" {
+			continue
+		}
 		if vs, ns, e := c.Submission(s, ds); e == nil {
 			p := map[string]interface{}{
-				"id": s.Id.Hex(), "user": s.User, "project": pn, "start date": milliseconds.DateString(s.Time), "start time": milliseconds.TimeString(s.Time),
+				"id": s.Id.Hex(), "assignment": an, "user": s.User, "project": pn, "start date": milliseconds.DateString(s.Time), "start time": milliseconds.TimeString(s.Time),
 			}
 			for i, v := range vs {
 				p[ds[i].Raw()] = map[string]interface{}{"value": v, "unit": ns[i]}
@@ -155,6 +163,10 @@ func File(fs []*project.File, ds description.Ds) (T, error) {
 	if e != nil {
 		return nil, e
 	}
+	a, e := db.Assignment(bson.M{db.ID: s.AssignmentId}, nil)
+	if e != nil {
+		return nil, e
+	}
 	pn, e := db.ProjectName(s.ProjectId)
 	if e != nil {
 		return nil, e
@@ -162,7 +174,7 @@ func File(fs []*project.File, ds description.Ds) (T, error) {
 	for _, f := range fs {
 		if vs, ns, e := c.File(f, ds); e == nil {
 			p := map[string]interface{}{
-				"id": f.Name, "name": f.Name, "package": f.Package, "type": f.Type.Title(), "user": s.User, "project": pn, "date": milliseconds.DateString(f.Time), "time": milliseconds.TimeString(f.Time),
+				"id": f.Name, "name": f.Name, "package": f.Package, "type": f.Type.Title(), "assignment": a.Name, "user": s.User, "project": pn, "date": milliseconds.DateString(f.Time), "time": milliseconds.TimeString(f.Time),
 			}
 			for i, v := range vs {
 				p[ds[i].Raw()] = map[string]interface{}{"value": v, "unit": ns[i]}
@@ -174,11 +186,11 @@ func File(fs []*project.File, ds description.Ds) (T, error) {
 }
 
 func FileFields() description.Ds {
-	return description.Ds{{Type: "id"}, {Type: "name"}, {Type: "package"}, {Type: "type"}, {Type: "user"}, {Type: "project"}, {Type: "date"}, {Type: "time"}}
+	return description.Ds{{Type: "id"}, {Type: "name"}, {Type: "package"}, {Type: "type"}, {Type: "assignment"}, {Type: "user"}, {Type: "project"}, {Type: "date"}, {Type: "time"}}
 }
 
 func SubmissionFields() description.Ds {
-	return description.Ds{{Type: "id"}, {Type: "user"}, {Type: "project"}, {Type: "start date"}, {Type: "start time"}}
+	return description.Ds{{Type: "id"}, {Type: "assignment"}, {Type: "user"}, {Type: "project"}, {Type: "start date"}, {Type: "start time"}}
 }
 
 func AssignmentFields() description.Ds {
@@ -204,11 +216,24 @@ func OverviewFields(t string) []*description.D {
 	}
 }
 
-func (p pname) get(id bson.ObjectId) string {
-	n, ok := p[id]
+func _idname(t string) *idname {
+	return &idname{t: t, m: make(map[bson.ObjectId]string)}
+}
+
+func (i idname) get(id bson.ObjectId) string {
+	n, ok := i.m[id]
 	if ok {
 		return n
 	}
-	p[id], _ = db.ProjectName(id)
-	return p[id]
+	switch i.t {
+	case "project":
+		i.m[id], _ = db.ProjectName(id)
+	case "assignment":
+		a, e := db.Assignment(bson.M{db.ID: id}, bson.M{db.NAME: 1})
+		if e != nil {
+			return ""
+		}
+		i.m[id] = a.Name
+	}
+	return i.m[id]
 }

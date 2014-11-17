@@ -12,31 +12,40 @@ import (
 	"github.com/godfried/impendulo/tool/jpf"
 	"github.com/godfried/impendulo/tool/junit"
 	"github.com/godfried/impendulo/tool/pmd"
+	"github.com/godfried/impendulo/tool/result"
 
 	"strings"
 )
 
 func Types(r string) ([]string, error) {
+	v, e := Valuer(r)
+	if e != nil {
+		return nil, e
+	}
+	return v.Types(), nil
+}
+
+func Valuer(r string) (result.Valuer, error) {
 	switch r {
 	case pmd.NAME:
-		return pmd.Types(), nil
+		return &pmd.Result{}, nil
 	case javac.NAME:
-		return javac.Types(), nil
+		return &javac.Result{}, nil
 	case checkstyle.NAME:
-		return checkstyle.Types(), nil
+		return &checkstyle.Result{}, nil
 	case jpf.NAME:
-		return jpf.Types(), nil
+		return &jpf.Result{}, nil
 	case gcc.NAME:
-		return gcc.Types(), nil
+		return &gcc.Result{}, nil
 	case code.NAME:
-		return code.Types(), nil
+		return &code.Result{}, nil
 	case findbugs.NAME:
-		return findbugs.Types(), nil
+		return &findbugs.Result{}, nil
 	default:
 		if strings.HasPrefix(r, jacoco.NAME) {
-			return jacoco.Types(), nil
+			return &jacoco.Result{}, nil
 		} else if strings.HasPrefix(r, junit.NAME) {
-			return junit.Types(), nil
+			return &junit.Result{}, nil
 		}
 		return nil, fmt.Errorf("unknown result type %s", r)
 	}

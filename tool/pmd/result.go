@@ -95,23 +95,23 @@ func (r *Result) Success() bool {
 	return true
 }
 
-//ChartVals gets the number of errors found by PMD.
-func (r *Result) ChartVals() []*result.ChartVal {
-	return []*result.ChartVal{
-		&result.ChartVal{Name: ERRORS, Y: float64(r.Report.Errors), FileId: r.FileId},
+//Values gets the number of errors found by PMD.
+func (r *Result) Values() []*result.Value {
+	return []*result.Value{
+		&result.Value{Name: ERRORS, V: float64(r.Report.Errors), FileId: r.FileId},
 	}
 }
 
-func (r *Result) ChartVal(n string) (*result.ChartVal, error) {
+func (r *Result) Value(n string) (*result.Value, error) {
 	switch n {
 	case ERRORS:
-		return &result.ChartVal{Name: ERRORS, Y: float64(r.Report.Errors), FileId: r.FileId}, nil
+		return &result.Value{Name: ERRORS, V: float64(r.Report.Errors), FileId: r.FileId}, nil
 	default:
-		return nil, fmt.Errorf("unknown ChartVal %s", n)
+		return nil, fmt.Errorf("unknown Value %s", n)
 	}
 }
 
-func Types() []string {
+func (r *Result) Types() []string {
 	return []string{ERRORS}
 }
 

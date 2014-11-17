@@ -94,29 +94,29 @@ func (r *Result) Reporter() result.Reporter {
 	return r.Report
 }
 
-//ChartVals
-func (r *Result) ChartVals() []*result.ChartVal {
-	return []*result.ChartVal{
-		&result.ChartVal{Name: FAILURES, Y: float64(len(r.Report.Failures)), FileId: r.FileId},
-		&result.ChartVal{Name: ERRORS, Y: float64(len(r.Report.Errors)), FileId: r.FileId},
-		&result.ChartVal{Name: PASSED, Y: float64(r.Report.Passed()), FileId: r.FileId},
+//Values
+func (r *Result) Values() []*result.Value {
+	return []*result.Value{
+		&result.Value{Name: FAILURES, V: float64(len(r.Report.Failures)), FileId: r.FileId},
+		&result.Value{Name: ERRORS, V: float64(len(r.Report.Errors)), FileId: r.FileId},
+		&result.Value{Name: PASSED, V: float64(r.Report.Passed()), FileId: r.FileId},
 	}
 }
 
-func (r *Result) ChartVal(n string) (*result.ChartVal, error) {
+func (r *Result) Value(n string) (*result.Value, error) {
 	switch n {
 	case FAILURES:
-		return &result.ChartVal{Name: FAILURES, Y: float64(len(r.Report.Failures)), FileId: r.FileId}, nil
+		return &result.Value{Name: FAILURES, V: float64(len(r.Report.Failures)), FileId: r.FileId}, nil
 	case ERRORS:
-		return &result.ChartVal{Name: ERRORS, Y: float64(len(r.Report.Errors)), FileId: r.FileId}, nil
+		return &result.Value{Name: ERRORS, V: float64(len(r.Report.Errors)), FileId: r.FileId}, nil
 	case PASSED:
-		return &result.ChartVal{Name: PASSED, Y: float64(r.Report.Passed()), FileId: r.FileId}, nil
+		return &result.Value{Name: PASSED, V: float64(r.Report.Passed()), FileId: r.FileId}, nil
 	default:
-		return nil, fmt.Errorf("unknown ChartVal %s", n)
+		return nil, fmt.Errorf("unknown Value %s", n)
 	}
 }
 
-func Types() []string {
+func (r *Result) Types() []string {
 	return []string{FAILURES, ERRORS, PASSED}
 }
 

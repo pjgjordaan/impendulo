@@ -34,13 +34,17 @@ import (
 )
 
 type (
-	//Target stores information about the target file.
+	//Target stores information about a target file.
 	Target struct {
-		Name    string
+		//Name of the file. Example: ~/dir/package/File.java -> File
+		Name string
+		//The file's package. Example: ~/dir/package/File.java -> package
 		Package string
-		Ext     string
-		Dir     string
-		Lang    project.Language
+		//The file's extension. Example: ~/dir/package/File.java -> java
+		Ext string
+		//The file's directory (not including the package). Example: ~/dir/package/File.java -> ~/dir
+		Dir  string
+		Lang project.Language
 	}
 )
 

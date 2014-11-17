@@ -136,14 +136,14 @@ func (d *D) Check(pid bson.ObjectId) {
 	d.Set(code.NAME)
 }
 
-func (d *D) Charter(f *project.File) (result.Charter, error) {
+func (d *D) Valuer(f *project.File) (result.Valuer, error) {
 	if _, e := convert.Id(f.Results[d.Key()]); e != nil {
-		return d.charter(f)
+		return d.valuer(f)
 	}
-	return db.Charter(bson.M{db.ID: f.Results[d.Key()]}, nil)
+	return db.Valuer(bson.M{db.ID: f.Results[d.Key()]}, nil)
 }
 
-func (d *D) charter(f *project.File) (result.Charter, error) {
+func (d *D) valuer(f *project.File) (result.Valuer, error) {
 	switch d.Type {
 	case code.NAME:
 		fd, e := db.File(bson.M{db.ID: f.Id}, nil)
@@ -152,7 +152,7 @@ func (d *D) charter(f *project.File) (result.Charter, error) {
 		}
 		return code.New(fd.Id, project.JAVA, fd.Data), nil
 	default:
-		return nil, fmt.Errorf("not a charter %s", d.Type)
+		return nil, fmt.Errorf("not a valuer %s", d.Type)
 	}
 }
 
