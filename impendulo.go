@@ -83,7 +83,6 @@ func init() {
 	pFlags.UintVar(&mProcs, "mp", processor.MAX_PROCS, fmt.Sprintf("Specify the maximum number of goroutines to run when processing submissions (default %d).", processor.MAX_PROCS))
 
 	rFlags.UintVar(&tcpPort, "p", receiver.PORT, fmt.Sprintf("Specify the port to listen on for files using TCP (default %d).", receiver.PORT))
-
 	wFlags.UintVar(&httpPort, "p", web.PORT, fmt.Sprintf("Specify the port to use for the webserver (default %d).", web.PORT))
 }
 

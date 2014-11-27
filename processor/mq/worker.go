@@ -226,6 +226,11 @@ func (m *MessageHandler) Handle() error {
 	return nil
 }
 
+func (m *MessageHandler) DeleteQueue() error {
+	_, e := m.ch.QueueDelete(m.queue, false, false, false)
+	return e
+}
+
 func (m *MessageHandler) Shutdown() error {
 	if e := m.ch.Close(); e != nil {
 		return e
@@ -253,11 +258,6 @@ func (s *Submitter) Consume(d amqp.Delivery, ch *amqp.Channel) (e error) {
 	}
 	s.requestChan <- r
 	return
-}
-
-func (s *Starter) Consume(d amqp.Delivery, ch *amqp.Channel) error {
-	d.Ack(false)
-	return Reply(ch, d, []byte(s.key))
 }
 
 func (c *Changer) Consume(d amqp.Delivery, ch *amqp.Channel) (e error) {
@@ -345,17 +345,12 @@ func NewRedoer(rc chan *request.R) (*MessageHandler, error) {
 	return NewHandler(amqpURI, "submission_exchange", DIRECT, "redo_queue", "", &Redoer{requestChan: rc}, "redo_key")
 }
 
-func NewSubmitter(rc chan *request.R) (*MessageHandler, *MessageHandler, error) {
-	k := bson.NewObjectId().String()
-	su, e := NewHandler(amqpURI, "submission_exchange", DIRECT, "", "", &Submitter{requestChan: rc}, k)
-	if e != nil {
-		return nil, nil, e
-	}
-	st, e := NewHandler(amqpURI, "submission_exchange", DIRECT, "", "", &Starter{key: k}, "submission_key")
-	if e != nil {
-		return nil, nil, e
-	}
-	return su, st, nil
+func NewSubmitter(rc chan *request.R) (*MessageHandler, error) {
+	return NewHandler(amqpURI, "submission_exchange", DIRECT, "submission_queue", "", &Submitter{requestChan: rc}, "submission_key")
+}
+
+func NewFiler(rc chan *request.R, sid bson.ObjectId) (*MessageHandler, error) {
+	return NewHandler(amqpURI, "submission_exchange", DIRECT, "file_queue_"+sid.Hex(), "", &Submitter{requestChan: rc}, "file_key_"+sid.Hex())
 }
 
 func NewWaiter(c chan util.E) (*MessageHandler, error) {

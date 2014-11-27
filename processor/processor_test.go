@@ -2,7 +2,7 @@ package processor
 
 import (
 	"github.com/godfried/impendulo/db"
-	"github.com/godfried/impendulo/processor/file"
+	"github.com/godfried/impendulo/processor/worker/file"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/junit"
@@ -21,7 +21,7 @@ func TestProcessFile(t *testing.T) {
 	if e := db.Add(db.PROJECTS, p); e != nil {
 		t.Error(e)
 	}
-	a := project.NewAssignment(p.Id, "Honours 2014", "User", 1000, 10000)
+	a := project.NewAssignment(p.Id, bson.NewObjectId(), "Honours 2014", "User", 1000, 10000)
 	if e := db.Add(db.ASSIGNMENTS, a); e != nil {
 		t.Error(e)
 	}

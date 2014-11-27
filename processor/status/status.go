@@ -51,6 +51,10 @@ func NewSubInfo() *SubInfo {
 	return &SubInfo{Src: util.NewSet(), Test: util.NewSet(), Archive: util.NewSet()}
 }
 
+func (s *SubInfo) FileCount() int {
+	return len(s.Src) + len(s.Test) + len(s.Archive)
+}
+
 func (s *SubInfo) Empty() bool {
 	return len(s.Src) == 0 && len(s.Test) == 0 && len(s.Archive) == 0
 }

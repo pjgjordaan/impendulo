@@ -53,7 +53,6 @@ func th(mh *MessageHandler, t *testing.T) {
 }
 
 func init() {
-	fmt.Sprint(time.Now(), project.Project{}, strconv.Itoa(1), bson.NewObjectId())
 	util.SetErrorLogging("a")
 	util.SetInfoLogging("f")
 }
@@ -66,16 +65,14 @@ func (bc *BasicConsumer) Consume(d amqp.Delivery, ch *amqp.Channel) error {
 
 func basicStatus() (status.S, bson.ObjectId) {
 	sid := bson.NewObjectId().Hex()
-	sm := map[string]map[string]util.E{
-		sid: {
-			bson.NewObjectId().Hex(): util.E{},
-			bson.NewObjectId().Hex(): util.E{},
-			bson.NewObjectId().Hex(): util.E{},
-			bson.NewObjectId().Hex(): util.E{},
-			bson.NewObjectId().Hex(): util.E{},
+	sm := map[string]*status.SubInfo{
+		sid: &status.SubInfo{
+			Src:     util.NewSet(bson.NewObjectId().Hex(), bson.NewObjectId().Hex(), bson.NewObjectId().Hex(), bson.NewObjectId().Hex(), bson.NewObjectId().Hex()),
+			Archive: util.NewSet(),
+			Test:    util.NewSet(),
 		},
 	}
-	return status.S{FileCount: len(sm[sid]), Submissions: sm}, bson.ObjectIdHex(sid)
+	return status.S{FileCount: sm[sid].FileCount(), Submissions: sm}, bson.ObjectIdHex(sid)
 }
 
 func TestWaitIdle(t *testing.T) {
@@ -90,8 +87,12 @@ func TestWaitIdle(t *testing.T) {
 		for s.FileCount > 0 {
 			<-wChan
 			wChan <- util.E{}
-			for k, _ := range s.Submissions[sid.Hex()] {
-				s.Update(request.RemoveFile(bson.ObjectIdHex(k), sid))
+			for k, _ := range s.Submissions[sid.Hex()].Src {
+				r, e := request.RemoveFile(&project.File{Id: bson.ObjectIdHex(k), SubId: sid, Type: project.SRC})
+				if e != nil {
+					t.Error(e)
+				}
+				s.Update(r)
 				break
 			}
 		}
@@ -105,7 +106,7 @@ func TestWaitIdle(t *testing.T) {
 	if e = w.Shutdown(); e != nil {
 		t.Error(e)
 	}
-	if e = StopProducers(); e != nil {
+	if e = ShutdownProducers(); e != nil {
 		t.Error(e)
 	}
 }
@@ -131,7 +132,7 @@ func TestGetStatus(t *testing.T) {
 	if e = sl.Shutdown(); e != nil {
 		t.Error(e)
 	}
-	if e = StopProducers(); e != nil {
+	if e = ShutdownProducers(); e != nil {
 		t.Error(e)
 	}
 }
@@ -139,10 +140,10 @@ func TestGetStatus(t *testing.T) {
 func TestSubmitter(t *testing.T) {
 	n := 100
 	requestChan := make(chan *request.R)
-	handlers := make([]*MessageHandler, 2*n)
+	handlers := make([]*MessageHandler, n)
 	var e error
 	for i := 0; i < n; i++ {
-		if handlers[2*i+1], handlers[2*i], e = NewSubmitter(requestChan); e != nil {
+		if handlers[i], e = NewSubmitter(requestChan); e != nil {
 			t.Error(e)
 		}
 	}
@@ -163,10 +164,9 @@ func TestSubmitter(t *testing.T) {
 		}
 	}()
 	ids := make([]bson.ObjectId, n)
-	keys := make([]string, n)
 	for i := 0; i < n; i++ {
 		ids[i] = bson.NewObjectId()
-		if keys[i], e = StartSubmission(ids[i]); e != nil {
+		if e = StartSubmission(ids[i]); e != nil {
 			t.Error(e)
 		}
 	}
@@ -183,8 +183,8 @@ func TestSubmitter(t *testing.T) {
 			}
 		}
 	}()
-	for i, id := range ids {
-		if e = EndSubmission(id, keys[i]); e != nil {
+	for _, id := range ids {
+		if e = EndSubmission(id); e != nil {
 			t.Error(e)
 		}
 	}
@@ -193,7 +193,7 @@ func TestSubmitter(t *testing.T) {
 			t.Error(e)
 		}
 	}
-	if e = StopProducers(); e != nil {
+	if e = ShutdownProducers(); e != nil {
 		t.Error(e)
 	}
 }
@@ -234,7 +234,7 @@ func TestStatusChange(t *testing.T) {
 			t.Error(e)
 		}
 	}
-	if e = StopProducers(); e != nil {
+	if e = ShutdownProducers(); e != nil {
 		t.Error(e)
 	}
 }
@@ -260,7 +260,7 @@ func TestAMQPBasic(t *testing.T) {
 	if e = handler.Shutdown(); e != nil {
 		t.Error(e)
 	}
-	if e = StopProducers(); e != nil {
+	if e = ShutdownProducers(); e != nil {
 		t.Error(e)
 	}
 }
@@ -296,7 +296,7 @@ func TestAMQPQueue(t *testing.T) {
 			t.Error(e)
 		}
 	}
-	if e = StopProducers(); e != nil {
+	if e = ShutdownProducers(); e != nil {
 		t.Error(e)
 	}
 }

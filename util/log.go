@@ -99,6 +99,9 @@ func (l *Logger) setLogging(s string) {
 		l.file = true
 	case "c":
 		l.console = true
+	default:
+		l.file = false
+		l.console = false
 	}
 }
 

@@ -25,6 +25,7 @@
 package file
 
 import (
+	"container/list"
 	"fmt"
 
 	"github.com/godfried/impendulo/config"
@@ -44,14 +45,16 @@ import (
 
 type (
 	Worker struct {
-		submission *project.Submission
-		project    *project.P
-		rootDir    string
-		srcDir     string
-		toolDir    string
-		jpwath     string
-		compiler   tool.Compiler
-		tools      []tool.T
+		submission  *project.Submission
+		project     *project.P
+		rootDir     string
+		srcDir      string
+		toolDir     string
+		jpwath      string
+		compiler    tool.Compiler
+		tools       []tool.T
+		filer       *mq.MessageHandler
+		requestChan chan *request.R
 	}
 )
 
@@ -71,12 +74,19 @@ func New(sid bson.ObjectId) (*Worker, error) {
 		return nil, e
 	}
 	d := filepath.Join(os.TempDir(), s.Id.Hex())
+	rc := make(chan *request.R)
+	f, e := mq.NewFiler(rc, sid)
+	if e != nil {
+		return nil, e
+	}
 	w := &Worker{
-		submission: s,
-		project:    p,
-		rootDir:    d,
-		srcDir:     filepath.Join(d, "src"),
-		toolDir:    filepath.Join(d, "tools"),
+		submission:  s,
+		project:     p,
+		rootDir:     d,
+		srcDir:      filepath.Join(d, "src"),
+		toolDir:     filepath.Join(d, "tools"),
+		filer:       f,
+		requestChan: rc,
 	}
 	//Can't proceed without our compiler
 	w.compiler, e = Compiler(w)
@@ -91,21 +101,40 @@ func New(sid bson.ObjectId) (*Worker, error) {
 }
 
 //Start listens for a submission's incoming files and processes them.
-func (w *Worker) Start(fc chan bson.ObjectId, dc chan util.E) {
+func (w *Worker) Start(done chan util.E) {
+	if e := mq.ChangeStatus(request.StartSubmission(w.submission.Id)); e != nil {
+		util.Log(e)
+	}
 	util.Log("Processing submission", w.submission, LOG_F)
+	go mq.H(w.filer)
+	defer func() {
+		done <- util.E{}
+		if e := mq.ChangeStatus(request.StopSubmission(w.submission.Id)); e != nil {
+			util.Log(e, LOG_F)
+		}
+		w.filer.DeleteQueue()
+		w.filer.Shutdown()
+	}()
+	tq := list.New()
 	//Processing loop.
-processing:
 	for {
-		select {
-		case fid := <-fc:
-			if e := w.Process(fid); e != nil {
+		r := <-w.requestChan
+		switch r.Type {
+		case request.SUBMISSION_STOP:
+			break
+		case request.SRC_ADD, request.ARCHIVE_ADD:
+			if e := w.Process(r.FileId); e != nil {
 				util.Log(e, LOG_F)
 			}
-			//Indicate that we are finished with the file.
-			fc <- fid
-		case <-dc:
-			//We are done so time to exit.
-			break processing
+		case request.TEST_ADD:
+			tq.PushBack(r.FileId)
+		}
+
+	}
+	for e := tq.Front(); e != nil; e = e.Next() {
+		fid := e.Value.(bson.ObjectId)
+		if e := w.Process(fid); e != nil {
+			util.Log(e, LOG_F)
 		}
 	}
 	if e := db.UpdateTime(w.submission); e != nil {
@@ -116,6 +145,15 @@ processing:
 }
 
 func (w *Worker) Process(fid bson.ObjectId) error {
+	e := w.process(fid)
+	e2 := removeFile(fid)
+	if e == nil && e2 != nil {
+		e = e2
+	}
+	return e
+}
+
+func (w *Worker) process(fid bson.ObjectId) error {
 	//Retrieve file and process it.
 	f, e := db.File(bson.M{db.ID: fid}, nil)
 	if e != nil {
@@ -203,8 +241,7 @@ func (w *Worker) archive(name string, data []byte) error {
 	if e := mq.ChangeStatus(r); e != nil {
 		return e
 	}
-	e = w.Process(f.Id)
-	if r, e = request.RemoveFile(f); e != nil {
+	if e = w.Process(f.Id); e != nil {
 		return e
 	}
 	if se := mq.ChangeStatus(r); e == nil && se != nil {
@@ -246,4 +283,22 @@ func (w *Worker) ResultName(t tool.T) string {
 
 func (w *Worker) Tools() []tool.T {
 	return w.tools
+}
+
+func removeFile(fid bson.ObjectId) error {
+	f, e := db.File(bson.M{db.ID: fid}, db.FILE_SELECTOR)
+	if e != nil {
+		return e
+	}
+	r, e := request.RemoveFile(f)
+	if e != nil {
+		return e
+	}
+	if e = mq.ChangeStatus(r); e != nil {
+		return e
+	}
+	if r.Type != request.ARCHIVE_REMOVE {
+		return nil
+	}
+	return db.RemoveFileById(fid)
 }

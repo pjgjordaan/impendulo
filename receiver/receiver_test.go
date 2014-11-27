@@ -89,7 +89,7 @@ func addData(numUsers uint) (map[string]string, error) {
 	if e := db.Add(db.PROJECTS, p); e != nil {
 		return nil, e
 	}
-	if e := db.Add(db.ASSIGNMENTS, project.NewAssignment(p.Id, "an assignment", "user", util.CurMilis(), util.CurMilis()+10000)); e != nil {
+	if e := db.Add(db.ASSIGNMENTS, project.NewAssignment(p.Id, bson.NewObjectId(), "an assignment", "user", util.CurMilis(), util.CurMilis()+10000)); e != nil {
 		return nil, e
 	}
 	users := make(map[string]string, numUsers)

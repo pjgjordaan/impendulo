@@ -27,14 +27,13 @@
 package processor
 
 import (
-	"container/list"
 	"fmt"
 
 	"github.com/godfried/impendulo/processor/monitor"
 	"github.com/godfried/impendulo/processor/mq"
 	"github.com/godfried/impendulo/processor/request"
+	"github.com/godfried/impendulo/processor/worker/file"
 	"github.com/godfried/impendulo/util"
-	"labix.org/v2/mgo/bson"
 
 	"runtime"
 )
@@ -47,7 +46,7 @@ type (
 		requestChan   chan *request.R
 		processedChan chan util.E
 		//submitter listens for messages on AMQP which indicate that a submission has started.
-		redoer, starter, submitter *mq.MessageHandler
+		redoer, submitter *mq.MessageHandler
 	}
 )
 
@@ -88,7 +87,7 @@ func Shutdown() error {
 //AMQP URI.
 func NewServer(maxProcs uint) (*Server, error) {
 	rc := make(chan *request.R)
-	sm, st, e := mq.NewSubmitter(rc)
+	s, e := mq.NewSubmitter(rc)
 	if e != nil {
 		return nil, e
 	}
@@ -100,8 +99,7 @@ func NewServer(maxProcs uint) (*Server, error) {
 		maxProcs:      maxProcs,
 		requestChan:   rc,
 		processedChan: make(chan util.E),
-		submitter:     sm,
-		starter:       st,
+		submitter:     s,
 		redoer:        r,
 	}, nil
 }
@@ -109,64 +107,29 @@ func NewServer(maxProcs uint) (*Server, error) {
 //Serve spawns new processing routines for each submission started.
 //Added files are received here and then sent to the relevant submission goroutine.
 func (s *Server) Serve() {
-	go mq.H(s.starter)
 	go mq.H(s.submitter)
 	go mq.H(s.redoer)
-	hm := make(map[bson.ObjectId]*Handler)
-	sq := list.New()
 	var busy uint = 0
 	//Begin monitoring processing status
 	for {
-		if busy < s.maxProcs && sq.Len() > 0 {
-			//If there is an available spot,
-			//start processing the next submission.
-			sid := sq.Remove(sq.Front()).(bson.ObjectId)
-			h := hm[sid]
-			h.started = true
-			if h.done {
-				delete(hm, sid)
-			}
-			go h.Handle(s.processedChan)
-			busy++
-		} else if busy < 0 {
+		if busy < 0 {
 			//This will only occur when Shutdown() has been called and
 			//all submissions have been completed and processed.
 			break
 		}
+		for busy >= s.maxProcs {
+			<-s.processedChan
+			busy--
+		}
 		select {
 		case r := <-s.requestChan:
-			h, ok := hm[r.SubId]
 			switch r.Type {
-			case request.SUBMISSION_STOP:
-				if !ok {
-					util.Log(fmt.Errorf("no submission %q found to end", r.SubId))
-				} else {
-					//If the submission has finished, set the submission's Handler to done
-					//and if it has already started, remove it from the queue.
-					h.SetDone()
-					if h.started {
-						delete(hm, r.SubId)
-					}
-				}
 			case request.SUBMISSION_START:
-				if ok {
-					util.Log(fmt.Errorf("submission %s already started", r.SubId))
+				w, e := file.New(r.SubId)
+				if e != nil {
+					util.Log(e)
 				} else {
-					//This is a new submission so we initialise it.
-					sq.PushBack(r.SubId)
-					hm[r.SubId] = NewHandler(r.SubId)
-					if e := mq.ChangeStatus(r); e != nil {
-						util.Log(e)
-					}
-				}
-			case request.SRC_ADD, request.ARCHIVE_ADD, request.TEST_ADD:
-				if !ok {
-					util.Log(fmt.Errorf("no submission %s found for file %s", r.SubId, r.FileId))
-				} else {
-					h.AddFile(r)
-					if e := mq.ChangeStatus(r); e != nil {
-						util.Log(e)
-					}
+					go w.Start(s.processedChan)
 				}
 			default:
 				util.Log(fmt.Errorf("unsupported request type %d", r.Type))
@@ -182,9 +145,6 @@ func (s *Server) Serve() {
 func (s *Server) Shutdown() error {
 	s.processedChan <- util.E{}
 	if e := s.submitter.Shutdown(); e != nil {
-		return e
-	}
-	if e := s.starter.Shutdown(); e != nil {
 		return e
 	}
 	return s.redoer.Shutdown()

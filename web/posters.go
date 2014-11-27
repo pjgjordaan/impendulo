@@ -188,14 +188,13 @@ func AddArchive(r *http.Request, c *context.C) (string, error) {
 	if e = db.Add(db.FILES, f); e != nil {
 		return "Could not store archive.", e
 	}
-	k, e := mq.StartSubmission(s.Id)
-	if e != nil {
+	if e := mq.StartSubmission(s.Id); e != nil {
 		return "Could not start archive submission.", e
 	}
-	if e = mq.AddFile(f, k); e != nil {
+	if e = mq.AddFile(f); e != nil {
 		return "Could not submit archive.", e
 	}
-	if e = mq.EndSubmission(s.Id, k); e != nil {
+	if e = mq.EndSubmission(s.Id); e != nil {
 		return "Could not complete archive submission.", e
 	}
 	return "Archive submitted successfully.", nil

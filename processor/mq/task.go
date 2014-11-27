@@ -290,13 +290,13 @@ func GetStatus() (*status.S, error) {
 }
 
 //FileProducer
-func FileProducer(amqpURI string, fileKey string) (*Producer, error) {
-	return NewProducer("file_producer_"+fileKey, amqpURI, "submission_exchange", DIRECT, fileKey)
+func FileProducer(amqpURI string, sid bson.ObjectId) (*Producer, error) {
+	return NewProducer("file_producer_"+sid.Hex(), amqpURI, "submission_exchange", DIRECT, "file_key_"+sid.Hex())
 }
 
 //AddFile
-func AddFile(f *project.File, k string) error {
-	p, e := FileProducer(amqpURI, k)
+func AddFile(f *project.File) error {
+	p, e := FileProducer(amqpURI, f.SubId)
 	if e != nil {
 		return e
 	}
@@ -316,36 +316,27 @@ func AddFile(f *project.File, k string) error {
 }
 
 //StartProducer creates a new Producer which is used to signal the start or end of a submission.
-func StartProducer(amqpURI string) (*ReceiveProducer, error) {
-	id := bson.NewObjectId().String()
-	return NewReceiveProducer("submission_producer_"+id, amqpURI, "submission_exchange", DIRECT, "submission_key", id, "")
+func StartProducer(amqpURI string) (*Producer, error) {
+	return NewProducer("submission_producer", amqpURI, "submission_exchange", DIRECT, "submission_key")
 }
 
 //StartSubmission
-func StartSubmission(id bson.ObjectId) (string, error) {
+func StartSubmission(id bson.ObjectId) error {
 	p, e := StartProducer(amqpURI)
 	if e != nil {
-		return "", e
+		return e
 	}
 	m, e := json.Marshal(request.StartSubmission(id))
 	if e != nil {
-		return "", e
+		return e
 	}
-	d, e := p.ReceiveProduce([]byte{})
-	if e != nil {
-		return "", e
-	}
-	p.publishKey = string(d)
-	if e = p.Produce(m); e != nil {
-		return "", e
-	}
-	return p.publishKey, nil
+	return p.Produce(m)
 }
 
 //EndSubmission sends a message on AMQP that this submission has been completed by the user
 //and can thus be closed when processing is done.
-func EndSubmission(id bson.ObjectId, k string) error {
-	p, e := FileProducer(amqpURI, k)
+func EndSubmission(id bson.ObjectId) error {
+	p, e := FileProducer(amqpURI, id)
 	if e != nil {
 		return e
 	}

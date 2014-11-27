@@ -46,9 +46,8 @@ type (
 	//SubmissionHandler is an implementation of ConnHandler
 	//used to receive submissions from users of the impendulo system.
 	SubmissionHandler struct {
-		conn          net.Conn
-		submission    *project.Submission
-		processingKey string
+		conn       net.Conn
+		submission *project.Submission
 	}
 
 	ProjectInfo struct {
@@ -117,11 +116,10 @@ func (s *SubmissionHandler) Handle() error {
 	if e = s.LoadInfo(); e != nil {
 		return e
 	}
-	s.processingKey, e = mq.StartSubmission(s.submission.Id)
-	if e != nil {
+	if e = mq.StartSubmission(s.submission.Id); e != nil {
 		return e
 	}
-	defer func() { mq.EndSubmission(s.submission.Id, s.processingKey) }()
+	defer func() { mq.EndSubmission(s.submission.Id) }()
 	d := false
 	for !d {
 		d, e = s.Read()
@@ -309,7 +307,7 @@ func (s *SubmissionHandler) Read() (bool, error) {
 			return false, e
 		}
 		//Send file to be processed.
-		return false, mq.AddFile(f, s.processingKey)
+		return false, mq.AddFile(f)
 	case LOGOUT:
 		//Logout request so we are done with this client.
 		return true, nil
