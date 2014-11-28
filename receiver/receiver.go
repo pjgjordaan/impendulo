@@ -25,6 +25,7 @@
 package receiver
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/godfried/impendulo/db"
@@ -41,15 +42,14 @@ import (
 type (
 	//SubmissionSpawner is an implementation of
 	//HandlerSpawner for SubmissionHandlers.
-	SubmissionSpawner struct{}
+	SubmissionSpawner util.E
 
-	//SubmissionHandler is an implementation of ConnHandler
+	//SubmissionHandler is an implementation of Handler
 	//used to receive submissions from users of the impendulo system.
 	SubmissionHandler struct {
-		conn       net.Conn
-		submission *project.Submission
+		c net.Conn
+		s *project.Submission
 	}
-
 	ProjectInfo struct {
 		Project     *project.P
 		Assignments []*AssignmentInfo
@@ -58,6 +58,7 @@ type (
 		Assignment  *project.Assignment
 		Submissions []*project.Submission
 	}
+	ProjectInfos []*ProjectInfo
 )
 
 const (
@@ -73,6 +74,23 @@ const (
 	LOG_RECEIVER = "receiver/receiver.go"
 )
 
+var (
+	doneError = errors.New("submission session complete")
+)
+
+func (pi ProjectInfos) Add(a *project.Assignment, u string) error {
+	if len(pi) == 0 || pi[len(pi)-1].Project.Id != a.ProjectId {
+		p, e := db.Project(bson.M{db.ID: a.ProjectId}, nil)
+		if e != nil {
+			return e
+		}
+		pi = append(pi, NewProjectInfo(p))
+	}
+	ss, e := db.Submissions(bson.M{db.USER: u, db.ASSIGNMENTID: a.Id}, nil)
+	pi[len(pi)-1].Add(a, ss)
+	return e
+}
+
 func NewProjectInfo(p *project.P) *ProjectInfo {
 	return &ProjectInfo{Project: p, Assignments: make([]*AssignmentInfo, 0, 1)}
 }
@@ -82,24 +100,23 @@ func (p *ProjectInfo) Add(a *project.Assignment, subs []*project.Submission) {
 }
 
 //Spawn creates a new ConnHandler of type SubmissionHandler.
-func (s *SubmissionSpawner) Spawn() ConnHandler {
+func (s *SubmissionSpawner) Spawn() Handler {
 	return &SubmissionHandler{}
 }
 
 //Start sets the connection, launches the Handle method
 //and ends the session when it returns.
 func (s *SubmissionHandler) Start(c net.Conn) {
-	s.conn = c
-	s.submission = new(project.Submission)
-	s.submission.Id = bson.NewObjectId()
+	s.c = c
+	s.s = &project.Submission{Id: bson.NewObjectId()}
 	s.End(s.Handle())
 }
 
 //End ends a session and reports any errors to the user.
 func (s *SubmissionHandler) End(e error) {
-	defer s.conn.Close()
+	defer s.c.Close()
 	msg := OK
-	if e != nil {
+	if e != doneError && e != nil {
 		msg = "ERROR: " + e.Error()
 		util.Log(e, LOG_RECEIVER)
 	}
@@ -116,24 +133,19 @@ func (s *SubmissionHandler) Handle() error {
 	if e = s.LoadInfo(); e != nil {
 		return e
 	}
-	if e = mq.StartSubmission(s.submission.Id); e != nil {
+	if e = mq.StartSubmission(s.s.Id); e != nil {
 		return e
 	}
-	defer func() { mq.EndSubmission(s.submission.Id) }()
-	d := false
-	for !d {
-		d, e = s.Read()
-		if e != nil {
-			return e
-		}
+	defer func() { mq.EndSubmission(s.s.Id) }()
+	for e = s.Read(); e == nil; e = s.Read() {
 	}
-	return nil
+	return e
 }
 
 //Setup initialises a Submission.
 //It either logs a user in or registers a new user.
 func (s *SubmissionHandler) Setup() error {
-	j, e := util.ReadJSON(s.conn)
+	j, e := util.ReadJSON(s.c)
 	if e != nil {
 		return e
 	}
@@ -144,30 +156,19 @@ func (s *SubmissionHandler) Setup() error {
 	if e != nil {
 		return e
 	}
-	if e = s.submission.SetMode(m); e != nil {
+	if e = s.s.SetMode(m); e != nil {
 		return e
 	}
 	t := util.CurMilis()
-	//Send a list of available projects to the user.
 	as, e := db.Assignments(bson.M{db.START: bson.M{db.LT: t}, db.END: bson.M{db.GT: t}}, nil, db.PROJECTID)
 	if e != nil {
 		return e
 	}
-	pi := make([]*ProjectInfo, 0, len(as))
+	pi := make(ProjectInfos, 0, len(as))
 	for _, a := range as {
-		if len(pi) == 0 || pi[len(pi)-1].Project.Id != a.ProjectId {
-			p, e := db.Project(bson.M{db.ID: a.ProjectId}, nil)
-			if e != nil {
-				util.Log(e)
-				continue
-			}
-			pi = append(pi, NewProjectInfo(p))
-		}
-		ss, e := db.Submissions(bson.M{db.USER: s.submission.User, db.ASSIGNMENTID: a.Id}, nil)
-		if e != nil {
+		if e = pi.Add(a, s.s.User); e != nil {
 			util.Log(e)
 		}
-		pi[len(pi)-1].Add(a, ss)
 	}
 	return s.writeJSON(pi)
 }
@@ -177,8 +178,7 @@ func (s *SubmissionHandler) login(m map[string]interface{}) error {
 	if e != nil {
 		return e
 	}
-	un, e := convert.GetString(m, db.USER)
-	if e != nil {
+	if s.s.User, e = convert.GetString(m, db.USER); e != nil {
 		return e
 	}
 	p, e := convert.GetString(m, user.PWORD)
@@ -187,21 +187,20 @@ func (s *SubmissionHandler) login(m map[string]interface{}) error {
 	}
 	switch r {
 	case LOGIN:
-		u, e := db.User(un)
+		u, e := db.User(s.s.User)
 		if e != nil {
 			return e
 		}
 		if !util.Validate(u.Password, u.Salt, p) {
-			return fmt.Errorf("%q used invalid username or password", un)
+			return fmt.Errorf("%q used invalid username or password", s.s.User)
 		}
 	case REGISTER:
-		if e = db.Add(db.USERS, user.New(un, p)); e != nil {
-			return fmt.Errorf("user %s already exists", un)
+		if e = db.Add(db.USERS, user.New(s.s.User, p)); e != nil {
+			return fmt.Errorf("user %s already exists", s.s.User)
 		}
 	default:
 		return fmt.Errorf("invalid start request %q expected %s or %s", r, LOGIN, REGISTER)
 	}
-	s.submission.User = un
 	return nil
 }
 
@@ -209,7 +208,7 @@ func (s *SubmissionHandler) login(m map[string]interface{}) error {
 //A new submission is then created or an existing one resumed
 //depending on the request.
 func (s *SubmissionHandler) LoadInfo() error {
-	i, e := util.ReadJSON(s.conn)
+	i, e := util.ReadJSON(s.c)
 	if e != nil {
 		return e
 	}
@@ -231,19 +230,16 @@ func (s *SubmissionHandler) LoadInfo() error {
 //submission in the db.
 func (s *SubmissionHandler) createSubmission(subInfo map[string]interface{}) error {
 	var e error
-	s.submission.AssignmentId, e = convert.GetId(subInfo, db.ASSIGNMENTID)
-	if e != nil {
+	if s.s.AssignmentId, e = convert.GetId(subInfo, db.ASSIGNMENTID); e != nil {
 		return e
 	}
-	s.submission.ProjectId, e = convert.GetId(subInfo, db.PROJECTID)
-	if e != nil {
+	if s.s.ProjectId, e = convert.GetId(subInfo, db.PROJECTID); e != nil {
 		return e
 	}
-	s.submission.Time, e = convert.GetInt64(subInfo, db.TIME)
-	if e != nil {
+	if s.s.Time, e = convert.GetInt64(subInfo, db.TIME); e != nil {
 		return e
 	}
-	if e = db.Add(db.SUBMISSIONS, s.submission); e != nil {
+	if e = db.Add(db.SUBMISSIONS, s.s); e != nil {
 		return e
 	}
 	return s.write(OK)
@@ -260,75 +256,73 @@ func (s *SubmissionHandler) continueSubmission(subInfo map[string]interface{}) e
 	if e != nil {
 		return e
 	}
-	s.submission, e = db.Submission(bson.M{db.ID: id}, nil)
-	if e != nil {
+	if s.s, e = db.Submission(bson.M{db.ID: id}, nil); e != nil {
 		return e
 	}
 	return s.write(OK)
 }
 
 //Read reads Files from the connection and sends them for processing.
-func (s *SubmissionHandler) Read() (bool, error) {
-	//Receive file metadata and request info
-	i, e := util.ReadJSON(s.conn)
+func (s *SubmissionHandler) Read() error {
+	i, e := util.ReadJSON(s.c)
 	if e != nil {
-		return false, e
+		return e
 	}
-	//Get the type of request
 	r, e := convert.GetString(i, REQUEST)
 	if e != nil {
-		return false, e
+		return e
 	}
 	switch r {
 	case SEND:
-		if e = s.write(OK); e != nil {
-			return false, e
+		if e := s.read(i); e != nil {
+			return e
 		}
-		//Receive file data
-		b, e := util.ReadData(s.conn)
-		if e != nil {
-			return false, e
-		}
-		if e = s.write(OK); e != nil {
-			return false, e
-		}
-		delete(i, REQUEST)
-		var f *project.File
-		//Create a new file
-		switch s.submission.Mode {
-		case project.ARCHIVE_MODE:
-			f = project.NewArchive(s.submission.Id, b)
-		case project.FILE_MODE:
-			if f, e = project.NewFile(s.submission.Id, i, b); e != nil {
-				return false, e
-			}
-		}
-		if e = db.Add(db.FILES, f); e != nil {
-			return false, e
-		}
-		//Send file to be processed.
-		return false, mq.AddFile(f)
 	case LOGOUT:
-		//Logout request so we are done with this client.
-		return true, nil
+		return doneError
 	}
-	return false, fmt.Errorf("Unknown request %q", r)
+	return fmt.Errorf("Unknown request %q", r)
+}
+
+func (s *SubmissionHandler) read(m map[string]interface{}) error {
+	if e := s.write(OK); e != nil {
+		return e
+	}
+	b, e := util.ReadData(s.c)
+	if e != nil {
+		return e
+	}
+	if e = s.write(OK); e != nil {
+		return e
+	}
+	var f *project.File
+	switch s.s.Mode {
+	case project.ARCHIVE_MODE:
+		f = project.NewArchive(s.s.Id, b)
+	case project.FILE_MODE:
+		if f, e = project.NewFile(s.s.Id, m, b); e != nil {
+			return e
+		}
+	}
+	if e = db.Add(db.FILES, f); e != nil {
+		return e
+	}
+	return mq.AddFile(f)
 }
 
 //writeJSON writes an JSON data to this SubmissionHandler's connection.
 func (s *SubmissionHandler) writeJSON(i interface{}) error {
-	if e := util.WriteJSON(s.conn, i); e != nil {
+	if e := util.WriteJSON(s.c, i); e != nil {
 		return e
 	}
-	_, e := s.conn.Write([]byte(util.EOT))
+	_, e := s.c.Write([]byte(util.EOT))
 	return e
 }
 
 //write writes a string to this SubmissionHandler's connection.
 func (s *SubmissionHandler) write(d string) error {
-	if _, e := s.conn.Write([]byte(d)); e != nil {
+	if _, e := s.c.Write([]byte(d)); e != nil {
 		return e
 	}
-	_, e := s.conn.Write([]byte(util.EOT))
+	_, e := s.c.Write([]byte(util.EOT))
 	return e
 }

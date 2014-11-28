@@ -115,14 +115,24 @@ func RemoveAll(c string, symbols ...string) string {
 	return c
 }
 
-//EqualsOne returns true if i is equal to any of the members of as.
-func EqualsOne(i interface{}, as ...interface{}) bool {
+//Or returns true if i is equal to any of the members of as.
+func Or(i interface{}, as ...interface{}) bool {
 	for _, a := range as {
 		if i == a {
 			return true
 		}
 	}
 	return false
+}
+
+//And returns true if i is equal to all of the members of as.
+func And(i interface{}, as ...interface{}) bool {
+	for _, a := range as {
+		if i != a {
+			return false
+		}
+	}
+	return true
 }
 
 //ShortName gets the shortened class name of a Java class.

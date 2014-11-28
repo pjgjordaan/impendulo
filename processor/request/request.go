@@ -45,7 +45,8 @@ type (
 )
 
 const (
-	SUBMISSION_START Type = iota
+	_ Type = iota
+	SUBMISSION_START
 	SUBMISSION_STOP
 	SRC_ADD
 	TEST_ADD

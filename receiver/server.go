@@ -37,13 +37,13 @@ import (
 
 type (
 
-	//HandlerSpawner is an interface used to spawn ConnHandlers.
-	HandlerSpawner interface {
-		Spawn() ConnHandler
+	//Spawner is an interface used to spawn Handlers.
+	Spawner interface {
+		Spawn() Handler
 	}
 
-	//ConnHandler is an interface with basic methods for handling connections.
-	ConnHandler interface {
+	//Handler is an interface with basic methods for handling connections.
+	Handler interface {
 		Start(net.Conn)
 		End(error)
 	}
@@ -58,7 +58,7 @@ const (
 //spawn a new goroutine for each connection.
 //Each goroutine launched will handle its connection and
 //its type is determined by HandlerSpawner.
-func Run(p uint, s HandlerSpawner) {
+func Run(p uint, s Spawner) {
 	//Start listening for connections
 	l, e := net.Listen("tcp", ":"+strconv.Itoa(int(p)))
 	if e != nil {

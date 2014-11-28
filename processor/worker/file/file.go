@@ -105,18 +105,26 @@ func (w *Worker) Start(done chan util.E) {
 	if e := mq.ChangeStatus(request.StartSubmission(w.submission.Id)); e != nil {
 		util.Log(e)
 	}
-	util.Log("Processing submission", w.submission, LOG_F)
+	defer w.shutdown(done)
 	go mq.H(w.filer)
-	defer func() {
-		done <- util.E{}
-		if e := mq.ChangeStatus(request.StopSubmission(w.submission.Id)); e != nil {
-			util.Log(e, LOG_F)
-		}
-		w.filer.DeleteQueue()
-		w.filer.Shutdown()
-	}()
+	w.processFiles()
+	if e := db.UpdateTime(w.submission); e != nil {
+		util.Log(e, LOG_F)
+	}
+	os.RemoveAll(w.rootDir)
+}
+
+func (w *Worker) shutdown(done chan util.E) {
+	done <- util.E{}
+	if e := mq.ChangeStatus(request.StopSubmission(w.submission.Id)); e != nil {
+		util.Log(e, LOG_F)
+	}
+	w.filer.DeleteQueue()
+	w.filer.Shutdown()
+}
+
+func (w *Worker) processFiles() {
 	tq := list.New()
-	//Processing loop.
 	for {
 		r := <-w.requestChan
 		switch r.Type {
@@ -129,19 +137,12 @@ func (w *Worker) Start(done chan util.E) {
 		case request.TEST_ADD:
 			tq.PushBack(r.FileId)
 		}
-
 	}
 	for e := tq.Front(); e != nil; e = e.Next() {
-		fid := e.Value.(bson.ObjectId)
-		if e := w.Process(fid); e != nil {
+		if e := w.Process(e.Value.(bson.ObjectId)); e != nil {
 			util.Log(e, LOG_F)
 		}
 	}
-	if e := db.UpdateTime(w.submission); e != nil {
-		util.Log(e, LOG_F)
-	}
-	os.RemoveAll(w.rootDir)
-	util.Log("Processed submission", w.submission, LOG_F)
 }
 
 func (w *Worker) Process(fid bson.ObjectId) error {
@@ -173,8 +174,6 @@ func (w *Worker) process(fid bson.ObjectId) error {
 
 //ProcessFile extracts archives and runs tools on source files.
 func (w *Worker) Source(f *project.File) error {
-	util.Log("Processing file:", f.Id, LOG_F)
-	defer util.Log("Processed file:", f.Id, LOG_F)
 	//Create a target for the tools to run on and save the file.
 	t := tool.NewTarget(f.Name, f.Package, w.srcDir, project.Language(w.project.Lang))
 	if e := util.SaveFile(t.FilePath(), f.Data); e != nil {

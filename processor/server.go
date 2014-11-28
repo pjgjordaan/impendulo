@@ -98,7 +98,7 @@ func NewServer(maxProcs uint) (*Server, error) {
 	return &Server{
 		maxProcs:      maxProcs,
 		requestChan:   rc,
-		processedChan: make(chan util.E),
+		processedChan: make(chan util.E, maxProcs),
 		submitter:     s,
 		redoer:        r,
 	}, nil
