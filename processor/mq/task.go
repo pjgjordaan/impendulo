@@ -27,6 +27,7 @@ package mq
 import (
 	"encoding/json"
 
+	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processor/request"
 	"github.com/godfried/impendulo/processor/status"
 	"github.com/godfried/impendulo/project"
@@ -48,11 +49,19 @@ type (
 		tag, queue, bindingKey string
 		*Producer
 	}
+	names struct {
+		name, exchange, queue, requestKey, responseKey string
+	}
 )
 
 var (
-	producers map[string]*Producer
-	rps       map[string]*ReceiveProducer
+	producers      map[string]*Producer
+	rps            map[string]*ReceiveProducer
+	changerNames   names = names{name: "status_changer", exchange: "status_exchange", queue: "status_changer_queue", requestKey: "status_changer_request_key"}
+	retrieverNames names = names{name: "status_retriever", exchange: "status_exchange", queue: "status_retriever_queue", requestKey: "status_retriever_request_key", responseKey: "status_retriever_response_key"}
+	waiterNames    names = names{name: "status_waiter", exchange: "status_exchange", queue: "status_waiter_queue", requestKey: "status_waiter_request_key", responseKey: "status_waiter_response_key"}
+	submitterNames names = names{name: "submission_producer", exchange: "submission_exchange", queue: "submission_queue", requestKey: "submission_request_key"}
+	filerNames     names = names{name: "file_producer", exchange: "submission_exchange", queue: "file_queue_", requestKey: "file_request_key_"}
 )
 
 const (
@@ -65,7 +74,7 @@ func init() {
 }
 
 //NewReceiveProducer
-func NewReceiveProducer(name, amqpURI, exchange, exchangeType, publishKey, bindingKey, ctag string) (*ReceiveProducer, error) {
+func NewReceiveProducer(name, amqpURI, exchange, queue, exchangeType, publishKey, bindingKey, ctag string, autoDelete bool) (*ReceiveProducer, error) {
 	if r, ok := rps[name]; ok {
 		return r, nil
 	}
@@ -76,7 +85,7 @@ func NewReceiveProducer(name, amqpURI, exchange, exchangeType, publishKey, bindi
 		}
 		ctag = u4.String()
 	}
-	p, e := NewProducer(name, amqpURI, exchange, exchangeType, publishKey)
+	p, e := NewProducer(name, amqpURI, exchange, queue, exchangeType, publishKey, autoDelete)
 	if e != nil {
 		return nil, e
 	}
@@ -153,7 +162,7 @@ func (r *ReceiveProducer) ReceiveProduce(d []byte) ([]byte, error) {
 }
 
 //NewProducer
-func NewProducer(name, amqpURI, exchange, exchangeType, publishKey string) (*Producer, error) {
+func NewProducer(name, amqpURI, exchange, queue, exchangeType, publishKey string, autoDelete bool) (*Producer, error) {
 	if p, ok := producers[name]; ok {
 		return p, nil
 	}
@@ -181,6 +190,9 @@ func NewProducer(name, amqpURI, exchange, exchangeType, publishKey string) (*Pro
 		ch:         ch,
 		publishKey: publishKey,
 		exchange:   exchange,
+	}
+	if e := p.CreateQueue(queue, publishKey, autoDelete); e != nil {
+		return nil, e
 	}
 	producers[name] = p
 	return p, nil
@@ -232,7 +244,7 @@ func ShutdownProducers() error {
 
 //StatusChanger creates a Producer which can update Impendulo's status.
 func StatusChanger(amqpURI string) (*Producer, error) {
-	return NewProducer("status_changer", amqpURI, "change_exchange", FANOUT, "change_key")
+	return NewProducer(changerNames.name, amqpURI, changerNames.exchange, changerNames.queue, DIRECT, changerNames.requestKey, false)
 }
 
 //ChangeStatus is used to update Impendulo's current
@@ -254,7 +266,7 @@ func ChangeStatus(r *request.R) error {
 
 //IdleWaiter
 func IdleWaiter(amqpURI string) (*ReceiveProducer, error) {
-	return NewReceiveProducer("idle_waiter", amqpURI, "wait_exchange", DIRECT, "wait_request_key", "wait_response_key", "")
+	return NewReceiveProducer(waiterNames.name, amqpURI, waiterNames.exchange, waiterNames.queue, DIRECT, waiterNames.requestKey, waiterNames.responseKey, "", false)
 }
 
 //WaitIdle will only return once impendulo's processors are idle when called.
@@ -269,7 +281,7 @@ func WaitIdle() error {
 
 //StatusRetriever
 func StatusRetriever(amqpURI string) (*ReceiveProducer, error) {
-	return NewReceiveProducer("status_retriever", amqpURI, "status_exchange", DIRECT, "status_request_key", "status_response_key", "")
+	return NewReceiveProducer(retrieverNames.name, amqpURI, retrieverNames.exchange, retrieverNames.queue, DIRECT, retrieverNames.requestKey, retrieverNames.responseKey, "", false)
 }
 
 //GetStatus retrieves the current status of impendulo's processors
@@ -291,20 +303,22 @@ func GetStatus() (*status.S, error) {
 
 //FileProducer
 func FileProducer(amqpURI string, sid bson.ObjectId) (*Producer, error) {
-	return NewProducer("file_producer_"+sid.Hex(), amqpURI, "submission_exchange", DIRECT, "file_key_"+sid.Hex())
+	return NewProducer(filerNames.name+sid.Hex(), amqpURI, filerNames.exchange, filerNames.queue+sid.Hex(), DIRECT, filerNames.requestKey+sid.Hex(), true)
 }
 
 //AddFile
 func AddFile(f *project.File) error {
-	p, e := FileProducer(amqpURI, f.SubId)
-	if e != nil {
-		return e
-	}
-	//We only need to process source files  and archives.
 	if !f.CanProcess() {
 		return nil
 	}
 	r, e := request.AddFile(f)
+	if e != nil {
+		return e
+	}
+	if e := ChangeStatus(r); e != nil {
+		return e
+	}
+	p, e := FileProducer(amqpURI, f.SubId)
 	if e != nil {
 		return e
 	}
@@ -317,16 +331,20 @@ func AddFile(f *project.File) error {
 
 //StartProducer creates a new Producer which is used to signal the start or end of a submission.
 func StartProducer(amqpURI string) (*Producer, error) {
-	return NewProducer("submission_producer", amqpURI, "submission_exchange", DIRECT, "submission_key")
+	return NewProducer(submitterNames.name, amqpURI, submitterNames.exchange, submitterNames.queue, DIRECT, submitterNames.requestKey, false)
 }
 
 //StartSubmission
 func StartSubmission(id bson.ObjectId) error {
+	r := request.StartSubmission(id)
+	if e := ChangeStatus(r); e != nil {
+		return e
+	}
 	p, e := StartProducer(amqpURI)
 	if e != nil {
 		return e
 	}
-	m, e := json.Marshal(request.StartSubmission(id))
+	m, e := json.Marshal(r)
 	if e != nil {
 		return e
 	}
@@ -347,16 +365,44 @@ func EndSubmission(id bson.ObjectId) error {
 	return p.Produce(m)
 }
 
-//RedoProducer
-func RedoProducer(amqpURI string) (*Producer, error) {
-	return NewProducer("redo_producer", amqpURI, "submission_exchange", DIRECT, "redo_key")
-}
-
 //RedoSubmission
 func RedoSubmission(id bson.ObjectId) error {
-	p, e := RedoProducer(amqpURI)
+	fs, e := db.Files(bson.M{db.SUBID: id}, bson.M{db.DATA: 0}, 0, db.TIME)
 	if e != nil {
 		return e
 	}
-	return p.Produce([]byte(id.Hex()))
+	if e = StartSubmission(id); e != nil {
+		return e
+	}
+	defer EndSubmission(id)
+	for _, f := range fs {
+		if e = AddFile(f); e != nil {
+			return e
+		}
+	}
+	return nil
+}
+
+func (p *Producer) CreateQueue(name, key string, autoDelete bool) error {
+	if name == "" {
+		return nil
+	}
+	q, e := p.ch.QueueDeclare(
+		name,
+		defaultQueue.Durable,
+		autoDelete,
+		defaultQueue.Exclusive,
+		defaultQueue.NoWait,
+		nil,
+	)
+	if e != nil {
+		return e
+	}
+	return p.ch.QueueBind(
+		q.Name,
+		key,
+		p.exchange,
+		defaultQueue.NoWait,
+		nil,
+	)
 }

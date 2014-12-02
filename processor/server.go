@@ -42,11 +42,10 @@ type (
 
 	//Server is our processing server which receives and processes submissions and files.
 	Server struct {
-		maxProcs      uint
-		requestChan   chan *request.R
-		processedChan chan util.E
-		//submitter listens for messages on AMQP which indicate that a submission has started.
-		redoer, submitter *mq.MessageHandler
+		maxProcs    int
+		requestChan chan *request.R
+		createdChan chan util.E
+		submitter   *mq.MessageHandler
 	}
 )
 
@@ -56,12 +55,12 @@ const (
 
 var (
 	defaultServer *Server
-	MAX_PROCS     = util.Maxuint(runtime.NumCPU()-1, 1)
+	MAX_PROCS     = util.Max(runtime.NumCPU()-1, 1)
 )
 
 //Serve launches the default Server. It listens on the configured AMQP URI and
 //spawns at most maxProcs goroutines in order to process submissions.
-func Serve(maxProcs uint) error {
+func Serve(maxProcs int) error {
 	var e error
 	if defaultServer, e = NewServer(maxProcs); e != nil {
 		return e
@@ -85,22 +84,16 @@ func Shutdown() error {
 
 //NewServer constructs a new Server instance which will listen on the coinfigured
 //AMQP URI.
-func NewServer(maxProcs uint) (*Server, error) {
+func NewServer(maxProcs int) (*Server, error) {
 	rc := make(chan *request.R)
 	s, e := mq.NewSubmitter(rc)
 	if e != nil {
 		return nil, e
 	}
-	r, e := mq.NewRedoer(rc)
-	if e != nil {
-		return nil, e
-	}
 	return &Server{
-		maxProcs:      maxProcs,
-		requestChan:   rc,
-		processedChan: make(chan util.E, maxProcs),
-		submitter:     s,
-		redoer:        r,
+		maxProcs:    maxProcs,
+		requestChan: rc,
+		submitter:   s,
 	}, nil
 }
 
@@ -108,17 +101,14 @@ func NewServer(maxProcs uint) (*Server, error) {
 //Added files are received here and then sent to the relevant submission goroutine.
 func (s *Server) Serve() {
 	go mq.H(s.submitter)
-	go mq.H(s.redoer)
-	var busy uint = 0
-	//Begin monitoring processing status
+	busy := 0
+	processedChan := make(chan util.E, s.maxProcs)
 	for {
 		if busy < 0 {
-			//This will only occur when Shutdown() has been called and
-			//all submissions have been completed and processed.
 			break
 		}
 		for busy >= s.maxProcs {
-			<-s.processedChan
+			<-processedChan
 			busy--
 		}
 		select {
@@ -129,13 +119,12 @@ func (s *Server) Serve() {
 				if e != nil {
 					util.Log(e)
 				} else {
-					go w.Start(s.processedChan)
+					go w.Start(processedChan)
 				}
 			default:
 				util.Log(fmt.Errorf("unsupported request type %d", r.Type))
 			}
-		case <-s.processedChan:
-			//A submission has been processed so one less goroutine to worry about.
+		case <-processedChan:
 			busy--
 		}
 	}
@@ -143,9 +132,8 @@ func (s *Server) Serve() {
 
 //Shutdown stops Serve from running once all submissions have been processed.
 func (s *Server) Shutdown() error {
-	s.processedChan <- util.E{}
-	if e := s.submitter.Shutdown(); e != nil {
+	if e := mq.WaitIdle(); e != nil {
 		return e
 	}
-	return s.redoer.Shutdown()
+	return s.submitter.Shutdown()
 }

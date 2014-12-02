@@ -102,12 +102,10 @@ func New(sid bson.ObjectId) (*Worker, error) {
 
 //Start listens for a submission's incoming files and processes them.
 func (w *Worker) Start(done chan util.E) {
-	if e := mq.ChangeStatus(request.StartSubmission(w.submission.Id)); e != nil {
-		util.Log(e)
-	}
 	defer w.shutdown(done)
 	go mq.H(w.filer)
 	w.processFiles()
+	fmt.Println("finished processing files")
 	if e := db.UpdateTime(w.submission); e != nil {
 		util.Log(e, LOG_F)
 	}
@@ -119,23 +117,15 @@ func (w *Worker) shutdown(done chan util.E) {
 	if e := mq.ChangeStatus(request.StopSubmission(w.submission.Id)); e != nil {
 		util.Log(e, LOG_F)
 	}
-	w.filer.DeleteQueue()
+	fmt.Println("sent endsubmission request")
 	w.filer.Shutdown()
 }
 
 func (w *Worker) processFiles() {
 	tq := list.New()
 	for {
-		r := <-w.requestChan
-		switch r.Type {
-		case request.SUBMISSION_STOP:
+		if w.handleRequest(tq, <-w.requestChan) {
 			break
-		case request.SRC_ADD, request.ARCHIVE_ADD:
-			if e := w.Process(r.FileId); e != nil {
-				util.Log(e, LOG_F)
-			}
-		case request.TEST_ADD:
-			tq.PushBack(r.FileId)
 		}
 	}
 	for e := tq.Front(); e != nil; e = e.Next() {
@@ -143,6 +133,22 @@ func (w *Worker) processFiles() {
 			util.Log(e, LOG_F)
 		}
 	}
+}
+
+func (w *Worker) handleRequest(tq *list.List, r *request.R) bool {
+	switch r.Type {
+	case request.SUBMISSION_STOP:
+		return true
+	case request.SRC_ADD, request.ARCHIVE_ADD:
+		if e := w.Process(r.FileId); e != nil {
+			util.Log(e, LOG_F)
+		}
+	case request.TEST_ADD:
+		tq.PushBack(r.FileId)
+	default:
+		util.Log(fmt.Errorf("unsupported request %s", r), LOG_F)
+	}
+	return false
 }
 
 func (w *Worker) Process(fid bson.ObjectId) error {
@@ -240,13 +246,7 @@ func (w *Worker) archive(name string, data []byte) error {
 	if e := mq.ChangeStatus(r); e != nil {
 		return e
 	}
-	if e = w.Process(f.Id); e != nil {
-		return e
-	}
-	if se := mq.ChangeStatus(r); e == nil && se != nil {
-		e = se
-	}
-	return e
+	return w.Process(f.Id)
 }
 
 //StoreFile creates a new project.File given an encoded file name and file data.

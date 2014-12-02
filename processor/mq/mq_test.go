@@ -26,6 +26,7 @@ package mq
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/godfried/impendulo/processor/request"
 	"github.com/godfried/impendulo/processor/status"
@@ -34,7 +35,6 @@ import (
 	"github.com/streadway/amqp"
 	"labix.org/v2/mgo/bson"
 
-	"strconv"
 	"testing"
 	"time"
 )
@@ -49,6 +49,12 @@ type (
 func th(mh *MessageHandler, t *testing.T) {
 	if e := mh.Handle(); e != nil {
 		t.Error(e)
+	}
+}
+
+func th2(mh *MessageHandler) {
+	if e := mh.Handle(); e != nil {
+		fmt.Println(e)
 	}
 }
 
@@ -137,8 +143,82 @@ func TestGetStatus(t *testing.T) {
 	}
 }
 
+func basicProcess(rc chan *request.R) error {
+	for r := range rc {
+		switch r.Type {
+		case request.SRC_ADD:
+			continue
+		case request.SUBMISSION_STOP:
+			return nil
+		default:
+			return fmt.Errorf("Invalid request %q.", r)
+		}
+	}
+	return nil
+}
+
+func runFile(r *request.R, dc chan util.E) error {
+	if r.Type != request.SUBMISSION_START {
+		return fmt.Errorf("Invalid request %q.", r)
+	}
+	fc := make(chan *request.R)
+	f, e := NewFiler(fc, r.SubId)
+	if e != nil {
+		return e
+	}
+	go th2(f)
+	if e := basicProcess(fc); e != nil {
+		return e
+	}
+	if e := f.Shutdown(); e != nil {
+		return e
+	}
+	dc <- util.E{}
+	return nil
+}
+
+func createSubmissions(n int) error {
+	for i := 0; i < n; i++ {
+		id := bson.NewObjectId()
+		if e := StartSubmission(id); e != nil {
+			return e
+		}
+		f := &project.File{Id: bson.NewObjectId(), SubId: id, Type: project.SRC}
+		if e := AddFile(f); e != nil {
+			return e
+		}
+		if e := EndSubmission(id); e != nil {
+			return e
+		}
+	}
+	return nil
+}
+
+func TestSubmitterBasic(t *testing.T) {
+	rc := make(chan *request.R)
+	s, e := NewSubmitter(rc)
+	go th(s, t)
+	dc := make(chan util.E)
+	go func() {
+		r := <-rc
+		if e := runFile(r, dc); e != nil {
+			t.Error(e)
+		}
+	}()
+	if e = createSubmissions(1); e != nil {
+		t.Error(e)
+	}
+	<-dc
+	if e = s.Shutdown(); e != nil {
+		t.Error(e)
+	}
+	if e = ShutdownProducers(); e != nil {
+		t.Error(e)
+	}
+}
+
 func TestSubmitter(t *testing.T) {
-	n := 100
+	n := 10
 	requestChan := make(chan *request.R)
 	handlers := make([]*MessageHandler, n)
 	var e error
@@ -148,44 +228,32 @@ func TestSubmitter(t *testing.T) {
 		}
 	}
 	for _, h := range handlers {
-		go H(h)
+		go th(h, t)
 	}
-	time.Sleep(1 * time.Second)
+	doneChan := make(chan util.E)
 	go func() {
 		processed := 0
 		for r := range requestChan {
-			if r.Type != request.SUBMISSION_START {
-				t.Error(fmt.Errorf("Invalid request %q.", r))
-			}
+			go func(rq *request.R) {
+				if e := runFile(rq, doneChan); e != nil {
+					t.Error(e)
+				}
+			}(r)
 			processed++
 			if processed == n {
 				break
 			}
 		}
 	}()
-	ids := make([]bson.ObjectId, n)
-	for i := 0; i < n; i++ {
-		ids[i] = bson.NewObjectId()
-		if e = StartSubmission(ids[i]); e != nil {
-			t.Error(e)
-		}
-	}
 	time.Sleep(1 * time.Second)
-	go func() {
-		processed := 0
-		for r := range requestChan {
-			if r.Type != request.SUBMISSION_STOP {
-				t.Error(fmt.Errorf("Invalid request %q.", r))
-			}
-			processed++
-			if processed == n {
-				break
-			}
-		}
-	}()
-	for _, id := range ids {
-		if e = EndSubmission(id); e != nil {
-			t.Error(e)
+	if e := createSubmissions(n); e != nil {
+		t.Error(e)
+	}
+	received := 0
+	for _ = range doneChan {
+		received++
+		if received == n {
+			break
 		}
 	}
 	for _, h := range handlers {
@@ -241,7 +309,7 @@ func TestStatusChange(t *testing.T) {
 
 func TestAMQPBasic(t *testing.T) {
 	msgChan := make(chan string)
-	handler, e := NewHandler(DEFAULT_AMQP_URI, "test", DIRECT, "", "", &BasicConsumer{id: 1, msgs: msgChan}, "")
+	handler, e := NewHandler(args("test", "", ""), &BasicConsumer{id: 1, msgs: msgChan})
 	if e != nil {
 		t.Error(e)
 	}
@@ -271,7 +339,7 @@ func TestAMQPQueue(t *testing.T) {
 	handlers := make([]*MessageHandler, nH)
 	var e error
 	for i := 0; i < nH; i++ {
-		if handlers[i], e = NewHandler(DEFAULT_AMQP_URI, "test", DIRECT, "test_queue", "", &BasicConsumer{id: i, msgs: msgChan}, "test_key"); e != nil {
+		if handlers[i], e = NewHandler(args("test", "test_queue", "test_key"), &BasicConsumer{id: i, msgs: msgChan}); e != nil {
 			t.Error(e)
 		}
 	}

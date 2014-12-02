@@ -52,6 +52,14 @@ func NewSet(vals ...string) Set {
 	return s
 }
 
+func (s Set) String() string {
+	str := ""
+	for k, _ := range s {
+		str += " " + k
+	}
+	return "{" + str + " }"
+}
+
 func (s Set) Contains(k string) bool {
 	_, ok := s[k]
 	return ok

@@ -26,12 +26,11 @@ package mq
 
 import (
 	"encoding/json"
+	"fmt"
 
-	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/processor/request"
 	"github.com/godfried/impendulo/processor/status"
 	"github.com/godfried/impendulo/util"
-	"github.com/godfried/impendulo/util/convert"
 	uuid "github.com/nu7hatch/gouuid"
 	"github.com/streadway/amqp"
 	"labix.org/v2/mgo/bson"
@@ -52,12 +51,10 @@ type (
 	//Submitter is a Consumer used to handle submission and file requests.
 	Submitter struct {
 		requestChan chan *request.R
-		key         string
 	}
 
-	//Starter is a Consumer used to connect a Submitter to a submission request.
-	Starter struct {
-		key string
+	Filer struct {
+		requestChan chan *request.R
 	}
 
 	//Loader is a Consumer which listens for status requests on AMQP
@@ -72,12 +69,6 @@ type (
 		idleChan chan util.E
 	}
 
-	//Redoer is a Consumer which listens for requests to reanalyse submissions
-	//and submits them for reanalysis.
-	Redoer struct {
-		requestChan chan *request.R
-	}
-
 	//MessageHandler wraps a consumer in a struct in order to provide with other
 	//tools to manage its AMQP connection.
 	MessageHandler struct {
@@ -90,6 +81,21 @@ type (
 	NewStatusHandler func(amqpURI string, statusChan chan status.S) (*MessageHandler, error)
 
 	NewRequestHandler func(amqpURI string, requestChan chan *request.R) (*MessageHandler, error)
+	HandlerArgs       struct {
+		Exchange  ExchangeArgs
+		Queue     QueueArgs
+		URI, CTAG string
+		Keys      []string
+	}
+	ExchangeArgs struct {
+		Name, Type                            string
+		Durable, AutoDelete, Internal, NoWait bool
+	}
+
+	QueueArgs struct {
+		Name                                   string
+		Durable, AutoDelete, Exclusive, NoWait bool
+	}
 )
 
 const (
@@ -107,7 +113,16 @@ const (
 )
 
 var (
-	amqpURI = DEFAULT_AMQP_URI
+	amqpURI         = DEFAULT_AMQP_URI
+	defaultExchange = ExchangeArgs{
+		Type: DIRECT, Durable: true, AutoDelete: false, Internal: false, NoWait: false,
+	}
+	defaultQueue = QueueArgs{
+		Durable: true, AutoDelete: false, Exclusive: false, NoWait: false,
+	}
+	defaultArgs = HandlerArgs{
+		Queue: defaultQueue, Exchange: defaultExchange, URI: amqpURI, CTAG: "", Keys: []string{""},
+	}
 )
 
 func SetAMQP_URI(uri string) {
@@ -132,15 +147,15 @@ func Reply(c *amqp.Channel, d amqp.Delivery, b []byte) error {
 }
 
 //NewHandler
-func NewHandler(amqpURI, exchange, exchangeType, queue, ctag string, consumer Consumer, keys ...string) (*MessageHandler, error) {
-	if ctag == "" {
+func NewHandler(args HandlerArgs, consumer Consumer) (*MessageHandler, error) {
+	if args.CTAG == "" {
 		u4, e := uuid.NewV4()
 		if e != nil {
 			return nil, e
 		}
-		ctag = u4.String()
+		args.CTAG = u4.String()
 	}
-	c, e := amqp.Dial(amqpURI)
+	c, e := amqp.Dial(args.URI)
 	if e != nil {
 		return nil, e
 	}
@@ -161,36 +176,35 @@ func NewHandler(amqpURI, exchange, exchangeType, queue, ctag string, consumer Co
 		}
 	}()
 	if e = ch.ExchangeDeclare(
-		exchange,     // name of the exchange
-		exchangeType, // type
-		true,         // durable
-		false,        // delete when complete
-		false,        // internal
-		false,        // noWait
-		nil,          // arguments
+		args.Exchange.Name,
+		args.Exchange.Type,
+		args.Exchange.Durable,
+		args.Exchange.AutoDelete,
+		args.Exchange.Internal,
+		args.Exchange.NoWait,
+		nil, // arguments
 	); e != nil {
 		return nil, e
 	}
-	isUnique := queue == ""
 	q, e := ch.QueueDeclare(
-		queue,     // name of the queue
-		!isUnique, // durable
-		isUnique,  // delete when usused
-		false,     // exclusive
-		false,     // noWait
-		nil,       // arguments
+		args.Queue.Name,
+		args.Queue.Durable,
+		args.Queue.AutoDelete,
+		args.Queue.Exclusive,
+		args.Queue.NoWait,
+		nil,
 	)
 	if e != nil {
 		return nil, e
 	}
 	ch.Qos(PREFETCH_COUNT, PREFETCH_SIZE, false)
-	for _, k := range keys {
+	for _, k := range args.Keys {
 		if e = ch.QueueBind(
-			q.Name,   // name of the queue
-			k,        // bindingKey
-			exchange, // sourceExchange
-			false,    // noWait
-			nil,      // arguments
+			q.Name,
+			k,
+			args.Exchange.Name,
+			args.Queue.NoWait,
+			nil,
 		); e != nil {
 			return nil, e
 		}
@@ -199,8 +213,8 @@ func NewHandler(amqpURI, exchange, exchangeType, queue, ctag string, consumer Co
 		conn:     c,
 		ch:       ch,
 		queue:    q.Name,
-		exchange: exchange,
-		tag:      ctag,
+		exchange: args.Exchange.Name,
+		tag:      args.CTAG,
 		Consumer: consumer,
 	}, nil
 }
@@ -224,11 +238,6 @@ func (m *MessageHandler) Handle() error {
 		}
 	}
 	return nil
-}
-
-func (m *MessageHandler) DeleteQueue() error {
-	_, e := m.ch.QueueDelete(m.queue, false, false, false)
-	return e
 }
 
 func (m *MessageHandler) Shutdown() error {
@@ -257,6 +266,26 @@ func (s *Submitter) Consume(d amqp.Delivery, ch *amqp.Channel) (e error) {
 		return
 	}
 	s.requestChan <- r
+	return
+}
+
+func (f *Filer) Consume(d amqp.Delivery, ch *amqp.Channel) (e error) {
+	defer func() {
+		if r := recover(); r != nil {
+			e = r.(error)
+		}
+		d.Ack(false)
+	}()
+	r := new(request.R)
+	if e = json.Unmarshal(d.Body, &r); e != nil {
+		return
+	}
+	fmt.Println("filer received", r)
+	if e = r.Valid(); e != nil {
+		return
+	}
+	f.requestChan <- r
+	fmt.Println("filer sent", r)
 	return
 }
 
@@ -311,56 +340,32 @@ func (l *Loader) Consume(d amqp.Delivery, ch *amqp.Channel) (e error) {
 	return
 }
 
-func (r *Redoer) Consume(d amqp.Delivery, ch *amqp.Channel) (e error) {
-	defer func() {
-		if rec := recover(); rec != nil {
-			e = rec.(error)
-		}
-		d.Ack(false)
-	}()
-	sid, e := convert.Id(string(d.Body))
-	if e != nil {
-		return
-	}
-	fs, e := db.Files(bson.M{db.SUBID: sid}, bson.M{db.DATA: 0}, 0, db.TIME)
-	if e != nil {
-		return
-	}
-	r.requestChan <- request.StartSubmission(sid)
-	for _, f := range fs {
-		if !f.CanProcess() {
-			continue
-		}
-		var req *request.R
-		if req, e = request.AddFile(f); e != nil {
-			return
-		}
-		r.requestChan <- req
-	}
-	r.requestChan <- request.StopSubmission(sid)
-	return
-}
-
-func NewRedoer(rc chan *request.R) (*MessageHandler, error) {
-	return NewHandler(amqpURI, "submission_exchange", DIRECT, "redo_queue", "", &Redoer{requestChan: rc}, "redo_key")
+func args(exchange, queue, key string) HandlerArgs {
+	a := defaultArgs
+	a.Queue.Name = queue
+	a.Exchange.Name = exchange
+	a.Keys[0] = key
+	return a
 }
 
 func NewSubmitter(rc chan *request.R) (*MessageHandler, error) {
-	return NewHandler(amqpURI, "submission_exchange", DIRECT, "submission_queue", "", &Submitter{requestChan: rc}, "submission_key")
+	return NewHandler(args(submitterNames.exchange, submitterNames.queue, submitterNames.requestKey), &Submitter{requestChan: rc})
 }
 
 func NewFiler(rc chan *request.R, sid bson.ObjectId) (*MessageHandler, error) {
-	return NewHandler(amqpURI, "submission_exchange", DIRECT, "file_queue_"+sid.Hex(), "", &Submitter{requestChan: rc}, "file_key_"+sid.Hex())
+	a := args(filerNames.exchange, filerNames.queue+sid.Hex(), filerNames.requestKey+sid.Hex())
+	a.Queue.AutoDelete = true
+	return NewHandler(a, &Filer{requestChan: rc})
 }
 
 func NewWaiter(c chan util.E) (*MessageHandler, error) {
-	return NewHandler(amqpURI, "wait_exchange", DIRECT, "wait_queue", "", &Waiter{idleChan: c}, "wait_request_key")
+	return NewHandler(args(waiterNames.exchange, waiterNames.queue, waiterNames.requestKey), &Waiter{idleChan: c})
 }
 
 func NewChanger(c chan *request.R) (*MessageHandler, error) {
-	return NewHandler(amqpURI, "change_exchange", FANOUT, "", "", &Changer{requestChan: c}, "change_key")
+	return NewHandler(args(changerNames.exchange, changerNames.queue, changerNames.requestKey), &Changer{requestChan: c})
 }
 
 func NewLoader(c chan status.S) (*MessageHandler, error) {
-	return NewHandler(amqpURI, "status_exchange", DIRECT, "status_queue", "", &Loader{statusChan: c}, "status_request_key")
+	return NewHandler(args(retrieverNames.exchange, retrieverNames.queue, retrieverNames.requestKey), &Loader{statusChan: c})
 }

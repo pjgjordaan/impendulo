@@ -58,7 +58,6 @@ type (
 		Assignment  *project.Assignment
 		Submissions []*project.Submission
 	}
-	ProjectInfos []*ProjectInfo
 )
 
 const (
@@ -77,19 +76,6 @@ const (
 var (
 	doneError = errors.New("submission session complete")
 )
-
-func (pi ProjectInfos) Add(a *project.Assignment, u string) error {
-	if len(pi) == 0 || pi[len(pi)-1].Project.Id != a.ProjectId {
-		p, e := db.Project(bson.M{db.ID: a.ProjectId}, nil)
-		if e != nil {
-			return e
-		}
-		pi = append(pi, NewProjectInfo(p))
-	}
-	ss, e := db.Submissions(bson.M{db.USER: u, db.ASSIGNMENTID: a.Id}, nil)
-	pi[len(pi)-1].Add(a, ss)
-	return e
-}
 
 func NewProjectInfo(p *project.P) *ProjectInfo {
 	return &ProjectInfo{Project: p, Assignments: make([]*AssignmentInfo, 0, 1)}
@@ -136,9 +122,12 @@ func (s *SubmissionHandler) Handle() error {
 	if e = mq.StartSubmission(s.s.Id); e != nil {
 		return e
 	}
-	defer func() { mq.EndSubmission(s.s.Id) }()
+	defer func() {
+		fmt.Println(mq.EndSubmission(s.s.Id))
+	}()
 	for e = s.Read(); e == nil; e = s.Read() {
 	}
+	fmt.Println("done reading", s.s.Id)
 	return e
 }
 
@@ -159,18 +148,35 @@ func (s *SubmissionHandler) Setup() error {
 	if e = s.s.SetMode(m); e != nil {
 		return e
 	}
-	t := util.CurMilis()
-	as, e := db.Assignments(bson.M{db.START: bson.M{db.LT: t}, db.END: bson.M{db.GT: t}}, nil, db.PROJECTID)
+	pi, e := loadProjectInfo(s.s.User)
 	if e != nil {
 		return e
 	}
-	pi := make(ProjectInfos, 0, len(as))
-	for _, a := range as {
-		if e = pi.Add(a, s.s.User); e != nil {
-			util.Log(e)
-		}
-	}
 	return s.writeJSON(pi)
+}
+
+func loadProjectInfo(u string) ([]*ProjectInfo, error) {
+	t := util.CurMilis()
+	as, e := db.Assignments(bson.M{db.START: bson.M{db.LT: t}, db.END: bson.M{db.GT: t}}, nil, db.PROJECTID)
+	if e != nil {
+		return nil, e
+	}
+	pi := make([]*ProjectInfo, 0, len(as))
+	for _, a := range as {
+		if len(pi) == 0 || pi[len(pi)-1].Project.Id != a.ProjectId {
+			p, e := db.Project(bson.M{db.ID: a.ProjectId}, nil)
+			if e != nil {
+				return nil, e
+			}
+			pi = append(pi, NewProjectInfo(p))
+		}
+		ss, e := db.Submissions(bson.M{db.USER: u, db.ASSIGNMENTID: a.Id}, nil)
+		if e != nil {
+			return nil, e
+		}
+		pi[len(pi)-1].Add(a, ss)
+	}
+	return pi, nil
 }
 
 func (s *SubmissionHandler) login(m map[string]interface{}) error {
@@ -279,8 +285,10 @@ func (s *SubmissionHandler) Read() error {
 		}
 	case LOGOUT:
 		return doneError
+	default:
+		return fmt.Errorf("Unknown request %q", r)
 	}
-	return fmt.Errorf("Unknown request %q", r)
+	return nil
 }
 
 func (s *SubmissionHandler) read(m map[string]interface{}) error {

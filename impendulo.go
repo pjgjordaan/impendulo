@@ -54,8 +54,8 @@ var (
 	cfgFile, errLog, infoLog string
 	backupDB, access         string
 	dbName, dbAddr, mqURI    string
-	mProcs                   uint
-	httpPort, tcpPort        uint
+	mProcs                   int
+	httpPort, tcpPort        int
 )
 
 func init() {
@@ -80,10 +80,10 @@ func init() {
 	rFlags = flag.NewFlagSet("receiver", flag.ExitOnError)
 	wFlags = flag.NewFlagSet("web", flag.ExitOnError)
 
-	pFlags.UintVar(&mProcs, "mp", processor.MAX_PROCS, fmt.Sprintf("Specify the maximum number of goroutines to run when processing submissions (default %d).", processor.MAX_PROCS))
+	pFlags.IntVar(&mProcs, "mp", processor.MAX_PROCS, fmt.Sprintf("Specify the maximum number of goroutines to run when processing submissions (default %d).", processor.MAX_PROCS))
 
-	rFlags.UintVar(&tcpPort, "p", receiver.PORT, fmt.Sprintf("Specify the port to listen on for files using TCP (default %d).", receiver.PORT))
-	wFlags.UintVar(&httpPort, "p", web.PORT, fmt.Sprintf("Specify the port to use for the webserver (default %d).", web.PORT))
+	rFlags.IntVar(&tcpPort, "p", receiver.PORT, fmt.Sprintf("Specify the port to listen on for files using TCP (default %d).", receiver.PORT))
+	wFlags.IntVar(&httpPort, "p", web.PORT, fmt.Sprintf("Specify the port to use for the webserver (default %d).", web.PORT))
 }
 
 func main() {
@@ -176,19 +176,19 @@ func setupConn(a, n string) error {
 }
 
 //runWebServer runs the webserver
-func runWebServer(p uint) {
+func runWebServer(p int) {
 	wFlags.Parse(os.Args[2:])
 	web.Run(p)
 }
 
 //runFileReceiver runs the TCP file receiving server.
-func runFileReceiver(p uint) {
+func runFileReceiver(p int) {
 	rFlags.Parse(os.Args[2:])
 	receiver.Run(tcpPort, new(receiver.SubmissionSpawner))
 }
 
 //runFileProcessor runs the file processing server.
-func runFileProcessor(n uint) {
+func runFileProcessor(n int) {
 	pFlags.Parse(os.Args[2:])
 	go monitor.Start()
 	processor.Serve(n)

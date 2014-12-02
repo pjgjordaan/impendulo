@@ -47,6 +47,18 @@ type (
 	}
 )
 
+func (s *S) String() string {
+	ss := ""
+	for k, v := range s.Submissions {
+		ss += fmt.Sprintf("{Id: %s, Info: %s}\n", k, v)
+	}
+	return fmt.Sprintf("FileCount %d\nSubmissions: %s\n", s.FileCount, ss)
+}
+
+func (s *SubInfo) String() string {
+	return fmt.Sprintf("Src %s; Test: %s; Archive: %s", s.Src, s.Test, s.Archive)
+}
+
 func NewSubInfo() *SubInfo {
 	return &SubInfo{Src: util.NewSet(), Test: util.NewSet(), Archive: util.NewSet()}
 }

@@ -43,8 +43,8 @@ var (
 )
 
 const (
-	LOG_SERVER      = "webserver/server.go"
-	PORT       uint = 8080
+	LOG_SERVER     = "webserver/server.go"
+	PORT       int = 8080
 )
 
 func init() {
@@ -89,7 +89,7 @@ func getRoute(name string) string {
 }
 
 //Run starts up the webserver if it is not currently running.
-func Run(port uint) {
+func Run(port int) {
 	if Active() {
 		return
 	}
