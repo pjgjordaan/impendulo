@@ -23,52 +23,18 @@
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 var OverviewChart = {
-    tipe: '',
     init: function(tipe) {
         $(function() {
-            ComparisonChart.init();
-            OverviewChart.tipe = tipe;
-            OverviewChart.addOptions();
-            $('.select-chart').change(function() {
-                $('#chart').empty();
-                OverviewChart.load($('#x').val(), $('#y').val());
-            });
+            $('#granularity').append('<option value="overview">' + toTitleCase(tipe) + '</option>');
+            $('#granularity').append('<option value="assignment">Assignments</option>');
+            $('#granularity').append('<option value="submission">Submissions</option>');
+            var params = {
+                'type': 'overview',
+                'view': tipe
+            };
+            ComparisonChart.init(params);
         });
-    },
-
-    addOptions: function() {
-        var x = $('#x').val();
-        var y = $('#y').val();
-        $.getJSON('chart-options?type=overview', function(data) {
-            var o = data['options'];
-            if (not(o)) {
-                return;
-            }
-            for (var i = 0; i < o.length; i++) {
-                $('.select-chart').append('<option value="' + o[i].id + '">' + o[i].name + '</option>');
-            }
-            if (x === undefined || x === null || !$('#x option[value="' + x + '"]').length) {
-                x = o[0].id;
-            }
-            $('#x').val(x);
-            if (y === undefined || y === null || !$('#y option[value="' + y + '"]').length) {
-                y = o[o.length - 1].id;
-            }
-            $('#y').val(y);
-            OverviewChart.load(x, y);
-        });
-    },
-
-    load: function(x, y) {
-        var params = {
-            'type': 'overview',
-            'view': OverviewChart.tipe,
-            'x': x,
-            'y': y
-        };
-        ComparisonChart.load(params);
-    },
-
+    }
 };
 
 var Overview = {

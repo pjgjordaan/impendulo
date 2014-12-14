@@ -27,13 +27,10 @@ package web
 import (
 	"bytes"
 
-	"code.google.com/p/gorilla/sessions"
-
 	"fmt"
 
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/user"
-	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/web/context"
 
 	"net/http"
@@ -76,17 +73,12 @@ func testUserFunc(t *testing.T, f Poster, requests []postHolder) {
 	if e := db.Add(db.USERS, u); e != nil {
 		t.Error(e)
 	}
-	auth, enc, e := util.CookieKeys()
-	if e != nil {
-		t.Error(e)
-	}
-	store := sessions.NewCookieStore(auth, enc)
 	for _, ph := range requests {
 		r, e := http.NewRequest("POST", ph.url, new(bytes.Buffer))
 		if e != nil {
 			t.Error(e)
 		}
-		c, e := createContext(r, store)
+		c, e := context.LoadN(r, "test")
 		if e != nil {
 			t.Error(e)
 		}
@@ -96,12 +88,4 @@ func testUserFunc(t *testing.T, f Poster, requests []postHolder) {
 			t.Error(fmt.Errorf("Expected error for %s.", ph.url))
 		}
 	}
-}
-
-func createContext(r *http.Request, store sessions.Store) (*context.C, error) {
-	s, e := store.Get(r, "test")
-	if e != nil {
-		return nil, e
-	}
-	return context.Load(s), nil
 }

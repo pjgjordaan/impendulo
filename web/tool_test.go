@@ -25,13 +25,12 @@
 package web
 
 import (
-	"code.google.com/p/gorilla/sessions"
-
 	"fmt"
 
 	"github.com/godfried/impendulo/db"
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/util"
+	"github.com/godfried/impendulo/web/context"
 
 	"html"
 
@@ -48,7 +47,6 @@ var (
 		project.PKG:  "triangle",
 		project.NAME: "Triangle.java",
 	}
-
 	fileData = []byte(`
 package triangle;
 public class Triangle {
@@ -97,25 +95,19 @@ func TestCreatePMD(t *testing.T) {
 func testToolFunc(t *testing.T, f Poster, requests []postHolder) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
-	auth, enc, err := util.CookieKeys()
-	if err != nil {
-		t.Error(err)
-	}
-	store := sessions.NewCookieStore(auth, enc)
 	for _, ph := range requests {
-		req, err := http.NewRequest("POST", ph.url, nil)
-		if err != nil {
-			t.Error(err)
+		r, e := http.NewRequest("POST", ph.url, nil)
+		if e != nil {
+			t.Error(e)
 		}
-		ctx, err := createContext(req, store)
-		if err != nil {
-			t.Error(err)
+		c, e := context.LoadN(r, "test")
+		if e != nil {
+			t.Error(e)
 		}
-		ctx.AddUser("user")
-		_, err = f(req, ctx)
-		if ph.valid && err != nil {
-			t.Error(err)
-		} else if !ph.valid && err == nil {
+		c.AddUser("user")
+		if _, e = f(r, c); ph.valid && e != nil {
+			t.Error(e)
+		} else if !ph.valid && e == nil {
 			t.Error(fmt.Errorf("Expected error for %s.", ph.url))
 		}
 	}

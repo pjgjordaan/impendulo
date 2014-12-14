@@ -55,7 +55,7 @@ func Diff(orig, change string) (string, error) {
 		return "", e
 	}
 	defer os.Remove(n)
-	a := []string{d, "-u", n, "-"}
+	a := []string{d, "-wBu", n, "-"}
 	r, e := tool.RunCommand(a, strings.NewReader(change), 30*time.Second)
 	if e != nil && len(r.StdOut) == 0 {
 		return "", e

@@ -28,11 +28,60 @@ import (
 	"bytes"
 
 	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/user"
 	"labix.org/v2/mgo/bson"
 
 	"reflect"
 	"testing"
 )
+
+func testAddProject() (*project.P, error) {
+	p := project.New("project", "user", "none", project.JAVA)
+	if e = Add(PROJECTS, p); e != nil {
+		return nil, e
+	}
+	return p, nil
+}
+
+func testAddUser() (*user.U, error) {
+	u := user.New("user", "password")
+	if e = Add(USERS, u); e != nil {
+		return nil, e
+	}
+	return u, nil
+}
+
+func testAddSkeleton(pid bson.ObjectId) (*project.Skeleton, error) {
+	s := project.NewSkeleton(pid, "skeleton", []byte{})
+	if e = Add(SKELETONS, s); e != nil {
+		return nil, e
+	}
+	return s, nil
+}
+
+func testAddAssignment(pid, sid bson.ObjectId) (*project.Assignment, error) {
+	a := project.NewAssignment(pid, sid, "assignment", "user", 1000, 100000)
+	if e = Add(ASSIGNMENTS, a); e != nil {
+		return nil, e
+	}
+	return a, nil
+}
+
+func testAddSubmission(a *project.Assignment, uid string) (*project.Submission, error) {
+	s := project.NewSubmission(a.ProjectId, a.Id, u.Name, project.FILE_MODE, 10000)
+	if e = Add(SUBMISSIONS, s); e != nil {
+		return nil, e
+	}
+	return s, nil
+}
+
+func testAddSubmission(sid bson.ObjectId, uid string) (*project.Submission, error) {
+	f, e := project.NewFile(sub.Id, fileInfo, fileData)
+	if e != nil {
+		t.Error(e)
+	}
+
+}
 
 func TestRemoveFile(t *testing.T) {
 	Setup(TEST_CONN)
@@ -87,7 +136,7 @@ func TestSubmission(t *testing.T) {
 		t.Error(e)
 	}
 	defer s.Close()
-	sub := project.NewSubmission(bson.NewObjectId(), "user", project.FILE_MODE, 1000)
+	sub := project.NewSubmission(bson.NewObjectId(), bson.NewObjectId(), "user", project.FILE_MODE, 1000)
 	if e = Add(SUBMISSIONS, sub); e != nil {
 		t.Error(e)
 	}

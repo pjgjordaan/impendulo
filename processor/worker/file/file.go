@@ -105,7 +105,6 @@ func (w *Worker) Start(done chan util.E) {
 	defer w.shutdown(done)
 	go mq.H(w.filer)
 	w.processFiles()
-	fmt.Println("finished processing files")
 	if e := db.UpdateTime(w.submission); e != nil {
 		util.Log(e, LOG_F)
 	}
@@ -117,7 +116,6 @@ func (w *Worker) shutdown(done chan util.E) {
 	if e := mq.ChangeStatus(request.StopSubmission(w.submission.Id)); e != nil {
 		util.Log(e, LOG_F)
 	}
-	fmt.Println("sent endsubmission request")
 	w.filer.Shutdown()
 }
 

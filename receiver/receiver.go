@@ -123,11 +123,16 @@ func (s *SubmissionHandler) Handle() error {
 		return e
 	}
 	defer func() {
-		fmt.Println(mq.EndSubmission(s.s.Id))
+		if ie := mq.EndSubmission(s.s.Id); ie != nil {
+			if e == nil {
+				e = ie
+			} else {
+				util.Log(ie)
+			}
+		}
 	}()
 	for e = s.Read(); e == nil; e = s.Read() {
 	}
-	fmt.Println("done reading", s.s.Id)
 	return e
 }
 

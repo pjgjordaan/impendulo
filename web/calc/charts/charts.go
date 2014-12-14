@@ -207,7 +207,7 @@ func User(us []*user.U, x *description.D, y *description.D) (D, I, error) {
 	sumX, sumY := 0.0, 0.0
 
 	for _, u := range us {
-		if vs, ns, e := c.User(u, []*description.D{x, y}); e == nil {
+		if vs, ns, e := c.User(u, []*description.D{x, y}); e == nil && vs[0] >= 0 && vs[1] >= 0 {
 			sumX += vs[0]
 			sumY += vs[1]
 			v := map[string]interface{}{
@@ -236,7 +236,7 @@ func Project(ps []*project.P, x *description.D, y *description.D) (D, I, error) 
 	i := I{"x": x.Format(), "y": y.Format()}
 	sumX, sumY := 0.0, 0.0
 	for _, p := range ps {
-		if vs, ns, e := c.Project(p, []*description.D{x, y}); e == nil {
+		if vs, ns, e := c.Project(p, []*description.D{x, y}); e == nil && vs[0] >= 0 && vs[1] >= 0 {
 			sumX += vs[0]
 			sumY += vs[1]
 			v := map[string]interface{}{
@@ -274,7 +274,7 @@ func Assignment(as []*project.Assignment, x *description.D, y *description.D) (D
 			}
 			names[a.ProjectId] = n
 		}
-		if vs, ns, e := c.Assignment(a, []*description.D{x, y}); e == nil {
+		if vs, ns, e := c.Assignment(a, []*description.D{x, y}); e == nil && vs[0] >= 0 && vs[1] >= 0 {
 			sumX += vs[0]
 			sumY += vs[1]
 			p := map[string]interface{}{
@@ -312,7 +312,7 @@ func Submission(subs []*project.Submission, x *description.D, y *description.D) 
 			}
 			names[s.ProjectId] = n
 		}
-		if vs, ns, e := c.Submission(s, []*description.D{x, y}); e == nil {
+		if vs, ns, e := c.Submission(s, []*description.D{x, y}); e == nil && vs[0] >= 0 && vs[1] >= 0 {
 			sumX += vs[0]
 			sumY += vs[1]
 			p := map[string]interface{}{

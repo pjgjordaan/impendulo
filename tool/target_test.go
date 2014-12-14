@@ -25,42 +25,44 @@
 package tool
 
 import (
+	"github.com/godfried/impendulo/project"
+
 	"testing"
 )
 
 func TestPackagePath(t *testing.T) {
-	targ := NewTarget("", ".c.a", "d/a/fa", JAVA)
+	targ := NewTarget("", ".c.a", "d/a/fa", project.JAVA)
 	if targ.PackagePath() != "d/a/fa/c/a" {
 		t.Errorf("Invalid package path %s", targ.PackagePath())
 	}
-	targ = NewTarget("", "", "d/a/fa", JAVA)
+	targ = NewTarget("", "", "d/a/fa", project.JAVA)
 	if targ.PackagePath() != "d/a/fa" {
 		t.Errorf("Invalid package path %s", targ.PackagePath())
 	}
-	targ = NewTarget("", "a.v.a", "", JAVA)
+	targ = NewTarget("", "a.v.a", "", project.JAVA)
 	if targ.PackagePath() != "a/v/a" {
 		t.Errorf("Invalid package path %s", targ.PackagePath())
 	}
-	targ = NewTarget("", "..", "/", JAVA)
+	targ = NewTarget("", "..", "/", project.JAVA)
 	if targ.PackagePath() != "/" {
 		t.Errorf("Invalid package path %s", targ.PackagePath())
 	}
 }
 
 func TestExecutable(t *testing.T) {
-	targ := NewTarget("hello.c", "c.a.d", "", JAVA)
+	targ := NewTarget("hello.c", "c.a.d", "", project.JAVA)
 	if targ.Executable() != "c.a.d.hello" {
 		t.Errorf("Invalid executable %s", targ.Executable())
 	}
-	targ = NewTarget("hello.c.d.a", "", "", JAVA)
+	targ = NewTarget("hello.c.d.a", "", "", project.JAVA)
 	if targ.Executable() != "hello.c.d" {
 		t.Errorf("Invalid executable %s", targ.Executable())
 	}
-	targ = NewTarget("", "", "", JAVA)
+	targ = NewTarget("", "", "", project.JAVA)
 	if targ.Executable() != "" {
 		t.Errorf("Invalid executable %s", targ.Executable())
 	}
-	targ = NewTarget("", "a.b.c", "", JAVA)
+	targ = NewTarget("", "a.b.c", "", project.JAVA)
 	if targ.Executable() != "a.b.c." {
 		t.Errorf("Invalid executable %s", targ.Executable())
 	}

@@ -37,6 +37,9 @@ const (
 	FAILURES = "Failures"
 	ERRORS   = "Errors"
 	PASSED   = "Passed"
+	PF       = "Percentage Failures"
+	PE       = "Percentage Errors"
+	PP       = "Percentage Passed"
 )
 
 type (
@@ -100,6 +103,9 @@ func (r *Result) Values() []*result.Value {
 		&result.Value{Name: FAILURES, V: float64(len(r.Report.Failures)), FileId: r.FileId},
 		&result.Value{Name: ERRORS, V: float64(len(r.Report.Errors)), FileId: r.FileId},
 		&result.Value{Name: PASSED, V: float64(r.Report.Passed()), FileId: r.FileId},
+		&result.Value{Name: PF, V: 100 * float64(len(r.Report.Failures)) / float64(r.Report.Tests), FileId: r.FileId},
+		&result.Value{Name: PE, V: 100 * float64(len(r.Report.Errors)) / float64(r.Report.Tests), FileId: r.FileId},
+		&result.Value{Name: PP, V: 100 * float64(r.Report.Passed()) / float64(r.Report.Tests), FileId: r.FileId},
 	}
 }
 
@@ -111,13 +117,19 @@ func (r *Result) Value(n string) (*result.Value, error) {
 		return &result.Value{Name: ERRORS, V: float64(len(r.Report.Errors)), FileId: r.FileId}, nil
 	case PASSED:
 		return &result.Value{Name: PASSED, V: float64(r.Report.Passed()), FileId: r.FileId}, nil
+	case PF:
+		return &result.Value{Name: PF, V: 100 * float64(len(r.Report.Failures)) / float64(r.Report.Tests), FileId: r.FileId}, nil
+	case PE:
+		return &result.Value{Name: PE, V: 100 * float64(len(r.Report.Errors)) / float64(r.Report.Tests), FileId: r.FileId}, nil
+	case PP:
+		return &result.Value{Name: PP, V: 100 * float64(r.Report.Passed()) / float64(r.Report.Tests), FileId: r.FileId}, nil
 	default:
 		return nil, fmt.Errorf("unknown Value %s", n)
 	}
 }
 
 func (r *Result) Types() []string {
-	return []string{FAILURES, ERRORS, PASSED}
+	return []string{FAILURES, ERRORS, PASSED, PF, PE, PP}
 }
 
 func (r *Result) Template() string {

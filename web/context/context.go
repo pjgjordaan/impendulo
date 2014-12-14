@@ -99,15 +99,19 @@ func loadStore() error {
 	return nil
 }
 
-func loadSession(r *http.Request) (*sessions.Session, error) {
+func loadSession(r *http.Request, n string) (*sessions.Session, error) {
 	if e := loadStore(); e != nil {
 		return nil, e
 	}
-	return store.Get(r, STORE_NAME)
+	return store.Get(r, n)
 }
 
 func Load(r *http.Request) (*C, error) {
-	s, e := loadSession(r)
+	return LoadN(r, STORE_NAME)
+}
+
+func LoadN(r *http.Request, n string) (*C, error) {
+	s, e := loadSession(r, n)
 	if e != nil {
 		return nil, e
 	}

@@ -70,7 +70,7 @@ func Posters() map[string]Poster {
 func defaultPosters() map[string]Poster {
 	return map[string]Poster{
 		"addproject": AddProject, "addskeleton": AddSkeleton, "addarchive": AddArchive,
-		"runtools": RunTools, "deleteprojects": DeleteProjects, "deleteusers": DeleteUsers,
+		"runtools": RunTools, "deleteprojects": DeleteProjects, "deleteusers": DeleteUsers, "deleteassignments": DeleteAssignments,
 		"deletesubmissions": DeleteSubmissions, "deleteresults": DeleteResults, "deleteskeletons": DeleteSkeletons,
 		"deletetests": DeleteTests, "importdata": ImportData, "renamefiles": RenameFiles, "login": Login, "register": Register,
 		"logout": Logout, "editproject": EditProject, "edituser": EditUser, "editsubmission": EditSubmission,
@@ -206,7 +206,7 @@ func AddProject(r *http.Request, c *context.C) (string, error) {
 	if e != nil {
 		return "Could not read project name.", e
 	}
-	l, e := webutil.String(r, "lang")
+	l, e := webutil.Language(r, "lang")
 	if e != nil {
 		return "Could not read project language.", e
 	}
@@ -218,7 +218,7 @@ func AddProject(r *http.Request, c *context.C) (string, error) {
 	if e != nil {
 		return "Could not read description.", e
 	}
-	if e = db.Add(db.PROJECTS, project.New(n, un, l, d)); e != nil {
+	if e = db.Add(db.PROJECTS, project.New(n, un, d, l)); e != nil {
 		return "Could not add project.", e
 	}
 	return "Successfully added project.", nil
@@ -273,6 +273,24 @@ func DeleteSubmissions(r *http.Request, c *context.C) (string, error) {
 		}
 	}
 	return "Successfully deleted submissions.", nil
+}
+
+func DeleteAssignments(r *http.Request, c *context.C) (string, error) {
+	as, e := webutil.Strings(r, "assignment-id")
+	if e != nil {
+		return "Could not read assignment.", e
+	}
+	for _, a := range as {
+		id, e := convert.Id(a)
+		if e != nil {
+			util.Log(e)
+			continue
+		}
+		if e = db.RemoveAssignmentById(id); e != nil {
+			util.Log(e)
+		}
+	}
+	return "Successfully deleted assignments.", nil
 }
 
 func DeleteSkeletons(r *http.Request, c *context.C) (string, error) {

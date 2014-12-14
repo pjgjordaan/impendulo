@@ -106,6 +106,6 @@ func (p *P) String() string {
 }
 
 //New
-func New(n, u, l, d string) *P {
-	return &P{Id: bson.NewObjectId(), Name: n, User: u, Lang: Language(l), Time: milliseconds.Current(), Description: d}
+func New(n, u, d string, l Language) *P {
+	return &P{Id: bson.NewObjectId(), Name: n, User: u, Lang: l, Time: milliseconds.Current(), Description: d}
 }

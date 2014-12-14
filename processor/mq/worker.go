@@ -26,7 +26,6 @@ package mq
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/godfried/impendulo/processor/request"
 	"github.com/godfried/impendulo/processor/status"
@@ -280,12 +279,10 @@ func (f *Filer) Consume(d amqp.Delivery, ch *amqp.Channel) (e error) {
 	if e = json.Unmarshal(d.Body, &r); e != nil {
 		return
 	}
-	fmt.Println("filer received", r)
 	if e = r.Valid(); e != nil {
 		return
 	}
 	f.requestChan <- r
-	fmt.Println("filer sent", r)
 	return
 }
 

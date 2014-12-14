@@ -11,19 +11,6 @@ import (
 	"net/http"
 )
 
-/*
-func FileInfos(r *http.Request) ([]byte, error) {
-	sid, e := webutil.Id(r, "submission-id")
-	if e != nil {
-		return nil, e
-	}
-	fs, e := db.FileInfos(bson.M{db.SUBID: sid, db.TYPE: bson.M{db.IN: []project.Type{project.SRC, project.TEST}}})
-	if e != nil {
-		return nil, e
-	}
-	return util.JSON(map[string]interface{}{"fileinfos": fs})
-}
-*/
 func FileNames(r *http.Request) ([]byte, error) {
 	m := bson.M{}
 	if pid, e := webutil.Id(r, "project-id"); e == nil {

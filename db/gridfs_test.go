@@ -29,6 +29,7 @@ import (
 
 	"github.com/godfried/impendulo/project"
 	"github.com/godfried/impendulo/tool/result"
+	"github.com/godfried/impendulo/user"
 	"labix.org/v2/mgo/bson"
 
 	"reflect"
@@ -43,17 +44,37 @@ func TestResultGridFS(t *testing.T) {
 		t.Error(e)
 	}
 	defer s.Close()
-	file, e := project.NewFile(bson.NewObjectId(), fileInfo, fileData)
+	u := user.New("user", "password")
+	if e = Add(USERS, u); e != nil {
+		t.Error(e)
+	}
+	p := project.New("project", u.Name, "none", project.JAVA)
+	if e = Add(PROJECTS, p); e != nil {
+		t.Error(e)
+	}
+	sk := project.NewSkeleton(p.Id, "skeleton", []byte{})
+	if e = Add(SKELETONS, sk); e != nil {
+		t.Error(e)
+	}
+	a := project.NewAssignment(p.Id, sk.Id, "assignment", u.Name, 1000, 100000)
+	if e = Add(ASSIGNMENTS, a); e != nil {
+		t.Error(e)
+	}
+	sub := project.NewSubmission(p.Id, a.Id, u.Name, project.FILE_MODE, 10000)
+	if e = Add(SUBMISSIONS, sub); e != nil {
+		t.Error(e)
+	}
+	f, e := project.NewFile(sub.Id, fileInfo, fileData)
 	if e != nil {
 		t.Error(e)
 	}
-	if e = Add(FILES, file); e != nil {
+	if e = Add(FILES, f); e != nil {
 		t.Error(e)
 	}
 	results := []result.Tooler{
-		checkstyleResult(file.Id, true),
-		findbugsResult(file.Id, true),
-		javacResult(file.Id, true),
+		checkstyleResult(f.Id, true),
+		findbugsResult(f.Id, true),
+		javacResult(f.Id, true),
 	}
 	for _, r := range results {
 		if e = AddResult(r, r.GetName()); e != nil {

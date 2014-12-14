@@ -22,8 +22,11 @@
 //(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 var ComparisonChart = {
+    params: {},
+    loadParams: {},
     colours: ['A30004', '#A40206', '#A50509', '#A7080C', '#A80A0E', '#AA0D11', '#AB1014', '#AD1317', '#AE1519', '#B0181C', '#B11B1F', '#B31E21', '#B42024', '#B52327', '#B7262A', '#B8292C', '#BA2B2F', '#BB2E32', '#BD3134', '#BE3437', '#C0363A', '#C1393D', '#C33C3F', '#C43F42', '#C64145', '#C74447', '#C8474A', '#CA4A4D', '#CB4C50', '#CD4F52', '#CE5255', '#D05558', '#D1575A', '#D35A5D', '#D45D60', '#D66063', '#D76265', '#D96568', '#DA686B', '#DB6B6D', '#DD6D70', '#DE7073', '#E07376', '#E17678', '#E3787B', '#E47B7E', '#E67E80', '#E78183', '#E98386', '#EA8689', '#EC898B', '#ED8C8E', '#EE8E91', '#F09193', '#F19496', '#F39799', '#F4999C', '#F69C9E', '#F79FA1', '#F9A2A4', '#FAA4A6', '#FCA7A9', '#FDAAAC', '#FFADAF'],
-    init: function() {
+    init: function(params) {
+        ComparisonChart.params = params;
         ComparisonChart.colours.reverse();
         $('#checkbox-labels').change(function() {
             $('.link text').toggle();
@@ -34,12 +37,45 @@ var ComparisonChart = {
         $('#checkbox-stddev').change(function() {
             $('.stddev').toggle();
         });
+        $('#checkbox-outliers-hide').change(function() {
+            $('.link[outlier="true"]').toggle();
+        });
+        $('.select-chart').change(function() {
+            ComparisonChart.load($('#x').val(), $('#y').val(), $('#granularity').val());
+        });
+        ComparisonChart.addOptions();
     },
-    load: function(params) {
-        $.getJSON('chart-data', params, function(data) {
+
+    addOptions: function() {
+        var x = $('#x').val();
+        var y = $('#y').val();
+        $.getJSON('chart-options', ComparisonChart.params, function(data) {
+            var o = data['options'];
+            if (not(o)) {
+                console.log(data);
+                return;
+            }
+            for (var i = 0; i < o.length; i++) {
+                $('.select-axis').append('<option value="' + o[i].id + '">' + o[i].name + '</option>');
+            }
+            if (not(x) || !$('#x option[value="' + x + '"]').length) {
+                x = o[0].id;
+            }
+            $('#x').val(x);
+            if (not(y) || !$('#y option[value="' + y + '"]').length) {
+                y = o[o.length - 1].id;
+            }
+            $('#y').val(y);
+            ComparisonChart.load(x, y, $('#granularity').val());
+        });
+    },
+
+    load: function(x, y, g) {
+        $('#chart').empty();
+        gs = not(g) ? '' : '&granularity=' + g;
+        $.getJSON('chart-data?x=' + x + '&y=' + y + gs, ComparisonChart.params, function(data) {
             ComparisonChart.create(data['chart-data'], data['chart-info']);
-            $('#checkbox-outliers').off();
-            $('#checkbox-outliers').change(function() {
+            $('#checkbox-outliers-adjust').change(function() {
                 ComparisonChart.create(data['chart-data'], data['chart-info']);
             });
         });
@@ -48,9 +84,10 @@ var ComparisonChart = {
     create: function(data, info) {
         $('#chart').empty();
         if (not(data) || not(info)) {
+            $('#chart').append('<h3 class="centered">No Data</h3>');
             return;
         }
-        var m = [10, 150, 100, 100];
+        var m = [10, 150, 100, 10];
         var w = 1100 - m[1] - m[3];
         var h = 480 - m[0] - m[2];
         var radius = 5;
@@ -75,10 +112,10 @@ var ComparisonChart = {
             return y(ComparisonChart.getY(d));
         }
         var loadRX = function(d) {
-            return x(!$('#checkbox-outliers').prop('checked') ? minX + d.rx : minXO + d['rx_o']);
+            return x(!$('#checkbox-outliers-adjust').prop('checked') ? minX + d.rx : minXO + d['rx_o']);
         }
         var loadRY = function(d) {
-            return y(!$('#checkbox-outliers').prop('checked') ? maxY - d.ry : maxYO - d['ry_o']);
+            return y(!$('#checkbox-outliers-adjust').prop('checked') ? maxY - d.ry : maxYO - d['ry_o']);
         }
         var actualCombined = function(d) {
             return ComparisonChart.getActualX(d) / maxX + ComparisonChart.getActualY(d) / maxY;
@@ -213,6 +250,9 @@ var ComparisonChart = {
             })
             .attr('class', 'link')
             .attr('fill', chartColour)
+            .attr('outlier', function(d) {
+                return d['y_o'] !== undefined || d['x_o'] !== undefined;
+            })
             .attr('transform', function(d) {
                 return 'translate(' + loadX(d) + ',' + loadY(d) + ')';
             });
@@ -228,15 +268,18 @@ var ComparisonChart = {
             .attr('class', 'title')
             .attr('dy', '-1.0em')
             .attr('style', function(d) {
-                return 'text-anchor: middle; fill: ' + chartColour(d) + ';';
+                return 'text-anchor: middle; fill: black;';
             })
             .attr('font-size', '10px')
             .text(function(d) {
                 return d.title;
             });
         if (!$('#checkbox-labels').prop('checked')) {
-            $('.link text').toggle();
+            $('.link text.title').hide();
         }
+        if ($('#checkbox-outliers-hide').prop('checked')) {
+            $('.link[outlier="true"]').hide();
+        };
 
         var zoom = d3.behavior.zoom()
             .x(x)
@@ -278,7 +321,7 @@ var ComparisonChart = {
     },
 
     getX: function(d) {
-        return d['x_o'] && $('#checkbox-outliers').prop('checked') ? d['x_o'] : d.x;
+        return d['x_o'] && $('#checkbox-outliers-adjust').prop('checked') ? d['x_o'] : d.x;
     },
 
     getActualX: function(d) {
@@ -286,7 +329,7 @@ var ComparisonChart = {
     },
 
     getY: function(d) {
-        return d['y_o'] && $('#checkbox-outliers').prop('checked') ? d['y_o'] : d.y;
+        return d['y_o'] && $('#checkbox-outliers-adjust').prop('checked') ? d['y_o'] : d.y;
     },
 
     getActualY: function(d) {

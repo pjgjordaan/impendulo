@@ -23,15 +23,19 @@
 //SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 var SubmissionsChart = {
-    tipe: '',
     init: function(aid, pid, uid, tipe) {
-        SubmissionsChart.tipe = tipe;
-        ComparisonChart.init();
+        $('#div-granularity').hide();
+        var params = {
+            'type': 'submission',
+            'assignment-id': aid
+        };
+        if (tipe === 'project') {
+            params['project-id'] = pid;
+        } else if (tipe === 'user') {
+            params['user-id'] = uid;
+        }
+        ComparisonChart.init(params);
         $(function() {
-            $('.select-chart').change(function() {
-                $('#chart').empty();
-                SubmissionsChart.load($('#x').val(), $('#y').val());
-            });
             $.getJSON('projects', function(data) {
                 if (not(data['projects'])) {
                     console.log(data);
@@ -51,7 +55,6 @@ var SubmissionsChart = {
                             return;
                         }
                         SubmissionsChart.assDropdown(aid, data['assignments']);
-                        SubmissionsChart.addOptions();
                     });
                 });
             });
@@ -76,48 +79,11 @@ var SubmissionsChart = {
             setContext(params);
             $('#assignment-dropdown-label').attr('currentid', currentId);
             $('#assignment-dropdown-label h4').html('<small>assignment</small> ' + currentName + ' <span class="caret"></span>');
-            SubmissionsChart.addOptions();
+            ComparisonChart.params['assignment-id'] = currentId;
+            ComparisonChart.addOptions();
         });
     },
 
-    addOptions: function() {
-        var x = $('#x').val();
-        var y = $('#y').val();
-        $('.select-chart').empty();
-        var url = 'chart-options';
-        var count = 0;
-        var id = $('#assignment-dropdown-label').attr('currentid');
-        $.getJSON('chart-options?type=submission&assignment-id=' + id, function(data) {
-            var o = data['options'];
-            if (not(o)) {
-                console.log(data);
-                return;
-            }
-            for (var i = 0; i < o.length; i++) {
-                $('.select-chart').append('<option value="' + o[i].id + '">' + o[i].name + '</option>');
-            }
-            if (not(x) || $('#x option[value="' + x + '"]').length) {
-                x = o[0].id;
-            }
-            $('#x').val(x);
-            if (not(y) || $('#y option[value="' + y + '"]').length) {
-                y = o[o.length - 1].id;
-            }
-            $('#y').val(y);
-            SubmissionsChart.load(x, y);
-        });
-    },
-
-    load: function(x, y) {
-        var params = {
-            'type': 'submission',
-            'x': x,
-            'y': y,
-            'assignment-id': $('#assignment-dropdown-label').attr('currentid')
-        };
-        params[SubmissionsChart.tipe + '-id'] = $('#' + SubmissionsChart.tipe + '-dropdown-label').attr(SubmissionsChart.tipe + 'id');
-        ComparisonChart.load(params);
-    }
 };
 
 var SubmissionsView = {

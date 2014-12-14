@@ -63,7 +63,7 @@ var (
 		"newproject", "addproject", "runtoolsview", "runtools", "newconfig",
 	}
 	admin = []string{
-		"deleteprojects", "deleteusers", "deleteresults", "deleteview", "deletecache",
+		"deleteassignments", "deleteprojects", "deleteusers", "deleteresults", "deleteview", "deletecache",
 		"deleteskeletons", "deletesubmissions", "deletetests", "importview", "exportview",
 		"importdata", "exportdb.zip", "statusview", "evaluatesubmissionsview",
 		"evaluatesubmissions", "logs", "editdbview", "loadproject", "editproject",
@@ -71,8 +71,9 @@ var (
 		"editfile", "edittest", "renamefiles", "renameview", "editassignment",
 	}
 
-	homeViews = []string{
-		"homeview", "overviewresult", "overviewchart",
+	homeViews     = []string{"homeview"}
+	analysisViews = []string{
+		"overviewresult", "overviewchart",
 		"resultsview", "filesview", "submissionschart",
 		"submissionsview", "assignmentsview", "assignmentschart",
 	}
@@ -102,6 +103,7 @@ func Views() map[string]string {
 	}
 	viewRoutes = make(map[string]string)
 	setViewRoutes(homeViews, "home")
+	setViewRoutes(analysisViews, "analysis")
 	setViewRoutes(submitViews, "submit")
 	setViewRoutes(registerViews, "register")
 	setViewRoutes(downloadViews, "download")
@@ -151,7 +153,7 @@ func LoadView(n, v string) Handler {
 			return e
 		}
 		c.Browse.View = v
-		if c.Browse.View == "home" {
+		if c.Browse.View == "home" || c.Browse.View == "analysis" {
 			c.Browse.SetLevel(n)
 		}
 		t := []string{getNav(c), n}

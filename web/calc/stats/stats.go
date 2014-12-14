@@ -37,8 +37,8 @@ import (
 	"github.com/godfried/impendulo/tool"
 	"github.com/godfried/impendulo/tool/code"
 	"github.com/godfried/impendulo/tool/junit"
+	"github.com/godfried/impendulo/tool/lc"
 	"github.com/godfried/impendulo/tool/result/description"
-	"github.com/godfried/impendulo/tool/wc"
 	"github.com/godfried/impendulo/util"
 	"github.com/godfried/impendulo/util/convert"
 
@@ -142,28 +142,32 @@ func (c *C) Assignment(a *project.Assignment, ds []*description.D) ([]float64, [
 	if e != nil {
 		return nil, nil, e
 	}
-	count := 0
+	counts := make([]int, len(ds))
 	vals := make([]float64, len(ds))
 	var ns []string
 	for _, s := range subs {
 		if svals, sn, e := c.Submission(s, ds); e == nil {
 			for i, v := range svals {
-				vals[i] += v
+				if v >= 0 {
+					vals[i] += v
+					counts[i]++
+				}
 			}
 			if ns == nil {
 				ns = sn
 			}
-			count++
 		}
 	}
-	if count == 0 {
-		return nil, nil, nil
+	if ns == nil {
+		return nil, nil, fmt.Errorf("no assignment submissions found for %s", a)
 	}
 	for i, _ := range vals {
 		if ds[i].Type == "Submissions" {
 			vals[i] = float64(len(subs))
+		} else if counts[i] == 0 {
+			vals[i] = -1
 		} else if ds[i].Metric != "Total" {
-			vals[i] = util.Round(vals[i]/float64(count), 2)
+			vals[i] = util.Round(vals[i]/float64(counts[i]), 2)
 		}
 	}
 	return vals, ns, nil
@@ -174,28 +178,32 @@ func (c *C) Project(p *project.P, ds []*description.D) ([]float64, []string, err
 	if e != nil {
 		return nil, nil, e
 	}
-	count := 0
+	counts := make([]int, len(ds))
 	vals := make([]float64, len(ds))
 	var ns []string
 	for _, a := range as {
 		if avals, an, e := c.Assignment(a, ds); e == nil {
 			for i, v := range avals {
-				vals[i] += v
+				if v >= 0 {
+					vals[i] += v
+					counts[i]++
+				}
 			}
 			if ns == nil {
 				ns = an
 			}
-			count++
 		}
 	}
-	if count == 0 {
-		return nil, nil, nil
+	if ns == nil {
+		return nil, nil, fmt.Errorf("no project assignments found for %s", p)
 	}
 	for i, _ := range vals {
 		if ds[i].Type == "Assignments" {
 			vals[i] = float64(len(as))
+		} else if counts[i] == 0 {
+			vals[i] = -1
 		} else if ds[i].Metric != "Total" {
-			vals[i] = util.Round(vals[i]/float64(count), 2)
+			vals[i] = util.Round(vals[i]/float64(counts[i]), 2)
 		}
 	}
 	return vals, ns, nil
@@ -206,7 +214,7 @@ func (c *C) User(u *user.U, ds []*description.D) ([]float64, []string, error) {
 	if e != nil {
 		return nil, nil, e
 	}
-	count := 0
+	counts := make([]int, len(ds))
 	vals := make([]float64, len(ds))
 	var ns []string
 	am := util.NewSet()
@@ -214,16 +222,18 @@ func (c *C) User(u *user.U, ds []*description.D) ([]float64, []string, error) {
 		am.Add(s.AssignmentId.Hex())
 		if svals, sn, e := c.Submission(s, ds); e == nil {
 			for i, v := range svals {
-				vals[i] += v
+				if v >= 0 {
+					vals[i] += v
+					counts[i]++
+				}
 			}
 			if ns == nil {
 				ns = sn
 			}
-			count++
 		}
 	}
-	if count == 0 {
-		return nil, nil, errors.New("no user submissions")
+	if ns == nil {
+		return nil, nil, fmt.Errorf("no user submissions found for %s", u)
 	}
 	ac, sc := float64(len(am)), float64(len(ss))
 	for i, _ := range vals {
@@ -235,8 +245,10 @@ func (c *C) User(u *user.U, ds []*description.D) ([]float64, []string, error) {
 			}
 		} else if ds[i].Type == "Assignments" {
 			vals[i] = ac
+		} else if counts[i] == 0 {
+			vals[i] = -1
 		} else if ds[i].Metric != "Total" {
-			vals[i] = util.Round(vals[i]/float64(count), 2)
+			vals[i] = util.Round(vals[i]/float64(counts[i]), 2)
 		}
 	}
 	return vals, ns, nil
@@ -247,6 +259,7 @@ func ParseType(n string) (Type, error) {
 	switch n {
 	case "time", "passed", "testcases":
 		return Type(n), nil
+
 	default:
 		return Type(""), fmt.Errorf("unknown stats type %s", n)
 	}
@@ -552,7 +565,7 @@ func Lines(sid bson.ObjectId, n string) (int64, error) {
 	if e != nil {
 		return -1, nil
 	}
-	return wc.LinesB(f.Data)
+	return lc.LinesB(f.Data)
 }
 
 func TypeNames() []string {

@@ -246,7 +246,6 @@ func testReceive(spawner *clientSpawner) error {
 	for ok {
 		go func(c *client) {
 			errChan <- c.run(spawner.rport, spawner.numFiles, spawner.files)
-			fmt.Println("ran file", spawner.rport, spawner.numFiles)
 		}(cli)
 		cli, ok = spawner.spawn()
 	}
@@ -258,7 +257,6 @@ func testReceive(spawner *clientSpawner) error {
 		}
 		done++
 	}
-	fmt.Println("waiting")
 	return mq.WaitIdle()
 }
 

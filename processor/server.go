@@ -120,6 +120,7 @@ func (s *Server) Serve() {
 					util.Log(e)
 				} else {
 					go w.Start(processedChan)
+					busy++
 				}
 			default:
 				util.Log(fmt.Errorf("unsupported request type %d", r.Type))

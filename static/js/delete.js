@@ -32,6 +32,7 @@ var DeleteView = {
                 var ps = data['projects'];
                 for (var i = 0; i < ps.length; i++) {
                     $('#tp-project-id').append('<option value="' + ps[i].Id + '">' + ps[i].Name + '</option>');
+                    $('#ta-project-id').append('<option value="' + ps[i].Id + '">' + ps[i].Name + '</option>');
                     $('#ts-project-id').append('<option value="' + ps[i].Id + '">' + ps[i].Name + '</option>');
                     $('#tr-project-id').append('<option value="' + ps[i].Id + '">' + ps[i].Name + '</option>');
                     $('#tsk-project-id').append('<option value="' + ps[i].Id + '">' + ps[i].Name + '</option>');
@@ -42,6 +43,10 @@ var DeleteView = {
                     noneSelectedText: 'Delete projects'
                 });
                 $('#tp-project-id').multiselected = true;
+                DeleteView.loadAssignments('#ta-assignment-id', ps[0].Id, 'Delete assignments');
+                $('#ta-project-id').change(function() {
+                    DeleteView.loadAssignments('#ta-assignment-id', $(this).val(), 'Delete assignments');
+                });
                 DeleteView.loadSubmissions('#ts-submission-id', ps[0].Id, 'Delete submissions');
                 $('#ts-project-id').change(function() {
                     DeleteView.loadSubmissions('#ts-submission-id', $(this).val(), 'Delete submissions');
@@ -113,6 +118,26 @@ var DeleteView = {
             $(id).multiselect({
                 selectedText: '# of # tests selected',
                 noneSelectedText: 'Delete tests'
+            });
+            $(id).multiselected = true;
+        });
+    },
+
+    loadAssignments: function(id, pid, desc) {
+        clearMulti(id);
+        $(id).hide();
+        $.getJSON('assignments?project-id=' + pid, function(data) {
+            if (not(data['assignments'])) {
+                return;
+            }
+            $(id).show();
+            var as = data['assignments'];
+            for (var i = 0; i < as.length; i++) {
+                $(id).append('<option value="' + as[i].Id + '">' + as[i].Name + '</option>');
+            }
+            $(id).multiselect({
+                selectedText: '# of # assignments selected',
+                noneSelectedText: desc,
             });
             $(id).multiselected = true;
         });

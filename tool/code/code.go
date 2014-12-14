@@ -28,8 +28,8 @@ import (
 	"fmt"
 
 	"github.com/godfried/impendulo/project"
+	"github.com/godfried/impendulo/tool/lc"
 	"github.com/godfried/impendulo/tool/result"
-	"github.com/godfried/impendulo/tool/wc"
 
 	"labix.org/v2/mgo/bson"
 
@@ -82,7 +82,7 @@ func (r *Result) Values() []*result.Value {
 }
 
 func (r *Result) Lines() int64 {
-	lc, _ := wc.Lines(r.Data)
+	lc, _ := lc.Lines(r.Data)
 	return lc
 }
 

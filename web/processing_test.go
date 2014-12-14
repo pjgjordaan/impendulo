@@ -13,10 +13,9 @@ import (
 func TestSnapshots(t *testing.T) {
 	db.Setup(db.TEST_CONN)
 	defer db.DeleteDB(db.TEST_DB)
-	s := project.NewSubmission(bson.NewObjectId(), "user", project.FILE_MODE, 100000)
-	err := db.Add(db.SUBMISSIONS, s)
-	if err != nil {
-		t.Error(err)
+	s := project.NewSubmission(bson.NewObjectId(), bson.NewObjectId(), "user", project.FILE_MODE, 100000)
+	if e := db.Add(db.SUBMISSIONS, s); e != nil {
+		t.Error(e)
 	}
 	specs := []spec{{"Triangle.java", project.SRC, s.Id, 5},
 		{"Triangle", project.LAUNCH, s.Id, 3},
@@ -38,26 +37,24 @@ type spec struct {
 
 func testSnapshots(s spec, t *testing.T) {
 	for i := 0; i < s.num; i++ {
-		f := createFile(s.id, s.tipe, s.name)
-		err := db.Add(db.FILES, f)
-		if err != nil {
-			t.Error(err)
+		if e := db.Add(db.FILES, createFile(s.id, s.tipe, s.name)); e != nil {
+			t.Error(e)
 		}
 	}
-	files, err := db.Snapshots(s.id, s.name)
-	if err != nil {
-		t.Error(err)
+	files, e := db.Snapshots(s.id, s.name)
+	if e != nil {
+		t.Error(e)
 	}
 	if len(files) != s.num {
 		t.Error(fmt.Errorf("Expected %d got %d snapshots.", s.num, len(files)))
 	}
 }
 
-func createFile(subId bson.ObjectId, tipe project.Type, name string) *project.File {
+func createFile(sid bson.ObjectId, t project.Type, n string) *project.File {
 	return &project.File{
 		Id:    bson.NewObjectId(),
-		SubId: subId,
-		Name:  name,
-		Type:  tipe,
+		SubId: sid,
+		Name:  n,
+		Type:  t,
 	}
 }

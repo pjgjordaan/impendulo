@@ -239,12 +239,13 @@ var AssignmentsView = {
 var AssignmentsChart = {
     init: function(tipe, id) {
         $(function() {
-            ComparisonChart.init();
-            AssignmentsChart.addOptions(tipe, id);
-            $('.select-chart').change(function() {
-                $('#chart').empty();
-                AssignmentsChart.load(tipe, $('#type-dropdown-label').attr(tipe + 'id'), $('#x').val(), $('#y').val());
-            });
+            $('#granularity').append('<option value="assignment">Assignments</option>');
+            $('#granularity').append('<option value="submission">Submissions</option>');
+            var params = {
+                'type': 'assignment'
+            };
+            params[tipe + '-id'] = id;
+            ComparisonChart.init(params);
             $.getJSON(tipe + 's', function(data) {
                 if (not(data[tipe + 's'])) {
                     console.log(data);
@@ -260,52 +261,16 @@ var AssignmentsChart = {
                     }
                 }
                 $('#type-dropdown ul.dropdown-menu a').on('click', function() {
-                    $('#chart').empty();
                     var tid = $(this).attr(tipe + 'id');
                     var params = {};
                     params[tipe + '-id'] = tid;
                     setContext(params);
                     $('#type-dropdown-label').attr(tipe + 'id', tid);
                     $('#type-dropdown-label h4').html('<small>' + tipe + '</small> ' + $(this).html() + ' <span class="caret"></span>');
-                    AssignmentsChart.addOptions(tipe, tid);
+                    ComparisonChart.params[tipe + '-id'] = tid;
+                    ComparisonChart.addOptions();
                 });
             });
         });
     },
-
-    addOptions: function(tipe, id) {
-        var x = $('#x').val();
-        var y = $('#y').val();
-        $.getJSON('chart-options?type=assignment&' + tipe + '-id=' + id, function(data) {
-            var o = data['options'];
-            if (not(o)) {
-                console.log(data);
-                return;
-            }
-            for (var i = 0; i < o.length; i++) {
-                $('.select-chart').append('<option value="' + o[i].id + '">' + o[i].name + '</option>');
-            }
-            if (not(x) || !$('#x option[value="' + x + '"]').length) {
-                x = o[0].id;
-            }
-            $('#x').val(x);
-            if (not(y) || !$('#y option[value="' + y + '"]').length) {
-                y = o[o.length - 1].id;
-            }
-            $('#y').val(y);
-            AssignmentsChart.load(tipe, id, x, y);
-        });
-    },
-
-    load: function(tipe, id, x, y) {
-        var params = {
-            'type': 'assignment',
-            'id': id,
-            'x': x,
-            'y': y,
-            'assignment-type': tipe
-        };
-        ComparisonChart.load(params);
-    },
-
 };

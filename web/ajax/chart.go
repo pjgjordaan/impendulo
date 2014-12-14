@@ -36,9 +36,11 @@ func Chart(r *http.Request) ([]byte, error) {
 	if e := r.ParseForm(); e != nil {
 		return nil, e
 	}
-	t, e := webutil.String(r, "type")
+	t, e := webutil.String(r, "granularity")
 	if e != nil {
-		return nil, e
+		if t, e = webutil.String(r, "type"); e != nil {
+			return nil, e
+		}
 	}
 	switch t {
 	case "file":
@@ -108,34 +110,26 @@ func assignmentChart(r *http.Request) ([]byte, error) {
 	if e != nil {
 		return nil, e
 	}
-	t, e := webutil.String(r, "assignment-type")
-	if e != nil {
-		return nil, e
-	}
-	id, e := webutil.String(r, "id")
-	if e != nil {
-		return nil, e
+	id := "all"
+	m := bson.M{}
+	if pid, e := webutil.Id(r, "project-id"); e == nil {
+		m[db.PROJECTID] = pid
+		id = pid.Hex()
+	} else if uid, e := webutil.String(r, "user-id"); e == nil {
+		id = uid
+		m[db.USER] = uid
 	}
 	c, e := db.Chart(id, calc.ASSIGNMENT, xd.Raw(), yd.Raw())
 	if e == nil {
 		return util.JSON(map[string]interface{}{"chart-data": c.Data, "chart-info": c.Info})
 	}
-	m := bson.M{}
-	switch t {
-	case "project":
-		pid, e := convert.Id(id)
-		if e != nil {
-			return nil, e
-		}
-		m[db.PROJECTID] = pid
-	case "user":
+	if _, ok := m[db.USER]; ok {
+		delete(m, db.USER)
 		aids, e := db.UserAssignmentIds(id)
 		if e != nil {
 			return nil, e
 		}
 		m[db.ID] = bson.M{db.IN: aids}
-	default:
-		return nil, fmt.Errorf("invalid submission chart type %s", t)
 	}
 	a, e := db.Assignments(m, nil)
 	if e != nil {
@@ -161,7 +155,7 @@ func submissionChart(r *http.Request) ([]byte, error) {
 		return nil, e
 	}
 	m := bson.M{}
-	var id string
+	id := "all"
 	if pid, e := webutil.Id(r, "project-id"); e == nil {
 		m[db.PROJECTID] = pid
 		id = pid.Hex()
