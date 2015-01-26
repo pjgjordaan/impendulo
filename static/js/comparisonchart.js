@@ -78,6 +78,9 @@ var ComparisonChart = {
             $('#checkbox-outliers-adjust').change(function() {
                 ComparisonChart.create(data['chart-data'], data['chart-info']);
             });
+            $('#checkbox-zeros').change(function() {
+                ComparisonChart.create(data['chart-data'], data['chart-info']);
+            });
         });
     },
 

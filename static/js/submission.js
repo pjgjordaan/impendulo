@@ -71,7 +71,6 @@ var SubmissionsChart = {
             }
         }
         $('#assignment-dropdown ul.dropdown-menu a').on('click', function() {
-            $('#table-submissions > tbody').empty();
             var currentId = $(this).attr('currentid');
             var currentName = $(this).html();
             var params = {};
@@ -91,7 +90,6 @@ var SubmissionsView = {
     init: function(aid, pid, uid, tipe) {
         SubmissionsView.tipe = tipe;
         $(function() {
-            $('#button-filter').on('click', SubmissionsView.load);
             $.getJSON('projects', function(data) {
                 if (not(data['projects'])) {
                     console.log(data);
@@ -131,7 +129,6 @@ var SubmissionsView = {
             $('#assignment-dropdown-label').append('<h4><small>assignment</small> None Selected <span class="caret"></span></h4>');
         }
         $('#assignment-dropdown ul.dropdown-menu a').on('click', function() {
-            $('#table-submissions > tbody').empty();
             var currentId = $(this).attr('assignmentid');
             var currentName = $(this).html();
             var params = {};
@@ -144,84 +141,13 @@ var SubmissionsView = {
     },
 
     load: function() {
-        $('#table-submissions > tbody').empty();
         var aid = $('#assignment-dropdown-label').attr('assignmentid');
         var params = {
             'type': 'submission',
             'assignment-id': aid
         }
         params[SubmissionsView.tipe + '-id'] = $('#' + SubmissionsView.tipe + '-dropdown-label').attr(SubmissionsView.tipe + 'id');
-        $.getJSON('table', params, function(data) {
-            if (not(data['table-data']) || not(data['table-fields']) || not(data['table-metrics'])) {
-                console.log(data);
-                return;
-            }
-            var td = data['table-data'];
-            var tf = data['table-fields'];
-            var tm = data['table-metrics'];
-            for (var j = 1; j < tf.length; j++) {
-                var n = toTitleCase(tf[j].name);
-                $('#table-submissions > thead > tr').append('<th key="' + tf[j].id + '">' + n + '</th>');
-                $('#fields').append('<option value="' + tf[j].id + '">' + n + '</option>');
-                $('#fields > option').last().prop('selected', true);
-            }
-            for (var j = 0; j < tm.length; j++) {
-                var n = toTitleCase(tm[j].name);
-                $('#table-submissions > thead > tr').append('<th key="' + tm[j].id + '">' + n + '</th>');
-                $('#fields').append('<option value="' + tm[j].id + '">' + n + '</option>');
-                $('#table-submissions > thead > tr > th').last().hide();
-            }
-            $('#fields').show();
-            $('#fields').multiselect({
-                noneSelectedText: 'Add table fields',
-                selectedText: '# table fields selected',
-                click: function(event, ui) {
-                    $('[key="' + ui.value + '"]').toggle();
-                    if ($('[key="' + ui.value + '"]').is(":visible")) {
-                        $('[key="' + ui.value + '"]').each(function() {
-                            $(this).appendTo($(this).parent());
-                        });
-                    }
-                },
-                checkAll: function(event, ui) {
-                    $('[key]').each(function() {
-                        if (!$(this).is(":visible")) {
-                            $(this).appendTo($(this).parent());
-                        }
-                    });
-                    $('[key]').show();
-                },
-                uncheckAll: function(event, ui) {
-                    $('[key]').hide();
-                }
-            });
-            for (var i = 0; i < td.length; i++) {
-                $('#table-submissions > tbody').append('<tr submissionid="' + td[i].id + '"></tr>')
-                var s = '#table-submissions > tbody > tr[submissionid="' + td[i].id + '"]';
-                for (var j = 1; j < tf.length; j++) {
-                    if (j === 1) {
-                        $(s).append('<td key="' + tf[j].id + '"><a href="filesview?submission-id=' + td[i].id + '">' + td[i][tf[j].id] + '</a></td>');
-                    } else {
-                        $(s).append('<td key="' + tf[j].id + '">' + td[i][tf[j].id] + '</td>');
-                    }
-                }
-                for (var j = 0; j < tm.length; j++) {
-                    var o = td[i][tm[j].id];
-                    var unit = '';
-                    var value = 'N/A';
-                    if (!not(o) && o.value !== -1) {
-                        value = o.value;
-                        unit = o.unit;
-                    }
-
-                    $(s).append('<td key="' + tm[j].id + '">' + value + ' ' + unit + '</td>');
-                    $(s + ' td').last().hide();
-                }
-            }
-            $("#table-submissions").tablesorter({
-                theme: 'bootstrap',
-                dateFormat: 'ddmmyyyy'
-            });
-        });
+        console.log(params);
+        ComparisonTable.load(params, 'submission', 'filesview');
     }
 }

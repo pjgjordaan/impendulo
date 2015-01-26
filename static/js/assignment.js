@@ -118,8 +118,6 @@ var AssignmentsView = {
     init: function(tipe, id) {
         AssignmentsView.tipe = tipe;
         $(function() {
-            $('#btn-all-submissions').attr('href', 'submissionsview?' + tipe + '-id=' + id);
-            $('#button-filter').on('click', AssignmentsView.load);
             $.getJSON(AssignmentsView.tipe + 's', function(data) {
                 if (not(data[AssignmentsView.tipe + 's'])) {
                     console.log(data);
@@ -135,7 +133,6 @@ var AssignmentsView = {
                     }
                 }
                 $('#type-dropdown ul.dropdown-menu a').on('click', function() {
-                    $('#table-assignments > tbody').empty();
                     var tid = $(this).attr(AssignmentsView.tipe + 'id');
                     var params = {};
                     params[AssignmentsView.tipe + '-id'] = tid;
@@ -150,89 +147,13 @@ var AssignmentsView = {
     },
 
     load: function() {
-        $('#fields').empty();
-        $('#table-assignments > tbody').empty();
-        $('#table-assignments > thead > tr').empty();
         var tid = $('#type-dropdown-label').attr(AssignmentsView.tipe + 'id');
         var params = {
             'type': 'assignment',
             'assignment-type': AssignmentsView.tipe,
             'id': tid
         };
-        $.getJSON('table', params, function(data) {
-            if (not(data['table-data']) || not(data['table-fields']) || not(data['table-metrics'])) {
-                console.log(data);
-                return;
-            }
-            var td = data['table-data'];
-            var tf = data['table-fields'];
-            var tm = data['table-metrics'];
-            for (var j = 1; j < tf.length; j++) {
-                var n = toTitleCase(tf[j].name);
-                $('#table-assignments > thead > tr').append('<th key="' + tf[j].id + '">' + n + '</th>');
-                $('#fields').append('<option value="' + tf[j].id + '">' + n + '</option>');
-                $('#fields > option').last().prop('selected', true);
-            }
-            for (var j = 0; j < tm.length; j++) {
-                var n = toTitleCase(tm[j].name);
-                $('#table-assignments > thead > tr').append('<th key="' + tm[j].id + '">' + n + '</th>');
-                $('#fields').append('<option value="' + tm[j].id + '">' + n + '</option>');
-                $('#table-assignments > thead > tr > th').last().hide();
-            }
-            if ($('#fields').multiselected) {
-                $('#fields').multiselect('destroy');
-            }
-            $('#fields').multiselect({
-                noneSelectedText: 'Add table fields',
-                selectedText: '# table fields selected',
-                click: function(event, ui) {
-                    $('[key="' + ui.value + '"]').toggle();
-                    if ($('[key="' + ui.value + '"]').is(":visible")) {
-                        $('[key="' + ui.value + '"]').each(function() {
-                            $(this).appendTo($(this).parent());
-                        });
-                    }
-                },
-                checkAll: function(event, ui) {
-                    $('[key]').each(function() {
-                        if (!$(this).is(":visible")) {
-                            $(this).appendTo($(this).parent());
-                        }
-                    });
-                    $('[key]').show();
-                },
-                uncheckAll: function(event, ui) {
-                    $('[key]').hide();
-                }
-            });
-            $('#fields').multiselected = true;
-            for (var i = 0; i < td.length; i++) {
-                $('#table-assignments > tbody').append('<tr assignmentid="' + td[i].id + '"></tr>')
-                var s = '#table-assignments > tbody > tr[assignmentid="' + td[i].id + '"]';
-                for (var j = 1; j < tf.length; j++) {
-                    if (j === 1) {
-                        $(s).append('<td key="' + tf[j].id + '"><a href="submissionsview?assignment-id=' + td[i].id + '">' + td[i][tf[j].id] + '</a></td>');
-                    } else {
-                        $(s).append('<td key="' + tf[j].id + '">' + td[i][tf[j].id] + '</td>');
-                    }
-                }
-                for (var j = 0; j < tm.length; j++) {
-                    var o = td[i][tm[j].id];
-                    var unit = '';
-                    var value = 'N/A';
-                    if (!not(o) && o.value !== -1) {
-                        value = o.value;
-                        unit = o.unit;
-                    }
-                    $(s).append('<td key="' + tm[j].id + '">' + value + ' ' + unit + '</td>');
-                    $(s + ' td').last().hide();
-                }
-            }
-            $("#table-assignments").tablesorter({
-                theme: 'bootstrap',
-                dateFormat: 'ddmmyyyy'
-            });
-        });
+        ComparisonTable.load(params, 'assignment', 'submissionsview');
     }
 };
 

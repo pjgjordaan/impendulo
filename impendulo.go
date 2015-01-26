@@ -116,7 +116,7 @@ func main() {
 		return
 	}
 	if e = config.LoadConfigs(cfgFile); e != nil {
-		return
+		util.Log(e)
 	}
 	switch flag.Arg(0) {
 	case "web":

@@ -91,6 +91,9 @@ var (
 	}
 
 	extraTemplates = map[string][]string{
+		"filesview":       {"comparisontable"},
+		"assignmentsview": {"comparisontable"},
+		"submissionsview": {"comparisontable"}, "overviewresult": {"comparisontable"},
 		"assignmentschart": {"comparisonchart"},
 		"submissionschart": {"comparisonchart"}, "overviewchart": {"comparisonchart"},
 	}
