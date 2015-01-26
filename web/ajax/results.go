@@ -119,10 +119,7 @@ func Comment(w http.ResponseWriter, r *http.Request) error {
 	if e != nil {
 		return e
 	}
-	u, e := c.Username()
-	if e != nil {
-		return e
-	}
+	u := c.ActiveUser()
 	f, e := webutil.File(r, "file-id", bson.M{db.COMMENTS: 1})
 	if e != nil {
 		return e

@@ -155,10 +155,10 @@ func (c *C) Username() (string, error) {
 }
 
 func (c *C) ActiveUser() string {
-	if !c.LoggedIn() {
+	u, e := c.Username()
+	if e != nil {
 		return "Anonymous"
 	}
-	u, _ := c.Username()
 	return u
 }
 
