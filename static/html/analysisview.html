@@ -272,6 +272,6 @@
 </div>
 <script type="text/javascript" language="javascript" src="/static/js/code.js"></script>
 <script>
-    CodeView.init('{{.ctx.Username}}', '{{$currentFile.Id.Hex}}', '{{$nextFile.Id.Hex}}');
+    CodeView.init('{{.ctx.ActiveUser}}', '{{$currentFile.Id.Hex}}', '{{$nextFile.Id.Hex}}');
 </script>
 {{end}} {{end}}

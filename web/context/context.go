@@ -154,6 +154,14 @@ func (c *C) Username() (string, error) {
 	return u, nil
 }
 
+func (c *C) ActiveUser() string {
+	if !c.LoggedIn() {
+		return "Anonymous"
+	}
+	u, _ := c.Username()
+	return u
+}
+
 //AddUser sets the currently signed in user.
 func (c *C) AddUser(u string) {
 	c.Session.Values["user"] = u

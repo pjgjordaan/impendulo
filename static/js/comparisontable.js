@@ -22,7 +22,7 @@ var ComparisonTable = {
                 $('#fields').append('<option value="' + tm[j].id + '">' + n + '</option>');
                 $('#table-comparison > thead > tr > th').last().hide();
             }
-            $('#fields').show();
+            $('#fields').hide();
             $('#fields').multiselect({
                 noneSelectedText: 'Add table fields',
                 selectedText: '# table fields selected',
